@@ -1,0 +1,177 @@
+general:
+  tags: C2644787, unified-prod-e2e, p1-ecomm-prod-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644787
+  metadata:
+    - name: scenarioId
+      string: EC003
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  
+  - name: Main
+    endTestOnFailure: true
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in Account modified for Optimization
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: ios.email
+              string: us.data.prod.flow002.ios.C2644787
+            - name: ios.password
+              string: us.data.prod.flow002.password.C2644787 
+            - name: android.email
+              string: us.data.prod.flow011.android.email
+            - name: android.password
+              string: us.data.prod.flow011.android.password
+
+      # Navigate to home 
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+      
+      #  Update Location Accuracy timer
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?_xf=b3a4m&wm_preview_date=1718305081740
+
+      # Change Intent to Pickup
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Pickup
+   
+      # Navigate to cart and clear it
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      # wait for 1 min to meet timer criteria
+      - sleep:
+          duration: 60000
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      # Verify Location Accuracy banner on Shop screen
+      - executeFunction:
+           name: unified.us.functions.gic.locationAccuracy.verifyBanner.searchScreen  
+
+      # Search for an item and click on it
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: Chicken
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      # Verify Location Accuracy banner on item detailse screen
+      - executeFunction:
+          name: unified.us.functions.gic.locationAccuracy.verifyBanner.itemScreen
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Verify Location Accuracy banner on cart screen
+      # # Day 0 Automation For Location Accurcay - Uncomment once the feature is available
+      # - executeFunction:
+      #      name: unifed.us.functions.gic.locationAccuracy.verifyBanner.cartScreen
+
+      - executeFunction:
+          name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: Pickup
+
+      # Go to book slot
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      # Verify cart page
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: Pickup
+            - name: cart
+              string: true
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.verifyBagFieldAndBagFeeForDelivery
+
+      # Verify review order page
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: Pickup
+            - name: reviewOrder
+              string: true
+              
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

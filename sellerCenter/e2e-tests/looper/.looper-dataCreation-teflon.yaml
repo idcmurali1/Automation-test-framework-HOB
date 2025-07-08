@@ -1,0 +1,67 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+     
+      - manual:
+          name: E2E [Dev build][STAGING]
+          call: run_tests_teflon(SAUCE_APP = 'storage:filename=sc-development-latest.apk', APP_BUILD_BRANCH = 'development-latest', TEST_TAGS = 'sc-e2e-data-creation', DEPENDENCY_PROFILE = 'looper-teflon')
+
+      - cron:
+          spec: "0 10,20 * * *"
+          call: run_tests_teflon(SAUCE_APP = 'storage:filename=sc-development-latest.apk', APP_BUILD_BRANCH = 'development-latest', TEST_TAGS = 'sc-e2e-data-creation', DEPENDENCY_PROFILE = 'looper-teflon')
+   
+   
+envs:
+  global:
+    variables:
+      MARKET: sellerCenter
+      APP_PLATFORM: android
+      POST_TO_ES: true
+      POST_TO_ANIVIA: true
+      USE_TEST_REPORT: true
+      SLACK_CHANNEL: sc-app-automation-result
+      APPLITOOLS_API_KEY: ENC[Rt+/oXg4fNf9b2Pq2MQ47frfGB42KVDp7l7/tQ/1na985VV7Ia42QMgDDOppIoaDTWfXJmsQW0Imo7rpXjXaQQ==]
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+              *App Build*: ${SAUCE_APP}\n
+              *Build Link*: ${BUILD_URL}\n
+              *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+              *Report Link*: ${REPORT_URL}"
+
+  # Environment profiles can be specified here with specific environment variable values.
+  env_android_teflon:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: sellerCenter/e2e-tests/dependencies/android/android-default.yaml
+    #   DEPENDENCY_PROFILE: looper
+      GLASS_ENV: teflon
+      MAPPING_LABELS: teflon
+
+flows:
+  run_tests_teflon:
+    - call: build_tunnel(env_android_teflon)
+
+  build_tunnel:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: setup
+          - call: execute_test
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          - call: get_test_failures
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          - call: post_test_results_json_to_es

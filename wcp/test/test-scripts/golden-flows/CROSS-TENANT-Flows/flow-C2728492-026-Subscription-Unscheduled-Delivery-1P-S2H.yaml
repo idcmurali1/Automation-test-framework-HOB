@@ -1,0 +1,160 @@
+general:
+  testCaseId: C2728492
+  tags: wcp-026, p1-us-prod, p1-ca-en-prod, p1-ca-fr-prod, p1-ca-en-teflon, p1-ca-fr-teflon, C2728492
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+  - name: Main
+    flow:
+
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # Onboarding
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      
+      # Sign in
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      - executeFunction:
+          name: functions.login.storeEmail
+          params:
+            - name: userAndroidEmail
+              string: data.wcp026.user.email.android
+            - name: useriOSEmail
+              string: data.wcp026.user.email.ios
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+    
+    # unsubscribe from manage subscription page
+      - executeFunction:
+          name: functions.subscriptionPage.manageSubscription.unSubscribe
+      
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+# Navigate to PDP with Deeplink
+      - executeFunction:
+          name: functions.productPage.navigatetoPDPwithDeeplink
+          params:
+            - name: productArray
+              string: data.searchPage.subscriptionItemArray
+
+#  Set up subscription from Item page and add to cart
+      - executeFunction:
+          name: functions.productPage.setupSubscriptionFromItemPage
+
+      - if: 
+          condition: ${market} == 'US' && ${platform} == 'Android'
+          then:
+              - executeFunction:
+                  name: functions.global.tapBackBtn
+
+      - executeFunction:
+          name: functions.utils.scrollUpToDisplayBottomBar
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      - executeFunction:
+          name: functions.setupSubscriptionPopup.verifyDeliveryFrequencyInCartpage
+  
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      
+      - executeFunction:
+          name: functions.addAddressBottomSheet.selectFirstAddressRadio
+      
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded
+      - if:
+          condition: ${environment} == 'Production' && ${market} == 'CA'
+          then:
+            # Validate Wallet Page Loaded
+            - executeFunction: 
+                name: functions.checkoutPage.tapAddPaymentMethodBtn
+            - executeFunction:
+                name: functions.checkoutPage.isWalletTileDisplayed
+      # - executeFunction:
+      #     name: functions.checkoutPage.clickOnAddPaymentMethodBtn 
+      #  # verify if the payment options are shown in wallet page
+      # - executeFunction:
+      #     name: functions.checkoutPage.walletPopup.hasPaymentAttached
+
+      # - executeFunction:
+      #    name: functions.checkoutPage.walletPopup.tapCloseBtn
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+          #  Place order
+            - executeFunction:
+                name:  functions.checkoutPage.tapPlaceOrderButton
+          
+          # Validate Thank you page
+            - executeFunction:
+                name: functions.thankYouPage.assertPageforSubscriptionItem
+            
+            - executeFunction:
+                name: functions.thankYouPage.getOrderNumber
+
+            - log : ${returnedOrderNumber}
+
+          # Verify if Manage now link is redirecting to manage susbcription page
+        
+            - executeFunction:
+                name: functions.thankyouPage.manageNow.navigateToManageSubscription
+          # Validate manage subscription page 
+            - executeFunction:
+                name: functions.subscriptionPage.verifyManageSubscription
+          # Tap on continue shopping button
+            - executeFunction:
+                name: functions.thankYouPage.tapOnContinueShoppingButton
+          #  Navigate to ODP
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+          # Verify ODP
+            - executeFunction:
+               name: functions.orderDetailPage.verifyItemDetails
+            - executeFunction:
+                name: functions.orderDetailPage.verifyPaymentMethodSection
+            - executeFunction:
+                name: functions.orderDetailPage.verifyPOSSummary
+    
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

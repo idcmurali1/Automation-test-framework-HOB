@@ -1,0 +1,202 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function asserts the items listed in the Cart Page in the corresponding list by Fulfillment
+  #    Method. In Merge Hallways, a single order can have different type of fulfillment methods per the item types
+  #    (unscheduled delivery, scheduled delivery or scheduled pickup), so, the products will display in separate
+  #    sections/lists in the page depending on their fulfillment type.
+  #
+  # PARAMS:
+  #   ${fulfillmentMethod}  [Mandatory]
+  #        Defines in which category/list the items array will be validated.
+  #        Options: [ scheduledPickup | scheduledDelivery | unscheduledPickup | unscheduledDelivery ]
+  #
+  #   ${itemsArray}  [Mandatory]
+  #         List of items to be asserted.
+  #         Similar items array as the one obtained by the function 'searchPage.addToCartUsingItemArrayList-GetProductDetails'.
+  #
+  #   ${assertItemDetails}  [Mandatory]
+  #         Whether to assert the items details or only whether it's displayed or not.
+  #         Options: [ true | false | null ]. If null, it will be taken as true.
+  - name: functions.cartPage.assertItemsArrayListed-byFulfillmentMethod
+    platform: ios
+    flow:
+      # Check param fulfillmentMethod...
+      - if:
+          condition: ${fulfillmentMethod} != 'scheduledPickup' && ${fulfillmentMethod} != 'scheduledDelivery' && ${fulfillmentMethod} != 'unscheduledPickup' && ${fulfillmentMethod} != 'unscheduledDelivery'
+          then:
+            - failTest:
+                message: X Fulfillment method provided '${fulfillmentMethod}' is not correct. Use any of [ scheduledPickup | scheduledDelivery | unscheduledPickup | unscheduledDelivery ].
+          else:
+            - log:
+                message: "Fulfillment Method: '${fulfillmentMethod}'"
+                color: CYAN
+
+      # Check param itemsArray...
+      - if:
+          condition: ${itemsArray} == "null"
+          then:
+            - failTest:
+                message: X Items Array is empty.
+          else:
+            - log:
+                message: "Items Array: '${itemsArray}'"
+                color: CYAN
+
+      # Check param assertItemDetails...
+      - if:
+          condition: ${assertItemDetails} == "null"
+          then:
+            - storeIn:
+                key: assertItemDetails
+                value: true
+      - if:
+          condition: ${assertItemDetails} != true || ${assertItemDetails} != false
+          else:
+            - failTest:
+                message: X Assert Item Details value '${assertItemDetails}' is not correct. Use any of [ true | false | null ].
+          then:
+            - log:
+                message: "Assert Item Details value: '${assertItemDetails}'"
+                color: CYAN
+
+      # Define which group to use for validations...
+      - if:
+          condition: ${fulfillmentMethod} == 'scheduledPickup' || ${fulfillmentMethod} == 'scheduledDelivery'
+          then:
+            - storeIn:
+                key: groupName
+                value: SCGroup_fulfillmentPlaceLabel
+          else:
+            - storeIn:
+                key: groupName
+                value: FCGroup_fulfillmentPlaceLabel
+
+      # Scroll into the group with the defined group name...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: cartPage.fulfillmentGroupByName.groupCard # <--- ${groupName}
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: cartPage.fulfillmentGroupByName.groupCard # <--- ${groupName}
+                position: center
+                scrollLimit: 5
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.fulfillmentGroupByName.groupCard # <--- ${groupName}
+
+      # Expand the group if not expanded...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: cartPage.fulfillmentGroupByName.groupCard.productInfo # <--- ${groupName}
+            timeout: 5000
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: cartPage.fulfillmentGroupByName.groupCard.expandProductListButton # <--- ${groupName}
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: cartPage.fulfillmentGroupByName.groupCard.expandProductListButton # <--- ${groupName}
+                      position: center
+                      scrollLimit: 5
+            - click:
+                identifier: cartPage.fulfillmentGroupByName.groupCard.expandProductListButton # <--- ${groupName}
+            - sleep:
+                duration: 3000
+
+      # Loop through the array of items and verify the item info...
+      - storeIn:
+          key: productDetailsArray
+          value: ${itemsArray}
+      - executeFunction:
+          name: functions.utils.javascript.getArrayLength # <--- ${productDetailsArray} / RETURNS ---> ${getArrayLength}
+
+      - loop:
+          begin: 0
+          end: ${getArrayLength}
+          storeIndex: index
+          flow:
+
+            # Extract separate the item properties...
+            - executeFunction:
+                name: functions.utils.javascript.getProductDetails # <--- ${productDetailsArray}, ${index} / RETURNS ---> ${productName}, ${actualPrice}, ${productQty}
+            - log:
+                message: "Checking product '${productName}'..."
+                color: CYAN
+
+            # If item name not found, scroll into it and verify existence...
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: cartPage.fulfillmentGroupByName.groupCard.productInfoByProductName # <--- ${groupName}, ${productName}
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: cartPage.fulfillmentGroupByName.groupCard.productInfoByProductName # <--- ${groupName}, ${productName}
+                      position: center
+                      scrollLimit: 5
+            - verifyIdentifier:
+                present:
+                  - identifier: cartPage.fulfillmentGroupByName.groupCard.productInfoByProductName # <--- ${groupName}, ${productName}
+            - log:
+                message: "✔︎ Product found."
+                color: CYAN
+
+            # Assert item details if requested...
+            - if:
+                condition: ${assertItemDetails}
+                then:
+                  - getString:
+                      identifier: cartPage.fulfillmentGroupByName.groupCard.productInfoByProductName # <--- ${groupName}, ${productName}
+                      storeIn: productInfo
+                  - log:
+                      message: "Product details displayed: '${productInfo}"
+                      color: CYAN
+
+                  # Validate price...
+                  - executeNode:
+                      file: wcp/test/helpers/stringContains.js
+                      args:
+                        - value: ${productInfo}
+                        - value: "Costo: ${actualPrice}"
+                      getResponse:
+                        storeIn: priceIsCorrect
+                  - if:
+                      condition: ${priceIsCorrect}
+                      then:
+                        - log:
+                            message: "✔︎ Product price is correct (expected: '${actualPrice}')."
+                            color: CYAN
+                      else:
+                        - failTest:
+                            message: "X Product price not correct or not displayed (expected: '${actualPrice}')"
+
+                  # Validate quantity...
+                  - executeNode:
+                      file: wcp/test/helpers/stringContains.js
+                      args:
+                        - value: ${productInfo}
+                        - value: "Cant. ${productQty}"
+                      getResponse:
+                        storeIn: qtyIsCorrect
+                  - if:
+                      condition: ${qtyIsCorrect}
+                      then:
+                        - log:
+                            message: "✔︎ Product quantity is correct (expected: '${productQty}')."
+                            color: CYAN
+                      else:
+                        - failTest:
+                            message: "X Product quantity not correct or not displayed (expected: '${productQty}')"
+      - log:
+          message: ✔︎ All products found in the corresponding ${fulfillmentMethod} group.
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cartPage.assertItemsArrayListed-byFulfillmentMethod"
+          color: BLUE

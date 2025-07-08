@@ -1,0 +1,151 @@
+general:
+  platform: android
+  tags: PS-001, ca-function-run
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: true
+    flow:
+      - log: Execute before scenarios
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validating disabled preferred Substitution Option
+    flow:
+      - log:
+         message: Validating disabled preferred Substitution Option
+         color: PURPLE_BOLD_BRIGHT
+
+      - log: 
+          message: Onboarding to app using postal code.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.orleansZipCode
+
+      - log:
+          message: Navigating to Sign In to account from home page.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+      - log:
+          message: Putting user credentials.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.PS-001.emailID 
+            - name: password
+              string: ca.test.data.functional.password        
+
+      - log: 
+          message: Selecting store at HomePage.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.home.selectStore
+          params:
+            - name: Zip_Code
+              string: ca.test.data.orleansZipCode
+            - name: storeName
+              string: ca.test.data.orleansStoreName
+
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: pinCode
+              string: ca.test.data.PS-001.selectAddressZipCode
+
+      - executeFunction:
+         name: ca.test.functions.productSearch.checkItemsInCartAndRemovingThem
+
+      - log: 
+          message: Searching for a GO product with product name.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.functions.searchPage.searchItemArray
+          params:
+            - name: items
+              string: ca.test.data.PS-001.goItemArray
+            - name: quantity
+              string: ca.test.data.PS-001.GO_Item_Qty
+            - name: checkNonPromotionBadges
+              string: true
+
+      - log:
+          message: Asserting cart quantity.
+          color: GREEN_BOLD
+
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantity
+           params:
+            - name: cartQuantity
+              string: ca.test.data.PS-001.GO_Item_Qty
+
+      - log:
+          message: Asserting cart total.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ${totalPrice}
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - log:
+          message: Navigating to cart.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCart
+
+      - executeFunction:
+          name: ca.test.functions.cart.reserveTimePage
+
+      # Validating reserve time page
+      - executeFunction:
+          name: ca.test.functions.reserveTimePageValidation
+
+      # Reserving a slot
+      - executeFunction:
+          name: ca.test.functions.bookASlot.reserveTimePage.reserveStandardSlot
+
+      # Clicking on book a slot button
+      - executeFunction:
+          name: ca.test.functions.bookASlot.reserveTimePage.bookASlotButton 
+
+     # Proceed to continue to checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOut
+      
+     # Validate and disable preferred substitution option
+      - executeFunction:
+         name: ca.test.functions.checkout.disablePreferredSubstitution
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction: 
+          name: ca.test.functions.utils.afterSteps

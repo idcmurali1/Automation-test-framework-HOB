@@ -1,0 +1,343 @@
+#======================================================================================================================
+#   AUTHOR: Fernanda Peruyero (vn54e7a)
+#   CREATED: Jul/19/2024
+#   REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-od-smoke-production-android-1538, prepurchase-od-smoke-production-android
+  testCaseId: MMS-3336
+
+scenarios:
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#  Verify that a list can be created, edited and deleted
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#  https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+Android
+#
+#  JIRA AUTOMATION TC:
+#  https://jira.walmart.com/browse/MMS-3336 
+#
+#  JIRA MANUAL TC:
+#  https://jira.walmart.com/browse/MMS-1538 
+#
+########################################################################################################################
+
+  # BEFORE HOOK #######################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - storeIn:
+          key: __SQUAD_REPORTING_TEST_CASE_NAME
+          value: GMX_OD_Smoke_PROD_PrePurchase_Android_1538
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+      
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+          params:
+            - name: packageName
+              string: ${APP_PACKAGE}
+
+      - storeIn:
+          key: MMS_1538_SUCCESSFUL_EXECUTION
+          value: false
+      - storeIn:
+          key: MMS_1538_LIST_EXISTS
+          value: false
+      - storeIn:
+          key: MMS_1538_EDITED_LIST_EXISTS
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+
+# MAIN HOOK #########################################################################################################
+ 
+  - name: Main
+    platform: android
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+      
+      #STEP 1-2: Navigate through Onboarding and select banner ----------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: NAVIGATE THROUHG ONBOARDING AND SELECT THE OD BANNER"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.smoke.od.prepurchase-1538.zipCode
+            - name: banner
+              string: 'OD'
+
+    #STEP 3: Login from Profile Screen ----------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 3: LOGIN FROM PROFILE SCREEN"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.smoke.od.prepurchase.tc-1538.userEmail
+            - name: userPassword
+              string: mx.data.qaa.smoke.od.prepurchase-1538.userPassword
+            - name: userName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.userName
+    
+     # STEP 4: Navigate to "Tus productos" section------------------------------------------------ 
+      - log:
+         message: 'STEP 4: NAVIGATE TO "TUS PRODUCTOS" SECTION AND OPEN TAB "LISTAS"'
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+    
+     # STEP 5-6: Create a list  --------------------------------------------------------------------------------------------
+      - log:
+         message: 'STEP 5-6: CREATE A LIST'
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.products-and-lists.tapLists
+      
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.flows.od.list.createCustomList
+          params:
+            - name: newListName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+
+      - storeIn:
+          key: MMS_1538_LIST_EXISTS
+          value: true
+
+    # STEP 7: Tap back from the list details ---------------------------------------------------------------------------------
+      - log:
+         message: 'STEP 7: TAP BACK FROM THE LIST DETAILS'
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.list.tapBack
+
+      - executeFunction: 
+          name: mx.functions.lists.assertListDisplayed
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+
+# STEP 8: Open List recently created and tap the configuration button --------------------------------------------------------
+      - log:
+         message: 'STEP 8: OPEN RECENTLY CREATED LIST AND TAP THE CONFIGURATION BUTTON'
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.lists.openList
+          params: 
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+      
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params: 
+            - name: expectedListName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+
+ # STEP 9: Update the name of the list that was just created ------------------------------------------------------------------   
+      - log:
+         message: 'STEP 9: UPDATE THE NAME OF THE LIST THAT WAS JUST CREATED'
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.list.editCustomList
+          params:
+            - name: listNewName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listNewName
+
+      - storeIn:
+          key: MMS_1538_LIST_EXISTS
+          value: false
+      - storeIn:
+          key: MMS_1538_EDITED_LIST_EXISTS
+          value: true
+
+ # STEP 10: Tap back from list details and validate that the name of the list was updated -------------------------------------    
+      - log:
+         message: 'STEP 10: TAP BACK FROM THE LIST DETAILS AND VALIDATE THAT THE NAME OF THE LIST WAS UPDATED'
+         color: ORANGE         
+      
+      - executeFunction:
+          name: mx.functions.list.tapBack
+      
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+
+      - executeFunction: 
+          name: mx.functions.lists.assertListDisplayed
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listNewName
+      
+      - executeFunction:
+          name: mx.functions.lists.assertListNotDisplayed
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+
+ # Step 11: Open list recently updated, go to configuration and tap delete list.
+
+      - log:
+         message: 'STEP 11: OPEN LIST RECENTLY UPDATED, GO TO CONFIGURATION AND TAP DELETE LIST'
+         color: ORANGE 
+
+      - executeFunction:
+          name: mx.functions.lists.openList
+          params: 
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listNewName
+      
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params: 
+            - name: expectedListName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listNewName
+      
+      - executeFunction:
+          name: mx.functions.list.tapSettingsButton
+
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.assertPopupDisplayed
+      
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.tapDeleteThisList
+
+      - executeFunction:
+          name: mx.functions.list.delete-list-popup.assertPopupDisplayed
+
+    # Step 12: Tap back from Deletion confirmation popup
+      - log:
+         message: 'STEP 12: TAP BACK FROM DELETION CONFIRMATION POPUP'
+         color: ORANGE 
+      
+      - executeFunction:
+          name: mx.functions.list.delete-list-popup.tapBack
+
+    # Step 13: Tap "Eliminar esta lista" once again and tap close button from deletion confirmation popup.
+      - log:
+         message: 'STEP 13: TAP "ELIMINAR ESTA LISTA" ONCE AGAIN AND TAP CLOSE BUTTON FROM DELETION CONFIRMATION POPUP'
+         color: ORANGE 
+
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.tapDeleteThisList
+
+      - executeFunction:
+          name: mx.functions.list.delete-list-popup.assertPopupDisplayed
+
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.delete-list.tapClose
+
+    # Step 14: Delete list by taping configuration > "Eliminar esta lista" and confirm deletion.
+      - log:
+         message: 'STEP 14: DELETE LIST BY TAPPING CONFIGURATION > "ELIMINAR ESTA LISTA AND CONFIRM DELETION'
+         color: ORANGE 
+
+      - executeFunction:
+          name: mx.flows.od.list.deleteCustomList
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1538.listNewName
+              
+    # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_1538_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+      
+# AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO STARTS: After Configs..."
+      
+      - if:
+          condition: ${MMS_1538_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. Reseting data for next execution"
+                color: RED
+            - if:
+                condition: ${MMS_1538_LIST_EXISTS} == true || ${MMS_1538_EDITED_LIST_EXISTS} == true
+                then:
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+                  - executeFunction:
+                      name: mx.functions.bottom-menu.tapProductsAndLists
+                  - executeFunction:
+                      name: mx.functions.products-and-lists.tapLists
+                  - if:
+                      condition: ${MMS_1538_LIST_EXISTS} == true
+                      then:
+                        - try:
+                            flow:
+                              - executeFunction:
+                                  name: mx.functions.lists.openList
+                                  params:
+                                    - name: listName
+                                      string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+                              - executeFunction:
+                                  name: mx.flows.od.list.deleteCustomList
+                                  params:
+                                    - name: listName
+                                      string: mx.data.qaa.smoke.od.prepurchase-1538.listName
+                            catch:
+                              flow:
+                                - log:
+                                    message: "List not found"
+                  - if: 
+                      condition: ${MMS_1538_EDITED_LIST_EXISTS} == true
+                      then:
+                        - try:
+                            flow:
+                              - executeFunction:
+                                  name: mx.functions.lists.openList
+                                  params:
+                                    - name: listName
+                                      string: mx.data.qaa.smoke.od.prepurchase-1538.listNewName
+                              - executeFunction:
+                                  name: mx.flows.od.list.deleteCustomList
+                                  params:
+                                    - name: listName
+                                      string: mx.data.qaa.smoke.od.prepurchase-1538.newListName
+                            catch:
+                              flow:
+                                - log:
+                                    message: "Edited lisit not found"
+            - failTest:
+               message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"

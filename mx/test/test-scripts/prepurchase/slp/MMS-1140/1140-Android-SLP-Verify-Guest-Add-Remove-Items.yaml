@@ -1,0 +1,166 @@
+#======================================================================================================================
+#  AUTHOR: Fenrnada Peruyero (vn54e7a)
+#  CREATED: Sep/30/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-walmart-ea-smoke-production-android-1140, prepurchase-walmart-ea-smoke-production-android,
+        prepurchase-bodega-ea-smoke-production-android-1140, prepurchase-bodega-ea-smoke-production-android,
+        prepurchase-schema-validation-production-android-1140, prepurchase-schema-validation-production-android
+  testCaseId: MMS-4831
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [SLP] - Verify that a guest can add and remove items from SLP
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    TO-DO 
+#
+#  JIRA AUTOMATION TC:
+#   
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-1140 
+#
+#######################################################################################################################
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+       - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+            
+       - executeFunction:
+          name: functions.utils.setMarketInfo
+
+       - storeIn:
+          key: MMS_1140_SUCCESSFUL_EXECUTION
+          value: false
+
+       - log: "BEFORE SCENARIO END"
+
+ # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: android
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+ 
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN APP AND COMPLETE ONBOARDING. (2) OPEN THE EA BANNER."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+      
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: SEARCH FOR AN ITEM BY ENTERING THE PRODUCT KEYWORD/NAME INTO THE SEARCH FIELD ON THE TOP OF THE SCREEN."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.searchField.enterText # <-- ${searchText}
+          params:
+            - name: searchText
+              string: mx.data.prepurchase-1140.searchText
+      
+      - executeFunction:
+          name: mx.functions.slp.assertResultsDisplayed
+
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: ONCE IN THE LIST OF ITEMS, ADD THE FIRST AVAILABLE ITEM TO CART FROM SLP BY USING THE STEPPER."
+      
+      - sleep:
+          duration: 2000
+          
+      - executeFunction:
+          name: mx.functions.slp.addToCartFirstProductListed
+      
+      - executeFunction:
+          name: functions.searchResultPage.getProductName
+
+      #STEP 4.1 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4.1: VERIFY THAT THE QUANTITY IN THE STEPPER IS THE EXPECTED ONE."
+ 
+      - executeFunction:
+          name: mx.functions.slp.assertItemQuantity
+          params:
+            - name: expectedQuantity
+              string: mx.data.prepurchase-1140.itemQuantity
+            - name: productName
+              string: ${productName}
+
+      # STEPS 5 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 5: Remove item from cart by reducing the amount of items to 0 from SLP."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.slp.decreaseProductQuantityBy
+          params:
+            - name: productName
+              string: ${productName}
+            - name: quantity
+              string: mx.data.prepurchase-1140.itemQuantity
+ 
+       # STEPS 5.1 -----------------------------------------------------------------------------------------------------
+              
+      - log:
+         message: "STEP 5.1: VERIFY THAT NO ITEMS APPEAR IN THE STEPPER."
+      
+      - executeFunction:
+          name: mx.functions.slp.assertItemQuantity
+          params:
+            - name: expectedQuantity
+              string: "Agregar"
+            - name: productName
+              string: ${productName}
+      # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_1140_SUCCESSFUL_EXECUTION
+          value: true
+
+ # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_1140_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"
+  

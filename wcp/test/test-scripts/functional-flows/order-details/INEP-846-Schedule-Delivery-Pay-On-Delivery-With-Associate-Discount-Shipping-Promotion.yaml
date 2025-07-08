@@ -1,0 +1,240 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-846
+#       Flow - MH: Scheduled Delivery - pay on delivery with associate discount + shipping promotion
+#    
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179465
+#
+#   JIRA STORY ID:
+#     https://jira.walmart.com/browse/INEP-336
+#
+#   JIRA TEST PLAN ID:
+#     https://jira.walmart.com/browse/INEP-442
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-846
+#
+#   JIRA SUB-TASK ID:
+#     https://jira.walmart.com/browse/INEP-785
+#   
+#   PRE-REQUISITE: Account with Associate membership.
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-846
+  tags: INEP-846, OPIF-179465, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: 'INEP-846: BEFORE SCENARIO START'
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+      - log: 'INEP-846: BEFORE SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH:  Scheduled Delivery - pay on delivery with associate discount + shipping promotion"
+    flow:
+      - log: 'INEP-846: MAIN SCENARIO START'
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API.
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail} , ${userPassword}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+      # Onboard to application.
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      # login to application.
+      - log:
+          message: "Login to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # <-- ${userEmail}, ${userPassword}
+
+     # Navigate to shop button and add products to cart.
+      - log:
+          message: "Navigate to cart and ensure Items are added to cart."
+          color: PURPLE_BOLD_BRIGHT 
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.shared
+
+      # Navigate to cart and ensure items are added to cart.
+      - log:
+          message: "Navigate to cart and ensure items are added to cart."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Reserve Express Pickup Slot
+      - log:
+          message: "Validate fulfillment method."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      - executeFunction:
+          name: functions.reserveATime.bookSlot
+          params:
+            - name: fufillment
+              string: data.global.deliveryText.delivery
+            - name: slotType
+              string: Standard
+
+      # Validate Minimum Order Fee not displayed for Subtotal
+      - executeFunction: 
+          name: functions.cartPage.moneyBox.assertFeeNotPresent
+          params:
+            - name: feeLabel
+              string: data.moneyBox.belowMinOrderFeeText
+
+      # Select continue to checkout.
+      - log:
+          message: "Navigate to ROP"
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+
+      # Select pay at store as payment method.
+      - log:
+          message: "Select Pay at Store as a payment method"
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction:
+          name: functions.checkoutPage.scrollDownToEditPaymentButton
+      - executeFunction:
+          name: functions.checkoutPage.selectPaymentMethod
+          params:
+            - name: payment
+              string: data.paymentMethod.payAtStore
+      - executeFunction:
+          name: functions.checkoutPage.validatePayAtStore
+      
+      # TODO: VALIDATE ASSOCIATE DISCOUNT + SHIPPING PROMOTIONS
+      # AN ASSOCIATE ACCOUNT REQUIRED
+      
+      # Place the order.
+      - log:
+          message: "Place the Order."
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction: 
+          name: functions.checkoutPage.tapPlaceOrderButton    
+
+      # Validate thankyou page.
+      - log:
+           message: "Validate Thankyou Page Header."
+           color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+           name: functions.thankYouPage.verifyThankYouPageDisplayed # RETURNS --> ${returnedOrderNumber}
+
+      # Navigate to ODP.
+      - log:
+          message: "Navigate to ODP."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.navigateToODPUseDeeplink
+
+      # Validate item is displayed in ODP.
+      - log:
+            message: "Validate correct item is displayed in ODP."
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+            name: functions.orderDetailPage.verifySectionDisplayed
+      - executeFunction:
+          name: functions.orderDetailPage.verifyDeliveryType
+          params:
+          - name: expectedDeliveryType
+            string: data.global.deliveryText.delivery
+
+      # Validate payment details is displayed in ODP.
+      - executeFunction:
+            name: functions.orderDetailPage.verifyItemDetails
+      - log:
+            message: "Validate Payment Details Displayed in ODP."   
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethodSection
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethod
+          params:
+          - name: paymentType
+            string: data.paymentMethod.payAtStore
+      - executeFunction:
+          name: functions.orderDetailPage.validateMoneybox
+      
+      # TODO: ADD VALIDATIONS ONCE WE HAVE AN ASSOCIATE ACCOUNT
+      # VALIDATIONS PENDING: ASSOCIATE DISCOUNT + SHIPPING PROMOTIONS
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-846: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-846: AFTER SCENARIO START'
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+      - log: 'INEP-846: AFTER SCENARIO END'

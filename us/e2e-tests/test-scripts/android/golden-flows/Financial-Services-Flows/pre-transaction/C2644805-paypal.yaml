@@ -1,0 +1,167 @@
+# Author : Suprinder Pujji
+
+general:
+  platform: android
+  tags: us-golden-flows, us-golden-flows-ecom-p1, C2644805, p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644805     
+  metadata:
+    - name: scenarioId
+      string: FS004
+      
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #  Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: paypal${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.android.flow039.createAccountPayload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.paypal.changePaymentsButton      
+
+      - executeFunction:
+          name: us.functions.paypal.logInPage
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHomeDeeplink
+          #us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: backupItem
+              string: 209452107
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+#              string: walmart://ip/595198706
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+           name: us.functions.cart.switchBetweenPickUpAndShipping
+           params:
+             - name: fulfillmentType
+               string: pickup
+
+      # Book slot
+      - executeFunction:
+          name: us.functions.cart.checkoutWithSlotBooking
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart
+            - name: slotDay
+              string: dayAfter
+            - name: slotIndex
+              string: 3
+
+      # # Enter mobile contact phone number (Already Phone numer entered - Uncomment this if phone number needs to enter)
+      # - executeFunction:
+      #     name: us.functions.checkout.enterMobileContact
+      #     params:
+      #       - name: phoneNumber
+      #         string: us.data.flow001.phoneNumber
+
+      #Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      - executeFunction:
+          name: us.functions.paypal.removePayPalCard
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

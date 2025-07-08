@@ -1,0 +1,249 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-373
+#       Flow - MH:  Place an unscheduled delivery order payment with paypal MSI
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179465
+#
+#   JIRA STORY ID:
+#      Https://jira.walmart.com/browse/INEP-336
+#
+#   JIRA TEST PLAN ID:
+#     https://jira.walmart.com/browse/INEP-442
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-373
+#
+#   JIRA SUB-TASK ID:
+#      Https://jira.walmart.com/browse/INEP-613
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-373
+  tags: INEP-373, OPIF-179465, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: 'INEP-373: BEFORE SCENARIO START'
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+
+      - log: 'INEP-373: BEFORE SCENARIO END'
+      
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Place an unscheduled delivery order payment with paypal"
+    flow:
+      - log: 'INEP-373: MAIN SCENARIO START'
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API.
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail} , ${userPassword}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+      # Onboard to application.
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      
+      # login to application.
+      - log:
+          message: "Login to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # <-- ${userEmail}, ${userPassword}
+
+     # Navigate to shop button and add products to cart.
+      - log:
+          message: "Navigate to cart and ensure Items are added to cart."
+          color: PURPLE_BOLD_BRIGHT 
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.unscheduled
+
+      # Navigate to cart and ensure items are added to cart.
+      - log:
+          message: "Navigate to cart and ensure items are added to cart."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+      - executeFunction:
+          name: functions.cartPage.scrollToTopOfCart           
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails  
+      - executeFunction:
+          name: functions.cartPage.validateMoneybox
+      - executeFunction:
+         name: functions.cartPage.tapOnSwitchButton
+     
+     # Validate MSI Interest Bottom Sheet on cart page
+      - log:
+          message: "Validate MSI button sheet"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateBankPromotionBottomSheet
+
+      # Validate fulfillment method.
+      - log:
+          message: "Validate fulfillment method."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.scheduledPickup.verifyCard
+
+      # Select continue to checkout.
+      - log:
+          message: "Navigate to ROP"
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+
+      # Select pay at store as payment method.
+      - log:
+          message: "Validating User is able to select Paypal"
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction:
+          name: functions.checkoutPage.selectPaymentMethod
+          params:
+            - name: payment
+              string: data.global.paypalText    
+      - executeFunction:
+          name: functions.checkoutPage.paymentMethod.applyPayPalPayment
+          params:
+          - name: payPalEmailId
+            string: data.default.payPalEmailId
+          - name: payPalPassword
+            string: data.default.payPalPassword
+          - name: lastFourDigits
+            string: data.default.payPalCredit.lastFourDigits
+      - executeFunction:
+          name: functions.checkoutPage.validateMsiOptionsDisplayed
+      - executeFunction:
+          name: functions.checkoutPage.selectMsiOption
+      
+      # Place the order.
+      - log:
+          message: "Place the Order."
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction: 
+          name: functions.checkoutPage.tapPlaceOrderButton    
+            
+      # Validate thankyou page.
+      - log:
+           message: "Validate Thankyou Page Header."
+           color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+           name: functions.thankYouPage.verifyThankYouPageDisplayed # RETURNS --> ${returnedOrderNumber}
+            
+      # Navigate to ODP.
+      - log:
+            message: "Navigate to ODP."
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.navigateToODPUseDeeplink
+            
+      # Validate item is displayed in ODP.
+      - log:
+            message: "Validate correct item is displayed in ODP."
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+            name: functions.orderDetailPage.verifySectionDisplayed
+      - executeFunction:
+          name: functions.orderDetailPage.verifyDeliveryType
+          params:
+          - name: expectedDeliveryType
+            string: data.global.deliveryText.delivery
+      
+      # Validate payment details is displayed in ODP.
+      - executeFunction:
+            name: functions.orderDetailPage.verifyItemDetails
+      - log:
+            message: "Validate Payment Details Displayed in ODP."   
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethodSection
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethod
+          params:
+          - name: paymentType
+            string: data.global.paypalText
+      - executeFunction:
+          name: functions.orderDetailPage.validateMoneybox
+      
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-373: MAIN SCENARIO END'
+         
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+  
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-373: AFTER SCENARIO START'
+
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+
+      - log: 'INEP-373: AFTER SCENARIO END'
+       

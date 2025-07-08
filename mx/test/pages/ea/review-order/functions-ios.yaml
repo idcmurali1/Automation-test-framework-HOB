@@ -1,0 +1,1158 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Feb/26/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertPageDisplayed
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.review-order.deliveryHeaderContainer
+          then:
+            - executeFunction:
+                name: mx.functions.utils.scrollToTop
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.review-order.pageTitle
+            - identifier: mx.mappings.ea.review-order.deliveryDetailsSection
+            - identifier: mx.mappings.ea.review-order.placeOrderButton
+          timeout: 30000
+      - log:
+          message: "Assertion Succeeded: Page is Displayed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: review-order.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts the selected delivery method, either home delivery or pickup. Other values given
+  #                 will fail the test.
+  # PARAM         ${expectedDeliveryMethod} [Mandatory] Delivery method to assert. Options: [ 'HomeDelivery' | 'PickupDelivery' ].
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertDeliveryMethod
+    platform: ios
+    flow:
+      - if:
+          condition: ${expectedDeliveryMethod} != 'HomeDelivery' && ${expectedDeliveryMethod} != 'PickupDelivery'
+          then:
+            - failTest:
+                message: "Invalid Delivery Method Option provided: '${expectedDeliveryMethod}'"
+      - log:
+          message: "Assert For: '${expectedDeliveryMethod}'"
+          color: CYAN
+
+      # Home Delivery Assertion...
+      - if:
+          condition: ${expectedDeliveryMethod} == 'HomeDelivery'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.ea.review-order.homeDeliveryIsSelected
+                then:
+                  - log:
+                      message: "Assertion Succeeded: Home Delivery Method is Selected."
+                      color: GREEN_BOLD
+                else:
+                  - failTest:
+                      message: "Failed: Home Delivery Method is not Selected."
+
+      # Pickup Delivery Assertion...
+      - if:
+          condition: ${expectedDeliveryMethod} == 'PickupDelivery'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.ea.review-order.pickupDeliveryIsSelected
+                then:
+                  - log:
+                      message: "Assertion Succeeded: Pickup Delivery Method is Selected."
+                      color: GREEN_BOLD
+                else:
+                  - failTest:
+                      message: "Failed: Pickup Delivery Method is not Selected."
+      - log:
+          message: "End function review-order.assertDeliveryMethod"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedDeliveryDate} This is the displayed delivery date located at the top. Beware, this date changes.
+  #                                     after selecting the payment method.
+  # NOTE:     This function is ONLY for orders without multiple delivery sections.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.getSingleDeliveryDate
+    platform: ios
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.review-order.deliveryDate
+          storeIn: returnedDeliveryDate
+      - executeNode:
+           file: mx/test/helpers/review-order/getDeliveryDateEAForiOS.js
+           args:
+             - value: ${returnedDeliveryDate}
+           getResponse:
+               storeIn: returnedDeliveryDate
+      - log:
+          message: "Returned Delivery Date: '${returnedDeliveryDate}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: review-order.getSingleDeliveryDate"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts the selected delivery date collected from the one displayed in Cart.
+  # NOTE:         This function is ONLY for orders without multiple delivery sections.
+  # PARAM         ${expectedDeliveryDate} [Mandatory] Delivery date to assert (the one from Cart page).
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertSingleDeliveryDate
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Delivery Date: '${expectedDeliveryDate}'"
+          color: CYAN
+
+      # Getting and parsing the displayed Delivery Date...
+      - getString:
+          identifier: mx.mappings.ea.review-order.deliveryDate
+          storeIn: displayedDeliveryDate
+      - executeNode:
+          file: mx/test/helpers/review-order/getDeliveryDateEAForiOS.js
+          args:
+            - value: ${displayedDeliveryDate}
+          getResponse:
+            storeIn: displayedDeliveryDate
+      - log:
+          message: "Displayed Delivery Date: '${displayedDeliveryDate}'"
+          color: GREEN_BOLD
+
+      # Comparing Expected vs Displayed...
+      - if:
+          condition: ${expectedDeliveryDate} == ${displayedDeliveryDate}
+          then:
+            - log:
+                message: "Assertion Succeeded: Correct Delivery Date."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Incorrect Delivery Date."
+      - log:
+          message: "End function review-order.assertSingleDeliveryDate"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts the Home Delivery Address NAME and not the actual address.
+  # PARAM         ${expectedHomeAddressName} [Mandatory] Address Name to validate.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertHomeAddressName
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Home Address Name: '${expectedHomeAddressName}'"
+          color: CYAN
+      - if:
+          identifier:
+            value:
+              - identifier: mx.mappings.ea.review-order.homeAddressName
+                contains: ${expectedHomeAddressName}
+          then:
+            - log:
+                message: "Assertion Succeeded: Correct Home Address Name."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Incorrect Home Address Name."
+      - log:
+          message: "End function review-order.assertHomeAddressName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method verifies the selected user address inside the Delivery Details section by full string.
+  # NOTE:         Home Delivery must be selected in order to perform assertion correctly.
+  # PARAMS:       ${addressFullString}  [Mandatory]  Full string containing the address to be validated.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertHomeAddressByFullString
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Address Full String: '${addressFullString}'"
+          color: CYAN
+
+      # Retrieving displayed Address...
+      - getString:
+          identifier: mx.mappings.ea.review-order.storeOrHomeAddress
+          storeIn: displayedAddress
+      - log:
+          message: "Displayed Address: '${displayedAddress}'"
+          color: GREEN_BOLD
+
+      # Assertion by Full String...
+      - if:
+          identifier:
+            value:
+              - identifier: mx.mappings.ea.review-order.storeOrHomeAddress
+                contains: ${addressFullString}
+          then:
+            - log:
+                message: "Assertion Succeeded: Home Address by Full String is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Home Address by Full String is not correct."
+      - log:
+          message: "End function: review-order.assertHomeAddressByFullString"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method verifies the selected user address inside the Delivery Details section by its individual values.
+  # NOTE:         Home Delivery must be selected in order to perform assertion correctly.
+  # PARAMS:
+  #               ${streetName}       [Mandatory]   Name of the street to be validated.
+  #               ${exteriorNumber}   [Mandatory]   Exterior number to be validated.
+  #               ${city}             [Mandatory]   City to be validated.
+  #               ${state}            [Mandatory]   State to be validated.
+  #               ${zipCode}          [Mandatory]   ZIP Code to be validated.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertHomeAddressByIndividualValues
+    platform: ios
+    flow:
+      # Using '\e[36m' to print in CYAN and '\e[0m' to reset color, to simplify logs.
+      - log: "\e[36mExpected StreetName: '${streetName}'\e[0m"
+      - log: "\e[36mExpected ExteriorNumber: '${exteriorNumber}'\e[0m"
+      - log: "\e[36mExpected City: '${city}'\e[0m"
+      - log: "\e[36mExpected State: '${state}'\e[0m"
+      - log: "\e[36mExpected ZipCode: '${zipCode}'\e[0m"
+
+      # Retrieving displayed Address...
+      - getString:
+          identifier: mx.mappings.ea.review-order.storeOrHomeAddress
+          storeIn: displayedAddress
+      - log:
+          message: "Displayed Address: '${displayedAddress}'"
+          color: GREEN_BOLD
+
+      # Assertion by Individual Values...
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAll.js
+          args:
+            - value: ${displayedAddress}
+            - value: ${streetName}, ${exteriorNumber}, ${city}, ${state}, ${zipCode}
+          getResponse:
+            storeIn: isAddressCorrect
+      - if:
+          condition: ${isAddressCorrect} == true
+          then:
+            - log:
+                message: "Home Address by individual values is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Expected Home address not contained in: '${displayedAddress}'"
+      - log:
+          message: "End function: review-order.assertHomeAddressByIndividualValues"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method verifies the selected store address inside the Delivery Details section by full string.
+  # NOTE:         Pickup Delivery must be selected in order to perform assertion correctly.
+  # PARAMS:       ${addressFullString}  [Mandatory]  Full string containing the address to be validated.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertStoreAddressByFullString
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Address Full String: '${addressFullString}'"
+          color: CYAN
+
+      # Retrieving displayed Address...
+      - getString:
+          identifier: mx.mappings.ea.review-order.storeOrHomeAddress
+          storeIn: displayedAddress
+      - log:
+          message: "Displayed Address: '${displayedAddress}'"
+          color: GREEN_BOLD
+
+      # Assertion by Full String...
+      - if:
+          identifier:
+            text:
+              - identifier: mx.mappings.ea.review-order.storeOrHomeAddress
+                contains: ${addressFullString}
+          then:
+            - log:
+                message: "Assertion Succeeded: Store Address by Full String is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Store Address by Full String is not correct."
+      - log:
+          message: "End function: review-order.assertStoreAddressByFullString"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method verifies the selected Pickup Person inside the Delivery Details section by full name.
+  # NOTE:         Pickup Delivery must be selected in order to perform assertion correctly.
+  # NOTE:         If the full name is not provided, function fails.
+  # PARAMS:       ${pickupPersonName}  [Mandatory]  Pickup Person's full name.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertPickupPerson
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Pickup Person Name: '${pickupPersonName}'"
+          color: CYAN
+      - if:
+          identifier:
+            label:
+              - identifier: mx.mappings.ea.review-order.selectedPickupPerson
+                equals: ${pickupPersonName}
+          then:
+            - log:
+                message: "Assertion Succeeded: Selected Pickup Person is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Selected Pickup Person is not correct."
+      - log:
+          message: "End function: review-order.assertPickupPerson"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.tapAddOrChangePaymentMethodButton
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.review-order.addOrChangePaymentMethodButton
+      - log:
+          message: "End function: review-order.tapAddPaymentMethodButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertInStorePaymentMethodIsSelected
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.inStorePaymentMethodIsSelected
+          then:
+            - log:
+                message: "Assertion Succeeded: In-Store Payment Method is Selected."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: In-Store Payment Method is not displayed or was not Selected properly."
+      - log:
+          message: "End function: review-order.assertInStorePaymentMethodIsSelected"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${userPhoneNumber} [Mandatory] User's phone number to input.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.enterCellphoneNumber
+    platform: ios
+    flow:
+    - log:
+        message: "Phone number: '${userPhoneNumber}'"
+        color: CYAN
+    - enterText:
+        identifier: mx.mappings.ea.review-order.phoneNumberInputField
+        string: ${userPhoneNumber}
+        clickFirst: true
+        clearField: true
+    - click:
+        identifier: mx.mappings.review-order.payment-section.listoButton
+
+    # NOTE: Sometimes the last digit does not get entered correctly.
+    # Verifying if phone number's last digit was entered correctly...
+    - if:
+        identifier:
+          present:
+            - identifier: mx.mappings.ea.review-order.invalidPhoneNumberLabel
+        then:
+          - log:
+              message: "There was an error trying to enter the phone number..."
+              color: GREEN_BOLD
+          - executeNode:
+              file: mx/test/helpers/review-order/getLastDigitFromPhoneNumber.js
+              args:
+                - value: ${userPhoneNumber}
+              getResponse:
+                  storeIn: phoneNumberLastDigit
+          - enterText:
+              identifier: mx.mappings.ea.review-order.phoneNumberInputField
+              string: ${phoneNumberLastDigit}
+              clearField: false
+          - click:
+              identifier: mx.mappings.review-order.payment-section.listoButton
+          - verifyIdentifier:
+              notPresent:
+                - identifier: mx.mappings.ea.review-order.invalidPhoneNumberLabel
+          - log:
+              message: "Success: Phone Number was entered correctly."
+              color: GREEN_BOLD
+    - log:
+        message: "End function: review-order.enterCellphoneNumber"
+        color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${expectedDeliveryFee}  [Mandatory]   Delivery fee to assert, must be a cleaned numeric value.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertDeliveryFee
+    platform: ios
+    flow:
+      - log:
+          message: "Expected delivery fee: '${expectedDeliveryFee}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.review-order.deliveryFeeValue
+          storeIn: displayedDeliveryFee
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedDeliveryFee}
+           getResponse:
+               storeIn: displayedDeliveryFee
+      - log:
+          message: "Displayed Delivery Fee: '${displayedDeliveryFee}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${displayedDeliveryFee} == ${expectedDeliveryFee}
+          then:
+            - log:
+                message: "Assertion Succeeded: Delivery Fee is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Delivery Fee is not present or not correct, displayed value: '${displayedDeliveryFee}'"
+      - log:
+          message: "End function: review-order.assertDeliveryFee"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function gets the displayed delivery fee
+  # RETURN: ${returnedDeliveryFee}  Delivery fee value displayed in label.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.getDisplayedDeliveryFee
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.deliveryFeeNotChargedLabel
+          then:
+            - log:
+                message: "Delivery Fee is not being charged for this purchase, returning '0.00'..."
+                color: GREEN_BOLD
+            - storeIn:
+                key: returnedDeliveryFee
+                value: 0.00
+          else:
+            - getString:
+                identifier: mx.mappings.ea.review-order.deliveryFeeValue
+                storeIn: returnedDeliveryFee
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceString.js
+                args:
+                  - value: ${returnedDeliveryFee}
+                getResponse:
+                    storeIn: returnedDeliveryFee
+      - log:
+          message: "Delivery Fee got: '${returnedDeliveryFee}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: review-order.getDisplayedDeliveryFee"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${expectedDeliveryFee}  [Mandatory]   Delivery fee to assert, must be a cleaned numeric value.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertDeliveryFeeNotCharged
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.deliveryFeeNotChargedLabel
+          then:
+            - log:
+                message: "Assertion Succeeded: Delivery Fee is not charged."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Delivery Fee is being charged or label is not visible/displayed."
+      - log:
+          message: "End function: review-order.assertDeliveryFeeNotCharged"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${expectedSubtotal}   [Mandatory]   Expected subtotal to assert.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertSubtotal
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Subtotal: '${expectedSubtotal}'"
+          color: CYAN
+
+      # Get displayed Subtotal.
+      - getString:
+          identifier: mx.mappings.ea.review-order.subtotalValue
+          storeIn: displayedSubtotal
+
+      # Clean the subtotal obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedSubtotal}
+           getResponse:
+               storeIn: displayedSubtotal
+      - log:
+          message: "Displayed Subtotal: '${displayedSubtotal}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedSubtotal} == ${expectedSubtotal}
+          then:
+            - log:
+                message: "Successful Assertion: Subtotal is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Subtotal is incorrect."
+      - log:
+          message: "End function: review-order.assertSubtotal"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the correct original subtotal BEFORE discounts. This element appears if there's
+  #                 at least one product with discount in the cart.
+  # PARAM:        ${expectedOriginalSubtotal}   [Mandatory]   Expected original subtotal to assert.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertSubtotalBeforeDiscounts
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Subtotal before discounts: '${expectedOriginalSubtotal}'"
+          color: CYAN
+
+      # Get displayed Subtotal before discounts.
+      - getString:
+          identifier: mx.mappings.ea.review-order.subtotalValueBeforeDiscount
+          storeIn: displayedOriginalSubtotal
+
+      # Clean the subtotal obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedOriginalSubtotal}
+           getResponse:
+               storeIn: displayedOriginalSubtotal
+      - log:
+          message: "Displayed Subtotal before discounts: '${displayedOriginalSubtotal}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedOriginalSubtotal} == ${expectedOriginalSubtotal}
+          then:
+            - log:
+                message: "Successful Assertion: Subtotal before discounts is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Subtotal is incorrect."
+      - log:
+          message: "End function: review-order.assertSubtotalBeforeDiscounts"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts savings amount for purchasing discounted products (green label next to 'Ahorras').
+  #                 Only when there's at least one product with discount in the cart.
+  # PARAM:        ${expectedSavingsAmount}   [Mandatory]   Expected Savings amount to be displayed.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertSavingsAmount
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Savings Amount: '${expectedSavingsAmount}'"
+          color: CYAN
+
+      # Get displayed Savings Amount before discounts.
+      - getString:
+          identifier: mx.mappings.ea.review-order.savingsAmountValue
+          storeIn: displayedSavingsAmount
+
+      # Clean the Savings Amount obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedSavingsAmount}
+           getResponse:
+               storeIn: displayedSavingsAmount
+      - log:
+          message: "Displayed Savings Amount: '${displayedSavingsAmount}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedSavingsAmount} == ${expectedSavingsAmount}
+          then:
+            - log:
+                message: "Successful Assertion: Savings Amount is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Savings Amount is incorrect."
+      - log:
+          message: "End function: review-order.assertSavingsAmount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the correct original subtotal AFTER discounts. This element appears if there's
+  #                 at least one product with discount in the cart.
+  # PARAM:        ${expectedSubtotalAfterDiscount}   [Mandatory]   Expected subtotal after discount to assert.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertSubtotalAfterDiscounts
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Subtotal after discounts: '${expectedSubtotalAfterDiscount}'"
+          color: CYAN
+
+      # Get displayed Subtotal after discounts.
+      - getString:
+          identifier: mx.mappings.ea.review-order.subtotalValueAfterDiscount
+          storeIn: displayedSubtotalAfterDiscount
+
+      # Clean the subtotal obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedSubtotalAfterDiscount}
+           getResponse:
+               storeIn: displayedSubtotalAfterDiscount
+      - log:
+          message: "Displayed Subtotal after discounts: '${displayedSubtotalAfterDiscount}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedSubtotalAfterDiscount} == ${expectedSubtotalAfterDiscount}
+          then:
+            - log:
+                message: "Successful Assertion: Subtotal after discount is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Subtotal after discount is incorrect."
+      - log:
+          message: "End function: review-order.assertSubtotalAfterDiscounts"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts whether the displayed estimated total in the Details section is equal to the given estimated total.
+  # PARAM:        ${expectedEstimatedTotal}  [Mandatory]  Estimated total to assert against.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertEstimatedTotalFromDetailsSection
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Estimated Total: '${expectedEstimatedTotal}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.review-order.estimatedTotalInDetailsSection
+          storeIn: displayedEstimatedTotal
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedEstimatedTotal}
+           getResponse:
+               storeIn: displayedEstimatedTotal
+      - log:
+          message: "Displayed Estimated Total: '${displayedEstimatedTotal}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${displayedEstimatedTotal} == ${expectedEstimatedTotal}
+          then:
+            - log:
+                message: "Successful Assertion: Estimated Total from details section is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Estimated Total from details section is incorrect."
+      - log:
+          message: "End function: review-order.assertEstimatedTotalFromDetailsSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts whether the displayed estimated total inside the Continue button section isß equal to the given estimated total.
+  # PARAM:        ${expectedEstimatedTotal}  [Mandatory]  Estimated total to assert against.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.assertEstimatedTotalFromButton
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Estimated Total: '${expectedEstimatedTotal}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.review-order.estimatedTotalInsideButtonSection
+          storeIn: displayedEstimatedTotal
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedEstimatedTotal}
+           getResponse:
+               storeIn: displayedEstimatedTotal
+      - log:
+          message: "Displayed Estimated Total: '${displayedEstimatedTotal}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${displayedEstimatedTotal} == ${expectedEstimatedTotal}
+          then:
+            - log:
+                message: "Successful Assertion: Estimated Total from button section is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Estimated Total from button section is incorrect."
+      - log:
+          message: "End function: review-order.assertEstimatedTotalFromButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the total products count in the delivery details section (at the very top of the page).
+  # PARAMS:       ${expectedProductsCount}  [Mandatory]  Expected products count.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.review-order.assertProductsCountInDeliveryDetailsSection
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Product Count: '${expectedProductsCount}'"
+          color: CYAN
+
+      # Retrieving the displayed label...
+      - getString:
+          identifier: mx.mappings.ea.review-order.productsCountInDeliveryDetailsSection
+          storeIn: displayedQuantity
+      - log:
+          message: "Displayed Products Count label: '${displayedQuantity}'"
+          color: GREEN_BOLD
+
+      # Comparing the expected vs the displayed...
+      - if:
+          identifier:
+            label:
+              - identifier: mx.mappings.ea.review-order.productsCountInDeliveryDetailsSection
+                contains: ", ${expectedProductsCount} artículo"
+          then:
+            - log:
+                message: "Assertion Succeeded: Products Count is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Products Count is not correct."
+      - log:
+          message: "End function: review-order.assertProductsCountInDeliveryDetailsSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function scrolls down or up to a specific section of review-order page.
+  # NOTE:         This is a helper for the 'scrollDownToSection' and 'scrollUpToSection' functions.
+  # PARAMS:       ${mapping}    [Mandatory]  Mapping of the section to scroll into.
+  #               ${direction}  [Mandatory]  Which direction to scroll. [ 'up' | 'down' ]
+  - name: mx.functions.ea.review-order.scrollToSectionByMapping
+    platform: ios
+    flow:
+      - log:
+          message: "Element to scroll into: '${mapping}'"
+          color: CYAN
+      - log:
+          message: "Direction: '${direction}'"
+          color: CYAN
+
+      # This scroll is needed for better performance...
+      - if:
+          condition: ${direction} == 'up'
+          then:
+            - scroll:
+                direction: down
+                scrollLimit: 1
+                wait: 1000
+          else:
+            - scroll:
+                direction: up
+                scrollLimit: 1
+                wait: 1000
+
+      # Performing scroll...
+      - scroll:
+          direction: ${direction}
+          scrollLimit: 12
+          wait: 2000
+          position: center
+          untilIdentifier: ${mapping}
+      - verifyIdentifier:
+          visible:
+            - identifier: ${mapping}
+              value: 'true'
+      - log:
+          message: "End function: review-order.scrollToSectionByMapping"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method scrolls down to the specified Section on param. These options are not used by text.
+  # NOTE:         This is a helper for the 'scrollDownToSection' and 'scrollUpToSection' functions.
+  # PARAM:        ${sectionOption}  [Mandatory]  Name of section to scroll into (NOT the one displayed on page).
+  # OPTIONS:                        [ 'Payment' | 'Invoice' | 'PhoneNumber' | 'Totals' ].
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.review-order.scrollDownToSection
+    platform: ios
+    flow:
+      - log:
+          message: "Section to scroll into: '${sectionOption}'"
+          color: CYAN
+      - if:
+          condition: ${sectionOption} != 'Payment' && ${sectionOption} != 'Invoice' && ${sectionOption} != 'PhoneNumber' && ${sectionOption} != 'Totals'
+          then:
+            - failTest:
+                message: "Invalid Section Option provided: '${sectionOption}'"
+
+      # Setting scroll direction...
+      - storeIn:
+          key: direction
+          value: down
+
+      # Scrolling down to Payment section...
+      - if:
+          condition: ${sectionOption} == 'Payment'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.paymentSectionContainer
+
+      # Scrolling down to Invoice section...
+      - if:
+          condition: ${sectionOption} == 'Invoice'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.invoiceSectionContainer
+
+      # Scrolling down to Phone Number section...
+      - if:
+          condition: ${sectionOption} == 'PhoneNumber'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.phoneNumberSectionContainer
+
+      # Scrolling down to Totals section...
+      - if:
+          condition: ${sectionOption} == 'Totals'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.totalsSectionContainer
+      - log:
+          message: "End function: review-order.scrollDownToSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method scrolls up to the specified Section on param. These options are not used by text.
+  # NOTE:         The values specified in the 'wait' attributes of the scrolls must not be changed.
+  # NOTE:         The Totals Section is not included because it's the section at the bottom, thus it cannot be scrolled up into.
+  # PARAM:        ${sectionOption}  [Mandatory]  Name of section to scroll into (NOT the one displayed on page).
+  # OPTIONS:                        [ 'Payment' | 'Invoice' | 'PhoneNumber' | 'Delivery' ].
+  - name: mx.functions.ea.review-order.scrollUpToSection
+    platform: ios
+    flow:
+      - log:
+          message: "Section to scroll into: '${sectionOption}'"
+          color: CYAN
+      - if:
+          condition: ${sectionOption} != 'Payment' && ${sectionOption} != 'Invoice' && ${sectionOption} != 'PhoneNumber' && ${sectionOption} != 'Delivery'
+          then:
+            - failTest:
+                message: "Invalid Section Option provided: '${sectionOption}'"
+
+      # Setting scroll direction...
+      - storeIn:
+          key: direction
+          value: up
+
+      # Scrolling down to Delivery section...
+      - if:
+          condition: ${sectionOption} == 'Delivery'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.deliverySectionContainer
+
+      # Scrolling down to Payment section...
+      - if:
+          condition: ${sectionOption} == 'Payment'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.paymentSectionContainer
+
+      # Scrolling down to Invoice section...
+      - if:
+          condition: ${sectionOption} == 'Invoice'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.invoiceSectionContainer
+
+      # Scrolling down to Phone Number section...
+      - if:
+          condition: ${sectionOption} == 'PhoneNumber'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.scrollToSectionByMapping
+                params:
+                  - name: mapping
+                    string: mx.mappings.ea.review-order.phoneNumberSectionContainer
+      - log:
+          message: "End function: review-order.scrollUpToSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the products count next to the subtotal label below the products section in cart.
+  # PARAMS:       ${expectedProductsCount}  [Mandatory]  Product Count expected to be displayed.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.review-order.assertProductsCountInSubtotalLabel
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Product Count: '${expectedProductsCount}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.review-order.productsCountInSubtotalLabel
+          storeIn: displayedProductsCount
+      - log:
+          message: "Displayed Product Count: '${displayedProductsCount}'"
+          color: GREEN_BOLD
+      - verifyIdentifier:
+          label:
+            - identifier: mx.mappings.ea.review-order.productsCountInSubtotalLabel
+              contains: "(${expectedProductsCount} artículo"
+      - log:
+          message: "Assertion Succeeded: Products Count is correct"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: review-order.assertProductsCountInSubtotalLabel"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:
+  #   ${returnedOrderedDate}  The ordered date of the order if needed in a future assertion.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.tapPlaceOrder
+    platform: ios
+    flow:
+    - click:
+        identifier: mx.mappings.ea.review-order.placeOrderButton
+    - executeNode:
+        file: mx/test/helpers/utils/getTodaysDateAsStringForAssertion.js
+        getResponse:
+          storeIn: returnedOrderedDate
+    - log:
+        message: "Ordered Date '${returnedOrderedDate}' saved in 'returnedOrderedDate'."
+        color: GREEN_BOLD
+    - log:
+        message: "End function: review-order.tapPlaceOrder"
+        color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.review-order.openProductsDetailsPopup
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.review-order.openProductDetailsPopupButton
+      - log:
+          message: "End function: review-order.openProductsDetailsPopup"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.products-details-popup.assertPopupDisplayed
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.review-order.products-details-popup.title
+            - identifier: mx.mappings.ea.review-order.products-details-popup.closeButton
+            - identifier: mx.mappings.ea.review-order.products-details-popup.container
+      - log:
+          message: "End function: review-order.products-details-popup.assertPopupDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${expectedProductsCount}  [Mandatory]   Expected products count.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.review-order.products-details-popup.assertProductsCount
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Products Count: '${expectedProductsCount}'"
+          color: CYAN
+
+      # Retrieving the displayed label...
+      - getString:
+          identifier: mx.mappings.ea.review-order.products-details-popup.productsCount
+          storeIn: displayedQuantity
+      - log:
+          message: "Displayed Products Count label: '${displayedQuantity}'"
+          color: GREEN_BOLD
+
+      # Comparing the expected vs the displayed...
+      - if:
+          identifier:
+            label:
+              - identifier: mx.mappings.ea.review-order.products-details-popup.productsCount
+                contains: "${expectedProductsCount} artículo"
+          then:
+            - log:
+                message: "Assertion Succeeded: Products Count is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Products Count is not correct."
+      - log:
+          message: "End function: review-order.products-details-popup.assertProductsCount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${productName}  [Mandatory]   Expected product name to be listed.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.review-order.products-details-popup.assertProductListed
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Product Name: '${productName}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.products-details-popup.productByName # <--PARAM--${productName}
+          then:
+            - log:
+                message: "Assertion Succeeded: Product is listed."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Product is not listed."
+      - log:
+          message: "End function: review-order.products-details-popup.assertProductListed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.review-order.products-details-popup.tapClose
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.review-order.products-details-popup.closeButton
+      - log:
+          message: "End function: review-order.products-details-popup.tapClose"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.review-order.tapBack
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.review-order.backButton
+      - log:
+          message: "End function: ea.review-order.tapBack"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.review-order.almost-done-popup.exitPayment
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.review-order.almost-done-popup.exitPaymentButton
+      - log:
+          message: "End function: ea.review-order.almost-done-popup.exitPayment"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.review-order.almost-done-popup.tapExitPaymentIfDisplayed
+    platform: ios
+    flow:
+      - if: 
+          identifier:
+            present:
+             - identifier: mx.mappings.ea.review-order.almost-done-popup.exitPaymentButton
+          then:
+            - click:
+                identifier: mx.mappings.ea.review-order.almost-done-popup.exitPaymentButton
+      - log:
+          message: "End function:ea.review-order.almost-done-popup.tapExitPaymentIfDisplayed"
+          color: BLUE

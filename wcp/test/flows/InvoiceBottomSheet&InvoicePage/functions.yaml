@@ -1,0 +1,276 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+# Description: This function will validate and select existing invoice
+  # Param validateInvioceName [Optional] true -> save name, false/null -> skip save name function
+  - name: functions.checkoutPage.selectExistingInvoiceFromSheet
+    flow:  
+      - if:
+          condition: ${market} == 'US' || ${market} == 'CA'
+          then:
+            - log: 
+                message: "Invoice is not required for CA  market"
+                color: RED
+          else:
+            - executeFunction:
+                name: functions.checkoutPage.isInvoiceBottomSheetDisplayed
+            - if:
+                condition: ${returnedIsDisplayed}
+                then:   
+                  - if:
+                     condition: ${validateInvioceName}
+                     then:
+                       - executeFunction:
+                           name: functions.invoiceBottomSheet.getTaxPayerName
+            - executeFunction:
+                name: functions.checkoutPage.verifyExistingInvoice
+            - executeFunction:
+                name: functions.checkoutPage.selectExistingInvoice
+            - executeFunction:
+                name: functions.invoiceBottomSheet.saveExistingInvoice
+      
+      
+      - log: 
+          message: "End flow: checkoutPage.selectExistingInvoiceFromSheet"
+          color: BLUE
+
+
+#--------------------------------------------------------------------------------------------------------------------
+# Description: This function add new invoice
+# Param [Mandatory] ${invoiceFirstName}
+#       [Mandatory] ${invoiceLastName}
+#       [Mandatory] ${invoiceMiddleName}
+#       [Mandatory] ${invoiceRfc}
+#       [Mandatory] ${invoiceTaxRegime}
+#       [Mandatory] ${invoiceCFDI}
+#       [Mandatory] ${invoiceEmail}
+#       [Mandatort] ${invoicePostalCode}
+#       [Mandatory] ${invoiceSteetAddress}
+#       [Mandatory] ${invoiceAppartment}
+#       [Mandatory] ${invoiceColoniaName}
+#       [Mandatory] ${invoicePhoneCountryCode}
+#       [Optional]  ${validateMandatoryField}
+#
+  - name: functions.invoicePage.addNewInvoice  #Invoice page will not have a lot of functions, so write iOS and Android functions in one file to avoid creating too many files
+                          #Separate this function to increase the function maintainability and readability 
+    flow:
+      - executeFunction:
+          name: functions.invoiceBottomSheet.selecAddNewAddressLink
+      - executeFunction:
+          name: functions.invoicePage.selectPersonType
+          params:
+            - name: PersonType
+              string: data.global.PersonType
+      - executeFunction:
+          name: functions.invoicePage.enterFirstName # <-- ${invoiceFirstName}
+      - executeFunction:
+          name: functions.invoicePage.enterLastName # <-- ${invoiceLastName}
+      - executeFunction:
+          name: functions.invoicePage.enterMiddleName # <-- ${invoiceMiddleName}
+      - executeFunction:
+          name: functions.invoicePage.enterRFC # <-- ${invoiceRfc}
+      - executeFunction:
+          name: functions.invoicePage.selectTaxRegime # <-- ${invoiceTaxRegime}
+      - executeFunction:
+          name: functions.invoicePage.selectCfdi # <-- ${invoiceCFDI}
+      - executeFunction:
+          name: functions.invoicePage.enterInvoiceEmail # <-- ${invoiceEmail}
+      - executeFunction:
+          name: functions.invoicePage.enterPostalCode # <-- ${invoicePostalCode}
+      - executeFunction:
+          name: functions.invoicePage.invoiceStreetAddress # <-- ${invoiceSteetAddress}
+      - executeFunction:
+          name: functions.invoicePage.invoiceApartment # <-- ${invoiceAppartment}
+      - if:
+          condition: ${validateMandatoryField}
+          then:
+            - executeFunction:
+                name: functions.invoiceBottomSheet.validateMandatoryFields          
+      - executeFunction:
+          name: functions.invoicePage.selectColonia # <-- ${invoiceColoniaName}
+      - executeFunction:
+          name: functions.invoicePage.enterInvoicePhoneCountryCode # <-- ${invoicePhoneCountryCode}
+      - executeFunction:
+          name: functions.invoicePage.enterInvoicePhoneNumber
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: functions.invoicePage.checkProfileCheckbox
+      - executeFunction:
+          name: functions.invoicePage.tapOnSaveButton
+      - if:
+          condition: ${market} == 'MX' && ${platform} == 'Android'
+          then:
+              - executeFunction:
+                  name: functions.invoicePage.handleInvoiceMessageWhenAddNewInvoice
+    #   - executeFunction:
+    #       name: functions.invoiceBottomSheet.saveExistingInvoice
+      - log: 
+          message: "End flow: invoicePage.addNewInvoice"
+          color: BLUE
+        
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function handle the invoice messaige after add new invoice
+  # Param
+  - name: functions.invoicePage.handleInvoiceMessageWhenAddNewInvoice
+    platform: android
+    flow:
+      - if:
+            identifier:
+                present:
+                - identifier: invoiceBottomSheet.invoiceMigratedMessage
+            then:
+                - executeFunction:
+                    name: functions.checkoutPage.tapInvoiceEditButton
+                - executeFunction:
+                    name: functions.invoicePage.taxDropdown
+                - executeFunction:
+                    name: functions.invoicePage.CFDIDropDown
+                - executeFunction:
+                    name: functions.invoicePage.scrollDownToSaveButton
+                - executeFunction:
+                    name: functions.invoicePage.colonyDropDown
+                - executeFunction:
+                    name: functions.invoicePage.enterInvoicePhoneCountryCode
+                - executeFunction:
+                    name: functions.invoicePage.checkProfileCheckbox
+                - executeFunction:
+                    name: functions.invoicePage.tapOnSaveButton
+      - log: 
+            message: "End flow: invoicePage.handleInvoiceMessageWhenAddNewInvoice"
+            color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+# Description: This function add new invoice
+# Param [Mandatory] invoiceFirstName
+#       [Mandatory] invoiceLastName
+#       [Mandatory] invoiceMiddleName
+#       [Mandatory] RFC
+#       [Mandatory] taxRegime
+#       [Mandatory] CFDI
+#       [Mandatory] invoiceEmail
+#       [Mandatort] postalCode 
+#       [Mandatory] invoiceSteetAddress
+#       [Mandatory] invoiceAppartment
+#       [Mandatory] coloniaName
+#       [Mandatory] invoicePhoneNumber
+#
+#   - name: functions.invoicePage.addNewInvoice
+#     platform: ios
+#     flow:
+#         - executeFunction:
+#             name: functions.invoiceBottomSheet.selecAddNewAddressLink
+#         - executeFunction:
+#             name: functions.invoicePage.enterFirstName
+#         - executeFunction:
+#             name: functions.invoicePage.enterLastName
+#         - executeFunction:
+#             name: functions.invoicePage.enterMiddleName
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.enterRFC
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.taxDropdown
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.CFDIDropDown
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.enterInvoiceEmail
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.scrollDownToSaveButton
+#         - executeFunction:
+#             name: functions.invoicePage.enterPostalCode
+#         - executeFunction:
+#             name: functions.invoicePage.invoiceStreetAddress
+#         - executeFunction:
+#             name: functions.invoicePage.invoiceApartment
+#         - executeFunction:
+#             name: functions.invoicePage.colonyDropDown
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.scrollDownToSaveButton
+#         - executeFunction:
+#             name: functions.invoicePage.enterInvoicePhoneCountryCode
+#         - executeFunction:
+#             name: functions.invoicePage.enterInvoicePhoneNumber
+#         - executeFunction:
+#             name: functions.checkout.hideKeyboard
+#         - executeFunction:
+#             name: functions.invoicePage.checkProfileCheckbox
+#         - executeFunction:
+#             name: functions.invoicePage.tapOnSaveButton
+#         - executeFunction:
+#             name: functions.invoiceBottomSheet.saveExistingInvoice
+#         - log: 
+#             message: "End flow: invoicePage.addNewInvoice"
+#             color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+# Description: This function edit invoice details
+# Param [Mandatory] ${invoiceFirstName}
+#       [Mandatory] ${invoiceLastName}
+#       [Mandatory] ${invoiceMiddleName}
+#       [Mandatory] ${invoiceRfc}
+#       [Mandatory] ${invoiceTaxRegime}
+#       [Mandatory] ${invoiceCFDI}
+#       [Mandatory] ${invoiceEmail}
+#       [Mandatory] ${invoicePostalCode}
+#       [Mandatory] ${invoiceSteetAddress}
+#       [Mandatory] ${invoiceAppartment}
+#       [Mandatory] ${invoiceColoniaName}
+#       [Mandatory] ${invoicePhoneCountryCode}
+#
+  - name: functions.invoicePage.editInvoiceDetails 
+    flow:
+      - executeFunction:
+          name: functions.invoiceBottomSheet.selecEditAddressLink
+      - executeFunction:
+          name: functions.invoicePage.selectPersonType
+          params:
+            - name: PersonType
+              string: data.global.PersonType
+      - executeFunction:
+          name: functions.invoicePage.enterFirstName # <-- ${invoiceFirstName}
+      - executeFunction:
+          name: functions.invoicePage.enterLastName # <-- ${invoiceLastName}
+      - executeFunction:
+          name: functions.invoicePage.enterMiddleName # <-- ${invoiceMiddleName}
+      - executeFunction:
+          name: functions.invoicePage.enterRFC # <-- ${invoiceRfc}
+      - executeFunction:
+          name: functions.invoicePage.selectTaxRegime # <-- ${invoiceTaxRegime}
+      - executeFunction:
+          name: functions.invoicePage.selectCfdi # <-- ${invoiceCFDI}
+      - executeFunction:
+          name: functions.invoicePage.enterInvoiceEmail # <-- ${invoiceEmail}
+      - executeFunction:
+          name: functions.invoicePage.enterPostalCode # <-- ${invoicePostalCode}
+      - executeFunction:
+          name: functions.invoicePage.invoiceStreetAddress # <-- ${invoiceSteetAddress}
+      - executeFunction:
+          name: functions.invoicePage.invoiceApartment # <-- ${invoiceAppartment}
+      - executeFunction:
+          name: functions.invoicePage.selectColonia # <-- ${invoiceColoniaName}
+      - executeFunction:
+          name: functions.invoicePage.enterInvoicePhoneCountryCode # <-- ${invoicePhoneCountryCode}
+      - executeFunction:
+          name: functions.invoicePage.enterInvoicePhoneNumber
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: functions.invoicePage.checkProfileCheckbox
+      - executeFunction:
+          name: functions.invoicePage.tapOnSaveButton
+      - log: 
+          message: "End flow: invoicePage.editInvoiceDetails"
+          color: BLUE

@@ -1,0 +1,62 @@
+configuration:
+  runtime: "concord-v2"
+  processTimeout: "PT4H"
+  dependencies:
+    - "mvn://com.walmartlabs.concord.plugins:looper-task:latest"
+  arguments:
+    username: svcstoreautomation
+    baseUrl: "https://looperpro-cigateway.prod.walmart.com"
+    apiToken: ${crypto.decryptString("B8mFH85bQYPHQ4Uueezwghg7gJHxppHybZ8QwCjfo0WPrFwDI8FC+MFxB1sdilNH")}
+    postToSplunk: "false"
+    appBuildBranch: development-latest
+  meta:
+    testTags: ""
+    appBuildBranch: ""
+    dependencyProfile: ""
+
+flows:
+  runTests:
+    - task: looper
+      in:
+        username: ${username}
+        baseUrl: ${baseUrl}
+        apiToken: ${apiToken}
+        jobName: seller-center/us/e2e-tests/uploadToSauceLabs
+        call: ${looperFlow}
+        suspend: true
+        sync: true
+        parameters:
+          APP_BUILD_BRANCH: ${appBuildBranch}
+
+triggers:
+
+  ## development ##
+
+  # Execute build upload into sauce labs for android
+  - manual:
+      name: "Upload Android [Development] Latest"
+      entryPoint: runTests
+      arguments:
+        looperFlow: update_by_app_branch_android
+
+  # - cron:
+  #     spec: "0 */12 * * *"
+  #     timezone: "America/Los_Angeles"
+  #     entryPoint: runTests
+  #     arguments:
+  #       looperFlow: update_by_app_branch_android
+
+  # Execute build upload into sauce labs for iOS
+  - manual:
+      name: "Upload iOS [Development] Latest"
+      entryPoint: runTests
+      arguments:
+        looperFlow: update_by_app_branch_ios
+
+  # Disabled until we have solution on captcha hanlding for production
+  # - cron:
+  #     spec: "0 */12 * * *"
+  #     timezone: "America/Los_Angeles"
+  #     entryPoint: runTests
+  #     arguments:
+  #       looperFlow: update_by_app_branch_ios

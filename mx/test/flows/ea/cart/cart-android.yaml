@@ -1,0 +1,435 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Oct/23/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Performs all the following assertions for the given product name.
+  #   - Product Listed:           Asserts the product is listed on Cart list.
+  #   - Expected Quantity:        Whether the displayed quantity is correct.
+  #   - Expected Unit Price:      Whether the displayed price (unit price) is correct.
+  #   - Expected Original Price:  Whether the displayed original price (before discount) is correct.
+  #   - Expected Subtotal:        Whether the displayed product subtotal is correct.
+  #
+  # PARAMS:  ${productName}             [Mandatory]  Name of the product to perform assertions for.
+  #          ${expectedQuantity}        [Mandatory]  Expected quantity the product should show. Options: [ <numeric value> | null ]
+  #                                                    If option is a numeric value, the method will assert that as the expected quantity the product should display.
+  #                                                    If option is 'null', this assertion will be skipped.
+  #          ${expectedUnitPrice}       [Mandatory]  Expected price the product should show. Options: [ <numeric value> | null ]
+  #                                                    If option is a numeric value, the method will assert that as the expected price the product should display.
+  #                                                    If option is 'null', this assertion will be skipped.
+  #          ${assertDiscount}          [Mandatory]  Wether to run the discount assertion or not. Options: [ true | false ]
+  #          ${expectedOriginalPrice}   [Mandatory]  Expected original price the product should show. Options: [ <numeric value> | null ]
+  #                                                    If option is a numeric value, the method will assert that as the expected original price the product should display.
+  #                                                    If option is 'null', this assertion will be skipped.
+  #          ${expectedSubtotal}        [Mandatory]  Expected sub-total the product should show. Options: [ <numeric value> | null ]
+  #                                                    If option is a numeric value, the method will assert that as the expected subtotal the product should display.
+  #                                                    If option is 'null', this assertion will be skipped.
+  #          ${direction}               [Optional]   Direction where to scroll to try to find the element(product).
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.flows.ea.cart.quickPerformProductAssertions
+    platform: android
+    flow:
+      - log:
+          message: "Performing Product Assertions for: '${productName}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductListed # <--[PARAMS]--${productName}--${direction}
+
+      # Expected Quantity Assertion...
+      - log:
+          message: "Expected Quantity Assertion ['${expectedQuantity}']..."
+          color: CYAN
+      - if:
+          condition: ${expectedQuantity} == null
+          then:
+            - log:
+                message: "Quantity Assertion Skipped (expectedQuantity = null)"
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.ea.cart.assertProductQuantity # <--[PARAM]--${productName}
+                params:
+                  - name: expectedQuantity
+                    string: ${expectedQuantity}
+
+      # Product Unit Price Assertion...
+      - log:
+          message: "Expected Unit Price Assertion ['${expectedUnitPrice}']..."
+          color: CYAN
+      - if:
+          condition: ${expectedUnitPrice} == null
+          then:
+            - log:
+                message: "Unit Price Assertion Skipped (expectedUnitPrice = null)"
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.ea.cart.assertProductUnitPrice # <--[PARAM]--${productName}
+                params:
+                  - name: expectedUnitPrice
+                    string: ${expectedUnitPrice}
+
+      # Product Original Price Assertion...
+      - log:
+          message: "Run Original Price Assertion? ['${assertDiscount}']..."
+          color: CYAN
+      - if:
+          condition: ${assertDiscount} == false
+          then:
+            - log:
+                message: "Original Price Assertion Skipped (assertDiscount = false)"
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.ea.cart.assertProductOriginalPrice # <--[PARAM]--${productName}
+                params:
+                  - name: expectedOriginalPrice
+                    string: ${expectedOriginalPrice}
+
+      # Product Subtotal Price Assertion...
+      - log:
+          message: "Expected Subtotal Assertion ['${expectedSubtotal}']..."
+          color: CYAN
+      - if:
+          condition: ${expectedSubtotal} == null
+          then:
+            - log:
+                message: "Subtotal Price Assertion Skipped (expectedSubtotal = null)"
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.ea.cart.assertProductSubtotal # <--[PARAM]--${productName}
+                params:
+                  - name: expectedSubtotal
+                    string: ${expectedSubtotal}
+      - log:
+          message: "End flow: cart.quickPerformProductAssertions"
+          color: BLUE
+
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts all the values in the totals section (bottom of the page). Estimated total is calculated inside this method.
+  # PARAMS:
+  #          ${deliveryMethod}         [Mandatory]    Selected Delivery Method. Options: [ HomeDelivery | PickupDelivery ]
+  #                                                     - If option is 'HomeDelivery', flow will assert the Delivery Fee as Charged.
+  #                                                       (This option needs the value of 'expectedDeliveryFee' to be a numeric value, else flow fails).
+  #                                                     - If option is 'PickupDelivery', flow will run the Delivery Fee assertion as Not Charged.
+  #                                                       (This option ignores the value of 'expectedDeliveryFee'.
+  #
+  #          ${assertDeliveryFee}      [Optional]     Flag to indicate if the Delivery Fee should be verified. Options: [ true | false ]
+  #                                                     - If 'HomeDelivery' is selected while this parameter is 'true' flow will use the value in 'expectedDeliveryFee' to assert the Delivery fee as charged.
+  #                                                     - If 'HomeDelivery' is selected while this parameter is 'false' flow will not verify the Delivery fee, and it will return the displayed value in 'returnedDeliveryFee' instead.
+  #                                                     - If 'PickupDelivery' is selected this parameter and 'expectedDeliveryFee' will be ignored and flow will run the Delivery Fee assertion as Not Charged.
+  #
+  #          ${expectedDeliveryFee}     [Optional]    Expected delivery fee cost. Options: [ <numeric value> | null ]
+  #                                                     Since delivery fee depends on the value of 'assertDeliveryFee' refer the documentation in the previous parameter for the full details.
+  #
+  #          ${expectedSubtotal}        [Mandatory]   Expected subtotal (the result of the addition of all the products subtotals). If there are
+  #                                                     discounts, this value should be equal to the sum of all product subtotals BEFORE discount.
+  #
+  #          ${assertDiscount}          [Mandatory]    Flag to indicate if the Saved amount should be verified. Options: [ true | false ]
+  #                                                     If 'true', the original subtotal value will be verified, as well as the savings amount and finally the subtotal after discounts (it uses 'expectedSubtotal' and 'expectedSavingsAmount').
+  #                                                     If 'false', only the subtotal without discounts will be verified (it uses 'expectedSubtotal').
+  #
+  #          ${expectedSavingsAmount}   [Optional]    This is the sum of all the amount that is being saved for purchasing discounted products (the value next to the "Ahorras $XX.XX" label).
+  #                                                     This parameter is ignored if 'assertDiscount' is 'false'.
+  #
+  # RETURNS: 
+  #          ${returnedEstimatedTotal}  This is the calculated estimated total (Subtotal + Delivery fee), for Pickup orders Delivery fee equals '0.00'.
+  #          ${returnedDeliveryFee}     If the expectedDeliveryFee is 'null' it will return this variable with the value displayed for delivery fee.
+  #          ${returnedSubtotal}        If the there were discounts in the cart, this will be the fixed subtotal after discounts. If there weren't discounts, this value will be the same as 'expectedSubtotal'.
+  # AUTHOR: Rodrigo Pacheco C.
+  # EDITOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.ea.cart.assertTotals
+    platform: android
+    flow:
+      - log:
+          message: "[Mandatory] Delivery method: '${deliveryMethod}'"
+          color: CYAN
+      - log:
+          message: "[Mandatory] Assert Delivery Fee?: '${assertDeliveryFee}'"
+          color: CYAN
+      - log:
+          message: "[Optional] Expected Delivery Fee: '${expectedDeliveryFee}'"
+          color: CYAN
+      - log:
+          message: "[Mandatory] Assert Discount?: '${assertDiscount}'"
+          color: CYAN
+      - log:
+          message: "[Optional] Expected Savings amount: '${expectedSavingsAmount}'"
+          color: CYAN
+      - log:
+          message: "[Mandatory] Expected Subtotal: '${expectedSubtotal}'"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.cart.estimatedTotalLeftLabel
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.ea.cart.estimatedTotalLeftLabel
+                scrollLimit: 4
+                wait: 1000
+      # This scroll is needed, sometimes the estimated total gets behind the continue button.
+      - scroll:
+          direction: down
+          scrollLimit: 1
+          wait: 1000
+
+      # Delivery Fee assertion...
+      - log:
+          message: "Delivery Fee assertion..."
+          color: CYAN
+      - if:
+          condition: ${deliveryMethod} != 'HomeDelivery' && ${deliveryMethod} != 'PickupDelivery'
+          then:
+            - failTest:
+                message: "Invalid Delivery Method Option provided: '${deliveryMethod}'"
+      - if:
+          condition: ${deliveryMethod} == 'HomeDelivery'
+          then:
+            - if:
+                condition: ${assertDeliveryFee} != true && ${assertDeliveryFee} != false
+                then:
+                  - failTest:
+                      message: "Invalid 'assertDeliveryFee' Option provided: '${assertDeliveryFee}'"
+            - if:
+                condition: ${assertDeliveryFee} == true
+                then:
+                  - log:
+                      message: "Performing Delivery Fee assertion (Optional 'assertDeliveryFee' = 'true'), flow will assert Delivery Fee as Charged..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.ea.cart.assertDeliveryFee
+                      params:
+                        - name: expectedDeliveryFee
+                          string: ${expectedDeliveryFee}
+                  - storeIn:
+                      key: finalDeliveryFee
+                      value: ${expectedDeliveryFee}
+                else :
+                  - log:
+                      message: "Delivery Fee assertion skipped (Optional 'assertDeliveryFee' = 'false'). Getting displayed delivery fee value..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.ea.cart.getDisplayedDeliveryFee #--RETURNS--${returnedDeliveryFee}-->
+                  - storeIn:
+                      key: finalDeliveryFee
+                      value: ${returnedDeliveryFee}
+
+      - if:
+          condition: ${deliveryMethod} == 'PickupDelivery'
+          then:
+            - log:
+                message: "Selected Delivery method is Pickup Delivery, flow will assert Delivery Fee as Not Charged..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.ea.cart.assertDeliveryFeeNotCharged
+            - storeIn:
+                key: finalDeliveryFee
+                value: '0.00'
+
+      # Subtotal assertion...
+      - if:
+          condition: ${assertDiscount} != true && ${assertDiscount} != false
+          then:
+            - failTest:
+                message: "Invalid 'assertDiscount' Option provided: '${assertDiscount}'"
+      - if:
+          condition: ${assertDiscount} == false
+          then:
+            - log:
+                message: "Performing Subtotal assertion without discounts ('assertDiscount' = 'false')."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.ea.cart.assertSubtotal
+                params:
+                  - name: expectedSubtotal
+                    string: ${expectedSubtotal}
+          else:
+            - log:
+                message: "Performing Subtotal assertion with discounts ('assertDiscount' = 'true')."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.ea.cart.assertSubtotalBeforeDiscounts
+                params:
+                  - name: expectedOriginalSubtotal
+                    string: ${expectedSubtotal}
+            - executeFunction:
+                name: mx.functions.ea.cart.assertSavingsAmount
+                params:
+                  - name: expectedSavingsAmount
+                    string: ${expectedSavingsAmount}
+            - arithmetic:
+                expression: ${expectedOriginalSubtotal} - ${expectedSavingsAmount}
+                numberOfDecimalPlaces: 2
+                storeIn: expectedSubtotal
+            - executeFunction:
+                name: mx.functions.ea.cart.assertSubtotal
+                params:
+                  - name: expectedSubtotal
+                    string: ${expectedSubtotal}
+      - storeIn:
+          key: returnedSubtotal
+          value: ${expectedSubtotal}
+      - log:
+          message: "Calculated Final Subtotal: '${returnedSubtotal}'"
+          color: CYAN
+
+      # Estimated Total assertion...
+      - log:
+          message: "Estimated Total assertion..."
+          color: CYAN
+      - arithmetic:
+          expression: ${expectedSubtotal} + ${finalDeliveryFee}
+          numberOfDecimalPlaces: 2
+          storeIn: returnedEstimatedTotal
+      - log:
+          message: "Calculated Estimated Total: '${returnedEstimatedTotal}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.ea.cart.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${returnedEstimatedTotal}
+      - executeFunction:
+          name: mx.functions.ea.cart.assertEstimatedTotalFromButton
+          params:
+            - name: expectedEstimatedTotal
+              string: ${returnedEstimatedTotal}
+      - log:
+          message: "End flow: cart.assertTotals"
+          color: BLUE
+
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function detects if there was a problem trying to proceed to Review-Order page after clicking the
+  #                 continue button from Cart and tries again by going back to Cart and clicking continue one more time.
+  #                 It performs 3 times max.
+  # AUTHOR: Rodrigo Pacheco C.
+  - name: mx.flows.ea.cart.proceedToReviewOrderWithoutErrors
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.alertPopup
+          then:
+            - log:
+                message: "There was a problem trying to continue to Review-Order, retrying..."
+                color: CYAN
+            - click:
+                identifier: mx.mappings.ea.review-order.goBackToCartButton
+            - loop:
+                begin: 1
+                end: 3
+                storeIndex: ${retryNumber}
+                flow:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: mx.mappings.ea.cart.pageTitle
+                      then:
+                        - executeFunction:
+                            name: mx.functions.ea.review-order.tapBack
+                        - verifyIdentifier:
+                            present:
+                              - identifier: mx.mappings.ea.cart.pageTitle
+                  - sleep:
+                      duration: 8000
+                  - executeFunction:
+                      name: mx.functions.ea.cart.tapContinue
+                  - sleep:
+                      duration: 8000
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: mx.mappings.ea.review-order.pageTitle
+                          - identifier: mx.mappings.ea.review-order.deliveryHeaderContainer
+                          - identifier: mx.mappings.ea.review-order.deliveryDetailsSection
+                      then:
+                        - log:
+                            message: "Success: Review-Order Page displayed..."
+                            color: CYAN
+                        - break: true
+                      else:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: mx.mappings.ea.review-order.alertPopup
+                            then:
+                              - log:
+                                  message: "Alert Popup displayed again, attempt number: [${retryNumber}]..."
+                                  color: CYAN
+                              - click:
+                                  identifier: mx.mappings.ea.review-order.goBackToCartButton
+                            else:
+                              - log:
+                                  message: "Alert Popup did not displayed but neither Review-Order page. Attempt number: [${retryNumber}]..."
+                                  color: CYAN
+      - log:
+          message: "End flow: cart.proceedToReviewOrderWithoutErrors"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function changes the selected address from the address selector popup by its name. This flow
+  #                 only works when the account has at least 2 added addresses, this flow will fail if there aren't
+  #                 any registered addresses in the account.
+  # PARAMS:
+  #   ${addressName}  [Mandatory]  Address name to select.
+  # RETURNS:
+  #   ${returnedSelectedAddress} Full String containing the selected address.
+  #   ${returnedStreetName}
+  #   ${returnedExteriorNumber}
+  #   ${returnedCity}
+  #   ${returnedState}
+  #   ${returnedZipCode}
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.flows.ea.cart.changeAddressByNameFromSelector
+    platform: android
+    flow:
+      - log:
+          message: "Name of the Address to select: '${addressName}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.ea.cart.openAddressSelector
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.selectAddressByName
+          params:
+            - name: homeAddressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.assertAddressIsSelectedByName
+          params:
+            - name: homeAddressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.getSelectedAddress #--RETURNS--${returnedStreetName}--${returnedExteriorNumber}--ETC-->
+          params:
+            - name: homeAddressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.tapSave
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.ea.cart.assertHomeAddressByIndividualValues
+          params:
+            - name: streetName
+              string: ${returnedStreetName}
+            - name: exteriorNumber
+              string: ${returnedExteriorNumber}
+      - log:
+          message: "End flow: cart.changeAddressByNameFromSelector"
+          color: BLUE

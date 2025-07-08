@@ -1,0 +1,148 @@
+general:
+  platform: ios
+  tags: C2694648, p1-wplus-teflon-e2e, WP030
+  testCaseId: C2694648
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: WP030 #467
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_ASSIST_NON_MEMBER_SIGN_UP_FLOW'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Create Non member account
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createAccountPayload.generic
+
+      # User Cohort Verification
+      # - executeFunction:
+      #     name: us.functions.utils.astro.postCohortVerification
+      #     params:
+      #       - name: email
+      #         string: $customerEmail
+      #       - name: payload
+      #         string: us.data.assist.payload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: E2epassword$
+
+      # Navigate to assist page via deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.assist.deepLink
+
+      # W+ Assist MLP
+      - executeFunction:
+          name: us.functions.wplus.assist.mlp
+
+      # User Cohort Verification
+      - executeFunction:
+          name: us.functions.wplus.assist.sheeridscreen
+          params:
+            - name: firstName
+              string: Test
+            - name: lastName
+              string: Test
+            - name: DOB
+              string: 11/11/1990
+
+      # Select monthly plan for assist membership
+      - executeFunction:
+          name: us.functions.wplus.assist.selectMembershipPlan
+          params:
+            - name: tenure
+              string: monthly
+
+      - executeFunction:
+          name: us.functions.wplus.aquisition.legalErrorAlertCheck
+
+      # Welcome Splash Validation
+      - executeFunction:
+          name: us.functions.wplus.welcomeSplash
+          params:
+            - name: memberType
+              string: nonMember
+
+      # Navigate to membership hub
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      # Verify the membership details
+      - executeFunction:
+          name: us.functions.wplus.assist.manageMembership.verifyMembership
+          params:
+            - name: tenure
+              string: monthly
+            - name: membershipType
+              string: trial
+
+      # Upgrade the membership to annual
+      - executeFunction:
+          name: us.functions.wplus.assist.manageMembership.upgradeToAnnual
+
+      # Verify the membership upgrade to annual
+      - executeFunction:
+          name: us.functions.wplus.assist.manageMembership.verifyMembership
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: trial
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,360 @@
+functions:
+    - name: unified.us.functions.utils.afterSteps
+      flow:
+        - if:
+            condition: "${testStatus} == 'passed'"
+            then:
+              - log: "Test passed"
+            else:
+              - log: "Test failed"
+              - if:
+                  condition: ${testStarted} == null
+                  then:
+                    - failTest:
+                        message: "FAILURE - Unable to Open App"
+
+    - name: unified.us.functions.utils.handleCartMergePopup
+      flow:
+        - try:
+            flow:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.popup.cartMerge
+              - click:
+                  identifier: us.mappings.error.dismissButton
+            catch:
+              flow:
+                - log: No Technical Error Page observed
+
+  # New Utility to validate review order/Cart page details for any multiple fulfillment type present in review order page.
+  # [mandatory] ${listOfExpectedFulfilment} - Shipping/Delivery from store/Pickup/Digital delivery/Auto Care... [In a String for example Pickup, Shipping, Digital delivery, Auto Care Center]
+  # [mandatory] ${cart} or ${reviewOrder} - true / false (set flag true for cart page validation / set flag true for reviewOrder page validation)
+  # TBD[optional]  ${unscheduled}     - true/false [default false] [Set to true if unscheduled item fulfillment time needs to be validated]
+  # TBD[optional]  ${expressSlot}     - true/false [default false] [Set to true if express slot fulfillment time needs to be validated]
+
+    - name: unified.us.functions.verifyCardDetailsNew
+      flow:
+      # Condition for handling the same function for both cart and review order page
+        - if:
+            condition: ${cart}
+            then:
+              - executeFunction:
+                  name: unified.us.functions.cart.scrollToTopOfCart
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.cart.navBarTitle
+                  then:
+                    - log: Cart page displayed
+                    - storeIn:
+                        key: cart
+                        value: false
+                  else:
+                    - failTest:
+                        message: "FAILURE - ${env} - cart page is not displayed"
+        - if:
+            condition: ${reviewOrder}
+            then:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.reviewOrder.navBarTitle
+                  then:
+                    - log: Review order page loaded successfully
+                    # Scroll to top of Review order page
+                    - executeFunction:
+                        name: us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+                    - storeIn:
+                        key: reviewOrder
+                        value: false
+                  else:
+                    - failTest:
+                        message: "ENV_FAILURE - ${env} review order page load ERROR"
+        - if:
+            condition: ${orderConfirmation}
+            then:                          
+              - executeFunction:
+                  name: unified.us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.orderConfirmationPage
+                    - name: direction
+                      string: up  
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.orderConfirmationPage
+                  then:
+                    - log:  order confirmation page loaded successfully
+                    - storeIn:
+                        key: orderConfirmation
+                        value: false
+                  else:
+                    - failTest:
+                        message: "ENV_FAILURE - ${env}  order confirmation page load ERROR"
+        - storeIn:
+            key: listOfFulfilmentDetails
+            value: ''
+        - if:
+            condition: ${platform} == 'Android'
+            then:
+              - loop:
+                  begin: 0
+                  end: 7
+                  storeIndex: scrollIndex
+                  mode: increment
+                  flow:
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.global.fulfilmentCardTitleForVerifying
+                        then:
+                          - getString:
+                              identifier: us.mappings.global.fulfilmentCardTitleForVerifying
+                              attribute: text
+                              storeIn: fulfillmentAvailable
+                          - log: ${fulfillmentAvailable}
+                          - storeIn:
+                              key: listOfFulfilmentDetails
+                              value: ${listOfFulfilmentDetails}${fulfillmentAvailable}####
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.global.fulfilmentCardPreviousTitle
+                        then:
+                          - scroll:
+                              direction: down
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: us.mappings.global.fulfilmentCardTitle
+                        then:
+                          - break: true
+        - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - numberOfChildElements:
+                  identifier: us.mappings.global.fulfilmentCardPage
+                  filterBy: us.mappings.global.fulfilmentCardTitle
+                  storeIn: noOfCard
+              - arithmetic:
+                  expression: ${noOfCard} + 1
+                  storeIn: noOfCard
+              - storeIn:
+                  key: listOfFulfilmentDetails
+                  value: ''
+              - loop:
+                  begin: 1
+                  end: ${noOfCard}
+                  storeIndex: scrollIndex
+                  mode: increment
+                  flow:
+                    - getString:
+                        identifier: us.mappings.global.fulfilmentCardTitleWithIndex
+                        attribute: label
+                        storeIn: fulfillmentAvailable
+                    - log: ${fulfillmentAvailable}
+                    - storeIn:
+                        key: listOfFulfilmentDetails
+                        value: ${listOfFulfilmentDetails}${fulfillmentAvailable}####
+        - executeNode:
+            file: us/e2e-tests/helpers/cardValidation.js
+            args:
+              - value: ${listOfFulfilmentDetails}
+              - value: ${listOfExpectedFulfilment}
+            getResponse:
+              storeIn: validationStatus
+        - log: ${validationStatus}
+        - if:
+            condition: ${validationStatus} == 'Validation Completed all expected fulfilments are available'
+            then:
+              - log: verify Card Details successful
+              - storeIn:
+                  key: fulfillmentAvailable
+                  value: 'null'
+            else:
+              - failTest:
+                  message: ${validationStatus}
+
+    # When user is presented with the W+ sign up but prefers to dismiss on iOS only.
+    # Close W+ pop up
+    - name: unified.us.test.functions.utils.closeWplusPrompt.homeScreen
+      flow:
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wplus.benefitsTabEarlyAccessStartPaidMembershipButton 
+            then: 
+              - log: W+ Plus membership prompt is present closing.
+              - click:      
+                  identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn 
+              - log: W+ Benefits prompt is dismissed!
+            else:
+              - log: W+ Plus membership prompt is not present nothing to close continue
+
+    # When no delivery address is present, select Add address CTA instead to direct to Add address prompt.
+    - name: unified.us.test.functions.utils.gic.noDeliveryAddressPresent.addAddressCTA  
+      flow:
+        - if:
+            identifier:
+              timeout: 15000
+              notPresent:
+                - identifier: us.mappings.home.gic.module.addAddress.cta.present
+                - log: Add Address is not present, Select the Delivery Address Card!          
+            then:
+              - click:
+                  identifier: us.mappings.home.gic.module.deliveryAddressCard.cta.present
+                  wait: 3000
+            else:
+              - log: Add Address is present, Select Add Address to provide one!
+              - click:
+                  identifier: us.mappings.home.gic.module.addAddress.cta.present      
+
+    - name: unified.us.functions.utils.tryAgainWhenThereIsError
+      flow:
+        - loop:
+            begin: 0
+            end: 3
+            storeIndex: i
+            flow:
+              - log: $i
+              - if: 
+                  identifier:
+                    present: 
+                      - identifier: us.mappings.item.tryAgainLink
+                  then:
+                    - log: 'Trying again to load item page'
+                    - click:
+                        identifier: us.mappings.item.tryAgainLink
+                        wait: 5000
+                  else:
+                    - break: true
+
+    - name: unified.us.functions.utils.dismissKeyboard
+      flow:
+        - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - if:
+                  identifier:
+                    timeout: 10000
+                    present:
+                      - identifier: Done
+                  then:
+                    - click:
+                        identifier: Done
+        - if:
+            condition: ${platform} == 'Android'
+            then:
+              - if:
+                  identifier:
+                    timeout: 8000
+                    present:
+                      - identifier: us.mappings.global.authentication.keyboard
+                  then:
+                    - click:
+                        identifier: us.mappings.global.authentication.hideKeyboard
+        - sleep:
+            duration: 2000
+
+  # Relaunch the application
+    - name: unified.us.test.functions.utils.relaunchApp
+      flow:
+        - terminateApp: true
+        - sleep:
+            duration: 10000 
+        - if:
+            condition: ${platform} == 'Android'
+            then:
+              - activateApp:
+                  packageName: com.walmart.android.debug 
+              - sleep:
+                  duration: 50000 
+              - if:
+                  identifier: 
+                    present:
+                      - identifier: us.mappings.home.orderSavingsupdatesCancel 
+                  then:
+                    - log: Get order and savings updates displayed or Walmart Bottom sheet displayed
+                    - click:
+                        identifier: us.mappings.home.orderSavingsupdatesCancel 
+              - executeFunction:
+                  name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+        - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - executeAppiumScript:
+                  method: "mobile: activateApp"
+                  params:
+                    - key: bundleId
+                      value: com.walmart.beta.electronics 
+              - sleep:
+                  duration: 50000 
+
+              - if:
+                  identifier: 
+                    present:
+                      - identifier: us.mappings.global.onboarding.searchButton
+                  then:
+                     - log: Get order and savings updates displayed or Walmart Bottom sheet displayed
+                     - click:
+                        identifier: us.mappings.global.onboarding.searchButton
+
+    - name: unified.us.functions.utils.astro.fetchPasscode.latestPhoneOTP
+      flow:
+        - log: Fetches the latest OTP sent on phone
+        - log: $customerEmail
+        - log: $astroPhoneNumber
+        - callAPI:
+            url: http://astro.walmart.com/api/v2/teflon/customer/$customerEmail/otp?phone=1$astroPhoneNumber
+            requestMethod: GET
+            wait: 5000
+            header:
+              - key: Content-Type
+                value: application/json
+              - key: Accept
+                value: application/json
+              - key: response_type
+                value: omni
+              - key: segment
+                value: oaoh
+            readTimeout: 40000
+            verifyResponseCode: 200
+            retriesOnFail: 3
+            verifyResponseBodyContains:
+              - '"astroStatus":"SUCCESS"'
+            getResponse:
+              storeIn: response
+            getValue:
+              - key: astroDetails.passcode
+                storeIn: otpFromPhone
+        - log: $otpFromPhone
+
+    - name: unified.us.functions.utils.astro.fetchPasscode.latestEmailOTP
+      flow:
+        - log: Fetches the latest OTP sent on Email
+        - log: $customerEmail
+
+        - callAPI:
+            url: http://astro.walmart.com/api/v2/teflon/customer/$customerEmail/otp
+            requestMethod: GET
+            wait: 5000
+            verifyResponseCode: 200
+            header:
+              - key: Content-Type
+                value: application/json
+              - key: Accept
+                value: application/json
+              - key: response_type
+                value: omni
+              - key: segment
+                value: oaoh
+            readTimeout: 40000
+            verifyResponseCode: 200
+            verifyResponseBodyContains:
+              - '"astroStatus":"SUCCESS"'
+            getResponse:
+              storeIn: response
+            getValue:
+              - key: astroDetails.passcode
+                storeIn: otpFromEmail

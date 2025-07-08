@@ -1,0 +1,97 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#   CREATED: Mar/23/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description:          This flow changes the store to the one specified on parameter from the delivery method selector
+  #                           selector and clicks save.
+  # REQUIREMENT:          Use a zip code that makes the desired store appear first on the list.
+  # Params: ${zipCode}    [Mandatory]  Desired zip code to enter when opening the store selector popup.
+  #         ${storeName}  [Mandatory]  Name of the store you want to switch to.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.delivery-method-selector.changeStoreFromSelector
+    platform: ios
+    flow:
+      - log:
+          message: "[ PARAM: ZipCode: '${zipCode}' ]"
+          color: CYAN
+      - log:
+          message: "[ PARAM: Store Name: '${storeName}' ]"
+          color: CYAN
+      - storeIn:
+          key: selectedStore
+          value: ${storeName}
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.delivery-method-selector.selectedStore # <--PARAM--${selectedStore}
+          then:
+            - log:
+                message: "Store '${storeName}' is already selected."
+                color: GREEN
+          else:
+            - log:
+                message: "Selecting Store '${storeName}'..."
+                color: GREEN_BOLD
+            - click:
+                identifier: mx.mappings.delivery-method-selector.pickupStoreSelectorButton
+            - executeFunction:
+                name: mx.functions.store-selector-popup.assertPageDisplayed
+            - executeFunction:
+                name: mx.flows.od.store-selector-popup.quickChangeStoreFromPopup
+                params:
+                  - name: zipCode
+                    string: ${zipCode}
+                  - name: storeName
+                    string: ${storeName}
+            - log:
+                message: "Store '${storeName}' selected."
+                color: GREEN
+            - sleep:
+                duration: 3000
+      - log:
+          message: "End flow: od.delivery-method-selector.changeStoreFromSelector"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  #
+  # PARAMS:
+  #   ${zipCode}    [Mandatory]  ZIP Code to search the Store to be selected.
+  #   ${storeName}  [Mandatory]  Name of the Store to be selected.
+  #
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: -----
+  - name: mx.flows.od.delivery-method-selector.changeCurrentStore
+    platform: ios
+    flow:
+      - log:
+          message: "[ PARAM: ZIP Code: '${zipCode}']"
+          color: CYAN
+      - log:
+          message: "[ PARAM: Store Name: '${storeName}']"
+          color: CYAN
+      # Expand Delivery Method Selector if not expanded...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.delivery-method-selector.expandLocationBanner
+          then:
+            - executeFunction:
+                name: mx.functions.delivery-method-selector.expandSelector
+      # Select Pickup Delivery...
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.tapPickupButtonIfNotSelected
+      # Call 'changeStoreFromSelector' flow...
+      - executeFunction:
+          name: mx.flows.od.delivery-method-selector.changeStoreFromSelector
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.closeSelector
+      - log:
+          message: "End flow: mx.flows.od.delivery-method-selector.changeCurrentStore"
+          color: BLUE

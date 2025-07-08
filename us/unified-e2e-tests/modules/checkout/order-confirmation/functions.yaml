@@ -1,0 +1,535 @@
+functions:
+
+  # Get order number for order placed
+  - name: unified.us.functions.orderConfirmation.getOrderNumber
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderConfrimation.ratings.notNowButton
+          then:
+            - click:
+                identifier: us.mappings.orderConfrimation.ratings.notNowButton
+      - getString:
+          identifier: us.mappings.orderConfirmation.orderNumber
+          extractNumbers: true
+          storeIn: orderNo
+      - sleep:
+          duration: 10000
+
+  - name: unified.us.functions.orderConfirmation.orderCreationValidation
+    flow:
+      - sleep:
+          duration: 10000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderConfirmation.orderNumber
+                then:
+                  - log: Order created successfully
+                else:
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:
+                        - failTest:
+                            message: "ENV_FAILURE - ${env} - Order creation error"
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.orderConfrimation.ratings.notNowButton
+                            then:
+                              - log: Order created successfully
+                            else:
+                              - failTest:
+                                  message: "ENV_FAILURE - ${env} - Order creation error"
+
+  - name: unified.us.functions.orderConfirmation.SODBanner
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderConfirmation.rxpd.SODText
+
+
+  - name: unified.us.functions.orderConfirmation.ratings
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderConfrimation.ratings.notNowButton
+          then:
+              - click:
+                  identifier: us.mappings.orderConfrimation.ratings.notNowButton
+
+  - name: unified.us.functions.orderConfirmation.addItems
+    flow:
+    - click:
+        identifier: us.mappings.orderconfirmation.addItems
+        wait: 2000
+
+  - name: unified.us.functions.ibotta.validateCashEarnedCardInThankYouPage
+    flow:
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderconfirmation.viewRewardsCenter
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderconfirmation.viewRewardsCenter
+      - log: Cash Card is showing on Thank You screen
+
+
+  - name: unified.us.functions.ibotta.navigateToCashCenterFormTYP
+    flow:
+      - click:
+          identifier: us.mappings.orderconfirmation.viewRewardsCenter
+          wait: 5000      
+
+
+  - name: unified.us.functions.wplus.ibotta.verifyWalmartCashPending
+    flow:
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.homePage.walmartCashBanner.totalWalmartCashPendingText
+              contains: Total Walmart Cash pending
+            - identifier: us.mappings.homePage.walmartCashBanner.totalWalmartCashPendingAmountLabel
+              contains: $
+
+
+# Validate Rewards details on Review Order Screen
+  - name: unified.us.functions.ibotta.validateRewardsInfoInCheckoutPage
+    flow:
+      - scroll:
+          direction: down
+          position: center
+          untilIdentifier: us.mappings.reviewOrder.rewardsEarnedDetails
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.rewardsEarnedDetails
+          then:
+            - log: "Cash Earned is showing on the Review Order screen"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - User should see the cash earned in the review order page but can't see"
+
+  - name: unified.us.functions.orderConfirmation.verifyEBTDetailsDisplay
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderConfirmation.EBTBalanceText
+          scrollLimit: 3
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderConfirmation.EBTBalanceText
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderConfirmation.EBTBalanceText
+                    contains: "EBT Balance"
+                  - identifier: us.mappings.orderConfirmation.EBTFoodBalanceText
+                    contains: "Food balance"
+                  - identifier: us.mappings.orderConfirmation.EBTCashBalanceText
+                    contains: "Cash balance"
+          else:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.orderConfirmation.EBTBalanceTitle
+                    contains: "EBT Balance"
+                  - identifier: us.mappings.orderConfirmation.EBTBalanceText
+                    contains: "Food balance"
+                  - identifier: us.mappings.orderConfirmation.EBTBalanceText
+                    contains: "Cash balance"
+
+  - name: unified.us.functions.checkout.enterEBTPinAndPlaceOrder
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeRadioButton
+          then:
+            - executeFunction: 
+                name: us.functions.reviewOrder.verifyBagsDetailsOurSustainabilityPledge
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - click:
+          identifier: us.mappings.reviewOrder.placeOrderButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.continueButton
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.continueButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.checkout.EBT.pinField 
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.ebtField 
+                  - click:
+                      identifier: us.mappings.paymentMethod.ebtField2
+                  - click:
+                      identifier: us.mappings.paymentMethod.ebtField3
+                  - click:
+                      identifier: us.mappings.paymentMethod.ebtField4
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.paymentMethod.checkout.EBT.newPinField
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.checkout.EBT.newPinField
+                      string: 0005
+                  - click:
+                      identifier: us.mappings.reviewOrder.submitEBTPin
+                  - sleep:
+                      duration: 15000
+                  - executeFunction:
+                      name: us.functions.orderConfirmation.orderCreationValidation
+             
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.submitEBTPin   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.ebtPin.payframe
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.EBTPinField
+            - enterText:
+                identifier: us.mappings.reviewOrder.EBTPinField
+                string: 0005
+            - click:
+                identifier: us.mappings.reviewOrder.submitEBTPin
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.orderCreationValidation
+
+  - name: unified.us.functions.checkout.newpaymentMethod.addCardDetails
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                string: ${number}
+                pressEnter: true
+            - click:
+                identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+            - enterText:
+                identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+                string: ${firstName}
+                clearField: false
+                clickFirst: false
+            - click:
+                identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+            - enterText:
+                identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+                string: ${lastName}
+                clearField: false
+                clickFirst: false
+                pressEnter: true
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.paymentMethod.addPayment.overlay.splashPage.expiry
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.splashPage.expiry
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.splashPage.expiry
+                string: ${expiration}
+                clearField: false
+                clickFirst: false
+                pressEnter: true
+     
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+                string: ${cvv}
+                pressEnter: true
+    
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+                string: ${phoneNumber}
+                pressEnter: true
+      
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                  - enterText:
+                       identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                       string: ${streetAddress}
+                       pressEnter: true
+           
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                      string: ${city}
+                      pressEnter: true
+           
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                      string: ${state}
+                      pressEnter: true
+          
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                      string: ${zipcode}
+                      pressEnter: true
+  
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+     
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                string: ${number}
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+            - enterText:
+                identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+                string: ${firstName}
+                clearField: false
+                clickFirst: false
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+            - enterText:
+                identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+                string: ${lastName}
+                clearField: false
+                clickFirst: false
+            - click:
+                 identifier: us.mappings.default.keyboardDoneButton    
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+                string: ${expirationMonth}
+                clearField: false
+                clickFirst: false
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+                string: ${expirationYear}
+                clearField: false
+                clickFirst: false
+            - click:
+                identifier: Done
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+                string: ${cvv}
+            - click:
+                identifier: Done
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+                string: ${phoneNumber}
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton
+            - if:
+                identifier:
+                   present:
+                     - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                      string: ${streetAddress}
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                      string: ${city}
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                      string: ${state}
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                      string: ${zipcode}
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+
+  - name: unified.us.functions.orderConfirmation.closeOrderConfirmation
+    flow:
+      - if:
+          identifier:
+            timeout: 6000
+            present:
+              - identifier: us.mappings.orderConfirmation.closeButton
+          then:
+              - click:
+                  identifier: us.mappings.orderConfirmation.closeButton
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderConfirmation.ContinueShoppingButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderConfirmation.ContinueShoppingButton
+            - click:
+                identifier: us.mappings.orderConfirmation.ContinueShoppingButton
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.tabBar.shop
+                  - name: direction
+                    string: up
+            - click:
+                identifier: us.mappings.tabBar.shop
+               
+  - name: unified.us.functions.checkout.orderConfirmation.verifyMultiplePickupMessage
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.functions.orderconfirmation.curbsidePickup.verifyMultiplePickupMessage
+                    contains: This order requires pickup in 2 different areas of the parking lot.
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.functions.orderconfirmation.curbsidePickup.verifyMultiplePickupMessage
+                    - name: direction
+                      string: down
+            - verifyIdentifier:
+                text:
+                  - identifier: us.functions.orderconfirmation.curbsidePickup.verifyMultiplePickupMessage
+                    contains: This order requires pickup in 2 different areas of the parking lot.
+
+  - name: unified.us.functions.checkout.orderConfirmation.verifyAddItems
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderconfirmation.addItems
+
+  # [mandatory] ${pickupText} - GardenCenterPickup/GroceryPickup/LiquorPickup... [Required for identifying fulfillment section to be validated]
+  - name: unified.us.functions.orderConfirmation.verifyPickupInstructions
+    flow:
+      - executeFunction:
+          name: us.functions.utils.getPickupTextsToCompare
+
+      - log: -----------${pickupText} section validation start-----------
+      - if:
+          condition: ${pickupText} == null
+          then:
+            - log: Skipping fulfillment section validation as none mentioned
+          else:
+            - storeIn:
+                key: type
+                value: ${pickupText}
+            - log: Validating fulfillment section ${type}
+            - if:
+                condition: ${type} == 'GardenCenterPickup'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.orderConfirmation.gardenCenterPickup.pickupInstructionsText
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderConfirmation.gardenCenterPickup.pickupInstructionsText
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderConfirmation.gardenCenterPickup.pickupInstructionsText
+                          contains: Garden Center pickup instructions
+                  - log: Validated ${type} instructions
+
+            - if:
+                condition: ${type} == 'GroceryPickup'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.orderConfirmation.groceryPickup.pickupInstructionsText
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderConfirmation.groceryPickup.pickupInstructionsText
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderConfirmation.groceryPickup.pickupInstructionsText
+                          contains: Pickup instructions
+                  - log: Validated ${type} instructions
+
+            - if:
+                condition: ${type} == 'LiquorPickup'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.orderConfirmation.liquorPickup.pickupInstructionsText
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderConfirmation.liquorPickup.pickupInstructionsText
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderConfirmation.liquorPickup.pickupInstructionsText
+                          contains: Liquor pickup instructions
+                  - log: Validated ${type} instructions
+      - storeIn:
+          key: pickupText
+          value: 'null'
+      - storeIn:
+          key: altPickupText
+          value: 'null'

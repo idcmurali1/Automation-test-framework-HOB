@@ -1,0 +1,1283 @@
+functions:
+  - name: unified.us.functions.gic.changeFulfillment
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.gic.updateStore
+          then:
+            - click:
+                identifier: us.mappings.home.gic.updateStore
+      - executeFunction:
+          name: unified.us.functions.gic.collapseIfExpanded
+
+  - name: unified.us.functions.gic.expandIfCollapsed
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 8000
+                present:
+                  - identifier: us.mappings.home.gic.collapsedIcon
+            - click:
+                identifier: us.mappings.home.gic.collapsedIcon
+          catch:
+            flow:
+              - log: GIC already expanded
+
+  - name: unified.us.functions.gic.collapseIfExpanded
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: us.mappings.home.gic.expandedIcon
+            - log: Collapsing GIC screen
+            - click:
+                identifier: us.mappings.home.gic.expandedIcon
+          catch:
+            flow:
+              - log: GIC already collapsed
+
+  - name: unified.us.functions.gic.setFulfillment
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.gic.newModule.container
+                then:
+                  - if:
+                      condition: ${option} == 'Shipping'
+                      then:
+                        - storeIn:
+                            key: newGIC
+                            value: true
+                        - try:
+                            flow:
+                              - storeIn:
+                                  key: option
+                                  value: Pickup
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  label:
+                                    - identifier: us.mappings.home.gic.module.intentSelection
+                                      notContains: selected
+                              - storeIn:
+                                  key: option
+                                  value: Delivery
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  label:
+                                    - identifier: us.mappings.home.gic.module.intentSelection
+                                      notContains: selected
+                            catch:
+                              flow:
+                                - click:
+                                    identifier: us.mappings.home.gic.module.intentSelection
+                                - log: ${option} intent selected
+                                - sleep:
+                                    duration: 4000
+                      else:
+                        - try:
+                            flow:
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  label:
+                                    - identifier: us.mappings.home.gic.module.intentSelection
+                                      contains: selected
+                              - log: ${option} intent already selected
+                            catch:
+                              flow:
+                                - click:
+                                    identifier: us.mappings.home.gic.module.intentSelection
+                                - log: ${option} intent selected
+                                - sleep:
+                                    duration: 3000
+                else:
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            timeout: 0
+                            label:
+                              - identifier: us.mappings.home.gic.module.intentSelection
+                                contains: clear
+                        - log: ${option} intent already selected
+                      catch:
+                        flow:
+                          - click:
+                              identifier: us.mappings.home.gic.module.intentSelection
+                          - log: ${option} intent selected
+                          - sleep:
+                              duration: 3000
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.gic.newModule.container
+                then:
+                  - storeIn:
+                      key: newGIC
+                      value: true
+                  - if:
+                      condition: ${option} == 'Shipping'
+                      then:
+                        - try:
+                            flow:
+                              - storeIn:
+                                  key: option
+                                  value: Pickup
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  checked:
+                                    - identifier: us.mappings.wplus.globalIntentPickup
+                                      value: false
+                              - storeIn:
+                                  key: option
+                                  value: Delivery
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  checked:
+                                    - identifier: us.mappings.wplus.globaIntentDelivery
+                                      value: false
+                            catch:
+                              flow:
+                                - if:
+                                    condition: ${option} == 'Pickup'
+                                    then:
+                                      - click:
+                                          identifier: us.mappings.wplus.globalIntentPickup
+                                    else:
+                                      - click:
+                                          identifier: us.mappings.wplus.globaIntentDelivery
+                      else:
+                        - if:
+                            condition: ${option} == 'Pickup'
+                            then:
+                              - try:
+                                  flow:
+                                    - verifyIdentifier:
+                                        timeout: 0
+                                        checked:
+                                          - identifier: us.mappings.wplus.globalIntentPickup
+                                            value: true
+                                    - log: Pickup intent already selected
+                                  catch:
+                                    flow:
+                                      - click:
+                                          identifier: us.mappings.wplus.globalIntentPickup
+                            else:
+                              - if:
+                                  condition: ${option} == 'Delivery'
+                                  then:
+                                    - try:
+                                        flow:
+                                          - verifyIdentifier:
+                                              timeout: 0
+                                              checked:
+                                                - identifier: us.mappings.wplus.globaIntentDelivery
+                                                  value: true
+                                          - log: Delivery intent already selected
+                                        catch:
+                                          flow:
+                                            - click:
+                                                identifier: us.mappings.wplus.globaIntentDelivery
+                # old GIC Screen
+                else:
+                  - if:
+                      condition: ${option} == 'Shipping'
+                      then:
+                        - try:
+                            flow:
+                              - verifyIdentifier:
+                                  contentDescription:
+                                    - identifier: us.mappings.home.gic.module.shippingIntent
+                                      contains: us.data.gicSelectedAttribute
+                              - log: Shipping intent already selected
+                            catch:
+                              flow:
+                                - click:
+                                    identifier: us.mappings.home.gic.module.shippingIntent
+                      else:
+                        - if:
+                            condition: ${option} == 'Pickup'
+                            then:
+                              - try:
+                                  flow:
+                                    - verifyIdentifier:
+                                        contentDescription:
+                                          - identifier: us.mappings.wplus.globalIntentPickup
+                                            contains: us.data.gicSelectedAttribute
+                                    - log: Pickup intent already selected
+                                  catch:
+                                    flow:
+                                      - click:
+                                          identifier: us.mappings.wplus.globalIntentPickup
+                            else:
+                              - if:
+                                  condition: ${option} == 'Delivery'
+                                  then:
+                                    - try:
+                                        flow:
+                                          - verifyIdentifier:
+                                              contentDescription:
+                                                - identifier: us.mappings.wplus.globaIntentDelivery
+                                                  contains: us.data.gicSelectedAttribute
+                                          - log: Delivery intent already selected
+                                        catch:
+                                          flow:
+                                            - click:
+                                                identifier: us.mappings.wplus.globaIntentDelivery
+
+  # Description: This method verify and update fulfillment
+  - name: unified.us.functions.homePage.verify.updateZipCodeButton
+    flow:
+      - log: Verify and update Zipcode button at GIC
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Pickup
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gicSelectStoreButton
+      - log: Update Zipcode button on the GIC validated!
+      - sleep:
+          duration: 2000
+
+  # Description: This method verify pickup time slots at reserve
+  - name: unified.us.functions.homePage.verify.pickup.reserve.timeslots
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.pickuptime.text
+            - identifier: us.mappings.gic.reserve.viewalltimes.text
+            - identifier: us.mappings.gic.reserve.timeslots.container
+      - log: Pickup reservation time slots on the GIC validated!
+
+  # Description: This method verify pickup time slots in the Cart
+  - name: unified.us.functions.gic.verify.pickup.timeslot.inCart
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.inCart.fullfillmentDetail
+            - identifier: us.mappings.gic.inCart.pickup.timeslot.view
+      - log: Pickup reservation timeslot is validated in the cart!
+
+  # Description: This method uses to select a pickup timeslot from GIC
+  - name: unified.us.functions.gic.selectPickupTime
+    flow:
+      - log: Select a pickup time slot from GIC
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.timeslots.container
+      - click:
+          identifier: us.mappings.gic.reserve.timeslot.slot1
+          wait: 3500
+      - executeFunction:
+          name: unified.us.functions.gic.reserve.closeUnavailableTimeslot
+      - log: "Selected one time slot"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.seeTimes
+
+  - name: unified.us.functions.gic.reserve.closeUnavailableTimeslot
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.gic.reserve.timeslot.unavailable
+          then:
+            - log: This time slot is unavailable
+            - click:
+                identifier: us.mappings.global.closeButton
+                wait: 2000
+            - click:
+                identifier: us.mappings.gic.reserve.timeslot.slot4
+                wait: 2000
+
+  # Description: This method use to set a Delivery Store by Zipcode and assert the Delivery Store Card updates in GIC.
+  - name: unified.us.functions.gicDss.select.deliveryStore.address.updatesStoreCard
+    flow:
+      - log: Set a Delivery Store inside catchment for a user's Address and Delivery Store Card updates in GIC.
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed   
+      - executeFunction:
+          name: unified.us.test.functions.utils.closeWplusPrompt.homeScreen
+      - executeFunction:
+          name: unified.us.functions.gic.module.noIntent.selectStore.byZipcode 
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed    
+      - verifyIdentifier:
+          present:          
+            - identifier: us.mappings.home.gic.module.storeAddress.present
+            - identifier: us.mappings.gicDss.storeName.present              
+      - log: Confirmed ${DeliveryStoreName} has been selected and now displays in the Delivery Store Card in the GIC module!
+
+  # Description: This method use to select a store from GIC module by tapping the Store card no intent selected. 
+  - name: unified.us.functions.gic.module.noIntent.selectStore.byZipcode
+    flow:
+      - click:
+          identifier: us.mappings.home.gic.module.unselectedIntent.storeAddresssection
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.gic.selectStore.headerText 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.gic.selectStore.headerText 
+          then:             
+            - log: Store Selector is present, proceed with Zip Code entry
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.zipcodeClearButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.zipcodeClearButton
+            - enterText:
+                identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield 
+                string: ${ZIP_CODE}
+                pressEnter: true
+          else:
+            - log: Store Selector is not present, proceed with selection
+            - verifyIdentifier:
+                present:
+                  - identifier: Select Store
+            - log: Store Selector is present, proceed with Zip Code entry
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.zipcodeClearButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.zipcodeClearButton                 
+            - enterText:
+                identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield 
+                string: ${ZIP_CODE}
+                pressEnter: true        
+      - click:
+          identifier: us.mappings.gic.selectStore.byZipcode
+          wait: 3000
+      - log: Clicked on Store name ${SelectedStoreByZip}           
+      - click:
+          identifier: us.mappings.reserveSlot.selectStore.saveButton
+          wait: 3000
+
+  # Description: This method use to choose a Delivery Address from within the Gic Module.
+  - name: unified.us.functions.gic.module.selectAdress.fromSelector  
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.test.functions.utils.gic.noDeliveryAddressPresent.addAddressCTA
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mappings.home.gic.module.deliveryAddress.present
+              then:
+                - click:
+                    identifier: us.mappings.home.gic.module.deliveryAddress.present
+              else:
+                - scroll: 
+                    direction: down
+                    untilIdentifier: us.mappings.home.gic.module.deliveryAddress.present
+                    position: center
+                    wait: 3000         
+      - click:
+          identifier: us.mappings.home.gic.module.deliveryAddress.present
+          wait: 3000
+      - log: "Clicked on user's address: ${deliveryAddress}"  
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mappings.default.keyboardDoneButton  
+              then:
+                - click:
+                    identifier: us.mappings.default.keyboardDoneButton  
+          - scroll:
+              direction: down
+              untilIdentifier: us.mappings.gic.select.address.save.button
+      - click:
+          identifier: us.mappings.gic.select.address.save.button
+          wait: 3000
+      - verifyIdentifier:
+          timeout: 10000
+          present:          
+            - identifier: us.mappings.home.gic.module.deliveryAddressCard.present
+      - log: "The User's Delivery Address: ${deliveryAddressCard} is now presented on the GIC delivery address card!"
+  
+  # Description: This method use to validate the Dss Bottom Sheet and Update to a new Store
+  - name: unified.us.functions.gic.module.dssBottomSheet.selectStoreLink 
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.module.dssBottomSheet.validation     
+      - click:
+          identifier: us.mappings.home.gic.module.dssBottomSheet.selectDiffStoreLink
+          wait: 3000
+      - executeFunction:
+          name: unified.us.functions.gic.module.dssBottomSheet.selectStoreLinkPage.validation          
+      - executeFunction:
+          name: unified.us.functions.gic.module.storeCardDetails.persist.forDeliveryAndPickup 
+
+  # Description: This method use to validate the DSS bottom sheet for any Store Selection
+  - name: unified.us.functions.gic.module.dssBottomSheet.validation 
+    flow:
+      - click:
+          identifier: us.mappings.home.gic.module.pickupIntent
+      - click:
+          identifier: us.mappings.home.gic.module.deliveryIntent
+      - verifyIdentifier:   
+          timeout: 15000
+          present: 
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.updateStoreheader      
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.deliveryUnavailbleText
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.storeAddress
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.storeName            
+      - log: Header, delivery text and the store address on the DSS bottom sheet prompt are present!         
+      - verifyIdentifier:
+          timeout: 15000
+          present:  
+            - identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.selectDiffStoreLink
+      - log: All Elements present on DSS bottom sheet prompt!
+
+  # Description: This method use to validate the GIC Module Store Card details and then select Pickup intent and valdiate Store Card Details remains the same.
+  - name: unified.us.functions.gic.module.storeCardDetails.persist.forDeliveryAndPickup  
+    flow:
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.gic.selectedStoreAddress.PickupDeliveryIntent 
+            - identifier: us.mappings.gic.selectedStoreName.PickupDeliveryIntent     
+      - click:
+          identifier: us.mappings.home.gic.module.pickupIntent
+          wait: 5000
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.gic.selectedStoreAddress.PickupDeliveryIntent
+            - identifier: us.mappings.gic.selectedStoreName.PickupDeliveryIntent  
+
+  # Description: This method use to validate the Dss Bottom Sheet and Update to a new Store
+  - name: unified.us.functions.gic.module.dssBottomSheet.updateStore 
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.module.dssBottomSheet.validation     
+      - click:
+          identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+          wait: 3000
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: unified.us.functions.gic.module.storeCardDetails.persist.forDeliveryAndPickup  
+
+  # Description: This method use to validate the Dss Bottom Sheet and Update to a new Store
+  - name: unified.us.functions.gic.module.dssBottomSheet.selectStoreLinkPage.validation  
+    flow:
+      - log: Validate the GIC DSS Select Your Store prompt!
+      - verifyIdentifier:
+          timeout: 15000
+          present:
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.headerText
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.storeName
+            - identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.storeAddress
+      - log: All Elements present in the Select Your Store prompt, select a new Delivery Store
+      - click:
+          identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.storeAddress
+          wait: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.saveAsMyStore.cta        
+          then:
+            - log: Save my store button was present!           
+            - click:
+                identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.saveAsMyStore.cta
+                wait: 5000                                                           
+            - log: Save my store button was clicked!    
+          else: 
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.saveAsMyStore.cta
+            - verifyIdentifier:
+                timeout: 10000
+                present:
+                  - identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.saveAsMyStore.cta
+            - log: Save my store button is now visible!   
+            - click:
+                identifier: us.mappings.home.gic.module.dssBottomSheet.selectYourStorePage.saveAsMyStore.cta
+                wait: 5000
+            - log: Save my store button was clicked!
+
+  - name: unified.us.functions.home.location.updateStore.gicDss  
+    flow:
+      - log: ${ZIP_CODE}
+      # Making sure GIC is displayed
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed 
+      - executeFunction:
+          name: unified.us.functions.gicDss.select.deliveryStore.address.updatesStoreCard
+      - executeFunction:
+          name: unified.us.functions.gicDss.select.deliveryStore.address.updatesStoreCard.forPickupIntent
+      - executeFunction:
+          name: unified.us.functions.gic.collapseIfExpanded
+
+  # Description: This method use to set a new Delivery Store inside catchment for a user's Address and Pickup Store Card updates in GIC. 
+  - name: unified.us.functions.gicDss.select.deliveryStore.address.updatesStoreCard.forPickupIntent
+    flow:
+      - log: Set a different Delivery Store inside catchment based on the users address and confirm Delivery Store is the same as Pickup Store in the GIC Module.      
+      - executeFunction:
+          name: unified.us.functions.gic.module.intentSelected.storeCard.storeSelector
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - log: Final Stage Confirm New Store and Store Card when Delivery intent is selected                      
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.gic.selectedStoreAddress.PickupDeliveryIntent 
+            - identifier: us.mappings.gic.selectedStoreName.PickupDeliveryIntent
+      - click:
+          identifier: us.mappings.home.gic.module.pickupIntent
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.selectedStoreAddress.PickupDeliveryIntent
+            - identifier: us.mappings.gic.selectedStoreName.PickupDeliveryIntent              
+      - log: Confirmed the Delivery Store is the same as Pickup Store in the GIC Module for new Store inside Catchment
+
+  # Description: This method use to tap the Store card when intent is selected and select a store from the store selector prompt. 
+  - name: unified.us.functions.gic.module.intentSelected.storeCard.storeSelector
+    flow:
+      - click:
+          identifier: us.mappings.home.gic.module.deliveryIntent
+      - verifyIdentifier:
+          present:           
+            - identifier: us.mappings.home.gic.module.storeAddress.present
+            - identifier: us.mappings.gicDss.storeName.present
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.gic.module.storeAddressSection
+            - click:
+                identifier: us.mappings.home.gic.module.storeAddressSection
+          else:
+            - click:
+                identifier: us.mappings.home.gic.module.storeAddressSection.storeName  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.gic.select.address.selectYourStore.headerText 
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.gic.select.address.storesDeliveringToYourAddress.headerText 
+            - log: Store Selector is present, proceed with selection
+          else:
+            - log: Store Selector is not present, proceed with selection                        
+      - click:
+          identifier: us.mappings.home.gic.module.newStoreAddress.selectStore
+          wait: 3000
+      - click:
+          identifier: us.mappings.gic.select.address.saveMyStore.button
+          wait: 3000
+
+  - name: unified.us.functions.gic.updateStore
+    flow:
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.home.gic.updateStore
+          then:
+            - click:
+                identifier: us.mappings.home.gic.updateStore
+                wait: 3000    
+
+ # Description: This method use to verify gic header with bookslot and zipcode
+  - name: unified.us.functions.verify.deliveryIntent.selected.inGicHeader
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.module.deliveryIntent.selected.inGicHeader 
+
+  # Description: This method use to verify slot in cart page
+  - name: unified.us.functions.gic.verify.cart.slot
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.slot
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - verifyValue:
+                      identifier: us.mappings.cart.slot
+                      contains: "Tomorrow"
+                else:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.cart.slot
+                          contains: Tomorrow
+          catch:
+            flow:
+                - verifyIdentifier:
+                    present:
+                      - identifier: us.mappings.cart.slot
+                - verifyIdentifier:
+                    text:
+                      - identifier: us.mappings.cart.slot
+                        contains: Today
+      - log: Reservation remains
+  
+  # Description: This method use to validate bookslot selection
+  - name: unified.us.functions.home.validateDfsinfo.bookslot.selection
+    flow:
+      - sleep:
+          duration: 1000
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.dfs.deliveryaddress 
+            - identifier: us.mappings.home.gic.seeTimes
+
+  # Description: This method use to validates all GIC module elements in unselected state.
+  - name: unified.us.functions.homePage.verify.GICExpandedView.unselected
+    flow:
+      - log: validates all GIC module elements in unselected state.
+      - executeFunction:
+         name: unified.us.functions.gic.expandIfCollapsed
+      #Validate GIC Header    
+      - verifyIdentifier:
+          timeout: 50000
+          present:
+            - identifier: us.mappings.home.gic.module.headerText.section
+            - identifier: us.mappings.home.gic.module.headerText
+            - identifier: us.mappings.home.gic.expandedIcon
+            - identifier: us.mappings.home.gic.module.headerBar
+      - log: GIC header validated!      
+      #Validate GIC intent icons        
+      - verifyIdentifier:
+          timeout: 50000        
+          present:                                                        
+            - identifier: us.mappings.home.gic.module.shippingIntent
+            - identifier: us.mappings.home.gic.module.pickupIntent
+            - identifier: us.mappings.home.gic.module.deliveryIntent
+      - log: GIC Module intent selections validated!               
+      #Validate GIC Store Info       
+      - verifyIdentifier:
+          timeout: 50000        
+          present:
+            - identifier: us.mappings.home.gic.module.addAddressMessage.text
+            - identifier: us.mappings.home.gic.module.parent.addAddressButton
+      - log: GIC Module Store data validated!
+
+  # Description: This method use to validates the GIC module is not present on screen.
+  - name: unified.us.functions.homePage.verify.GICExpandedView.notPresent
+    flow:
+      - verifyIdentifier:
+          timeout: 50000
+          notPresent:
+            - identifier: us.mappings.home.gic.module.headerText.section
+            - identifier: us.mappings.home.gic.module.headerText
+            - identifier: us.mappings.home.gic.module.bannerChevron
+            - identifier: us.mappings.home.gic.module.headerBar
+      - log: GIC header and module are not present on screen.
+
+  # Description: This method use to change the GIC selected intent from Delivery to Pickup by Reserving a curbside Pickup via Bookslot.
+  - name: unified.us.functions.homePage.gic.Module.deliveryIntent.changesTo.pickupIntent.fromBookslot.selection
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+      - verifyIdentifier:
+          timeout: 100000
+          present:
+            - identifier: us.mappings.home.gic.module.deliveryIntent.selected.inGicHeader         
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot 
+          params:
+            - name: page
+              string: home
+            - name: tab
+              string: pickup    
+            - name: slotDay
+              string: dayAfter 
+            - name: slotIndex
+              string: 3                              
+      - verifyIdentifier:
+          timeout: 100000
+          present:
+            - identifier: us.mappings.home.gic.module.pickupIntent.selected.inGicHeader          
+      - log: GIC intent set to Pickup from Bookslot pickup selection 
+
+  #User Searches on TV or other shared item and Adds item to cart.
+  #Confirm in Cart intent show item is in Store Module for pickup.
+  #Return to Homescreen.
+  #Change GIC intent to Shipping.
+  #Return to Cart.
+  #Validate Item is now in Shipping Module based on GIC intent change.  
+  # Description: This method use to verify GIC header is present on Search and Identify Shared item for testcase
+  - name: unified.us.functions.homePage.gic.Module.searchFor.sharedItems.gicPickupHeader
+    flow:
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed 
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string:  us.data.prod.gic.sharedItem4
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.gic.module.pickupIntent.selected.inGicHeader
+          then:
+            - click:
+                identifier: us.mappings.home.gic.collapsedIcon
+            - log: GIC is now Expanded  
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: us.mappings.wplus.globalIntentPickup
+            - click:
+                identifier: us.mappings.home.gic.expandedIcon
+          else:
+            - log: pickup indent is already selected  
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.home.gic.module.pickupIntent.selected.inGicHeader
+      - click:
+          identifier: us.mappings.search.firstItem
+          wait: 3000         
+      - scroll: 
+          direction: down
+          untilIdentifier: us.mappings.item.switching.fulfillment.pickupText
+          position: center
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.item.switching.fulfillment.pickupText
+              - identifier: us.mappings.item.switching.fulfillment.deliverystoreText
+              - identifier: us.mappings.item.switching.fulfillment.shippingText
+          then:
+            - log: Cant find the expected fulfillment requirements
+            - log: Deep link to a new Item.
+            - click:
+                identifier: us.mappings.item.closeButton
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - terminateApp: true
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.goToDeepLink
+                      params:
+                        - name: deepLinkUrl
+                          string: walmart://home
+            - executeFunction:
+                name: unified.us.functions.search.searchItem
+                params:
+                  - name: searchTerm
+                    string: us.data.prod.item.ios.sharedItem
+            - click:
+                identifier: us.mappings.search.firstItem
+                wait: 3000                         
+            - scroll: 
+                direction: down
+                untilIdentifier: us.mappings.item.switching.fulfillment.pickupText
+                position: center                                    
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.item.switching.fulfillment.pickupText
+                  - identifier: us.mappings.item.switching.fulfillment.deliverystoreText
+                  - identifier: us.mappings.item.switching.fulfillment.shippingText
+            - log: fulfillment requirements are present with 2nd item.
+            - log: 2nd Item is a shared item, now adding to cart!          
+          else:
+            - log: fulfillment requirements are present with 1st item.            
+            - log: 1st Item is a shared item, now adding to cart!
+
+  # Description: This method use to verify Review Order screen for GIC variation A or variation B
+  - name: unified.us.functions.homePage.gic.Module.verifyReviewOrder.variationA.orVariationB
+    flow: 
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.curbsidepickup.cardTitle
+          then:
+            - log: Review Order screen is GIC variation B and multi-fulfillment
+            - executeFunction:
+                name: unified.us.functions.verifyCardDetailsNew
+                params:
+                  - name: listOfExpectedFulfilment
+                    string: Pickup, Shipping
+            # - executeFunction:
+            #     name: unified.us.functions.verifyCardDetailsNew
+            #     params:
+            #       - name: listOfExpectedFulfilment
+            #         string: Shipping
+          else:
+            - log: Review Order screen is GIC variation A and Shipping only 
+            - executeFunction:
+                name: us.functions.checkout.reviewOrder.fcDelivery.verifyCard
+
+  # Description: This method use after GIC Intent Has been changed verify Cart Item fullfillment changes to expected value.
+  - name: unified.us.functions.homePage.gic.Module.verifySwitchingOfIntentsInGICAffectsCartIntent
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+      - if:
+          condition: ${platform} == 'iOS'
+          then:          
+            - getString:
+                identifier: us.mappings.cart.scheduledDelivery.cardTitle
+                attribute: value
+                storeIn: intentType
+            - log: ${intentType}    
+            - if:
+                condition: ${intentType} == 'Pickup' || ${intentType} == Pickup || ${intentType} == "Pickup or delivery from store" || ${intentType} == "Delivery from store" || ${intentType} == 'Sin costo Retiro'
+                then:
+                  - log: GIC Intent matches Pickup
+                else:
+                  - log: GIC Intent did not match Pickup
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.orderConfirmation.scDelivery.cardTitle
+            - sleep:
+                duration: 3000
+            - verifyIdentifier:
+                timeout: 10000
+                present:
+                  - identifier: us.mappings.orderConfirmation.scDelivery.cardTitle
+            - log: GIC Intent matches Pickup         
+      - log: Verify selected store is displayed on Cart page
+      - executeFunction:
+          name: us.functions.cart.verify.pickupAddress
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.prod.home.deeplinkurl
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - click:
+          identifier: us.mappings.home.gic.module.shippingIntent
+          wait: 3000
+      - log: GIC Shipping Intent is now selected 
+      - sleep:
+          duration: 6000                                   
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar 
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - getString:
+                identifier: us.mappings.cart.scheduledDelivery.cardTitle
+                attribute: value
+                storeIn: intentType2  
+            - if:
+                condition: ${intentType2} == 'Shipping' ||  ${intentType2} == 'shipping' || ${intentType2} == 'Sin costo Envío'
+                then:
+                  - log: GIC Intent matches Pickup
+                  - log: Expo variation A was detected!
+                else: 
+                  - executeFunction:
+                      name: unified.us.functions.homePage.gic.Module.verifySwitchingOfIntentsInGICAffectsCartIntentHelper
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - scroll:
+                direction: up
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderConfirmation.scDelivery.cardTitle
+                then:
+                    - executeFunction:
+                       name: unified.us.functions.homePage.gic.Module.verifySwitchingOfIntentsInGICAffectsCartIntentHelper
+                else:
+                    - log: Expo variation A was detected!
+                    - scroll:
+                        direction: up
+                        untilIdentifier: us.mappings.orderConfirmation.fcDelivery.cardTitle          
+                    - verifyIdentifier:
+                        timeout: 10000
+                        present:
+                          - identifier: us.mappings.orderConfirmation.fcDelivery.cardTitle 
+
+  - name: unified.us.functions.homePage.gic.Module.verifySwitchingOfIntentsInGICAffectsCartIntentHelper
+    flow:
+      - log: GIC Intent did not match Pickup
+      - log: Expo variation B was detected!
+      # - click:
+      #     identifier: unified.us.mappings.global.navigation.backNavigation
+      - click: 
+          identifier: us.mappings.global.navigation.backNavigation
+      - executeFunction:
+          name: us.functions.homePage.gic.Module.searchFor.sharedItems.gicShippingHeader
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderConfirmation.fcDelivery.cardTitle 
+          then:
+            - log: GIC Intent now matches Shipping for Item Level Preservation, variation B
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderConfirmation.fcDelivery.cardTitle 
+                position: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderConfirmation.fcDelivery.cardTitle 
+            - log: GIC Intent now matches Shipping for Item Level Preservation, variation B
+
+  - name: unified.us.functions.gic.locationAccuracy.verifyBanner.searchScreen
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mapping.gic.locationAccuracy.banner.searchScreen
+          position: center      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapping.gic.locationAccuracy.banner.searchScreen
+            - identifier: us.mapping.gic.locationAccuracy.closeBanner.searchScreen
+      - log: Location Accuracy banner is present on home page
+
+  - name: unified.us.functions.gic.locationAccuracy.verifyBanner.itemScreen
+    flow:    
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.localmarketPlace.pickup
+          position: center  
+      - click:
+          identifier: us.mappings.item.localmarketPlace.pickup
+      - verifyIdentifier:
+          present:
+          - identifier: us.mapping.gic.locationAccuracy.banner.itemScreen
+      - log: Location Accuracy banner is present on item details screen
+
+  - name: unifed.us.functions.gic.locationAccuracy.verifyBanner.cartScreen
+    flow:    
+      - verifyIdentifier:
+          present:
+          - identifier: us.mapping.gic.locationAccuracy.banner.cartScreen
+      - log: Location Accuracy banner is present on cart screen    
+
+  - name: unified.us.functions.gic.deselectFulfillment
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      timeout: 0
+                      label:
+                        - identifier: us.mappings.home.gic.module.intentSelection
+                          contains: clear
+                  - log: ${option} intent selected
+                  - click:
+                      identifier: us.mappings.home.gic.module.intentSelection
+                  - log: ${option} intent deselected    
+                catch:
+                  flow:
+                    - log: ${option} intent already deselected
+            - sleep:
+                duration: 3000 
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                condition: ${option} == 'Shipping'
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.gic.Clear.shippingFulfillment  
+                      then:  
+                          - log: Shipping intent selected
+                          - click:
+                              identifier: us.mappings.gic.Clear.shippingFulfillment
+                          - log: Shipping intent deselected
+                      else:
+                          - log: Shipping does not be intent selected
+                else: 
+                    - if:
+                        condition: ${option} == 'Pickup'
+                        then:
+                          - if:
+                              identifier:
+                                present:
+                                - identifier: us.mappings.gic.Clear.pickupFulfillment 
+                              then:
+                              - log: Pickup intent selected
+                              - click:
+                                  identifier: us.mappings.gic.Clear.pickupFulfillment
+                              - log: Pickup intent deselected 
+                              else:
+                                - log: Pickup does not be intent selected
+                        else:    
+                            - if:
+                                condition: ${option} == 'Delivery'
+                                then:
+                                  - if:
+                                      identifier:
+                                        present:
+                                          - identifier: us.mappings.gic.Clear.deliveryFulfillment    
+                                      then:
+                                      - log: Delivery intent selected
+                                      - click:
+                                          identifier: us.mappings.gic.Clear.deliveryFulfillment 
+                                      - log: Delivery intent deselected
+                                      else:
+                                        - log: Delivery does not be intent selected
+  
+
+  - name: unified.us.functions.gic.select.inhome.delivery.address
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - sleep:
+                duration: 3000
+            - if:
+                condition: ${shipAnotherCountry}
+                then:
+                
+                  - executeFunction:
+                      name: us.functions.gic.expandIfCollapsed
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.home.gic.module.shipAnotherCountry
+                  - click:
+                      identifier: us.mappings.home.gic.module.shipAnotherCountry
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.maping.home.gic.module.addressTitle
+                  - click:
+                      identifier: us.mapping.gic.module.selectColumbiaCountry
+                  - click:
+                      identifier: us.mapping.gic.module.addShippingAddress
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mapping.gic.module.selectAddressHeaderPresent
+                      then:
+                        - click:
+                            identifier: us.mapping.gic.module.clickAddANewAddress
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mapping.gic.module.verifyAddAddressTitle
+
+                  - log: Add address sheet opened
+                else:
+                  - executeFunction:
+                      name: us.functions.gic.expandIfCollapsed
+                  - click:
+                      identifier: us.mappings.home.gic.add.address.button
+                  - sleep:
+                      duration: 2000
+                  - click:
+                      identifier: us.mappings.gic.select.address.radiobutton
+                  - sleep:
+                      duration: 2000
+                  - click:
+                      identifier: us.mappings.gic.select.address.save.button
+                  - log: InHome Delivery Eligible address is selected on GIC!
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - sleep:
+                duration: 3000
+            - if:
+                condition: ${shipAnotherCountry}
+                then:
+                  - executeFunction:
+                      name: us.functions.gic.expandIfCollapsed
+                  - verifyIdentifier:
+                      present:
+                        - identifier: com.walmart.android.debug:id/gic_ship_to_other_country_container
+                  - click:
+                      identifier: com.walmart.android.debug:id/gic_ship_to_other_country_container
+                  - verifyIdentifier:
+                      present:
+                        - identifier: com.walmart.android.debug:id/title
+                  - click:
+                      identifier: (//androidx.appcompat.widget.LinearLayoutCompat[@resource-id="com.walmart.android.debug:id/line_item"])[3]
+                  - click:
+                      identifier: com.walmart.android.debug:id/add_shipping_address_button
+                  - verifyIdentifier:
+                      present:
+                        - identifier: com.walmart.android.debug:id/title
+                  - log: Add address sheet opened
+                else:
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: us.mappings.home.gic.add.address.button
+                        then:
+                          - log: GIC module is not in Expanded view, click chevron to expand
+                          - click:
+                              identifier: us.mappings.home.gic.collapsedIcon
+                          - log: GIC is now Expanded
+                        else:
+                          - log: GIC is already in Expanded view and see the Add Address button!
+                    - click:
+                        identifier: us.mappings.home.gic.add.address.button
+                    - sleep:
+                        duration: 2000
+                    - click:
+                        identifier: us.mappings.gic.select.address.radiobutton
+                    - sleep:
+                        duration: 2000
+                    - click:
+                        identifier: us.mappings.gic.select.address.save.button
+                    - sleep:
+                        duration: 5000
+                    - log: InHome Delivery Eligible address is selected on GIC!
+                
+  # Select User Address in home page via GIC
+  - name: unified.us.functions.gic.selectAddress
+    flow:
+      - click:
+          identifier: us.mappings.home.gic.module.parent.addAddressButton
+      - click:
+          identifier: us.mappings.gic.select.address.radiobutton
+      - click:
+          wait: 2000
+          identifier: us.mappings.gic.select.address.save.button  
+
+  - name: unified.us.functions.gic.verifyHotGicPickupAndDeliveryOptions
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - sleep:
+          duration: 3000
+      # Clearing if any intent is preselected
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.hot.gic.deliveryOptionSelected
+          then:
+            - click:
+                identifier: us.mappings.hot.gic.deliveryOptionSelected
+          else: 
+            - if:
+                identifier:
+                  present: 
+                    - identifier: us.mappings.hot.gic.pickupOptionSelected
+                then:
+                  - click:
+                      identifier: us.mappings.hot.gic.pickupOptionSelected
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.hot.gic.pickupOption
+            - identifier: us.mappings.hot.gic.deliveryOption
+            - identifier: us.mappings.hot.gic.fullDeliveryAddress
+            - identifier: us.mappings.hot.gic.storeAddress
+
+      - click:
+          identifier: us.mappings.hot.gic.deliveryOption
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.hot.gic.fullDeliveryAddress
+            - identifier: us.mappings.hot.gic.shippingText
+            - identifier: us.mappings.item.switching.fulfillment.deliverystoreText
+            - identifier: us.mappings.home.gic.seeTimes
+
+# Navigate to Drone Landing Page via GIC Shop-drone-ready picks
+  - name: unified.us.functions.gic.verify.navigateToDroneLanding
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.gic.shopDroneReadyPicks.cta
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.gic.shopDroneReadyPicks.droneIcon
+                  - identifier: us.mappings.home.gic.shopDroneReadyPicks.droneTitle
+                  - identifier: us.mappings.home.gic.shopDroneReadyPicks.droneDescription
+                  - identifier: us.mappings.home.gic.shopDroneReadyPicks.button
+            - click:
+                identifier: us.mappings.home.gic.shopDroneReadyPicks.button
+            - log: Clicked Shop-drone-ready picks from GIC!  
+
+
+ # Verify Drone Capacity and Timer on GIC once an item is added to the cart
+  - name: unified.us.functions.gic.verify.droneCapacityAndTimer
+    flow:
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+      - verifyIdentifier:
+          present:
+          - identifier: us.mappings.home.gic.collapsed.droneDeliveryIcon
+          - identifier: us.mappings.home.gic.droneSlotReserved.capacityProgress
+          - identifier: us.mappings.home.gic.droneSlotReserved.capacityHeader        
+          - identifier: us.mappings.home.gic.droneSlotReserved.capacityInfo
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label: 
+                  - identifier: us.mappings.home.gic.droneSlotReserved.timer
+                    contains: Drone delivery Check out in
+          else:       
+            - verifyIdentifier:
+                timeout: 8000 
+                present:
+                  - identifier: us.mappings.navBar.cartIconEmpty 
+                text:
+                  - identifier: us.mappings.navBar.cartIconEmpty 
+                    contains: "1"         
+            - log: Drone-delivery item is added to cart and navBar cart count is displayed as 1

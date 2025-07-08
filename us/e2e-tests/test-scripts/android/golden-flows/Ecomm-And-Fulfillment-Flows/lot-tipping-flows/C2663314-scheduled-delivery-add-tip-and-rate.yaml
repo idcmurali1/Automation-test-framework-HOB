@@ -1,0 +1,329 @@
+general:
+  platform: android
+  tags: #C2663314, us-golden-flows-ecom-p1, Tipping, p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2663314
+  metadata:
+    - name: scenarioId
+      string: EC034 #90
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.tipping.greaterThan35.email
+
+      - executeFunction:
+          name: us.functions.checkGiftCardBalanceAndLoadIfZero
+          params:
+            - name: balance
+              string: 100
+            - name: PID
+              string: 969a9722-0a84-4662-9888-7751d247183f.3969
+            - name: pin
+              string: 0952
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.tipping.greaterThan35.email
+            - name: password
+              string: us.data.tipping.greaterThan35.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup
+
+      # Set store
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+            - name: storeOnly
+              string: true
+
+      #Fetch FC_DELIVERY EBT stock from items list 
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.tipping.greaterThan35.android.email        
+            - name: itemType
+              string: FC_DELIVERY 
+            - name: itemList
+              string: us.data.fcDelivery.EBT.itemIds
+      - storeIn:
+          key: item1
+          value: $itemFetched                            
+
+      # Add item1 to the cart
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/$item1
+      - executeFunction:
+           name: us.functions.item.addItemToCart
+      - sleep:
+          duration: 3000                         
+
+      #Fetch SC_DELIVERY stock from items list
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.tipping.greaterThan35.android.email        
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY 
+            - name: itemList
+              string: us.data.moreThan35.SCD.itemLists
+      - storeIn:
+          key: item2
+          value: $itemFetched
+
+      # Add item2 to the cart
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/$item2
+
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup
+
+      - executeFunction:
+           name: us.functions.item.addItemToCart
+      - sleep:
+          duration: 3000                 
+
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup
+                    
+      # Navigate to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      # - executeFunction:
+      #     name: us.functions.cart.increaseItemQtyInCart
+      #     params:
+      #       - name: quantity
+      #         string: 2
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: pickup
+
+      # Go to book slot
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart             
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      # Go to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.home.closeStoreConfirmationBannerIfDisplayed
+      # Get the subtotal of SC delivery items
+      - executeFunction:
+          name: us.functions.utils.astro.getItemPrice
+          params:          
+            - name: storeId
+              string: 32144
+            - name: item
+              string: ${item2}
+
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.driverTipAmountVerification.on.orderReviewPage
+          params:
+            - name: greaterThan35Dollars
+              string: true
+            - name: decimalPlacesNeededForTipCalc
+              string: 2
+            - name: SC_DELIVERY_ITEM
+              string: true                        
+
+      - executeFunction:
+          name: us.functions.customDriverTip.amount
+          params:
+            - name: tipAmount
+              string: 0             
+
+      # placing order and navigating to order confirmation page
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvBeforePlaceOrder
+          params:
+            - name: cvv
+              string: 123
+            - name: ebtExists
+              string: true
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrderAgainIfError
+          params:
+          - name: ebtExists
+            string: true
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+     
+      - log: ${orderNo}
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # - log: 'Post order confirmation validation for Drivers Deliver tip selection on the Order details page'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Move to PO Acknowledged
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Acknowledged
+
+      # Validate Driver Tip when the Order is in PO Acknowledged status
+      - executeFunction:
+          name: us.functions.utils.astro.validateDriverTip
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Acknowledged
+            - name: driverTipAmt
+              string: ${tipAmount}
+            - name: tipType
+              string: PreTip
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - sleep:
+          duration: 7000
+
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.handleRateYourDriverPopupIfRequired                                                                         
+
+      #  Astro Update Change the status of the order as Delivered
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+
+      # Move order to Delivered
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: Delivered  
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: us.functions.orderDetails.ost.scheduledDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Delivery from store
+            - name: orderStatus
+              string: Delivered
+
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.handleRateYourDriverPopupIfRequired
+
+      # Click Add Tip On ODP For SC + FC Delivery order in delivered state - navigated to Feedback and Tipping screen
+      # - executeFunction:
+      #     name: us.functions.tippingAndFeedback.navigateToFeedbackAndTippingScreenFromOrderDetails                
+
+      # Verify if add tip button is present in ODP page and add custom tip amount
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.deliveredOrder.addTipAndVerifyOnOrderDetails
+          params:
+            - name: custTipAmount
+              string: 10
+
+      # Commenting the BE tip validation as the API is failing. Will uncommnet after the issue is resolved.
+      # # Validate Driver Tip when the Order is in Delivered status and Tip is updated 
+      # - executeFunction:
+      #     name: us.functions.utils.astro.validateDriverTip
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: STORE_SCHEDULED_DELIVERY
+      #       - name: status
+      #         string: Delivered
+      #       - name: driverTipAmt
+      #         string: ${custTipAmount}
+      #       - name: tipType
+      #         string: PostTip            
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

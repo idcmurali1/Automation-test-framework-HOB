@@ -1,0 +1,300 @@
+#======================================================================================================================
+#    AUTHOR: Sergio Fernandez (vn0t1qt)
+#   CREATED: Oct/12/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Sets the Test Case Name being currently executed (to be used internally in the construction of the
+  #   final report that will be created once the Test Case execution finishes).
+  #
+  #   * This function is meant to be executed in the Before Scenario in the Test Case.
+  #
+  # PARAMS: ${testCaseName}  [Mandatory]  Name of the Test Case being executed.
+  #
+  # AUTHOR:  Sergio Fernandez (vn0t1qt)
+  # EDITORS: -----
+  - name: mx.squad-reporting.setTestCaseName
+    # anonymousHeader: true # TODO: uncomment once the new R2 functionality 'anonymousHeader' is released.
+    flow:
+      - executeNode:
+          file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+          args:
+            - value: ${testCaseName}
+          getResponse:
+            storeIn: isTestCaseNameEmpty
+      - if:
+          condition: ${isTestCaseNameEmpty}
+          then:
+            - storeIn:
+                key: __SQUAD_REPORTING_TEST_CASE_NAME
+                value: ''
+          else:
+            - executeNode:
+                file: mx/squad-reporting-util/scripts/string-replace.js
+                args:
+                  - value: ${testCaseName}
+                  - value: ' '
+                  - value: '_'
+                getResponse:
+                  storeIn: testCaseName
+            - storeIn:
+                key: __SQUAD_REPORTING_TEST_CASE_NAME
+                value: ${testCaseName}
+      - log:
+          message: 'End function: mx.squad-reporting.setTestCaseName'
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Sets the Test Case Step being currently executed (to be used internally in the construction of the
+  #   final report that will be created once the Test Case execution finishes) and assign the Names of the Squads that
+  #   must be notified in case of the Test Case Execution fails in this Step.
+  #
+  #   Call this function before calling all other functions that represent a new step from your Test Case, this way, if
+  #   the Test Case execution fails, the report will have a way to identify which Step was being executed when the
+  #   test failure happened and which Squads must be notified about it.
+  #
+  #   This function does not perform the execution of the step, it only logs the given step in the console as well as
+  #   in the R2 Log and the console with the default color, and internally stores the data required to construct the
+  #   final execution report.
+  #
+  #   * This function is meant to be executed in the Main Scenario as many times as required (as many as Steps your
+  #     Test Case have).
+  #
+  #       i.e. Let's say you have a Test Case with these steps:
+  #
+  #              1) Navigate Onboarding all the way to OD Home
+  #              2) Navigate to Profile and Log into the app
+  #              3) Navigate to Home and perform a Product Search through SLP
+  #
+  #            You could code the following in your Main scenario...
+  #
+  #              - executeFunction:
+  #                  name: mx.squad-reporting.setTestCaseStep
+  #                  params:
+  #                    - name: step
+  #                      string: "STEP 1: Navigate Onboarding all the way to OD Home"
+  #                    - name: squadNames
+  #                      string: 'Squad_001 | Squad_003'
+  #
+  #              <then you call here all other functions to accomplish that piece of logic that step requires>
+  #              <then you call the setTestCaseStep function again>
+  #
+  #              - executeFunction:
+  #                  name: mx.squad-reporting.setTestCaseStep
+  #                  params:
+  #                    - name: step
+  #                      string: "STEP 2: Navigate to Profile and Log into the app"
+  #                    - name: squadNames
+  #                      string: 'Squad_001'
+  #
+  #              <then you call here all other functions to accomplish that piece of logic that step requires>
+  #              <then you call the setTestCaseStep function again>
+  #
+  #              - executeFunction:
+  #                  name: mx.squad-reporting.setTestCaseStep
+  #                  params:
+  #                    - name: step
+  #                      string: "STEP 3: Navigate to Home and perform a Product Search through SLP"
+  #                    - name: squadNames
+  #                      string: 'Squad_002'
+  #
+  #              <then you call here all other functions to accomplish that piece of logic that step requires>
+  #              <then you call the setTestCaseStep function again>
+  #              <and so on, up to as many steps your Test Case have>
+  #
+  # PARAMS: ${step}        [Mandatory]  String that describes the Step that will be executed afterwards.
+  #
+  #         ${squadNames}  [Mandatory]  Name(s) of the Squad(s) that must be notified in case of Step failure.
+  #                                     Provide a string with a single Squad Name or multiple Squad Names, separating
+  #                                     them by '|' (with or without spaces).
+  #                                       i.e. SQUAD001
+  #                                       i.e. SQUAD001|SQUAD002
+  #                                       i.e. SQUAD001 | SQUAD002 | SQUAD003
+  #
+  # AUTHOR:  Sergio Fernandez (vn0t1qt)
+  # EDITORS: -----
+  - name: mx.squad-reporting.setTestCaseStep
+    # anonymousHeader: true # TODO: uncomment once the new R2 functionality 'anonymousHeader' is released.
+    flow:
+      - executeNode:
+          file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+          args:
+            - value: ${step}
+          getResponse:
+            storeIn: isStepEmpty
+      - if:
+          condition: ${isStepEmpty}
+          then:
+            - storeIn:
+                key: __SQUAD_REPORTING_ACTUAL_STEP
+                value: 'STEP ??: <Unknown Test Step>'
+          else:
+            - storeIn:
+                key: __SQUAD_REPORTING_ACTUAL_STEP
+                value: ${step}
+      - executeNode:
+          file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+          args:
+            - value: ${squadNames}
+          getResponse:
+            storeIn: isSquadNamesEmpty
+      - if:
+          condition: ${isSquadNamesEmpty}
+          then:
+            - storeIn:
+                key: __SQUAD_REPORTING_ACTUAL_SQUAD_NAMES
+                value: ''
+          else:
+            - storeIn:
+                key: __SQUAD_REPORTING_ACTUAL_SQUAD_NAMES
+                value: ${squadNames}
+      - log: ${__SQUAD_REPORTING_ACTUAL_STEP}
+ 
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Logs the information about the Current Step that was being executed and the Squads to be informed in
+  #   case the Test Case Execution finished with errors, in a JSON file inside the ./squad-report/ folder.
+  #
+  #   Each Test Case logs its own file using the name of the Test Case that was set up with the function
+  #   'mx.squad-reporting.setTestCaseName'.
+  #
+  #   If the Test Case name was not set properly in the Before Scenario, this function will use a timestamp to assign
+  #   the file name.
+  #
+  #   If the Step were not set properly along the flow in the Main Scenario, this function will use the default string
+  #   '<UNKNOWN_TEST_CASE_STEP>' as step to report the failure.
+  #
+  #   If the Squad Names were not set properly along with the Step, this function will report the failure to the
+  #   'default' squad that must be configured in the ./squad-reporting-util/squads-info.json file.
+  #
+  #   * This function is meant to be executed in the After Scenario in the Test Case.
+  #
+  # PARAMS: ${testCaseExecutionStatus}  [Mandatory]  Status if the Test Case Execution:
+  #                                                    Values:
+  #                                                      - true: Test Case execution finished without error, or
+  #                                                      - false: Test Case execution finished with errors.
+  #
+  # AUTHOR:  Sergio Fernandez (vn0t1qt)
+  # EDITORS: -----
+  - name: mx.squad-reporting.logTestCaseFailure
+    # anonymousHeader: true # TODO: uncomment once the new R2 functionality 'anonymousHeader' is released.
+    # anonymous: true # TODO: uncomment once the new R2 functionality 'anonymous' is released.
+    flow:
+
+      - executeNode:
+          file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+          args:
+            - value: ${testCaseExecutionStatus}
+          getResponse:
+            storeIn: isTestCaseExecutionStatusEmpty
+      - if:
+          condition: ${isTestCaseExecutionStatusEmpty}
+          then:
+            - storeIn:
+                key: testCaseExecutionStatus
+                value: false
+      
+      - log:
+          message: Checking Test Case Execution Status (testCaseExecutionStatus = ${testCaseExecutionStatus})...
+          color: GREEN
+      - if:
+          condition: ${testCaseExecutionStatus} == true
+          then:
+            - log:
+                message: Test Case PASSED, Test Case Execution Report is not required.
+                color: GREEN
+          else:
+            - log:
+                message: Test Case FAILED, Test Case Report will be created...
+                color: GREEN
+
+            - log:
+                message: Checking Test Case Name (__SQUAD_REPORTING_TEST_CASE_NAME = '${__SQUAD_REPORTING_TEST_CASE_NAME}')...
+                color: GREEN
+            - executeNode:
+                file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+                args:
+                  - value: ${__SQUAD_REPORTING_TEST_CASE_NAME}
+                getResponse:
+                  storeIn: isSquadReportingTestCaseNameEmpty
+            - if:
+                condition: ${isSquadReportingTestCaseNameEmpty}
+                then:
+                  - log:
+                      message: Test Case Name is empty or null, a default name will be set...
+                      color: GREEN
+                  - executeNode:
+                      file: mx/squad-reporting-util/scripts/get-timestamp.js
+                      getResponse:
+                        storeIn: returnedTimestamp
+                  - storeIn:
+                      key: __SQUAD_REPORTING_TEST_CASE_NAME
+                      value: UNKNOWN_TC_${returnedTimestamp}
+                else:
+                  - log:
+                      message: Test Case Name OK [√]
+                      color: GREEN
+
+            - log:
+                message: Checking Actual Test Step (__SQUAD_REPORTING_ACTUAL_STEP = '${__SQUAD_REPORTING_ACTUAL_STEP}')...
+                color: GREEN
+            - executeNode:
+                file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+                args:
+                  - value: ${__SQUAD_REPORTING_ACTUAL_STEP}
+                getResponse:
+                  storeIn: isSquadReportingActualStepEmpty
+            - if:
+                condition: ${isSquadReportingActualStepEmpty}
+                then:
+                  - log:
+                      message: Actual Test Step is empty or null, a default Step will be set...
+                      color: GREEN
+                  - storeIn:
+                      key: __SQUAD_REPORTING_ACTUAL_STEP
+                      value: 'STEP ??: <Unknown Test Step>'
+                else:
+                  - log:
+                      message: Actual Test Step OK [√]
+                      color: GREEN
+
+            - log:
+                message: Checking Actual Squad Names (__SQUAD_REPORTING_ACTUAL_SQUAD_NAMES = '${__SQUAD_REPORTING_ACTUAL_SQUAD_NAMES}')...
+                color: GREEN
+            - executeNode:
+                file: mx/squad-reporting-util/scripts/is-r2-var-empty.js
+                args:
+                  - value: ${__SQUAD_REPORTING_ACTUAL_SQUAD_NAMES}
+                getResponse:
+                  storeIn: isSquadReportingActualSquadNamesEmpty
+            - if:
+                condition: ${isSquadReportingActualSquadNamesEmpty}
+                then:
+                  - log:
+                      message: Actual Squad Names is empty or null, a default Squad Names will be set...
+                      color: GREEN
+                  - storeIn:
+                      key: __SQUAD_REPORTING_ACTUAL_SQUAD_NAMES
+                      value: ''
+                else:
+                  - log:
+                      message: Actual Squad Names OK [√]
+                      color: GREEN
+
+            - executeNode:
+                file: mx/squad-reporting-util/scripts/save-test-case-error-report.js
+                args:
+                  - value: ${__SQUAD_REPORTING_TEST_CASE_NAME}
+                  - value: ${__SQUAD_REPORTING_ACTUAL_STEP}
+                  - value: ${__SQUAD_REPORTING_ACTUAL_SQUAD_NAMES}
+
+      - log:
+          message: 'End function: mx.squad-reporting.logTestCaseFailure'
+          color: BLUE

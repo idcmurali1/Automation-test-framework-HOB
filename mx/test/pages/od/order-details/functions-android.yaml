@@ -1,0 +1,778 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Dic/07/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.scrollToBottom
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.order-details.elementAtTheBottom
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.order-details.elementAtTheBottom
+                position: center
+                scrollLimit: 15
+                wait: 1000
+      - log:
+          message: "End function: order-details.scrollToBottom"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: ???
+  # EDITOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.order-details.productsExpandedListContainer
+          then:
+              - log: 
+                  message: "Your products section is already expanded"
+                  color: CYAN
+          else:
+              - click:
+                  identifier: mx.mappings.order-details.expandProductsSectionButton
+      - log:
+          message: "End function: 'mx.functions.order-details.expandProductsDetailsIfNotExpanded'"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  - name: mx.functions.order-details.collapseProductsSection
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.order-details.expandProductsSectionButton
+          then:
+              - log: "Your products section is already collapsed"
+          else:
+              - click:
+                  identifier: mx.mappings.order-details.collapseProductsSectionButton
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function first scrolls all the way to the top of this view and then scrolls down to find and click
+  # the add to cart button of the product specified on param.
+  # Param  ${productName}  [Mandatory] Product to find    
+  - name: mx.functions.order-details.addProductToCart
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.order-details.productContainerByProductName
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.order-details.addToCartButtonByProductName
+          then:
+            - click:
+                identifier: mx.mappings.order-details.addToCartButtonByProductName
+          else:
+            - failTest:
+                message: "Add to cart button is not present or product is out of stock."
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function increases the quantity of a product.
+  # Param: ${productName}  [Mandatory]  Name of the product to be increased.
+  # Param: ${quantity}     [Mandatory]  Number of times to increase the product quantity.
+  - name:  mx.functions.order-details.increaseProductQuantityBy
+    platform: android
+    flow:
+      - loop:
+           begin: 0
+           end: ${quantity}
+           mode: increment
+           flow:
+                - click: 
+                    identifier: mx.mappings.order-details.mainButtonByProductName
+                - click:
+                    identifier: mx.mappings.order-details.increaseButtonByProductName
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function decreases the quantity of a product.
+  # Param: ${productName}  [Mandatory]  Name of the product to be increased.
+  # Param: ${quantity}     [Mandatory]  Number of times to decrease the product quantity.
+  - name:  mx.functions.order-details.decreaseProductQuantityBy
+    platform: android
+    flow:
+      - loop:
+           begin: 0
+           end: ${quantity}
+           mode: increment
+           flow:
+                - click: 
+                    identifier: mx.mappings.order-details.mainButtonByProductName
+                - click:
+                    identifier: mx.mappings.order-details.decreaseButtonByProductName
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function switches product to pieces.
+  # Param: ${productName}  [Mandatory]  Name of the product to be switched to pieces.
+  - name:  mx.functions.order-details.switchProductToPieces
+    platform: android
+    flow:
+      - fetchPageSource: false
+      - click: 
+          identifier: mx.mappings.order-details.mainButtonByProductName
+      - click: 
+          identifier: mx.mappings.order-details.piecesButtonByProductName
+      - fetchPageSource: true
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function switches product to weight.
+  # Param: ${productName}  [Mandatory]  Name of the product to be switched to weight.
+  - name:  mx.functions.order-details.switchProductToWeight
+    platform: android
+    flow:
+      - fetchPageSource: false
+      - click: 
+          identifier: mx.mappings.order-details.mainButtonByProductName
+      - click: 
+          identifier: mx.mappings.order-details.weightButtonByProductName
+      - fetchPageSource: true
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function gets the product type, either dual, pieces or Weight.
+  # Param: ${productName}  [Mandatory]  Product to find
+  - name: mx.functions.order-details.getProductType
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.order-details.productUOMSelectorByName
+          then:
+            - storeIn:
+                key: returnedProductType
+                value: Dual
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.order-details.piecesProductCounterByProductName
+                then:
+                  - storeIn:
+                      key: returnedProductType
+                      value: Pieces
+                else:
+                  - storeIn:
+                      key: returnedProductType
+                      value: Weighable
+      - log: "Product type got: ${returnedProductType}"
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method extracts the product price.
+  # Param: ${productName}  [Mandatory]  Product to find.
+  - name: mx.functions.order-details.getProductPrice
+    platform: android
+    flow:
+      - log: 
+          message: "Retrieving price from label..."
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.productPrice
+          attribute: text
+          storeIn: productPrice
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromLabel.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: returnedProductPrice
+      - log: 
+          message: "Price got: $${returnedProductPrice}"
+          color: CYAN
+  
+  #--------------------------------------------------------------------------------------------------------------------
+                  
+  # Description: This function gets the the product's added quantity as pieces and stores it in the global variable
+  # ${returnedPiecesQuantity}.
+  # Param: ${productName}  [Mandatory]  Name of the product.
+  - name: mx.functions.order-details.getProductAddedQuantityAsPieces
+    platform: android
+    flow:
+      - log: 
+          message: "Retrieving product added quantity as pieces..."
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.piecesProductCounterByProductName
+          attribute: text
+          storeIn: returnedPiecesQuantity
+      - log: 
+          message: "Pieces got: ${returnedPiecesQuantity}"
+          color: CYAN
+  
+  #--------------------------------------------------------------------------------------------------------------------
+                  
+  # Description: This function gets the the product's added quantity as weight and stores it in the global variable
+  # ${returnedProductWeight}.
+  # Param: ${productName}  [Mandatory]  Name of the product.
+  - name: mx.functions.order-details.getProductAddedQuantityAsWeight
+    platform: android
+    flow:
+      - log: 
+          message: "Retrieving product added quantity as weight..."
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.weightProductCounterByProductName
+          attribute: text
+          storeIn: productWeight
+      - executeNode:
+          file: mx/test/helpers/slp/splitWeightString.js
+          args:
+            - value: ${productWeight}
+          getResponse:
+            storeIn: returnedProductWeight
+      - log: 
+          message: "Weight got: ${returnedProductWeight} grams"
+          color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function gets the the subtotal value at the bottom of the view and stores it in the global variable
+  # ${returnedSubtotal}.
+  - name: mx.functions.order-details.getSubtotal
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.order-details.scrollToBottom
+      - getString:
+          identifier: mx.mappings.order-details.subtotalValue
+          attribute: text
+          storeIn: displayedSubtotal
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromLabel.js
+          args:
+            - value: ${displayedSubtotal}
+          getResponse:
+            storeIn: returnedSubtotal
+      - log: "Subtotal got: $${returnedSubtotal}"
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function gets the the discount value at the bottom of the view and stores it in the global variable
+  # ${returnedDiscount}.
+  - name: mx.functions.order-details.getDiscount
+    platform: android
+    flow:
+      - log: 
+          message: "Retrieving displayed discount..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.order-details.scrollToBottom
+      - getString:
+          identifier: mx.mappings.order-details.discountValue
+          attribute: text
+          storeIn: displayedDiscount
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromLabel.js
+          args:
+            - value: ${displayedDiscount}
+          getResponse:
+            storeIn: returnedDiscount
+      - log: 
+          message: "Discount got: $${returnedDiscount}"
+          color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function gets the the delivery fee value at the bottom of the view and stores it in the global 
+  # variable ${returnedDeliveryFee}.
+  - name: mx.functions.order-details.getDeliveryFee
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.order-details.scrollToBottom
+      - getString:
+          identifier: mx.mappings.order-details.deliveryFeeValue
+          attribute: text
+          storeIn: displayedDeliveryFee
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromLabel.js
+          args:
+            - value: ${displayedDeliveryFee}
+          getResponse:
+            storeIn: returnedDeliveryFee
+      - log: "Delivery fee got: $${returnedDeliveryFee}"
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function gets the the total value at the bottom of the view and stores it in the global 
+  # variable ${returnedTotal}.
+  - name: mx.functions.order-details.getTotal
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.order-details.scrollToBottom
+      - getString:
+          identifier: mx.mappings.order-details.totalValue
+          attribute: text
+          storeIn: displayedTotal
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromLabel.js
+          args:
+            - value: ${displayedTotal}
+          getResponse:
+            storeIn: returnedTotal
+      - log: "Total got: $${returnedTotal}"
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method asserts the store name.
+  # Param:       ${expectedStoreName}  [Mandatory]  Store name to assert.
+  - name: mx.functions.order-details.assertStoreName
+    platform: android
+    flow:
+    ## TO DO: Turn this code back to normal once the issue gets fixed, also verify the mapping when this happens.
+      - log:
+          message: "As of now, the store name is not being displayed in order details page because of an issue. The code will be commented until page gets fixed."
+          color: YELLOW
+      # - log: 
+      #     message: "Store name: ${expectedStoreName}"
+      #     color: CYAN
+      # - verifyIdentifier:
+      #     text:
+      #       - identifier: mx.mappings.order-details.storeName
+      #         contains: ${expectedStoreName}
+      - log: 
+          message: "End function: order-details.assertStoreName"
+          color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts that a product is not present in order details.
+  # Param: ${productName}  [Mandatory]  Name of the product.
+  - name: mx.functions.order-details.assertProductNotListed
+    platform: android
+    flow: 
+      - log:  
+          message: Checking that ${productName} is not present.
+          color: CYAN
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.order-details.elementAtTheTop 
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.order-details.productContainerByProductName
+          scrollLimit: 15
+      - verifyIdentifier:
+          notPresent:
+            - identifier: mx.mappings.order-details.productContainerByProductName
+      - log:  
+          message: ${productName} is not present.
+          color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This method asserts the product quantity as weight
+  # Param: ${productName}                             [Mandatory]  Name of the certain product.
+  # Param: ${expectedOrderedQuantityAsWeight}  [Mandatory]  Quantity to assert as weight (no need to add the "g" but value must be in grams).
+  - name: mx.functions.order-details.assertProductOrderedQuantityAsWeight
+    platform: android
+    flow: 
+      - arithmetic: 
+          expression: ${expectedOrderedQuantityAsWeight} / 1000
+          storeIn: expectedQuantityInKg
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Ordered Quantity: '${expectedOrderedQuantityAsWeight}' (${expectedQuantityInKg} kg)"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.orderedQuantityAsWeightByProductName
+          storeIn: displayedQuantity
+      - log:  
+          message: "Displayed Ordered Quantity: '${displayedQuantity}'"
+          color: CYAN
+      - if:
+          condition: ${displayedQuantity} != '${expectedQuantityInKg} kg'
+          then:
+            - failTest:
+                message: "Assertion Failed: Displayed Ordered Quantity is not correct"
+      - log:
+          message: "Assertion Successful: Displayed Ordered Quantity is correct"
+          color: CYAN
+      - log:  
+          message: "End function: order-details.assertProductOrderedQuantityAsWeight"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts that a product has been added to cart.
+  # Param: ${productName}  [Mandatory]  Name of the product.
+  - name: mx.functions.order-details.assertProductAddedToCart
+    platform: android
+    flow:
+      - log: 
+          message: "Verifying if the product: ${productName}, was added to cart."
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.order-details.addToCartTextByProductName
+          then:
+            - log: 
+                message: "The product: ${productName}, was added to cart."
+                color: CYAN
+          else:
+            - failTest:
+                message: "The product: ${productName}, was not added to cart."
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts that a product was not added to cart.
+  # Param: ${productName}  [Mandatory]  Name of the product.
+  - name: mx.functions.order-details.assertProductNotAddedToCart
+    platform: android
+    flow: 
+      - log: 
+          message: "Verifying that the product: ${productName}, was not added to cart."
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.order-details.addToCartTextByProductName
+          then:
+            - log: 
+                message: "The product: ${productName}, was not added to cart."
+                color: CYAN
+          else:
+            - failTest:
+                message: "The product: ${productName}, was added to cart."
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts the product quantity as pieces.
+  # Param: ${productName}                    [Mandatory]  Name of the Product.
+  # Param: ${expectedAddedQuantityAsPieces}  [Mandatory]  Quantity of pieces to assert.
+  - name: mx.functions.order-details.assertProductAddedQuantityAsPieces
+    platform: android
+    flow: 
+      - log:  
+          message: "Expected added quantity as pieces: ${expectedAddedQuantityAsPieces}"
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.order-details.piecesProductCounterByProductName
+              equals: ${expectedAddedQuantityAsPieces}
+      - log:  
+          message: "End function: order-details.assertProductAddedQuantityAsPieces"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This method asserts the product quantity as weight.
+  # Param: ${productName}                      [Mandatory]  Name of the certain product.
+  # Param: ${expectedAddedQuantityAsWeight}  [Mandatory]  Quantity to assert as weight (no need to add the "g").
+  - name: mx.functions.order-details.assertProductAddedQuantityAsWeight
+    platform: android
+    flow: 
+      - log:  
+          message: "Expected added quantity as weight: ${expectedAddedQuantityAsWeight}"
+          color: CYAN
+      - if:
+          identifier:
+            text:
+              - identifier: mx.mappings.order-details.weightProductCounterByProductName
+                contains: "gr"
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: mx.mappings.order-details.weightProductCounterByProductName
+                    equals: "${expectedAddedQuantityAsWeight} gr"
+          else:
+            - verifyIdentifier:
+                text:
+                  - identifier: mx.mappings.order-details.weightProductCounterByProductName
+                    equals: "${expectedAddedQuantityAsWeight} g"
+            - log:
+                message: "End function: order-details.assertProductAddedQuantityAsWeight"
+                color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This method asserts the that a specific product defined on param is available and fails if it's not.
+  # NOTE: This function should be ran after mx.functions.order-details.isProductAvailable
+  # Param:  ${productName}                  [Mandatory]  Product to assert.
+  # Param:  ${expectedProductAvailability}  [Mandatory]  Assign to this variable the returned value of 'isProductAvailable' 
+  #                                                      function ${returnedIsProductAvailable}.
+  - name: mx.functions.order-details.assertProductAvailable
+    platform: android
+    flow: 
+      - log:  
+          message: "Verifying that the product: ${productName}, is available..."
+          color: CYAN
+      - if:
+          condition: ${expectedProductAvailability} == true
+          then:
+            - log:  
+                message: "The product: ${productName}, is available."
+                color: CYAN
+          else:
+            - failTest:
+                message: "The product: ${productName}, is not available."
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This method asserts the that a specific product defined on param is NOT available and fails if it is.
+  # NOTE: This function should be ran after mx.functions.order-details.isProductAvailable
+  # Param:  ${productName}                  [Mandatory]  Product to assert.
+  # Param:  ${expectedProductAvailability}  [Mandatory]  Assign to this variable the returned value of 'isProductAvailable' 
+  #                                                      function ${returnedIsProductAvailable}.
+  - name: mx.functions.order-details.assertProductNotAvailable
+    platform: android
+    flow: 
+      - log:  
+          message: "Verifying that the product: ${productName}, is NOT available..."
+          color: CYAN
+      - if:
+          condition: ${expectedProductAvailability} == false
+          then:
+            - log:  
+                message: "The product: ${productName}, is not available."
+                color: CYAN
+          else:
+            - failTest:
+                message: "The product: ${productName}, is available."
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function performs the assertion of the raw Delivery Location for the Pickup Delivery method.
+  #     By raw it is understood the exact value the Delivery Location Store Name and Store Address elements are
+  #     displaying in the screen (this means, the values provided in the parameters will not be parsed and and they
+  #     will be taken exactly as provided for the assertion).
+  #
+  #     For example:
+  #         If the displayed Delivery location is 'Wal-Mart Avila Camacho' as Store Name, and 'Kiosco SC 3721, MANUEL
+  #         AVILA CAMACHO, 2770, Colonia Seatle, Zapopan, Zapopan, MX, 45150' as Store Address, those are the exact
+  #         values that must be provided to assert them to be displayed. Any variation and the assertion will not
+  #         succeed.
+  #
+  # PARAMS:
+  #     ${expectedRawStoreName}      [Mandatory]
+  #         Expected raw value to be displayed as Store Name.
+  #
+  #     ${expectedRawStoreAddress}   [Mandatory]
+  #         Expected raw value to be displayed as Store Address.
+  #
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertRawDeliveryLocationForPickupDelivery
+    flow:
+      - log:
+          message: "Expected Store Name: '${expectedRawStoreName}'"
+          color: CYAN
+      - log:
+          message: "Expected Store Address: '${expectedRawStoreAddress}'"
+          color: CYAN
+      # Store Name assertion...
+      - getString:
+          identifier: mx.mappings.order-details.storeName
+          storeIn: displayedStoreName
+      - log:
+          message: "Displayed Store Name: '${displayedStoreName}'"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/utils/stringStartsWith.js
+          args:
+            - value: ${displayedStoreName}
+            - value: ${expectedRawStoreName}
+          getResponse:
+            storeIn: nameCheck
+      - if:
+          condition: ${nameCheck} == true
+          then:
+            - log:
+                message: "Store Name is correct!"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: Store Name is incorrect"
+      # Store Address assertion...
+      - getString:
+          identifier: mx.mappings.order-details.storeAddress
+          storeIn: displayedStoreAddress
+      - log:
+          message: "Displayed Store Address: '${displayedStoreAddress}'"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/utils/stringContains.js
+          args:
+            - value: ${displayedStoreAddress}
+            - value: ${expectedRawStoreAddress}
+          getResponse:
+            storeIn: addressCheck
+      - if:
+          condition: ${addressCheck} == true
+          then:
+            - log:
+                message: "Store Address is correct!"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: Store Address is incorrect"
+      - log:
+          message: "End function: order-details.assertRawDeliveryLocationForPickupDelivery"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function performs the assertion of the raw Delivery Location for the Home Delivery method.
+  #     By raw it is understood the exact value the Delivery Location Home Name and Address elements are displaying in
+  #     the screen (this means, the values provided in the parameters will not be parsed and and they
+  #     will be taken exactly as provided for the assertion).
+  #
+  #     For example:
+  #         If the displayed Delivery location is 'Test Address' as Home Name, and 'De La Rosa AMPL SAN LUCAS
+  #         TEPETLACALCO - 101, 02770 Ciudad de México   , Ciudad de México, Teléfono: +529876543211' as Home Address,
+  #         those are the exact values that must be provided to assert them to be displayed. Any variation and the
+  #         assertion will not succeed.
+  #
+  # PARAMS:
+  #     ${expectedRawHomeName}      [Mandatory]
+  #         Expected raw value to be displayed as Home Name.
+  #
+  #     ${expectedRawHomeAddress}   [Mandatory]
+  #         Expected raw value to be displayed as Home Address.
+  #
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertRawDeliveryLocationForHomeDelivery
+    flow:
+      - log:
+          message: "Expected Store Name: '${expectedRawHomeName}'"
+          color: CYAN
+      - log:
+          message: "Expected Store Address: '${expectedRawHomeAddress}'"
+          color: CYAN
+      # Home Name assertion...
+      - getString:
+          identifier: mx.mappings.order-details.homeAddressName
+          storeIn: displayedHomeName
+      - log:
+          message: "Displayed Home Name: '${displayedHomeName}'"
+          color: CYAN
+      - if:
+          condition: ${displayedHomeName} == ${expectedRawHomeName}
+          then:
+            - log:
+                message: "Home Name is correct!"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: Home Name is incorrect"
+      # Home Address assertion...
+      - getString:
+          identifier: mx.mappings.order-details.homeAddress
+          storeIn: displayedHomeAddress
+      - log:
+          message: "Displayed Home Address: '${displayedHomeAddress}'"
+          color: CYAN
+      - if:
+          condition: ${displayedHomeAddress} == ${expectedRawHomeAddress}
+          then:
+            - log:
+                message: "Home Address is correct!"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: Home Address is incorrect"
+      - log:
+          message: "End function: order-details.assertRawDeliveryLocationForHomeDelivery"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the specified product on ${productName} is listed.
+  # Params:  {productName}  [Mandatory]  Product to assert.
+  - name: mx.functions.order-details.assertProductListed
+    platform: android
+    flow:
+      - log:
+          message: "Product name: ${productName}"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.order-details.findProductInPage
+      - executeFunction:
+          name: mx.functions.utils.centerElementVerticallyWithinContainer
+          params:
+            - name: mappingOfContainer
+              string: mx.mappings.order-details.pageContainer
+            - name: mappingOfElementToCenter
+              string: mx.mappings.order-details.productContainerByProductName # <--PARAMS--${productName}
+            - name: searchDirection
+              string: down
+      - log:
+          message: "The product is listed."
+          color: CYAN
+      - log:
+          message: "End function: order-details.assertProductListed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM: ${productIndex}  Index of the product to get name 
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.order-details.getProductNameByIndex
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.order-details.productNameLabel
+          index: ${productIndex}
+          storeIn: returnedProductName 
+      - log:
+          message: "End function: order-details.getProductNameByIndex"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.order-details.confirmCancelationWithFirstOption
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.order-details.cancelation-pop.cancelationFirstOption
+      - click:
+          identifier: mx.mappings.order-details.cancelation-pop.confirmCancelationButton
+      - log:
+          message: "End function: order-details.confirmCancelation"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.order-details.assertOrderIsCanceled
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.cancelledOrderStatusLabel
+      - log:
+          message: "Assertion Succeeded: Order has been cancelled."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: order-details.assertOrderIsCanceled"
+          color: BLUE

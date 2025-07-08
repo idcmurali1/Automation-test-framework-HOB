@@ -1,0 +1,256 @@
+
+
+# Do not apply Associate discount flow
+
+general:
+  tags: C2657234, unified-teflon-e2e, unified-p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657234
+  metadata:
+    - name: scenarioId
+      string: EC063
+      
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+      
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem
+          params:        
+            - name: itemType
+              string: FC_OZARK
+            - name: store
+              string: 32144                            
+            - name: backupItem
+              string: 500913892 
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+#*******************************************************************************************************
+      # Astro - Create order 
+#*******************************************************************************************************
+      - if:
+          condition: ${platform} == 'Android'
+          then:          
+           - executeFunction:
+               name: unified.us.functions.utils.astro.createOrder
+               params:
+                 - name: payload
+                   string: us.data.flow054.createOrderPayload 
+      - if:
+          condition: ${platform} == 'iOS'
+          then:          
+           - executeFunction:
+               name: unified.us.functions.utils.astro.createOrder
+               params:
+                 - name: payload
+                   string: us.data.flow054ios.createOrderPayload   
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.flow058.email
+            - name: android.password
+              string: us.data.flow058.password
+            - name: ios.email
+              string: us.data.flow058.email.ios
+            - name: ios.password
+              string: us.data.flow058.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+#*******************************************************************************************************
+
+      # Astro - Move order status to PO Acknowledged
+
+#*******************************************************************************************************
+      - sleep:
+          duration: 300000
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: OZARK
+            - name: status
+              string: PO Acknowledged
+
+
+# #*******************************************************************************************************
+
+#       # Astro - Move order status to PO Pick Complete
+
+# #*******************************************************************************************************
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: OZARK
+            - name: status
+              string: PO Pick Complete
+
+# #*******************************************************************************************************
+
+#       # Astro - Move order status to Out for Delivery
+
+# #*******************************************************************************************************
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: OZARK
+            - name: status
+              string: PO Out for Delivery
+              
+# #*******************************************************************************************************
+
+#       # Astro - Move order status to Delivered
+
+# #*******************************************************************************************************
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: OZARK
+            - name: status
+              string: Delivered
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.signInAgain
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: unified.us.functions.orderDetails.ost.scheduledDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Delivery from store
+            - name: orderStatus
+              string: Delivered
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.verifyOrderStatusMsgAndTrackerDetails
+          params:
+            - name: message
+              string: Delivered today
+            - name: orderStatus
+              string: Delivered
+
+#*******************************************************************************************************
+
+      # Return Ozark item
+
+#*******************************************************************************************************
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.signInAgain
+
+      - executeFunction:
+          name: unified.us.functions.returns.goToStartReturn
+      
+      - executeFunction:
+          name: unified.us.functions.returns.verifyStartReturnScreen
+
+      - executeFunction:
+          name: unified.us.functions.returns.itemReturn
+          params:
+             - name: itemIndex
+               string: 1 
+             - name: returnReason
+               string: Poor quality
+             - name: returnMethod
+               string: Return at Walmart store
+             - name: itemType
+               string: fc
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.signInAgain
+
+      - sleep:
+          duration : 60000
+      
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.signInAgain
+
+      - executeFunction:
+          name: unified.us.functions.returns.returnODPValidation
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps
+

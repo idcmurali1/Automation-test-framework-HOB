@@ -1,0 +1,345 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: View Promo Codes
+# User: Registered User
+# Order Type: GO
+# Fulfillment: SCHEDULED_PICKUP
+# Payment Type: CC
+# Experience: A2C Using Transactibilty API
+# Validation: Validate Promo Codes
+#
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: ios
+  tags: flow-090, E2E-iOS-English
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+       # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.flow001.zipCode
+      
+      #Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateIosHomePage
+
+      - executeFunction:    
+          name: ca.test.functions.home.livingDesign.validateIosBottomNavigation    
+
+         # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.astro.createAccount
+          params:
+            - name: payLoad
+              string: ca.test.data.flow090.astroRequestBodyIos
+
+        # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.flowPromoCode090.userName
+            - name: password
+              string: ca.test.data.flowPromoCode.password
+
+      # Validating home page customer greeting
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameHomePage
+          params:
+            - name: usergreeting
+              string: ca.test.data.flow090.customerName
+
+      #terminate and relaunch the app
+      - executeFunction:
+         name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp          
+      
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.flow001.zipCode
+            - name: storeName
+              string: ca.test.data.flow001.storeName
+      
+      - executeFunction:
+          name: ca.test.functions.astro.addToCart
+          params:
+            - name: payLoad
+              string: ca.test.data.flowPromoCode.addToCartPayLoad
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartHomeIos  
+
+      # navigate to reserve time page
+      - executeFunction:
+          name: ca.test.functions.cart.reserveTimePage
+      
+      # Reserve time page validation
+      - executeFunction:
+          name: ca.test.functions.reserveTimePageValidation
+
+      - executeFunction: 
+          name: ca.test.functions.bookASlot.reserveTimePage.standardSlotSelection
+
+      # Clicking book a slot button
+      - executeFunction:
+          name: ca.test.functions.bookASlot.reserveTimePage.bookASlotButton 
+
+      # Verify cart subTotal
+      - executeFunction:
+          name: ca.test.functions.cart.cartSubTotal
+          params: 
+            - name: subTotal
+              string: ca.test.data.flow090.subtotal
+
+      - executeFunction:
+          name: ca.test.functions.cart.groceryPickUp
+          params:
+            - name: slotPrice
+              string: ca.test.data.flow090.groceryPickupFee        
+
+      # Verify cart taxes
+      - executeFunction:
+          name: ca.test.functions.cart.totalTaxAssertion
+          params: 
+            - name: taxes
+              string: ca.test.data.flow090.totalTaxAmount
+
+      # Asserting cart estimate sub total
+      - executeFunction:
+          name: ca.test.functions.cart.cartEstimatedTotal
+          params: 
+            - name: estimate_total
+              string: ca.test.data.flow090.estimatedTotal
+
+ # Applying promo code to exisiting customer
+      - executeFunction:
+          name: ca.test.functions.astro.promoCode
+          params:
+            - name: email
+              string: ca.test.data.flowPromoCode090.userName
+            - name: password
+              string: ca.test.data.flowPromoCode.password
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.GR.OFF
+
+      # Applying promo code to exisiting customer
+      - executeFunction:
+          name: ca.test.functions.astro.promoCode
+          params:
+            - name: email
+              string: ca.test.data.flowPromoCode090.userName
+            - name: password
+              string: ca.test.data.flowPromoCode.password
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.CS.10.entireOrderOff   
+
+      # Applying promo code to exisiting customer
+      - executeFunction:
+          name: ca.test.functions.astro.promoCode
+          params:
+            - name: email
+              string: ca.test.data.flowPromoCode090.userName
+            - name: password
+              string: ca.test.data.flowPromoCode.password
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.CANADA.CS.10.entireOrderOff
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOut
+
+      # Add Card Cvv
+      - executeFunction:
+          name: ca.test.functions.checkOut.payment.addCvvIos
+          params:
+            - name: CVV
+              string: 111
+
+      # Adding mobile number
+      - executeFunction:
+          name: ca.test.functions.checkout.phoneNumber.enterContactNumber  
+
+      #Promo Code Check
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCodeAvailabilityCheck           
+
+      # Clicking & Validating View Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.viewPromoCodes
+
+      # Validating added promo code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.validatingAddedPromoCode
+          params:
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.CS.10.entireOrderOff
+
+      # Apply Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.applyAnyPromoCode
+          params:
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.CS.10.entireOrderOff 
+
+      # Validate Applied Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateAppliedPromoCode
+          params:
+            - name: appliedCode
+              string: ca.test.data.flow090.promoCodeText.CS.10.entireOrderOff          
+
+      # Remove promo code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.remove
+
+      # Validating added promo code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.validatingAddedPromoCode
+          params:
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.CANADA.CS.10.entireOrderOff 
+
+      # Apply Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.applyAnyPromoCode
+          params:
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.CANADA.CS.10.entireOrderOff 
+
+      # Validate Applied Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateAppliedPromoCode
+          params:
+            - name: appliedCode
+              string: ca.test.data.flow090.promoCodeText.CANADA.CS.10.entireOrderOff           
+
+      # Remove promo code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.remove                
+
+      # Validating added promo code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.validatingAddedPromoCode
+          params:
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.GR.OFF
+
+      # Apply Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.promoCode.applyAnyPromoCode
+          params:
+            - name: promoCode
+              string: ca.test.data.flow090.promoCode.GR.OFF
+      # Validate Applied Promo Code
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateAppliedPromoCode
+          params:
+            - name: appliedCode
+              string: ca.test.data.flow090.promoCodeText.GR.OFF         
+
+      # Checkout page sub total assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.subTotalValidation
+          params:
+            - name: subTotal
+              string: ca.test.data.flow090.subtotal
+
+      # Checkout page grocery pickup fee assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.subTotal.scheduleOrderFee
+          params: 
+            - name: scheduledOrderFeeText
+              string: ca.test.data.flow090.groceryPickupFeeText 
+            - name: scheduledOrderFeeValue
+              string: ca.test.data.flow090.groceryPickupFee       
+
+      # Coupon code validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.subTotal.promoCodeValidation
+          params:
+            - name: promoCodeText
+              string: ca.test.data.flow090.promoCodeText.GR.OFF  
+            - name: promoCodeValue
+              string: ca.test.data.flow090.promoCodeValue
+
+      # Checkout page tax assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.taxesAssertion
+          params:
+            - name: total_tax
+              string: ca.test.data.flow090.taxes     
+
+      # Checkout page estimate total assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.estimateTotalAssertion
+          params:
+            - name: estimate_total
+              string: ca.test.data.flow090.checkOutEstimatedTotal
+
+      # Placing Order
+      - executeFunction:
+          name: ca.test.functions.checkOut.PlacingOrder
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Order Confirmation screen validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.orderConfirmationValidationIos    
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-090
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps
+      - executeFunction:
+          name: ca.test.functions.accountPage.removePromoCodeios

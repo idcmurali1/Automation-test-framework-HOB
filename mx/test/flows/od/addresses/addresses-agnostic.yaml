@@ -1,0 +1,457 @@
+#======================================================================================================================
+#    AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#   CREATED: Feb/17/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This function creates and adds a new home delivery address from the add-address-form popup/page.
+  # Params: ${userFirstName}             [Mandatory]  User's name to enter (Required).
+  #         ${userLastName}              [Mandatory]  User's last name to enter (Required).
+  #         ${userStreet}                [Mandatory]  User's street to enter (Required).
+  #         ${userExteriorNumber}        [Mandatory]  User's exterior number (Required).
+  #         ${userInteriorNumber}        [Mandatory]  User's interior number, if not defined or set to null, flow skips this step
+  #         ${userZipCode}               [Mandatory]  User's zip code to enter (Required).
+  #         ${userNeighborhood}          [Mandatory]  User's neighborhood to enter (Required).
+  #         ${expectedUserState}         [Mandatory]  User's state to assert.
+  #         ${expectedUserCity}          [Mandatory]  User's city to assert.
+  #         ${expectedUserMunicipality}  [Mandatory]  User's municipality to assert.
+  #         ${userPhoneNumber}           [Mandatory]  User's phone number to enter (Required).
+  #         ${markAsFavorite}            [Mandatory]  Set to 'true' if the 'favorite' checkbox should be marked, if not defined
+  #                                                       or set to null, flow skips this step.
+  - name: mx.flows.od.addresses.addHomeDeliveryAddressFromPopup
+    flow:
+      - executeFunction:
+          name: mx.functions.add-address-form.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.add-address-form.enterName
+      - executeFunction:
+          name: mx.functions.add-address-form.enterLastName
+      - executeFunction:
+          name: mx.functions.add-address-form.enterStreet
+      - executeFunction:
+          name: mx.functions.add-address-form.enterExteriorNumber
+      - if:
+          condition: ${userInteriorNumber} == null
+          then:
+            - log:
+                message: "Interior Number not provided, flow will skip this field."
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.add-address-form.enterInteriorNumber
+      - click:
+          identifier: mx.mappings.add-address-form.zipCodeField
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.onboarding.location-popup.allowLocationPopup
+          then:
+            - executeFunction:
+                name: mx.functions.onboarding.location-popup.tapAllowWhileUsingApp
+      - executeFunction:
+          name: mx.functions.add-address-form.enterZipCode
+      - executeFunction:
+          name: mx.functions.add-address-form.selectNeighborhood
+      - executeFunction:
+          name: mx.functions.add-address-form.assertCity
+      - executeFunction:
+          name: mx.functions.add-address-form.assertState
+      - executeFunction:
+          name: mx.functions.add-address-form.assertMunicipality
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.utils.closeKeyboardButton
+          then:
+            - click:
+                identifier: mx.mappings.utils.closeKeyboardButton
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.add-address-form.favoriteAddressCheckbox
+            - name: direction
+              string: down
+      - executeFunction:
+          name: mx.functions.add-address-form.enterPhoneNumber
+      - if:
+          condition: ${markAsFavorite} == true
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.tapFavoriteAddressCheckbox
+            - executeFunction:
+                name: mx.functions.add-address-form.assertFavoriteAddressCheckboxState
+                params:
+                  - name: expectedCheckboxState
+                    string: ${markAsFavorite}
+      - executeFunction:
+          name: mx.functions.add-address-form.tapSave
+      - executeFunction:
+          name: mx.functions.add-address-form.assertErrorsNotDisplayed
+      - sleep:
+          duration: 7000
+      - executeFunction:
+          name: mx.functions.add-address-form.confirmation-map.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.add-address-form.confirmation-map.assertAddressByIndividualValues
+          params:
+            - name: streetName
+              string: ${userStreet}
+            - name: exteriorNumber
+              string: ${userExteriorNumber}
+            - name: city
+              string: ${expectedUserCity}
+            - name: state
+              string: ${expectedUserState}
+            - name: zipCode
+              string: ${userZipCode}
+      # In case the Geo Pin does not load and confirm button does not appear, flow will re-open map only once.
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.add-address-form.confirmation-map.geoPin
+          then:
+            - log:
+                message: "Geo Pin did not load correctly, reloading popup once..."
+                color: YELLOW
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - goBack: true
+                else:
+                  - executeFunction:
+                      name: mx.functions.add-address-form.confirmation-map.tapBack
+            - executeFunction:
+                name: mx.functions.add-address-form.tapSave
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: mx.functions.add-address-form.confirmation-map.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.add-address-form.confirmation-map.tapConfirm
+      - executeFunction:
+          name: mx.functions.add-address-form.assertErrorsNotDisplayed
+      - log:
+          message: "End flow: addresses.addHomeDeliveryAddressFromPopup"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function edits an existing home delivery address from the add-address-form popup/page.
+  # NOTE:        Make sure to set as 'null' all the parameters that won't be needed, otherwise, variables previously set 
+  #                 in other functions like mx.flows.od.addresses.addHomeDeliveryAddressFromPopup will be used here.
+  #                 ALL PARAMETERS MUST BE SET.
+  # Params: ${userFirstName}             [Optional]  User's name to enter (Required field in form). If 'null' flow will skip.
+  #         ${userLastName}              [Optional]  User's last name to enter (Required field in form). If 'null' flow will skip.
+  #         ${userStreet}                [Optional]  User's street to enter (Required field in form). If 'null' flow will skip.
+  #         ${userExteriorNumber}        [Optional]  User's exterior number (Required field in form). If 'null' flow will skip.
+  #         ${userInteriorNumber}        [Optional]  User's interior number, if set to null, flow skips this step
+  #         ${clearInteriorNumberOption} [Optional]  Input ([ true | false ]). Set to true to clear field, false to skip.
+  #         ${userZipCode}               [Optional]  User's zip code to enter (Required field in form). If 'null' flow will skip.
+  #         ${userNeighborhood}          [Optional]  User's neighborhood to enter (Required field in form).
+  #         ${expectedUserState}         [Optional]  User's state to assert.
+  #         ${expectedUserCity}          [Optional]  User's city to assert.
+  #         ${expectedUserMunicipality}  [Optional]  User's municipality to assert.
+  #         ${userPhoneNumber}           [Optional]  User's phone number to enter (Required field in form). If 'null' flow will skip.
+  #         ${markAsFavorite}            [Optional]  Set to 'true' if the 'favorite' checkbox should be marked, 'false' to unmark,
+  #                                                       and 'null' to skip.
+  - name: mx.flows.od.addresses.editHomeDeliveryAddressFromPopup
+    flow:
+      # On iOS multiple keyboards open while trying to edit an address.
+      # On Android the top fields are not visible ONLY while editing, flow will perform 2 scrolls to show them correctly.
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.closeMultipleKeyboards
+            - executeFunction:
+                name: mx.functions.utils.scrollToTop
+          else:
+            - scroll:
+                direction: down
+                scrollLimit: 1
+                wait: 1000
+            - scroll:
+                direction: up
+                scrollLimit: 1
+                wait: 300
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.add-address-form.nameField
+      - executeFunction:
+          name: mx.functions.add-address-form.assertPageDisplayed
+
+      # ----- First name -----
+      - if:
+          condition: ${userFirstName} != null
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.enterName
+          else:
+            - log:
+                message: "First name not provided, flow will continue without modifying this field..."
+                color: CYAN
+
+      # ----- Last name -----
+      - if:
+          condition: ${userLastName} != null
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.enterLastName
+          else:
+            - log:
+                message: "Last name not provided, flow will continue without modifying this field..."
+                color: CYAN
+
+      # ----- Street -----
+      - if:
+          condition: ${userStreet} != null
+          then:
+            - click:
+               identifier: mx.mappings.add-address-form.streetField
+            - executeFunction:
+                name: mx.functions.add-address-form.isLocationAlertDisplayed
+            - executeFunction:
+                name: mx.functions.add-address-form.enterStreet
+          else:
+            - log:
+                message: "Street not provided, flow will continue without modifying this field..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.add-address-form.getStreet # ---> ${returnedStreet}
+            - storeIn:
+                key: userStreet
+                value: ${returnedStreet}
+
+      # ----- Exterior number -----
+      - if:
+          condition: ${userExteriorNumber} != null
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.enterExteriorNumber
+          else:
+            - log:
+                message: "Exterior number not provided, flow will continue without modifying this field..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.add-address-form.getExteriorNumber # ---> ${returnedExteriorNumber}
+            - storeIn:
+                key: userExteriorNumber
+                value: ${returnedExteriorNumber}
+
+      # ----- Interior number -----
+      # This field is not required in order to proceed, if you set a value to this variable, flow will replace it.
+      #     Be aware that ${clearInteriorNumberOption} must be set to 'false' or 'null' to prevent flow form clearing field.
+      - if:
+          condition: ${userInteriorNumber} != null
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.enterInteriorNumber
+      # If ${clearInteriorNumberOption} to 'true' flow will clear the field and leave it empty, otherwise flow will
+      #     leave it as it is.
+          else:
+            - log:
+                message: "Interior number not provided, flow will continue..."
+                color: CYAN
+            - if:
+                condition: ${clearInteriorNumberOption} == true
+                then:
+                  - executeFunction:
+                      name: mx.functions.add-address-form.clearInteriorNumber
+                else:
+                  - log:
+                      message: "Interior number will not be cleared, flow will continue without modifying this field..."
+                      color: CYAN
+
+      # ----- Zip code -----
+      - if:
+          condition: ${userZipCode} != null
+          then:
+            - click:
+               identifier: mx.mappings.add-address-form.zipCodeField
+            - executeFunction:
+                name: mx.functions.add-address-form.isLocationAlertDisplayed
+            - executeFunction:
+                name: mx.functions.add-address-form.enterZipCode
+          else:
+            - log:
+                message: "Zip code not provided, flow will continue without modifying this field..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.add-address-form.getZipCode # ---> ${returnedZipCode}
+            - storeIn:
+                key: userZipCode
+                value: ${returnedZipCode}
+
+      # ----- City -----
+      - executeFunction:
+          name: mx.functions.add-address-form.getUserCity # ---> ${returnedCity}
+
+      # ----- State -----
+      - executeFunction:
+          name: mx.functions.add-address-form.getUserState # ---> ${returnedState}
+
+      # ----- Municipality -----
+      - executeFunction:
+          name: mx.functions.add-address-form.getUserMunicipality # ---> ${returnedMunicipality}
+
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.utils.closeKeyboardButton
+          then:
+            - click:
+                identifier: mx.mappings.utils.closeKeyboardButton
+
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.add-address-form.favoriteAddressCheckbox
+            - name: direction
+              string: down
+
+      # ----- Phone number -----
+      - if:
+          condition: ${userPhoneNumber} != null
+          then:
+            - executeFunction:
+                name: mx.functions.add-address-form.enterPhoneNumber
+          else:
+            - log:
+                message: "Phone number not provided, flow will continue without modifying this field..."
+                color: CYAN
+
+      # ----- Favorite -----
+      # If ${markAsFavorite} is set to 'true', flow will verify the checkbox state and mark it if address is not favorite
+      #     if set to 'false', flow will verify the checkbox and unmark it if address is favorite and if set to 'null'
+      #     flow will skip this step and continue without any interaction.
+      - if:
+          condition: ${markAsFavorite} == true
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.add-address-form.markedFavoriteAddressCheckbox
+                then:
+                  - log:
+                      message: "Address is already marked as favorite."
+                      color: CYAN
+                else:
+                  - log:
+                      message: "Address will be marked as favorite."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.add-address-form.tapFavoriteAddressCheckbox
+          else:
+            - if:
+                condition: ${markAsFavorite} == false
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: mx.mappings.add-address-form.unmarkedFavoriteAddressCheckbox
+                      then:
+                        - log:
+                            message: "Address is not marked as favorite."
+                            color: CYAN
+                      else:
+                        - log:
+                            message: "Address will not be marked as favorite."
+                            color: CYAN
+                        - executeFunction:
+                            name: mx.functions.add-address-form.tapFavoriteAddressCheckbox
+                else:
+                  - log:
+                      message: "The 'markAsFavorite' variable != 'true' nor 'false', flow will continue without modifying the favorite checkbox..."
+                      color: CYAN
+
+      - executeFunction:
+          name: mx.functions.add-address-form.tapSave
+
+      - executeFunction:
+          name: mx.functions.add-address-form.assertErrorsNotDisplayed
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.functions.add-address-form.confirmation-map.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.add-address-form.confirmation-map.assertAddressByIndividualValues
+          params:
+            - name: streetName
+              string: ${userStreet}
+            - name: exteriorNumber
+              string: ${userExteriorNumber}
+            - name: city
+              string: ${returnedCity}
+            - name: state
+              string: ${returnedState}
+            - name: zipCode
+              string: ${userZipCode}
+
+      - executeFunction:
+          name: mx.functions.add-address-form.confirmation-map.tapConfirm
+      - executeFunction:
+          name: mx.functions.add-address-form.assertErrorsNotDisplayed
+      - log:
+          message: "End flow: addresses.editHomeDeliveryAddressFromPopup"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function deletes an address and asserts it is not displayed afterwards.
+  # Params: ${expectedAddressName}  [Mandatory]  Address name.
+  - name: mx.flows.od.addresses.deleteAddressByName
+    flow:
+      - log:
+          message: "Address name to delete: ${expectedAddressName}"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.addresses.tapDeleteAddressByName
+          params:
+            - name: addressName
+              string: ${expectedAddressName}
+      - executeFunction:
+          name: mx.functions.addresses.delete-address-confirmation-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.addresses.delete-address-confirmation-popup.tapDelete
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressNotDisplayed
+          params:
+            - name: addressName
+              string: ${expectedAddressName}
+      - log:
+          message: "End flow: addresses.deleteAddressByName"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+  # Description: This function deletes all visible addresses.
+  # AUTHOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.addresses.deleteAllAddresses
+    doWhile: true
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.addresses.deleteAddressButton
+      - executeFunction:
+          name: mx.functions.addresses.tapDeleteAddress
+      - executeFunction:
+          name: mx.functions.addresses.delete-address-confirmation-popup.tapDelete
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.addresses.deleteAddressButton
+          then:
+            - log:
+                message: "End flow: od.addresses.deleteAllAddresses"
+                color: BLUE
+

@@ -1,0 +1,58 @@
+inherit: 'job:///glass-mobile-app-automation/transactions-looper-ios-base'
+
+gitShallowDepth: 10
+
+triggers:
+  - push: disabled
+  - pr: disabled
+  - manual:
+      name: checkout-ios-regression
+      call: run_tests(env_checkout_ios_prod_parameters)
+  - cron:
+      spec: "0 21 * * 0,1,3-6"
+      call: run_scheduled_development_tests(env_checkout_ios_prod_parameters)
+      timezone: America/Los_Angeles
+  - cron:
+      spec: "0 12 * * 2"
+      call: run_scheduled_release_tests(env_checkout_ios_prod_parameters)
+      timezone: America/Los_Angeles
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      APP_PLATFORM: ios
+      SKIP_SLACK_TEST_RUN: all
+      SLACK_TEST_RUN_MESSAGE: "*Branch*: ${TRIGGER_BRANCH}\n
+                    *App Build*: ${SAUCE_APP}\n
+                    *Build Link*: ${BUILD_URL}\n
+                    *Report Link*: ${REPORT_URL}"
+      EMAIL_SUBJECT: Apps iOS E2E Test complete - Build ${BUILD_ID}
+      EMAIL_MESSAGE: "Hi Team, \n
+                       Build details can be found at: ${BUILD_URL}\n
+                       Test execution report results: ${REPORT_URL}\n
+                       Thanks, Transactions Team."
+  env_checkout_ios_prod_parameters:
+    variables:
+      TEST_TAGS: unified-prod-functional-checkout
+      DEPENDENCY_PROFILE: looper-prod-checkout
+      SLACK_CHANNEL: checkout-unified-r2-test
+      EMAIL_TO: checkout_ios_r2_test@email.wal-mart.com
+      DEPENDENCY_FILE_NAME: us/functional-tests-transactions/checkout/dependencies/ios/ios-default.yaml
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      USE_TEST_REPORT: true
+      THREADS: 25
+      EMAIL_SUBJECT: Checkout ${APP_PLATFORM} E2E Test complete - Build ${BUILD_ID}
+      SLACK_TEST_RUN_MESSAGE: "*Branch*: ${TRIGGER_BRANCH}\n
+                    *Platform*: ${APP_PLATFORM}\n
+                    *Test Tag*: ${TEST_TAGS}\n
+                    *App Build*: ${SAUCE_APP}\n
+                    *Build Link*: ${BUILD_URL}\n
+                    *Report Link*: ${REPORT_URL}"
+      EMAIL_MESSAGE: "Hi Team, \n
+                      Test execution for Checkout tests with test tag ${TEST_TAGS} on ${APP_PLATFORM} platform is complete.\n
+                      Build details can be found at: ${BUILD_URL}\n
+                      Test execution report results: ${REPORT_URL}\n
+                      Thanks,\n
+                      Checkout Team."

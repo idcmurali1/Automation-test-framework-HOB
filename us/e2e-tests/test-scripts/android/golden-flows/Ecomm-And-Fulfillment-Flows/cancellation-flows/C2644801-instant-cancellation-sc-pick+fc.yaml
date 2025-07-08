@@ -1,0 +1,104 @@
+# Non-amendable
+general:
+  platform: android
+  tags: C2644801, C2644801-carta-teflon, teflon-e2e-sim-dct, us-golden-flows, teflon-e2e-sim-dct, p1-spanish-teflon-e2e, p1-fulcrum-teflon-e2e, p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644801
+  metadata:
+    - name: scenarioId
+      string: EC015
+
+scenarios:
+  # Glass Mixed Order Cancel e2e Tests for FC Delivery+UD+SC-Scheduled-pickup
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem #us.functions.utils.getSearchableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: store
+              string: 32144
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem #us.functions.utils.getSearchableItem
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144
+            - name: itemFilter
+              string: buynow
+
+      - storeIn:
+          key: item2
+          value: $itemFetched
+
+  - name: Main
+    testCaseId: C2126544
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home and log in
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.C2644801Andr.email
+            - name: password
+              string: us.data.C2644801Andr.password
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+     # Navigate to cart and clear it
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.cancel.android.createOrderPayload      
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Includes steps of scrolling to the end of the screen to Cancel Order option, tapping on it, selecting the reason and then tapping on Request Cancel order button
+      - executeFunction:
+          name: us.functions.cancel.orderItemsInstantCancel
+          params:
+            - name: cancelOrder
+              string: true
+            - name: reasonIndex
+              string: 2
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

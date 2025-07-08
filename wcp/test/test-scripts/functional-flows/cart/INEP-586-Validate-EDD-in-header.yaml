@@ -1,0 +1,161 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-586
+#       Flow : MH: Validate item EDD in the fulfilment header
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179336
+#   INEP TEST ID:
+#     https://jira.walmart.com/browse/INEP-586
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-863
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-586
+  tags: INEP-586, OPIF-179336, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-863, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Validate item EDD in the fulfilment header"
+    flow:
+
+      # Create account using astro api..
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+      # Click on login and select sign in..
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user..
+      - log:
+          message: "Login with existing user using password as authentication method and ensure user is logged in.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+
+      # Add GM item from search page..
+      - log:
+          message: "Add GM item from search page.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+          params:          
+            - name: productArray
+              string: data.global.itemsArray.unscheduledGM1P_S2H
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.global.item.1count
+ 
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+    
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart.. "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails 
+
+      # Validate fulfilment details in cart page and print EDD.. 
+      - log:
+          message: "Validate fulfilment details in cart page and print EDD.. "
+          color: PURPLE_BOLD_BRIGHT                    
+      - executeFunction:
+          name: function.cartPage.validateFufillmentType
+          params:
+            - name: expectedFulfillmentType
+              string: data.global.deliveryText
+      - executeFunction:
+          name: functions.cartPage.getExpectedDeliveryDate
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - executeFunction:
+          name: functions.utils.after

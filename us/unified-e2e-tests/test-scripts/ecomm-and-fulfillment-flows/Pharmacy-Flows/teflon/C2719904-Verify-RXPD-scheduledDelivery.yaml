@@ -1,0 +1,223 @@
+general:
+  tags: C2719904 , unified-teflon-e2e, unified-p0-ecomm-teflon-e2e, p0-fulfillment
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2719904
+  metadata:
+    - name: scenarioId
+      string: EC145
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: patientId
+                value: 137818
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: patientId
+                value: 137821
+      - loop:
+          begin: 0
+          end: 3
+          mode: increment
+          flow:
+            - executeFunction:
+                    name: unified.us.functions.utils.astro.rxpd.create.rx
+                    params:
+                      - name: patientId
+                        string: ${patientId}          
+                      - name: siteId
+                        string: 5548
+                      - name: ndc
+                        string: 00093505698
+                      - name: moveTo
+                        string: ReadyForPickup
+              
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn 
+
+      # Account info
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.teflon.rxpd.android.sod.email
+            - name: android.password
+              string: us.data.teflon.rxpd.password
+            - name: ios.email
+              string: us.data.teflon.rxpd.ios.sod.email
+            - name: ios.password
+              string: us.data.teflon.rxpd.password
+
+      # Navigate to Pharmacy
+      - executeFunction:
+          name: unified.us.functions.services.naviagteToServices
+          params:
+            - name: servicesName
+              string: Pharmacy
+
+      # Enter Pharmacy Pin
+      - executeFunction:
+          name: unified.us.functions.services.pharmacy.enterPin
+
+      # Accept Consent forms when available
+      - executeFunction:
+          name: unified.us.functions.services.pharmacy.verify.consent.delivery.info
+
+      #Pharmacy Page validations
+      - executeFunction:
+          name: unified.us.functions.services.pharmacy.scheduledDeliveryPageValidation
+
+      # Add to Cart
+      - executeFunction:
+          name: unified.us.functions.services.pharmacy.addToCart
+
+      #Go Back
+      - click:
+          identifier: us.functions.services.pharmacy.goToServices
+
+      #Add a grocery item
+      - executeFunction:
+          name: unified.us.functions.search.groceryItem.usingDeeplink
+          params:
+            - name: groceryItem
+              string: groceryItemArray
+
+      #Add grocery item to cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name:  unified.us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop
+
+      # - executeFunction: // Commented out as nudge no longer appering for the existing users, disabling for now . 
+      #     name: unified.us.functions.home.verifyNudgeAndAddToCart
+      #     params:
+      #       - name: page
+      #         string: home
+
+      #Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # - executeFunction: // Commented out as nudge no longer appering for the existing users,disabling for now . 
+      #     name: unified.us.functions.home.verifyNudgeAndAddToCart
+      #     params:
+      #       - name: page
+      #         string: cart
+
+      - sleep:
+          duration: 1000
+
+      # Select Booking Slot
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 4
+            - name: rxpd
+              string: y
+
+       # Validate RXPD informations on Cart
+      - executeFunction:
+          name: unified.us.functions.cart.validate.rxpd.item
+
+      - executeFunction:
+          name: unified.us.functions.cart.validate.SODBanner
+
+      # Proceed to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.validate.SODBanner
+
+      # Validate RXPD informations on Review Order
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.rxpd.item.validations
+
+      - sleep:
+          duration: 1000
+
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.SODBanner
+
+      - log: ${orderNo}
+
+      - executeFunction:
+            name: unified.us.functions.global.navigation.goToDeepLink
+            params:
+              - name: deepLinkUrl
+                string: walmart://orders/$orderNo
+      
+      - executeFunction:
+          name: unified.us.functions.orderDetails.validate.SODBanner
+
+       # Validate RXPD informations on Order Details page
+      - executeFunction:
+          name: unified.us.functions.orderDetails.rxpd.item.validations
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps        

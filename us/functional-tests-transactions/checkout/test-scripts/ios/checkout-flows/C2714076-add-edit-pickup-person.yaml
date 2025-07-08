@@ -1,0 +1,162 @@
+# Verifying Store scheduled pickup checkout
+
+general:
+  platform: ios
+  tags: C2714076, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714076
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Verifying add and edit pickup person in checkout review order page
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Verifying add and edit pickup person in checkout review order page"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.sc.pickupperson.ios.email
+            - name: password
+              string: us.data.prod.checkout.sc.pickupperson.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      #Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search item and add to cart
+      - executeFunction:
+          name: us.functions.search.addItemtoCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.scPickUp.item
+            - name: expectedItemCount
+              string: 1
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      
+      - sleep:
+          duration: 40000
+
+
+      # # Go to book slot
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+            name: us.functions.functional.checkout.reviewOrder.updatePickupPerson
+            params:
+              - name: pickupPersonFirstName
+                string: Glass fName
+              - name: pickupPersonLastName
+                string: Test lName
+              - name: addAlternatePickupPerson
+                string: true
+              - name: altPickupPersonFirstName
+                string: Alt firstName
+              - name: altPickupPersonLastName
+                string: Alt lastName
+              - name: altPickupPersonEmail
+                string: altpickupemail@cloudtest.org
+              - name: removeAlternatePickupPerson
+                string: true
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.updatePickupPerson
+          params:
+            - name: pickupPersonFirstName
+              string: Glass
+            - name: pickupPersonLastName
+              string: Test
+            - name: addAlternatePickupPerson
+              string: true
+            - name: altPickupPersonFirstName
+              string: Alt firstName
+            - name: altPickupPersonLastName
+              string: Alt lastName
+            - name: altPickupPersonEmail
+              string: altpickupemail@cloudtest.org
+            - name: removeAlternatePickupPerson
+              string: false
+
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: Order number ${orderNo}
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

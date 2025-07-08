@@ -1,0 +1,277 @@
+#======================================================================================================================
+#   AUTHOR: Fernanda Peruyero (vn54e7a)
+#   CREATED: May/21/2024
+#   REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+
+  tags: prepurchase-od-smoke-production-android-1131, prepurchase-od-smoke-production-android
+  testCaseId: MMS-3124
+
+scenarios:
+#######################################################################################################################
+#
+#   TEST CASE TITLE: 
+#    Verify that a user can filter a list of items by "price" and "order by" from SLP
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+Android
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-3124
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-1131
+#
+########################################################################################################################
+
+  # BEFORE HOOK ##################################################sh mx/scripts/local-android-test-runner.sh#####################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - storeIn:
+          key: __SQUAD_REPORTING_TEST_CASE_NAME
+          value: GMX_OD_Smoke_PROD_PrePurchase_Android_1131
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+      
+      - storeIn:
+          key: MMS_1131_SUCCESSFUL_EXECUTION
+          value: false
+          
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN HOOK #########################################################################################################
+  - name: Main
+    platform: android
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+      
+      #STEP 1-2: Navigate through Onboarding and select banner -----------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: NAVIGATE THROUGH ONBOARDING AND SELECT THE OD BANNER"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.smoke.od.prepurchase-1131.zipCode
+            - name: banner
+              string: 'OD'
+
+    #STEP 3: Login from Profile Screen ----------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 3: LOGIN FROM PROFILE SCREEN"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.smoke.od.prepurchase.tc-1131.userEmail
+            - name: userPassword
+              string: mx.data.qaa.smoke.od.prepurchase-1131.userPassword
+            - name: userName
+              string: mx.data.qaa.smoke.od.prepurchase-1131.userName
+    
+     # STEP 4: Perform a search ----------------------------------------------------------------------------------------------- 
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 4: PERFORM A SEARCH.'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.smoke.od.prepurchase-1131.productSearch
+   
+    # STEP 5: Tap "Precio" -----------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 5: TAP "PRECIO".'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.slp.tapPriceFilterButton
+
+    # STEP 6: Move the slider from the end to around halfway. -------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 6: MOVE THE SLIDER FROM THE END TO HALFWAY.'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.price-filter.price-filter-bottom-sheet.assertBottomSheetDisplayed
+
+      - executeFunction: 
+          name: mx.functions.price-filter.price-filter-bottom-sheet.moveRightSliderKnob
+          params:
+            - name: xValue
+              string: mx.data.qaa.smoke.od.prepurchase-1131.xValue
+
+      - storeIn:
+          key: selectedPriceRange
+          value: ${returnedSelectedPriceRange}
+
+    # STEP 7: Ver resultados. ----------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 7: TAP "VER RESULTADOS"'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction: 
+          name: mx.functions.price-filter.price-filter-bottom-sheet.tapSeeResults
+      
+      - executeFunction:
+          name: mx.functions.slp.assertSelectedPriceRange
+          params:
+            - name: selectedPriceRange
+              string: ${selectedPriceRange}
+
+   # STEP 8: Tap 'Ordenar y Filtrar' ---------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 8: TAP "ORDENAR Y FILTRAR"'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+        
+      - executeFunction: 
+          name: mx.functions.slp.tapSortAndFilterButton
+
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.assertPopupDisplayed
+
+    # STEP 9: Open the "Ordenar por" section by tapping the arrow -------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: OPEN THE 'ORDENAR POR' SECTION BY TAPPING THE ARROW"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.expandSortByFilterIfNotExpanded
+    
+    # STEP 10: Select "Precio menor a mayor" ------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 10: SELECT "PRECIO MENOR A MAYOR" AND TAP "VER RESULTADOS"'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+    
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.selectSortByOption
+          params: 
+            - name: sortByOption
+              string: mx.data.qaa.smoke.od.prepurchase-1131.sortByFilter
+    
+    # STEP 10.1: Tap "Ver resultados" ---------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.tapSeeResults
+
+      - executeFunction:
+          name: mx.functions.slp.assertPricesFromLowToHigh
+          params:
+            - name: numOfProductsToCompare
+              string: mx.data.qaa.smoke.od.prepurchase-1131.numOfProductsToCompare
+        
+    # STEP 11: Tap "Ordenar y Filtrar" --------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 11: TAP "ORDENAR Y FILTRAR"'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+    
+      - executeFunction: 
+          name: mx.functions.slp.tapSortAndFilterButton
+
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.assertPopupDisplayed
+
+    # STEP 12: Tap "Eliminar todo" from the section ----------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP 12: TAP "ELIMINAR TODO" FROM THE SECTION AND TAP "VER RESULTADOS"'
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.tapEraseAll
+
+    # STEP 12.1: Tap "Ver resultados" ------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.functions.sort-and-filter.sort-and-filter-popup.tapSeeResults
+    
+    # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_1131_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+      
+# AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO STARTS: After Configs..."
+      
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${MMS_1131_SUCCESSFUL_EXECUTION} 
+
+      - if:
+          condition: ${MMS_1131_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. No need to reset data."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"

@@ -1,0 +1,564 @@
+#======================================================================================================================
+#  AUTHOR: Jorge Carrillo (vn575hp)
+#  CREATED: Oct/30/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: blocked-purchase-walmart-ea-sanity-production-android-004, blocked-purchase-bodega-ea-sanity-production-android-004, blocked-purchase-walmart-ea-sanity-production-android, blocked-purchase-bodega-ea-sanity-production-android
+  testCaseId: MMP-5102
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE:
+#    TC Goal: Account wallet, pick up person, delete from cart, coupon
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    TO-DO
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMP-5102
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMP-5059
+#
+#######################################################################################################################
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: MMP_5102_SUCCESSFUL_EXECUTION
+          value: false
+
+      - log: "BEFORE SCENARIO END"
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   M A I N   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: android
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 1: OPEN APP AND SELECT EA -------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1: OPEN WALMART APP AND COMPLETE ONBOARDING.  OPEN THE EA BANNER."
+         color: ORANGE
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      
+    #---------------------------------------------------------------------------------------------
+    # STEP 2: LOGIN FROM PROFILE -----------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 2: LOGIN FROM PROFILE."
+         color: ORANGE
+      - storeIn:
+          key: userEmail
+          value: mx.data.qaa.purchase.sanity.tc004.userEmail
+      - storeIn:
+          key: userPassword
+          value: mx.data.purchase-user-data.userPassword
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${userPassword}
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+      - log: "Emptying cart before test"
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.cartPage.clearCart
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 3: OPEN WALLET ------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: OPEN WALLET."
+         color: ORANGE
+      - executeFunction:
+          name: functions.accountPage.openWallet
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 4: ADD CREDIT CARD --------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: ADD CREDIT CARD."
+         color: ORANGE
+      - log: "Deleting all cards before test"
+      - executeFunction:
+          name: mx.flows.od.wallet.deleteAllCards
+      - executeFunction:
+          name: functions.walletPage.tapCredit$DebitCardBtn
+      - executeFunction:
+          name: mx.flows.add-and-edit-card-form.addNewCard
+          params:
+            - name: cardFirstName
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardFirstName
+            - name: cardLastName
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardLastName  
+            - name: cardNumber
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardNumber
+            - name: cardExpirationDate
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardExpirationDate
+            - name: cardCVV
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardCVV
+            - name: cardCountry
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardCountry
+            - name: cardStreet
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardStreet
+            - name: cardExteriorNumber
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardExteriorNumber
+            - name: cardZipCode
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardZipCode
+            - name: cardNeighborhood
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardNeighborhood
+            - name: cardState
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardState
+            - name: cardCity
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardCity
+            - name: cardMunicipality
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardMunicipality
+    
+    #---------------------------------------------------------------------------------------------
+    # STEP 5: GO TO HOME      --------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: GO TO HOME."
+         color: ORANGE
+      - executeFunction:
+            name: functions.global.tapShopBtn
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 6 & 7: SEARCH ITEM WITH COUPON PROMO AND OPEN PDP -------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 6 & 7: SEARCH ITEM WITH COUPON PROMO AND OPEN PDP"
+          color: ORANGE
+    # Selecting random item due to promo coupons not being consistent in production.
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: mx.data.purchase-004.pickupItem.array
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 8: ADD PRODUCT TO CART ----------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 8: ADD PRODUCT TO CART"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.pdp.addToCart # ---> ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.pdp.getPrice # ---> ${returnedProductPrice}
+      - executeFunction:
+          name: mx.functions.pdp.getType # ---> ${returnedProductType}
+      - executeFunction:
+          name: mx.functions.pdp.getProductQuantityAsPieces # ---> ${returnedProductQuantity}
+
+      # [VARIABLE] Product's name saved in ${purchase_5059_product_name}
+      - storeIn:
+          key: purchase_5059_first_product_name
+          value: ${returnedProductName}
+      # [VARIABLE] Product's price saved in ${purchase_5059_product_price}
+      - storeIn:
+          key: purchase_5059_first_product_price
+          value: ${returnedProductPrice}
+      # [VARIABLE] Product's type saved in ${purchase_5059_product_type}
+      - storeIn:
+          key: purchase_5059_first_product_type
+          value: ${returnedProductType}
+      # [VARIABLE] Product's quantity saved in ${purchase_5059_product_quantity}
+      - storeIn:
+          key: purchase_5059_first_product_quantity
+          value: ${returnedProductQuantity}
+      # [VARIABLE] Product's subtotal saved in ${purchase_5059_product_subtotal}
+      - storeIn:
+          key: purchase_5059_first_product_subtotal
+          value: ${returnedProductPrice}
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 9: ADD A DIFFERENT ITEM FROM PLP  -----------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      
+      - log:
+         message: "STEP 9: ADD A DIFFERENT ITEM FROM PLP."
+         color: ORANGE
+      - executeFunction:
+            name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: mx.data.purchase-004.secondPickupItem.array
+      - executeFunction:
+          name: mx.functions.pdp.addToCart # ---> ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.pdp.getPrice # ---> ${returnedProductPrice}
+      - executeFunction:
+          name: mx.functions.pdp.getType # ---> ${returnedProductType}
+      - executeFunction:
+          name: mx.functions.pdp.getProductQuantityAsPieces # ---> ${returnedProductQuantity}
+
+      # [VARIABLE] Product's name saved in ${purchase_5059_second_product_name}
+      - storeIn:
+          key: purchase_5059_second_product_name
+          value: ${returnedProductName}
+      # [VARIABLE] Product's price saved in ${purchase_5059_second_product_price}
+      - storeIn:
+          key: purchase_5059_second_product_price
+          value: ${returnedProductPrice}
+      # [VARIABLE] Product's type saved in ${purchase_5059_second_product_type}
+      - storeIn:
+          key: purchase_5059_second_product_type
+          value: ${returnedProductType}
+      # [VARIABLE] Product's quantity saved in ${purchase_5059_second_product_quantity}
+      - storeIn:
+          key: purchase_5059_second_product_quantity
+          value: ${returnedProductQuantity}
+      # [VARIABLE] Product's subtotal saved in ${purchase_5059_second_product_subtotal}
+      - storeIn:
+          key: purchase_5059_second_product_subtotal
+          value: ${returnedProductPrice}
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 10: GO TO CART  -----------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      
+      - log:
+         message: "STEP 10: GO TO CART."
+         color: ORANGE 
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.cartPage.scrollToTopOfCart
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails
+
+      - log: "Product - ${purchase_5059_second_product_name} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_5059_second_product_name}
+            - name: productType
+              string: ${purchase_5059_second_product_type}
+            - name: mx.data.qaa.purchase-003.productQty
+              string: ${purchase_5059_second_product_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_5059_second_product_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_5059_second_product_subtotal}
+
+      - log: "Product - ${purchase_5059_first_product_name} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_5059_first_product_name}
+            - name: productType
+              string: ${purchase_5059_first_product_type}
+            - name: mx.data.qaa.purchase-003.productQty
+              string: ${purchase_5059_first_product_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_5059_first_product_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_5059_first_product_subtotal}
+
+    #---------------------------------------------------------------------------------------------
+    # STEPS 11, 12 & 13: CHANGE DELIVERY METHOD TO PICK UP (11), ADD ZIP CODE (12) AND SELECT STORE (13)
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEPS 11, 12 & 13: CHANGE DELIVERY METHOD TO PICK UP (11), ADD ZIP CODE (12) AND SELECT STORE (13)"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.cartPage.getFulfillmentType
+
+      - executeFunction:
+          name: functions.cartPage.switchDeliveryToPickup
+
+
+    #---------------------------------------------------------------------------------------------
+    # STEPS 14: DELETE ITEM FROM CART
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEPS 14: DELETE ITEM FROM CART"
+          color: ORANGE
+      - executeFunction:
+          name: mx.functions.ea.cart.deleteProductByName
+          params:
+            - name: productName
+              string: ${purchase_5059_second_product_name}
+
+    #---------------------------------------------------------------------------------------------
+    # STEPS 15: CONTINUE TO CHECKOUT
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEPS 15: CONTINUE TO CHECKOUT"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+    #---------------------------------------------------------------------------------------------
+    # STEPS 16: VALIDATE PRODUCT DETAILS
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEPS 16: VALIDATE PRODUCT DETAILS"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.checkoutPage.validateItemDetails
+
+    #---------------------------------------------------------------------------------------------
+    # STEPS 17: UPDATE PICKUP PERSON
+    #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEPS 17: UPDATE PICKUP PERSON"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.checkoutPage.updatePickupPersonInformation
+          params:
+            - name: pickupPersonName
+              string: mx.data.qaa.purchase.sanity.tc004.pickupPersonFirstName
+            - name: pickupPersonLastName
+              string: mx.data.qaa.purchase.sanity.tc004.pickupPersonLastName
+            - name: pickupPersonPhoneNumber
+              string: mx.data.qaa.purchase.sanity.tc004.pickupPersonPhone
+
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 18: OPEN WALLET ------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 18: OPEN WALLET."
+         color: ORANGE
+      - executeFunction:
+          name: functions.checkoutPage.tapAddPaymentMethodBtn
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 19: VALIDATE ADDED CARD IS DISPLAYED  -------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 19: VALIDATE ADDED CARD IS DISPLAYED."
+         color: ORANGE
+      - executeFunction:
+          name: functions.checkoutPage.walletPopup.assertCardListed   
+          params:
+            - name: cardLast4Digits
+              string: mx.data.qaa.purchase.sanity.tc004.creditCardLastFourDigits
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 20: ADD A DEBIT CARD  -----------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 20: ADD A DEBIT CARD."
+         color: ORANGE
+      - executeFunction:
+          name: functions.walletPage.tapAddPaymentMethod
+      - executeFunction:
+          name: functions.walletPage.tapCredit$DebitCardBtn
+      - storeIn:
+          key: sameBillingAddress
+          value: true
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.fillCreditDebitCardInformationForm
+          params:
+            - name: cardHolderFirstName
+              string: mx.data.qaa.purchase.sanity.tc004.debitCardFirstName
+            - name: cardHolderLastName
+              string: mx.data.qaa.purchase.sanity.tc004.debitCardLastName  
+            - name: cardNumber
+              string: mx.data.qaa.purchase.sanity.tc004.debitCardNumber
+            - name: cardLast4Digits
+              string: mx.data.qaa.purchase.sanity.tc004.debitCardLastFourDigits
+            - name: expirationDate
+              string: mx.data.qaa.purchase.sanity.tc004.debitCardExpirationDate
+            - name: cvv
+              string: mx.data.qaa.purchase.sanity.tc004.debitCardCVV
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 21: ADD COUPON  -----------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      ## TODO: For now there is no permanent promotion in prod in order to always apply the same 
+      ## coupon, pending to look into a more stable solution, for now the functions are working 
+      ## correctly if a valid coupon is added as variable.
+      - log:
+         message: "STEP 21: ADD COUPON."
+         color: ORANGE
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: mx.data.qaa.purchase.sanity.tc004.sectionName
+      - executeFunction:
+          name: mx.flows.od.review-order.applyCoupon
+          params:
+            - name: promoCode
+              string: mx.data.qaa.purchase.sanity.tc004.coupon
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.functions.utils.tapCloseKeyboardButton
+          
+      - executeFunction:
+          name: mx.functions.review-order.getPromoDiscount
+
+      - storeIn:
+          key: purchase_5059_coupon_discount
+          value: ${returnedPromoDiscount}
+
+      - arithmetic:
+          expression: ${purchase_5059_first_product_subtotal} - ${purchase_5059_coupon_discount}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_5059_order_total
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${purchase_5059_order_total}
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotalFromButton
+              string: ${purchase_5059_order_total}
+
+      - executeFunction:
+                    name: mx.functions.utils.tapCloseKeyboardButton
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 22: REMOVE COUPON  --------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      ## TODO: For now there is no permanent promotion in prod in order to always apply the same 
+      ## coupon, pending to look into a more stable solution, for now the functions are working 
+      ## correctly if a valid coupon is added as variable.
+      - log:
+         message: "STEP 21: REMOVE COUPON."
+         color: ORANGE
+      - executeFunction:
+          name: mx.flows.od.review-order.removeCoupon
+          params:
+            - name: promoCode
+              string: mx.data.qaa.purchase.sanity.tc004.coupon
+      
+      - executeFunction:
+                    name: mx.functions.utils.tapCloseKeyboardButton
+
+      - arithmetic:
+          expression: ${purchase_5059_order_total} + ${purchase_5059_coupon_discount}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_5059_order_total
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${purchase_5059_order_total}
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotalFromButton
+              string: ${purchase_5059_order_total}
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 23: PLACE ORDER -----------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - if:
+          condition: ${GLASS_ENV} == 'teflon'
+          then:
+            - log:
+                message: "STEP 23: PLACE ORDER"
+                color: ORANGE
+
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+    #---------------------------------------------------------------------------------------------
+    # END ----------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMP_5102_SUCCESSFUL_EXECUTION
+          value: true
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   A F T E R   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMP_5102_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"

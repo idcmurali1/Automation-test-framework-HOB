@@ -1,0 +1,231 @@
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow Validate all the onboarding pages and navigates to the app using geo location.
+  # Param  ${PostalCode}  [Mandatory]  User postal code to enter the App.
+  #        ${ShoppingExperience}  [Mandatory]  Banner to be opened.
+  #                                              Options:
+  #                                                To select OD (1st banner): [ Walmart Express | Tu Bodega | OD ]
+  #                                                To select EA (2nd banner): [ Exclusivos online | Bodega Extendida | EA ]
+  - name: functions.onboardingToHomePage.usingPostalCode
+    flow:
+      - executeFunction:
+          name: functions.onboarding.isOnboardingDisplayed
+      - if:    # Temporary condition added while experiment is paused
+          condition: ${market} == 'US'
+          then:
+            - storeIn:
+                key: returnedIsDisplayed
+                value: true
+      - if:
+          condition: ${returnedIsDisplayed} == true
+          then:
+            - log:
+                message: "Onboarding displayed, flow will navigate through."
+                color: CYAN
+            - if:
+                condition: ${platform} == 'Android' && ( ${market} == 'US' || ${market} == 'CA' )
+                then:
+                  - executeFunction:
+                      name: functions.utils.restartAndroidBuild
+            - executeFunction:
+                name: functions.goThroughOnboarding
+          else:
+            - executeFunction:
+                name: functions.onboarding.closePopUps
+            - if: 
+                identifier:
+                  present:
+                    - identifier: homePage.shopFragmentRootContainer
+                then:
+                    - log: "Home page is loading"
+                else:
+                    - executeFunction:
+                        name: functions.utils.restartAndroidBuild  # Will remove this step when CEWMPLUS-116374 get fixed
+      - executeFunction:
+          name: functions.homePage.gic.tapGotItBtnIfDisplayed
+      - executeFunction:
+          name: functions.homePage.gic.collapseIfExpanded
+      - log:
+          message: "End flow: onboardingToHomePage.usingPostalCode (no validation)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Go through onboading pages 
+  - name: functions.goThroughOnboarding
+    flow:
+      - executeFunction:
+          name: functions.onboarding.tapContinueBtn
+      - executeFunction:
+          name: functions.onboarding.isNotificationDisplayed
+      - if:
+          condition: ${returnedIsDisplayed} == true
+          then:
+            - log:
+                message: "Notification displayed"
+                color: CYAN
+            - executeFunction:
+                name: functions.onboarding.getNotification.tapMaybeLater
+          else:
+            - log:
+                message: "Notification not displayed"
+                color: CYAN
+      - executeFunction:
+          name: functions.onboarding.shareLocation.tapEnterPostalCodeLink
+      - executeFunction:
+          name: functions.onboarding.enterPostalCode   # <-- ${PostalCode}
+      - executeFunction:
+          name: functions.onboarding.sharePostalCode.tapSearchButton
+      - executeFunction:
+          name: functions.onboarding.personalisedExperience.tapAllow    
+      - executeFunction:
+          name: functions.onboarding.shoppingExperience.tapShoppingOption # <-- MX/BO EA Only
+          params:
+            - name: ShoppingExperience
+              string: ${ShoppingExperience}
+      - if:
+         condition: ${merge-hallways}
+         then:
+            - executeFunction:
+                name: functions.global.enableWCPExpo
+         else:
+            - executeFunction:
+                name: functions.global.EAOnboardingHelper  # <-- MX/BO EA Android Teflon: Change to teflon, Prod: Close pop ups
+      - executeFunction:
+          name: functions.global.experienceOnboardingBottomSheet.dismissIfDisplayed
+      - log:
+          message: "End flow: goThroughOnboarding"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------------------------
+  # Description: This flow navigates to WCP expo experiment for MX and MX-Bodega markets. Restart the app and select the EA experience
+  # No params
+  - name: functions.onboardingToHomePage.navigateToExpoVariation
+    flow:
+        # Temporary solution for MX Teflon, This will be removed
+        - if: 
+            condition: ${environment} == 'Teflon'
+            then:
+              - if: 
+                  condition: ${merge-hallways}
+                  then:
+                    - executeFunction:
+                        name: functions.onboarding.navigation.goToDeepLink
+                        params:
+                          - name: deepLinkUrl
+                            string: data.onboarding.expo.variation
+                          - name: deeplinkMarketPrefix
+                            string: walmartea://
+              - if: 
+                  condition: ${market} == 'MX-Bodega'
+                  then:
+                    - executeFunction:
+                        name: functions.onboarding.navigation.goToDeepLink
+                        params:
+                          - name: deepLinkUrl
+                            string: data.onboarding.expo.variation
+                          - name: deeplinkMarketPrefix
+                            string: bodegaea://
+        - log:
+            message: "End flow: functions.onboardingToHomePage.navigateToExpoVariation"
+            color: BLUE
+  
+#--------------------------------------------------------------------------------------------------------------------------------------
+  # Description: Close pop ups for Android after navigate to Home Page
+  # No params
+  - name: functions.onboarding.closePopUps
+    flow:
+        - if:
+            condition: ${environment} == 'Teflon'
+            then:
+                - executeFunction:
+                    name: functions.homePage.newUpdateAvailablePopUp.dismissIfDisplayed
+                - executeFunction:
+                    name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed
+                - executeFunction:
+                    name: functions.homePage.orderDiscountUpdatesAlert.tapLaterBtn
+                - executeFunction:
+                    name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed
+                - executeFunction:
+                    name: functions.homePage.newUpdateAvailablePopUp.dismissIfDisplayed
+            else:
+                - executeFunction:
+                    name: functions.homePage.orderDiscountUpdatesAlert.tapLaterBtn
+                - executeFunction:
+                    name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed
+                - executeFunction:
+                    name: functions.homePage.orderDiscountUpdatesAlert.tapLaterBtn
+
+# TODO: verify if this function will be required or not. For now, it will be commented. 👇🏼
+
+#   # Description: This flow Validate all the onboarding pages and navigates to the app using geo location.
+#   - name: functions.onboardingToHomePage.tapOnWalmartExpress
+#     flow:
+
+#       - executeFunction:
+#           name: functions.onboarding.isOnboardingDisplayed
+#       - if:
+#           condition: ${returnedIsDisplayed} == true
+#           then:
+#             - log:
+#                 message: "Onboarding displayed, flow will navigate through."
+#                 color: CYAN
+#             - executeFunction:
+#                 name: functions.onboarding.tapContinueBtn
+#           else:
+#             - failTest:
+#                 message: "Onboarding not displayed."
+#       - executeFunction:
+#           name: functions.onboarding.isNotificationDisplayed
+#       - if:
+#           condition: ${returnedIsDisplayed} == true
+#           then:
+#             - log:
+#                 message: "Notification displayed"
+#                 color: CYAN
+#             - executeFunction:
+#                 name: functions.onboarding.getNotification.tapMaybeLater
+#           else:
+#             - log:
+#                 message: "Notification not displayed"
+#                 color: CYAN
+#       - executeFunction:
+#           name: functions.onboarding.shareLocation.tapEnterPostalCodeLink
+#       - executeFunction:
+#           name: functions.onboarding.enterPostalCode   # <-- ${PostalCode}
+#       - executeFunction:
+#           name: functions.onboarding.sharePostalCode.tapSearchButton
+#       - executeFunction:
+#           name: functions.onboarding.personalisedExperience.tapAllow          
+#       - executeFunction:
+#           name: functions.onboarding.shoppingExperience.tapShoppingOption
+#           params:
+#             - name: ShoppingExperience
+#               string: data.onboarding.walmartExpress
+#       - executeFunction:
+#           name: functions.onboarding.tapOnBackButton
+#       - executeFunction:
+#           name: functions.onboarding.shoppingExperience.tapShoppingOption
+#           params:
+#             - name: ShoppingExperience
+#               string: data.onboarding.onlineExclusiveStore  
+#       - executeFunction:
+#           name: functions.homePage.order$DiscountUpdatesAlert.tapLaterBtn
+#       - if:
+#           condition: ${platform} == 'Android'
+#           then:
+#             - executeFunction:
+#                 name: functions.global.closePopUp
+#     # Enable below function when wcp expo link is ready
+#     #   - if:
+#     #       condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+#     #       then:
+#     #         - executeFunction: 
+#     #             name: functions.onboardingToHomePage.navigateToExpoVariation
+#       - sleep:
+#           duration: 2500
+#       - log:
+#           message: "End flow: onboardingToHomePage.usingPostalCode (no validation)"
+#           color: BLUE

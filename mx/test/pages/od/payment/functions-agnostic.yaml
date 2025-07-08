@@ -1,0 +1,346 @@
+#======================================================================================================================
+#  AUTHOR: Isis Rojas Tolentino (vn53dge)
+#  CREATED: Mar/13/2023
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method asserts if payment page is displayed correctly
+  - name: mx.functions.payment.assertCardContainerDisplayed
+    flow:
+      - log:
+          message: Checking if payment page is displayed correctly
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.payment.paymentTitle
+            - identifier: mx.mappings.payment.creditDebitCardsContainer
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function scrolls right to the desired card
+  # Params:   ${last4Digits}  [Mandatory]   Card's last four digits
+  - name: mx.functions.payment.scrollRightToCard
+    flow:
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - getString:
+                identifier: mx.mappings.payment.indicator
+                storeIn: indicatorContentDesc
+                attribute: content-desc
+          else:
+            - getString:
+                identifier: mx.mappings.payment.indicator
+                storeIn: indicatorContentDesc
+                attribute: value
+      - executeNode:
+          file: mx/test/helpers/payment/getNumberOfCards.js
+          args:
+            - value: ${indicatorContentDesc}
+          getResponse:
+            storeIn: numberOfCards
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.payment.cardBy4Digits
+          then:
+            - log:
+                message: "End function: payment.scrollRightToCard"
+                color: CYAN
+          else:
+            - loop:
+                begin: 0
+                end: ${numberOfCards}
+                flow:
+                  - scroll:
+                      direction: left
+                      position: center
+                  - if:
+                      condition: ${APP_PLATFORM} == 'android'
+                      then:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: mx.mappings.payment.cardBy4Digits
+                            then:
+                              - break: true
+                              - log: 
+                                  message: "End function: payment.scrollRightToCard"
+                                  color: CYAN
+                      else:
+                        - getString:
+                            identifier: mx.mappings.payment.radioButtonBy4Digits
+                            storeIn: visible
+                            attribute: visible
+                        - if:
+                            condition: ${visible} == true
+                            then:
+                              - break: true
+                              - log: 
+                                  message: "End function: payment.scrollRightToCard"
+                                  color: CYAN
+                  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function clicks on the card's radio button by last 4 digits
+  # Params:   ${last4Digits}  [Mandatory]   Container
+  - name: mx.functions.payment.selectCard
+    flow:
+      - click:
+          identifier: mx.mappings.payment.radioButtonBy4Digits
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: payment.selectCard"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function taps on Continue
+  - name: mx.functions.payment.tapContinue
+    flow:
+      - click:
+          identifier: mx.mappings.payment.continueButton
+      # This button can take a while loading...
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: payment.tapContinue"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if payment page is displayed
+  - name: mx.functions.payment.assertPageDisplayed
+    flow: 
+      - verifyIdentifier: 
+          present:
+            - identifier: mx.mappings.payment.paymentTitle
+            - identifier: mx.mappings.payment.continueButton
+            - identifier: mx.mappings.payment.closeButton
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.payment.creditDebitCardsContainer
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.payment.otherPaymentsContainer
+      - log:
+          message: "End function: payment.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method scrolls down to pay at delivery section.
+  - name: mx.functions.payment.scrollDownToPayAtDelivery
+    flow:
+      - scroll:
+          direction: down
+          scrollLimit: 3
+          wait: 1000
+          position: center
+          untilIdentifier: mx.mappings.payment.payAtDeliveryContainer
+      - log:
+          message: "End Function: payment.scrollDownToPayAtDelivery"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts pay at delivery is not available (alert is displayed).
+  - name: mx.functions.payment.assertPayAtDeliveryNotAvailable
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.payment.payAtDeliveryAlertNotAvailable
+      - log:
+          message: "Pay at delivery is not available!"
+          color: CYAN
+      - log:
+          message: "End function: payment.assertPayAtDeliveryNotAvailable"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method taps close Button.
+  - name: mx.functions.payment.tapClose
+    flow: 
+      - click:  
+          identifier: mx.mappings.payment.closeButton
+      - log:
+          message: "End Function: payment.tapClose"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method selects the pay at delivery method, it receives a parameter to select the correct option
+  #              whether to pay in cash or with credit/debit card.
+  # Param        ${payAtDeliveryFormat}  [Mandatory]  (Input: [ cash | card ])
+  - name: mx.functions.payment.selectPayAtDeliveryOption
+    flow:
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.payment.payAtDeliveryContainer
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: mx.mappings.payment.payAtDeliveryContainer
+                      wait: 1000
+                      scrollLimit: 8
+          else:
+            - if:
+                identifier:
+                  visible:
+                    - identifier: mx.mappings.payment.payAtDeliveryContainer
+                      value: 'false'
+                then:
+                  - scroll:
+                      direction: down
+                      wait: 1000
+                      scrollLimit: 3
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.payment.payAtDeliveryContainer
+      - log:
+          message: Selecting Pay at delivery payment format...
+          color: CYAN
+      - scroll:
+          direction: down
+          scrollLimit: 2
+          wait: 1000
+      - if:
+          condition: ${payAtDeliveryFormat} == 'cash'
+          then:
+            - click:
+                identifier: mx.mappings.payment.payAtDeliveryCashOption
+            - log:
+                message: Cash payment format has been selected.
+                color: CYAN
+      - if:
+          condition: ${payAtDeliveryFormat} == 'card'
+          then:
+            - click:
+                identifier: mx.mappings.payment.payAtDeliveryCardOption
+            - log:
+                message: Credit/Debit card payment format has been selected.
+                color: CYAN
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: payment.selectPayAtDeliveryOption"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function taps on next card
+  - name: mx.functions.payment.tapNextCard
+    flow:
+      - click:
+          identifier: mx.mappings.payment.nextCard
+          ignoreException: true
+      - log:
+          message: "End function: payment.tapNextCard"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function click on radio button of an unchecked card
+  - name: mx.functions.payment.selectUnchekedCard
+    flow:
+      - click:
+          identifier: mx.mappings.payment.unchekedCardRadioButtonCentered
+      - log:
+          message: "End function: payment.selectUnchekedCard"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function assert the radio button checked
+  - name: mx.functions.payment.assertChekedCard
+    flow:
+      - click:
+          identifier: mx.mappings.payment.chekedCardRadioButtonCentered
+      - log:
+          message: "End function: payment.assertChekedCard"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  - name: mx.functions.payment.tapAddPayPalAccount
+    flow:
+      - click:
+          identifier: mx.mappings.payment.addPaypalAccountButton
+      - log:
+          message: "End function: payment.tapAddPayPalAccount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: Marks the 'Remember paypal data' checkbox, if it's already marked it doesn't do anything.
+  - name: mx.functions.payment.markRememberPaypalDataCheckbox
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.payment.checkedRememberPaypalDataCheckbox
+          then:
+            - log:
+                message: "Checkbox is already selected."
+                color: CYAN
+          else:
+            - click:
+                identifier: mx.mappings.payment.uncheckedRememberPaypalDataCheckbox
+      - log:
+          message: "End function: payment.markRememberPaypalDataCheckbox"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: Unmarks the 'Remember paypal data' checkbox, if it's not marked it doesn't do anything.
+  # NOTE: It seems that after 5 accounts have been registered, the app won't let you add another account while this
+  #         checkbox is marked, so in order to proceed, this checkbox must be unmarked.
+  - name: mx.functions.payment.unmarkRememberPaypalDataCheckbox
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.payment.uncheckedRememberPaypalDataCheckbox
+          then:
+            - log:
+                message: "Checkbox is already not selected."
+                color: CYAN
+          else:
+            - click:
+                identifier: mx.mappings.payment.checkedRememberPaypalDataCheckbox
+      - log:
+          message: "End function: payment.unmarkRememberPaypalDataCheckbox"
+          color: BLUE
+
+  # PAYMENT.CONTINUE-TO-PAYPAL-POPUP ##################################################################################
+  
+  - name: mx.functions.payment.continue-to-paypal-popup.assertPopupDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.payment.continue-to-paypal-popup.popupContainer
+            - identifier: mx.mappings.payment.continue-to-paypal-popup.confirmButton
+      - log:
+          message: "End function: payment.continue-to-paypal-popup.assertPopupDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  - name: mx.functions.payment.continue-to-paypal-popup.tapConfirm
+    flow:
+      - click:
+          identifier: mx.mappings.payment.continue-to-paypal-popup.confirmButton
+      - log:
+          message: "End function: payment.continue-to-paypal-popup.tapConfirm"
+          color: BLUE

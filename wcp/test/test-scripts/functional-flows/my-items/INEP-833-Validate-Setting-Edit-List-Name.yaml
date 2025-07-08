@@ -1,0 +1,171 @@
+
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - OPIF-833
+#       Flow - MH: Validate setting - Edit list name
+#    
+#
+#   CONFLUENCE OPIF TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179414
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-833
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-804
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-833
+  tags: INEP-833, OPIF-179414, p1-mh-opif-teflon, INEP-804, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Validate setting - Edit list name."
+    flow:
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+       # Click on login and select sign in..
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user..
+      - log:
+          message: "Login with existing user account.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      - executeFunction:
+          name: functions.global.tapShopBtn 
+
+      # Add item to lists from PDP.
+      - log:
+          message: "Add item to lists from pdp."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.utils.searchItemUsingDeepLink
+          params:
+            - name: searchText
+              string: data.inep-833.item1      # Need to update
+
+      - log:
+          message: "Add item to the list page.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.productDetailsPage.tapAddToFavorites    
+
+      # Close PDP
+      - log:
+          message: "Close PDP"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose       
+      
+    # Navigate to my items and click on lists.. 
+      - log:
+          message: "Navigate to my items and click on lists"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapMyItemsBtn
+      - executeFunction:
+          name: functions.myItemsPage.tapLists    
+    
+    # Open list
+      - log:
+          message: "Open favorites list"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.lists.nonEmptylistPage     
+
+    # Validate user is able to edit the list name and that it gets updated.
+      - log:
+          message: "Validate user is able to edit the list name and that it gets updated."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.lists.search.updateListNameAndValidate
+          params:
+            - name: listName
+              string: data.inep-833.listName 
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+
+    flow:
+      - log: "AFTER SCENARIO"
+
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+
+      - log: "AFTER SCENARIO ENDED"

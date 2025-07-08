@@ -1,0 +1,292 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Create a New account
+#Create a FC Order : Item 1 - Qty 1 - Unit Price <$50
+#Item 2 - Qty 2 - Unit Price <$50
+#Move to Delivered
+#Start a Return
+#Return Reason - Damaged
+#Condition - any
+#Return method - mailback
+#Review Screen -Customer is presented with 2 options
+#Refund Credit (last 4 digits should NOT be shown) and Original Payment methods
+#Select Refund Credit
+#Return should be created with confirmation
+
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  platform: android
+  tags: C2701024, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2701024
+
+      
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      # - log: Start Main
+
+      #Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@cloudtest.org
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Creating account using astro
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.fastRefund.createAccount    
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 945213102
+      - storeIn:
+          key: item1
+          value: $itemFetched
+          
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.fastRefund.createOrder    
+          
+      #Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn  
+
+      # #Login to account  
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+              
+            - name: password
+              string: E2epassword$
+              
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Delivered
+      - sleep:
+          duration : 30000
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/${orderNo}
+
+      - executeFunction:
+          name: us.functions.returns.goToStartReturn
+      
+      - executeFunction:
+          name: us.functions.returns.verifyStartReturnScreen
+
+      - executeFunction:
+          name: us.functions.returns.itemReturn
+          params:
+            - name: itemIndex
+              string: 1 
+            - name: returnReason
+              string: Damaged
+            - name: returnType
+              string: Refund
+            - name: returnMethod
+              string: Return by mail
+            - name: itemType
+              string: fc
+            - name: returnReviewText
+              string: Return by Mail
+            - name: cardType
+              string: fastRefund
+             
+      
+      - sleep:
+          duration: 30000
+  
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/${orderNo}
+      - sleep:
+          duration : 30000
+
+      - executeFunction:
+          name: us.functions.returns.returnODPValidation
+          params:
+            - name: returnReviewText
+              string: Return by mail
+            # - name: cardType
+            #   string: 
+            - name: buttonText
+              string: View label
+
+      - sleep:
+          duration : 60000
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://wallet
+      
+      - executeFunction:
+          name: us.functions.returns.verifyWalletAfterreturningItem
+          params:
+            - name: refundStatus
+              string: returnInProgress
+
+      - executeFunction:
+          name: us.functions.utils.astro.fetchReturnOrderNumber
+          params:
+            - name: orderNo
+              string: ${orderNo}
+
+      
+      
+      - executeFunction:
+          name: us.functions.utils.moveReturnOrderToIntransit
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: rmas
+              string: ${rmas}
+
+      - sleep:
+          duration: 60000
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/${orderNo}
+      
+      # - executeFunction:
+      #     name:  us.functions.returns.returnStatusODPValidation
+      #     params:
+      #       - name: refundStatus
+      #         string: InTransit
+
+      
+      # # # #put Oder detail page validation
+      # - sleep:
+      #     duration: 60000
+      
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://wallet
+
+      # - executeFunction:
+      #     name: us.functions.returns.verifyWalletAfterreturningItem
+      #     params:
+      #       - name: refundStatus
+      #         string: InTransit
+     
+      # - executeFunction:
+      #     name: us.functions.utils.moveReturnOrderToDeliveredRC
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: rmas
+      #         string: ${rmas}
+      
+      # - executeFunction:
+      #     name: us.functions.utils.moveReturnOrderToReturnReceived
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: rmas
+      #         string: ${rmas}
+      
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://orders/100000286126893
+      
+      
+
+       # put Oder detail page validation
+      - executeFunction:
+          name: us.functions.returns.returnStatusODPValidation
+          params:
+            - name: refundStatus
+              string: returnReceived
+      
+     
+      - sleep:
+          duration : 30000
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://wallet
+
+      # put Oder detail page validation
+      
+      - executeFunction:
+          name: us.functions.returns.verifyWalletAfterreturningItem
+          params:
+            - name: refundStatus
+              string: returnReceived
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

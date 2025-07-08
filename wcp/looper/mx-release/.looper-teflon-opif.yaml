@@ -1,0 +1,143 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: OPIF
+    scheduling: concurrent
+
+    triggers:
+      - pr:
+          scheduling: cancelRunning
+
+      - push:
+          manualOnly: true
+
+
+      - manual:
+          name: MX-iOS-teflon-Development
+          call: Run_iOS_Build_Teflon(MAPPING_LABELS = 'mx_ea_ios_teflon_merge_hallways', SAUCE_APP= 'storage:filename=mx-development-latest.zip', TEST_TAGS = 'p1-mh-opif-teflon', DEPENDENCY_PROFILE = 'looper-mx-teflon-opif')
+
+      # - cron:
+      #     spec: H 8 * * *
+      #     call: Run_iOS_Build_Teflon(MAPPING_LABELS = 'mx_ea_ios_teflon', SAUCE_APP= 'storage:filename=merge-hallways-development-latest.zip', TEST_TAGS = 'p1-mh-opif-teflon')
+
+
+      - manual:
+          name: MX-Android-teflon-Development
+          call: Run_Android_Build_Teflon(MAPPING_LABELS = 'mx_ea_android_teflon_merge_hallways', SAUCE_APP= 'storage:filename=mx-development-latest.apk', TEST_TAGS = 'p1-mh-opif-teflon', DEPENDENCY_PROFILE = 'looper-mx-teflon-opif')
+
+      # - cron:
+      #     spec: H 8 * * *
+      #     call: Run_Android_Build_Teflon(MAPPING_LABELS = 'mx_ea_android_teflon', SAUCE_APP= 'storage:filename=merge-hallways-development-latest.apk', TEST_TAGS = 'p1-mh-opif-teflon')
+
+
+      - manual:
+          name: MX-Android-teflon-Development-xray
+          call: Run_Android_Build_Teflon-xray(MAPPING_LABELS = 'mx_ea_android_teflon_merge_hallways', SAUCE_APP= 'storage:filename=mx-development-latest.apk', TEST_TAGS = 'p1-mh-opif-teflon', DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-jira-reporting')
+
+      # - cron:
+      #     spec: H 8 * * *
+      #     call: Run_Android_Build_Teflon-xray(MAPPING_LABELS = 'mx_ea_android_teflon', SAUCE_APP= 'storage:filename=merge-hallways-development-latest.apk', TEST_TAGS = 'p1-mh-opif-teflon', DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-jira-reporting')
+
+
+envs:
+  global:
+    variables:
+      SAUCE_USERNAME: wcp-apps-e2e
+      SAUCE_ACCESS_KEY: ENC[rnmbZWq+9q4Y2NblUl3yKduKKFO9zq86fEbKAl0j4lm4uh5bgYho+//5ZRtDYEqx]
+      POST_TO_SPLUNK: false
+      POST_TO_XRAY: false
+      JIRA_USERNAME: SVCIECMXCART
+      JIRA_PASSWORD: z3AHEdvLpJt71uPY
+      JIRA_PROJECT_ID: INEP
+      JIRA_TEST_PLAN_KEY: INEP-25
+      JIRA_TEST_SUITE: FUNCTIONAL
+
+      ELK_HOST: ENC[1daRK3FgaXEjV7OCVK+66P0fcD+RYxs47xG01WmiaDCl0xeJURP612vwYH8/8BZ31h2tnp5FT1B18us0Ag4n6fjGS3DghPw4vafKEr04BII=]
+      TEST_RESULTS_INDEX: testresults_apps_wcp
+      POST_TO_ES: false
+      MARKET: wcp
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      GLASS_ENV: teflon
+      JIRA_SUMMARY_PREFIX: 'MERGE_HALLWAYS'
+
+  android_platform_variables:
+    variables:
+      SLACK_CHANNEL: merge-hallways-e2e-report
+      APP_PLATFORM: android
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/android/android-default.yaml
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+  ios_platform_variables:
+    variables:
+      SLACK_CHANNEL: merge-hallways-e2e-report
+      APP_PLATFORM: ios
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/ios/ios-default.yaml
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+flows:
+
+
+  #Get latest app version from txt
+  get_app_version:
+      - var(APP_VERSION):
+          - shell (name Get App Version For MX Release): head wcp/looper/mx-release/app-version/mx-release-version.txt
+
+    # - if: |
+    #     %{REPORT_TO_TESTBURST == 'true'}
+    #   then:
+    #     - if: |
+    #         %{REPORT_TO_XRAY == 'true'}
+    #       then:
+    #         Run_iOS_Build_Teflon:
+    #           - call: build(ios_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-jira-reporting')
+    #         Run_iOS_Build_Prod:
+    #           - call: build(ios_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-jira-reporting')
+    #         Run_Android_Build_Teflon:
+    #           - call: build(android_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-jira-reporting')
+    #         Run_Android_Build_Prod:
+    #           - call: build(android_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-prod-opif-testburst-jira-reporting')
+    #       else:
+    #         Run_iOS_Build_Teflon:
+    #           - call: build(ios_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-reporting')
+    #         Run_iOS_Build_Prod:
+    #           - call: build(ios_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-jira-reporting')
+    #         Run_Android_Build_Teflon:
+    #           - call: build(android_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-reporting')
+    #         Run_Android_Build_Prod:
+    #           - call: build(android_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif-testburst-jira-reporting')
+    #   else:
+    #     Run_iOS_Build_Teflon:
+    #       - call: build(ios_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif')
+    #     Run_iOS_Build_Prod:
+    #       - call: build(ios_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-prod-opif' )
+    #     Run_Android_Build_Teflon:
+    #       - call: build(android_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-teflon-opif')
+    #     Run_Android_Build_Prod:
+    #       - call: build(android_platform_variables, DEPENDENCY_PROFILE = 'looper-mx-prod-opif')
+
+  Run_iOS_Build_Teflon:
+    - call: build(ios_platform_variables)
+  Run_iOS_Build_Prod:
+    - call: build(ios_platform_variables)
+  Run_Android_Build_Teflon:
+    - call: build(android_platform_variables)
+  Run_Android_Build_Prod:
+    - call: build(android_platform_variables)
+  Run_Android_Build_Teflon-xray:
+    - call: build(android_platform_variables)

@@ -1,0 +1,126 @@
+general:
+  tags: unified-us-golden-flows-wplus, C2737052, unified-p0-wplus-teflon-e2e, wplus-optimize-flows
+  testCaseId: C2737052
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: WP033, 394
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo  
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.monthly
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.convertTrialtoPaidMember
+          params:
+            - name: payload
+              string: us.data.flow079b.addMembershipPayloadPause
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: unified.us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Manage your membership plan
+
+      - executeFunction:
+          name: unified.us.functions.wplus.manageMembership.pauseMembership
+
+      - executeFunction:
+          name: unified.us.functions.wplus.manageMembership.undoPauseMembership
+
+      # Pause membership using Astro
+      - executeFunction:
+          name: unified.us.functions.utils.astro.pauseMembershipWithPastOrFutureDate
+          params:
+            - name: payload
+              string: us.data.pauseFlow.pauseMembershipWithPastDate
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: unified.us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Explore this offer & all your benefits #Walmart+ benefits
+
+      # To Validate the FDFS Benefit for Paused Member
+      - executeFunction:
+          name: unified.us.functions.wplus.benefits.fdfs
+          params:
+            - name: collapsed
+              string: y
+            - name: expanded
+              string: y
+            - name: pausedMember
+              string: y
+            - name: usedBenefit
+              string: n
+
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+      
+      - executeFunction:
+          name: unified.us.functions.wplus.manageMembership.undoPauseMembership
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

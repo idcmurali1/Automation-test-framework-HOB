@@ -1,0 +1,336 @@
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+# Flow: 009
+# User : Associate User
+# Order Type: GM 
+# Fulfillment: WMT+PFS PICKUP
+# Payment Type : GC [GC+RR is expected payment]
+# Additional validation: srp page validations - heart, A2C button, product image & name, qty, price, OD
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+general:
+  platform: ios
+  tags: flow-009, ca_authpoc, fr_ca, E2E-iOS-English, E2E-iOS-French, group-1
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.store.zipCodeOrleans
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.ios.data.flow009.email
+            - name: password
+              string: ca.test.ios.data.flow009.password
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.ios.data.flow009.email
+            - name: password
+              string: ca.test.ios.data.flow009.password
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.store.zipCodeOrleans
+            - name: storeName
+              string: ca.test.data.store.storeNameOrleans
+
+      # Selecting address at home page
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: address
+              string: ca.test.data.store.zipCodeOrleans
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:           
+            - name: product
+              string: ca.test.data.flow009.product_p1_Sku           
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.productSearch.addToCart
+          params:
+            - name: productName
+              string: ca.test.data.flow009.product_p1_Name
+            - name: quantity
+              string: ca.test.data.flow009.product_p1_Qty
+
+      #clear search box
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:           
+            - name: product
+              string: ca.test.data.flow009.product_p2_Sku
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.productSearch.addToCart
+          params:
+            - name: productName
+              string: ca.test.data.flow009.product_p2_Name
+            - name: quantity
+              string: ca.test.data.flow009.product_p2_Qty
+
+      # Validate cart quantity
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantity
+           params:
+            - name: cartQuantity
+              string: ca.test.data.flow009.assertCartQuantity
+
+      # Asserting cart total
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ca.test.data.flow009.assertCartSubtotal
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                                   
+
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+
+      # Selecting pickup or shipping
+      - executeFunction:
+          name: ca.test.functions.cart.selectPickupOptionsIos
+
+      # Cart fulfillment verification
+      - executeFunction:
+          name: ca.test.functions.cart.pickup.verifyCardIos     
+
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductDetails
+          params:
+            - name: productName
+              string: ca.test.data.flow009.product_p1_Name
+            - name: productPrice
+              string: ca.test.data.flow009.product_p1_price
+            - name: productQty
+              string: ca.test.data.flow009.product_p1_Qty
+
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductDetails
+          params:
+            - name: productName
+              string: ca.test.data.flow009.product_p2_Name
+            - name: productPrice
+              string: ca.test.data.flow009.product_p2_price
+            - name: productQty
+              string: ca.test.data.flow009.product_p2_Qty
+
+      # Verify cart subTotal
+      - executeFunction:
+          name: ca.test.functions.cart.cartSubTotal
+          params: 
+            - name: subTotal
+              string: ca.test.data.flow009.assertCartSubtotal
+
+      # Verify associate discount
+      - executeFunction:
+          name: ca.test.functions.cart.associateDiscount
+          params:
+            - name: associate_discount        
+              string: ca.test.data.flow009.assoicateDiscount
+
+      # Verify cart walmart pickup
+      - executeFunction:
+          name: ca.test.functions.cart.validateWalmartPickupFees
+          params: 
+            - name: walmart_pickup
+              string: ca.test.data.flow009.walmartPickupFee
+
+      # Verify cart taxes
+      - executeFunction:
+          name: ca.test.functions.cart.cartTaxes
+          params: 
+            - name: taxes
+              string: ca.test.data.flow009.totalTaxAmount
+
+      # Verify cart HST
+      - executeFunction:
+          name: ca.test.functions.cart.hstTaxAssertion
+          params: 
+            - name: hst_percentage
+              string: ca.test.data.flow009.hstTaxPercentageAssertion
+            - name: hst_tax_value
+              string: ca.test.data.flow009.hstTaxAmountAssertion
+
+      # Verify cart estimated total
+      - executeFunction:
+          name: ca.test.functions.cart.cartEstimatedTotal
+          params: 
+            - name: estimate_total
+              string: ca.test.data.flow009.estimateTotal
+        
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos
+
+      # CheckOut page order review validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+          params:
+            - name: fulfillment
+              string: ca.test.data.fullfillmentTypePickup
+
+      # Dynamic GC fn
+      - executeFunction:
+          name:  ca.test.functions.astroUrl.createGiftCard
+          params:
+            - name: giftCardAmount
+              string: ca.test.data.flow009.estimateTotal
+
+      # Navigating edit payment page
+      - executeFunction:
+          name: ca.test.functions.checkOut.editPayment
+      
+      - executeFunction:
+          name: ca.test.functions.checkOut.paymentOptions.editPayments.removeGiftCard
+
+      - executeFunction:
+          name: ca.test.functions.checkOut.editPayment.chooseGiftCard
+          params:
+            - name: cardNumber
+              string: ${giftCardNumber}
+            - name: cardPin
+              string: ${giftCardPin}
+            - name: cvvNumber
+              string: ca.test.data.flow009.cvvNumber
+
+      - executeFunction:
+          name: ca.test.functions.checkOut.paymentMethod.countinueButton
+
+      # # Mobile number validation
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.mobileContactValidationIos
+
+      # Validating mobile number
+      - executeFunction:
+          name: ca.test.functions.checkOut.assertPhoneNumberIsDisplayed
+
+       # Adding mobile number
+      - executeFunction:
+          name: ca.test.functions.checkout.phoneNumber.enterContactNumber           
+
+      # Checkout page sub total assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.subTotalValidation
+          params:
+            - name: subTotal
+              string: ca.test.data.flow009.assertCartSubtotal
+
+      # Verify associate discount
+      - executeFunction:
+          name: ca.test.functions.checkout.associateDiscount
+          params:
+            - name: associate_discount        
+              string: ca.test.data.flow009.assoicateDiscount      
+
+      # Verify checkout walmart pickup
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateWalmartPickupFees
+          params: 
+            - name: walmart_pickup
+              string: ca.test.data.flow009.pickupFee      
+
+      # Checkout page tax assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.taxesAssertion
+          params:
+            - name: total_tax
+              string: ca.test.data.flow009.totalTaxAmount
+              
+      # Checkout page hst assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.hstAssertion
+          params:
+            - name: hst_percentage
+              string: ca.test.data.flow009.checkOut.hstPercentage
+            - name: hst_tax_value
+              string: ca.test.data.flow009.hstTaxAmountAssertion
+ 
+      # Checkout page estimate total assertion
+      - executeFunction:  
+          name: ca.test.functions.checkOut.estimateTotalAssertion
+          params:
+            - name: estimate_total
+              string: ca.test.data.flow009.estimateTotal
+      
+      # Order placement
+      - executeFunction:
+          name: ca.test.functions.checkOut.PlacingOrder
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *          
+
+      # Order Confirmation screen validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.orderConfirmationValidationIos             
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-009
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps     
+    

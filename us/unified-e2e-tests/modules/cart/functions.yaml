@@ -1,0 +1,4503 @@
+functions:
+  - name: unified.us.functions.cart.validateTireInstallationRadioButton
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.cart.verifyGetExpertInstallationExpandButton
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cart.verifyGetExpertInstallationExpandButton
+                        - name: direction
+                          string: up
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.verifyGetExpertInstallationExpandButton
+          then:
+            - click:
+                identifier: us.mappings.cart.verifyGetExpertInstallationExpandButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.tireInstallationRadioButtonSelected
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.tireInstallationRadioButtonSelected
+            - click:
+                identifier: us.mappings.cart.tireInstallationRadioButtonSelected
+          else:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            timeout: 10000
+                            value:
+                              - identifier: us.mappings.cart.tireInstallationCheckBox
+                                equals: 1
+                        - log: checkbox already selected
+                      catch:
+                        flow:
+                          - click:
+                              identifier: us.mappings.cart.tireInstallationCheckBox
+
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            checked:
+                              - identifier: us.mappings.cart.tireInstallationCheckBox
+                                value: true
+                        - log: checkbox already selected
+                      catch:
+                        flow:
+                          - click:
+                              identifier: us.mappings.cart.tireInstallationCheckBox
+      - sleep:
+          duration: 4000
+
+  - name: unified.us.functions.cart.validateInstallationNotAvailableAtAutocare
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.navBar.cartIcon
+            - click:
+                identifier: us.mappings.navBar.cartIcon
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.verifyInstallationUnavailableText
+                then:
+                  - click:
+                      identifier: us.mappings.cart.clickOnRemoveAndContinueButton
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.navBar.cartIcon
+            - click:
+                identifier: us.mappings.navBar.cartIcon
+            - sleep:
+                duration: 7000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.cartConsentShipForFreeCta
+                then:
+                  - click:
+                      identifier: us.mappings.cart.cartConsentShipForFreeCta
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.verifyInstallationUnavailableText
+                then:
+                  - click:
+                      identifier: us.mappings.cart.clickOnRemoveAndContinueButton
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.cart.verifyInstallationUnavailableText
+            - sleep:
+                duration: 5000
+
+  - name: unified.us.functions.cart.handleSafetyAdviceAndCheckout
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.checkoutButton
+      - click:
+          identifier: us.mappings.cart.checkoutButton 
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: us.functions.cart.handleItemUpdatesBottomTray
+      - executeFunction:
+          name: unified.us.functions.cart.handleSafetyAdvice
+      - executeFunction:
+          name: unified.us.functions.cart.handleShipItemSeparatelyBottomTray
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+  - name: unified.us.functions.cart.handleSafetyAdvice
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.safetyAdviceHeader
+            - click:
+                identifier: us.mappings.cart.safetyAdviceContinueWithOneTire
+            - executeFunction:
+                name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+          catch:
+            flow:
+              - log: Safety Advice Header pop up not available
+
+  - name: unified.us.functions.cart.handleShipItemSeparatelyBottomTray
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.shipThisItemSeparatelyButton
+            - click:
+                identifier: us.mappings.cart.shipThisItemSeparatelyButton
+          catch:
+            flow:
+              - log: Ship this item separately bottomsheet not available
+
+  - name: unified.us.functions.cart.scrollToTopOfCart
+    flow:
+      - log: -------Scroll to top of cart page function start-------
+      - try:
+          flow:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.navBarTitle
+                  - name: direction
+                    string: up
+                  - name: limit
+                    string: 8
+            # Validate if Cart title is displayed
+            - if:
+                condition: ${skip}
+                then:
+                  - log: Skip cart page loading verification
+                  - storeIn:
+                      key: skip
+                      value: 'null'
+                else:
+                  - verifyIdentifier:
+                      timeout: 10000
+                      present:
+                        - identifier: us.mappings.cart.navBarTitle
+          catch:
+            flow:
+              - failTest:
+                  message: "ENV_FAILURE - ${env} - Issue with cart page loading"
+
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: us.mappings.navBar.cartIconEmpty
+            - log: Cart empty
+          catch:
+            flow:
+              - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.cart.fulfillmentTopSection.fulfillmentTypeText
+                    - name: direction
+                      string: up
+                    - name: limit
+                      string: 8
+      - log: -------Scroll to top of cart page function end-------
+
+  # Cart
+
+  # Utility to validate cart details for any fulfillment type
+  # [mandatory] ${fulfillmentText}    - Shipping/Pickup/Delivery from store/Pickup or delivery/Digital delivery/Pickup from Auto Care ... [Required to scroll to the appropriate cart fulfillment section]
+  # [optional]  ${altFulfillmentText} - Alternate fulfillment text for validation if 2 different fulfillment text display possibility exists [e.g. Curbside pickup / Pickup | Curbside pickup/In-store pickup]
+  # [optional]  ${partialCheckout}    - true/false [default false] [Set to true if Patial checkout section also to be validated]
+  # [optional]  ${unscheduled}        - true/false [default false] [Set to true if unscheduled item fulfillment time needs to be validated]
+  # [optional]  ${validationScope}    - partial/detailed [default partial] ['partial' scope validates fulfillment section type existance only and 'detailed' scope validates item icon/price/buttons ... as well]
+  - name: unified.us.functions.cart.verifyCardDetails
+    flow:
+      - executeFunction:
+          name: us.functions.utils.getFulfillmentTextsToCompare
+
+      - log: -------Validate ${fulfillmentText} cart details function start-------
+      - if:
+          condition: ${initialCartDataSetup} == null
+          then:
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: unified.us.functions.cart.scrollToTopOfCart
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.navBarTitle
+                then:
+                  - log: Cart page displayed
+                else:
+                  - failTest:
+                      message: "FAILURE - ${env} - cart page is not displayed"
+            # Expand item details only if detailed validation needs to be done else for basic validation details expansion is not needed
+            - if:
+                condition: ${validationScope} == 'detailed'
+                then:
+                  - executeFunction:
+                      name: us.functions.cart.seeDetails
+            - storeIn:
+                key: initialCartDataSetup
+                value: complete
+          else:
+            - log: Cart page already loaded and inital setup is done.
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+
+      - try:
+          flow:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.fulfillmentSection.fulfillmentTypeText
+                  - name: direction
+                    string: down
+                  - name: scrollLimit
+                    string: 5
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.fulfillmentSection.fulfillmentTypeText
+          catch:
+            flow:
+              - failTest:
+                  message: "FAILURE - ${env} - ${fulfillmentText} fulfillment section not displayed in cart page"
+      - if:
+          condition: ${unscheduled}
+          then:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - if:
+                      condition: ${unscheduled}
+                      then:
+                        - verifyIdentifier:
+                            label:
+                              - identifier: us.mappings.cart.fulfillmentSection.fulfillmentTimeText
+                                contains: us.data.cart.textAfter
+                        - log: Validations unscheduled fulfillment time text
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - if:
+                      condition: ${unscheduled}
+                      then:
+                        - verifyIdentifier:
+                            text:
+                              - identifier: us.mappings.cart.fulfillmentSection.fulfillmentTime
+                                contains: us.data.cart.textAfter
+                        - log: Validations unscheduled fulfillment time text
+
+      - if:
+          condition: ${validationScope} == 'detailed'
+          then:
+            - if:
+                condition: ${fulfillmentText} == 'Pickup' || ${fulfillmentText} == 'pickup' || ${fulfillmentText} == 'Retiro'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.cart.fulfillmentSection.fulfillmentDeliveryText
+                else:
+                  - if:
+                      condition: ${fulfillmentText} == 'Shipping' || ${fulfillmentText} == 'shipping' || ${fulfillmentText} == 'Envío'
+                      then:
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.cart.fulfillmentSection.fulfillmentDeliveryText
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.cart.fulfillmentSection.itemQuantityStepperSection  
+                then:
+                  - scroll:
+                      direction: down
+                      position: center
+                      untilIdentifier: us.mappings.cart.fulfillmentSection.itemQuantityStepperPlusButton
+                      scrollLimit: 7
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.fulfillmentSection.itemQuantityStepperSection
+                  - identifier: us.mappings.cart.fulfillmentSection.itemQuantityStepperMinusButton
+                  - identifier: us.mappings.cart.fulfillmentSection.itemQuantityStepperCountText
+                  - identifier: us.mappings.cart.fulfillmentSection.itemQuantityStepperPlusButton
+                  - identifier: us.mappings.cart.fulfillmentSection.itemRemoveLink
+                  - identifier: us.mappings.cart.fulfillmentSection.itemSaveForLaterLink
+            - log: Detailed ${fulfillmentText} fulfillment section validation done
+          else:
+            - log: Basic ${fulfillmentText} fulfillment section validation done
+      - if:
+          condition: ${partialCheckout}
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutButton
+                then:
+                  - scroll:
+                      direction: down
+                      position: center
+                      untilIdentifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutButton
+                  - identifier: us.mappings.cart.fulfillmentSection.itemSubTotalAmount
+
+      - if:
+          condition: ${fulfillmentText} == 'Pickup at Cary Advance Auto Parts'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.switching.switchtoshippingButton
+
+      - storeIn:
+          key: altFulfillmentText
+          value: "null"
+      - storeIn:
+          key: validationScope
+          value: "null"
+      - storeIn:
+          key: unscheduled
+          value: false
+      - storeIn:
+          key: partialCheckout
+          value: false
+      - log: -------Validate ${fulfillmentText} cart details function end-------
+      
+  - name: unified.us.functions.cart.availableforShippingOnly
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.verify.cartLoaded
+                then:
+                  - click:
+                      identifier: us.mappings.cart.verify.cartLoaded
+
+  - name: unified.us.functions.cart.selectNearByStore
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.findNearByStoreLink
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.findNearByStoreLink
+      - click:
+          identifier: us.mappings.cart.findNearByStoreLink
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.zipcodeClearButton
+          then:
+            - click:
+                identifier: us.mappings.home.zipcodeClearButton
+      - enterText:
+          identifier: us.mappings.cart.ACC.zipcodetextField
+          string: ${zipcode1}
+          pressEnter: true
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.ACC.redMessage
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.zipcodeClearButton
+          then:
+            - click:
+                identifier: us.mappings.home.zipcodeClearButton
+      - enterText:
+          identifier: us.mappings.cart.ACC.zipcodetextField
+          string: ${zipcode2}
+          pressEnter: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.ACC.storeAddress
+          then:
+            - click:
+                identifier: us.mappings.cart.ACC.storeAddress
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.cart.ACC.storeAddress
+            - click:
+                identifier: us.mappings.cart.ACC.storeAddress
+      - click:
+          identifier: us.mappings.cart.ACC.saveButton
+          wait: 2000
+      - sleep:
+          duration: 6000
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.switching.switchtopickupButton
+          then:
+            - click:
+                identifier: us.mappings.cart.switching.switchtopickupButton
+
+  - name: unified.us.functions.cart.scheduleInstallation
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.scheduler.schedulerScreenTitle
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.scheduler.schedulerScreenTitle
+            - sleep:
+                duration: 7000
+            - executeFunction:
+                name: unified.us.functions.slotDataSetUp
+            - sleep:
+                duration: 3000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.accNearByStore
+                then:
+                  - log: There are no upcoming appointments available at store.
+                  - click:
+                      identifier: us.mappings.reserveSlot.pickup.changeStoreLink
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: us.mappings.reserveSlot.selectStore.secondAddress
+                  - click:
+                      identifier: us.mappings.reserveSlot.selectStore.saveButton
+                  - sleep:
+                      duration: 3000
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.reserveSlot.timeSlot
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.selectDayForSlotDisplay
+                      params:
+                        - name: slotDay
+                          string: "tomorrow"
+            - click:
+                identifier: us.mappings.reserveSlot.timeSlot
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reserveSlot.continueButton
+                then:
+                  - click:
+                      identifier: us.mappings.reserveSlot.continueButton
+                      #Sorry! the time you selected is not handled
+
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - sleep:
+                      duration: 5000
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.schedulePackageAtStore
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.schedulePackageAtStore
+                        - sleep:
+                            duration: 3000
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.chooseInstallationPackage
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.valuePackage
+                        - sleep:
+                            duration: 3000
+                        - click:
+                            identifier: us.mappings.cart.continueButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reserveSlot.timeSlot
+                      then:
+                        - click:
+                            identifier: us.mappings.reserveSlot.timeSlot
+                        - click:
+                            identifier: us.mappings.reserveSlot.continueButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.checkoutButton
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.checkoutButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.safetyAdviceHeader
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.safetyAdviceContinueWithOneTire
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.checkoutButton
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.checkoutButton
+
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reserveSlot.noslotAccTiresWarningMessage
+                      then:
+                        - executeFunction:
+                            name: unified.us.functions.selectDayForSlotDisplay
+                            params:
+                              - name: slotDay
+                                string: "tomorrow"
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.reserveSlot.continueButton
+                        - click:
+                            identifier: us.mappings.reserveSlot.continueButton
+                  - sleep:
+                      duration: 5000
+                  - executeFunction:
+                      name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.chooseInstallationPackage
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.chooseInstallationPackageRadioButton
+                        - sleep:
+                            duration: 3000
+                        - click:
+                            identifier: us.mappings.cart.continueButton
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.reserveSlot.continueButton
+                            then:
+                              - click:
+                                  identifier: us.mappings.reserveSlot.continueButton
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.safetyAdviceHeader
+                            then:
+                              - click:
+                                  identifier: us.mappings.cart.safetyAdviceContinueWithOneTire
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.continueButton
+                            then:
+                              - click:
+                                  identifier: us.mappings.cart.continueButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.reservationExpired
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.selectNewTimeButton
+                        - sleep:
+                            duration: 3000
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.cart.scheduler.schedulerScreenTitle
+                        - executeFunction:
+                            name: unified.us.functions.slotDataSetUp
+                        - sleep:
+                            duration: 3000
+                        - click:
+                            identifier: us.mappings.reserveSlot.timeSlot
+                        - click:
+                            identifier: us.mappings.reserveSlot.continueButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.checkoutButton
+                      then:
+                        - click:
+                            wait: 5000
+                            identifier: us.mappings.cart.checkoutButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.chooseInstallationPackage
+          then:
+            - click:
+                identifier: us.mappings.cart.valuePackage
+            - click:
+                identifier: us.mappings.cart.continueButton
+                wait: 2000
+            - executeFunction:
+                name: unified.us.functions.cart.handleSafetyAdvice
+
+  - name: unified.us.functions.cart.visionItem.verifyRestrictedPrescription
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.navBar.cartIcon
+      - log: Navigating to cart screen
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.vision.AddAPrescriptionText
+      - log: Prescription label is displayed and item can not be purchased without prescription
+
+  - name: unified.us.functions.cart.oos.shopSimilarCart
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.shopsimilar
+      - click:
+          identifier: us.mappings.cart.shopsimilar
+          wait: 5000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.ReplaceCTA
+            - name: direction
+              string: down
+      - click:
+          identifier: us.mappings.cart.ReplaceCTA
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.viewReplacement
+            - name: direction
+              string: up
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.viewReplacement
+      - click:
+          identifier: us.mappings.cart.viewReplacement
+
+  - name: unified.us.functions.cart.removeAllCartItems
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.storeChangePopUp
+      - executeFunction:
+          name: unified.us.functions.cart.removeAdonsNotAvailable
+      - executeFunction:
+          name: unified.us.functions.cart.unavailableItemPopUp
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.startShoppingButton
+          then:
+            - log: No items in cart
+          else:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.cart.seeDetails
+                  - loop:
+                      begin: 0
+                      end: 11
+                      storeIndex: i
+                      flow:
+                        - log: $i
+                        - try:
+                            flow:
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  present:
+                                    - identifier: us.mappings.cart.smartNudgeView
+                              - click:
+                                  identifier: us.mappings.cart.smartNudgeViewClose
+                            catch:
+                              flow:
+                                - log: Smart Budge view not displayed
+                        - try:
+                            flow:
+                              - verifyIdentifier:
+                                  timeout: 0
+                                  present:
+                                    - identifier: us.mappings.cart.removeLinkButton
+                              - if:
+                                  identifier:
+                                    present:
+                                      - identifier: us.mappings.carePlans.wppSectionHeader 
+                                  then:
+                                    - scroll:
+                                        direction: down
+                                        scrollLimit: 1
+                              - click:
+                                  identifier: us.mappings.cart.removeLinkButton
+                                  wait: 3000
+                            catch:
+                              flow:
+                                - log: No Items in Cart to Remove
+                                - break: true
+                  # - if:
+                  #     identifier:
+                  #       timeout: 5000
+                  #       present:
+                  #         - identifier: us.mappings.cart.smartNudgeViewClose
+                  #     then:      
+                  #       - click:
+                  #           identifier: us.mappings.cart.smartNudgeViewClose    
+                  # # Fetch the number of seeDatails button found in cart
+                  # - numberOfChildElements:
+                  #     identifier: us.mappings.global.fulfilmentCardPage
+                  #     filterBy: us.mappings.cart.fulfillmentSection.expandView
+                  #     storeIn: seeDetailsFound
+                  # # Skip function if there are no see details is found in cart
+                  # - if:
+                  #     condition: ${seeDetailsFound} >= 1
+                  #     then:
+                  #       - executeFunction:
+                  #           name: unified.us.functions.cart.seeDetails
+                  # # Fetch the number of remove button present in cart
+                  # - numberOfChildElements:
+                  #     identifier: us.mappings.global.fulfilmentCardPage
+                  #     filterBy: us.mappings.cart.removeLinkButton
+                  #     storeIn: numberOfChildrenFound
+                  # - log: ${numberOfChildrenFound}
+                  # # - try:
+                  # #     flow:
+                  # #       - verifyIdentifier:
+                  # #           timeout: 0
+                  # #           present:
+                  # #             - identifier: us.mappings.carePlans.wppSectionHeader
+                  # #       - storeIn:
+                  # #           key: scrollDown
+                  # #           value: required
+                  # #     catch:
+                  # #       flow:
+                  # #         - storeIn:
+                  # #             key: scrollDown
+                  # #             value: notRequired
+                  # - if:
+                  #     condition: ${numberOfChildrenFound} != 1 || ${scrollDown} == 'required'
+                  #     then:
+                  #       # scrolling down to last remove button at position center to avoid unwanted clicking on ctc button
+                  #       - scroll:
+                  #           direction: down
+                  #           untilIdentifier: us.mappings.cart.lastItem
+                  #           position: center
+                  #           wait: 1000
+                  # # Removing items from cart
+                  # - loop:
+                  #     begin: 0
+                  #     end: 9
+                  #     storeIndex: i
+                  #     flow:
+                  #       - log: $i
+                  #       - try:
+                  #           flow:
+                  #             - verifyIdentifier:
+                  #                 present:
+                  #                   - identifier: us.mappings.cart.removeLinkButton
+                  #             - click:
+                  #                 identifier: us.mappings.cart.removeLinkButton
+                  #           catch:
+                  #             flow:
+                  #               - log: No Items in Cart to Remove
+                  #               - break: true
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.cart.scrollToTopOfCart
+                      params:
+                        - name: skip
+                          string: true
+                  - loop:
+                      begin: 0
+                      end: 11
+                      storeIndex: i
+                      flow:
+                        - log: $i
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.seeDetailsLink
+                            then:
+                              - log: See details is present
+                              - click:
+                                  identifier: us.mappings.cart.seeDetailsLink
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.startShoppingButton
+                            then:
+                              - break: true
+                            else:
+                              - executeFunction:
+                                  name: us.functions.utils.scrollIfNotVisible
+                                  params:
+                                    - name: identifier
+                                      string: us.mappings.cart.removeLinkButton
+                                    - name: direction
+                                      string: down
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.removeLinkButton
+                            then:
+                              - click:
+                                  identifier: us.mappings.cart.removeLinkButton
+                            else:
+                              - log: All items removed from cart
+                              - break: true
+
+  - name: unified.us.functions.cart.storeChangePopUp
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: us.mappings.cart.storePopUp
+            - click:
+                identifier: us.mappings.cart.storePopUPCloseButton
+          catch:
+            flow:
+              - log: No Store Change pop up screen displayed
+
+  - name: unified.us.functions.cart.unavailableItemPopUp
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: us.mappings.cart.unavailableItem.titleNavigationBar
+            - click:
+                identifier: us.mappings.global.closeButton
+          catch:
+            flow:
+              - log: No Unavailable Item PopUp
+
+  - name: unified.us.functions.cart.removeAdonsNotAvailable
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: us.mappings.cart.clickOnRemoveAndContinueButton
+            - click:
+                identifier: us.mappings.cart.clickOnRemoveAndContinueButton
+          catch:
+            flow:
+              - log: No remove Adons pop up screen displayed
+
+  - name: unified.us.functions.cart.seeDetails
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - loop:
+                begin: 0
+                end: 5
+                storeIndex: i
+                flow:
+                  - log: $i
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            timeout: 0
+                            present:
+                              - identifier: us.mappings.cart.fulfillmentSection.expandView
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.fulfillmentSectionTwo.expandView
+                            then:
+                              - scroll:
+                                  direction: down
+                                  scrollLimit: 1
+                        - log: See details is present
+                        - click:
+                            identifier: us.mappings.cart.fulfillmentSection.expandView
+                      catch:
+                        flow:
+                          - log: No See details in Cart
+                          - break: true
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - loop:
+                begin: 1
+                end: 5
+                storeIndex: i
+                flow:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cart.seeDetailsLink
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center
+                        - name: scrollLimit
+                          string: 6
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.seeDetailsLink
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.seeDetailsLink
+                      else:
+                        - break: true
+            - executeFunction:
+                name: unified.us.functions.cart.scrollToTopOfCart
+
+  #remove item from cart and navigate back to home
+  - name: unified.us.functions.cart.removeUnavailableItemsFromCart
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.alertMsg.oosItem
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.cart.removeAllUnavailableItems
+                  - verifyIdentifier:
+                      timeout: 5000
+                      notPresent:
+                        - identifier: us.mappings.cart.unavailableAlert
+                  - executeFunction:
+                      name: us.functions.cart.removeCurrentlyUnavailableItems
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.cart.scrollToTopOfCart
+                params:
+                  - name: skip
+                    string: true
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.unavailableAlert
+                then:
+                  - click:
+                      identifier: us.mappings.cart.unavailableAlert
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.cart.saveForLaterRemoveButton
+                  - executeFunction:
+                      name: unified.us.functions.cart.removeAllUnavailableItems
+                  - verifyIdentifier:
+                      timeout: 5000
+                      notPresent:
+                        - identifier: us.mappings.cart.unavailableAlert
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.unavailableAlert.oosheader
+                then:
+                  - click:
+                      identifier: us.mappings.cart.unavailableAlert.oosheader.saveallforlater
+                else:
+                  - log: "oos is not displayed"
+
+  - name: unified.us.functions.cart.missingAnything.verifycard
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.startNewOrderButton
+          then:
+            - log: "Clicking on start new order"
+            - click:
+                identifier: us.mappings.cart.startNewOrderButton
+          else:
+            - log: "Clicking on checkout"
+            - click:
+                identifier: us.mappings.cart.checkoutButton
+      - verifyIdentifier:
+          timeout: 100000
+          present:
+            - identifier: us.mappings.cart.missingAnything.headerText
+            - identifier: us.mappings.cart.missingAnything.closeButton
+            - identifier: us.mappings.cart.missingAnything.estimatedTotalText
+            - identifier: us.mappings.cart.missingAnything.estimatedPrice
+            - identifier: us.mappings.cart.missingAnything.ContinueButton
+            - identifier: us.mappings.cart.missingAnything.atcButton
+            - identifier: us.mappings.cart.missingAnything.firstItem
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cart.fulfillmentFirstSection.fulfillmentTypeText
+                    contains: ${fulfillmentText}
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.search.productTile.sponseredLabel
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.search.productTile.sponseredLabel
+                          contains: Sponsored
+          else:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.cart.missingAnything.headerText
+                    contains: Missing anything?
+                  - identifier: us.mappings.cart.missingAnything.ContinueButton
+                    contains: Continue
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.missingAnything.sponseredLabel
+                then:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: us.mappings.cart.missingAnything.sponseredLabel
+                          contains: Sponsored
+      - click:
+          identifier: us.mappings.cart.missingAnything.atcButton
+          wait: 2000
+      - log: Added item from Missing Anything screen
+      - click:
+          identifier: us.mappings.cart.missingAnything.ContinueButton
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.itemCount
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.itemCount   
+                    contains: 4   
+          else: 
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.itemCount   
+                    contains: 4
+      - log: Item added from missing anything present in review order page
+      - click:
+          identifier: us.mappings.global.navigateBackArrow
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.alert.leaveAnyWayButton
+          then:
+            - log: "Clicking on leave anyway Button"
+            - click:
+                identifier: us.mappings.reviewOrder.alert.leaveAnyWayButton
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.cart.localMarketPlace.subTotal
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cart.localMarketPlace.subTotal   
+                    contains: 4 
+          else: 
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.cart.localMarketPlace.subTotal   
+                    contains: 4          
+      - log: Item added from missing anything present in cart page
+      - click:
+          identifier: us.mappings.cart.checkoutButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.missingAnything.headerText
+      - log: Missing Anything screen is visible
+
+  ## Continue to checkout from cart screen
+  - name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.startNewOrderButton
+          then:
+            - log: "Clicking on start new order"
+            - click:
+                identifier: us.mappings.cart.startNewOrderButton
+          else:
+            - log: "Clicking on checkout"
+            - click:
+                identifier: us.mappings.cart.checkoutButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.missingAnything.headerText
+          then:
+            - click:
+                identifier: us.mappings.cart.missingAnything.ContinueButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.preferredDay.keepItemInCart
+          then:
+            - click:
+                identifier: us.mappings.cart.preferredDay.keepItemInCart
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.getItFasterTitle
+          then:
+            - click:
+                identifier: us.mappings.cart.noThanksButton
+
+      - executeFunction:
+          name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue
+      - sleep:
+          duration: 7000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: us.functions.cart.continueToCheckoutShipItemSeparately
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: us.functions.wplus.handle.SubstitutionPreferencePopup
+
+  - name: unified.us.functions.cart.fcDelivery.preorderItem.verifyCard
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.cart.fcDelivery.cardTitle
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.navBarTitle
+            - identifier: us.mappings.cart.fcDelivery.cardTitle
+            - identifier: us.mappings.cart.itemDetails.preOrderLabel
+            - identifier: us.mappings.cart.item.preOrder.releaseDateLabel
+
+  - name: unified.us.functions.cart.partialCheckout.verifyNoPartialCheckoutButton
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.cart.partialCheckout.storeCheckoutbutton
+            - identifier: us.mappings.cart.partialCheckout.shippingCheckoutbutton
+            - identifier: us.mappings.cart.partialCheckout.digitalDeliveryCheckoutbutton
+
+  - name: unified.us.functions.cart.itemWithWeight.verifyCard
+    flow:
+      - verifyIdentifier:
+           present:
+             - identifier: us.mappings.item.secondaryPriceTextbyWeight
+
+  ## verify shiping header and partial checkout button in cart screen
+  - name: unified.us.functions.cart.partialCheckout.verifyCheckout
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.getFulfillmentTextsToCompare
+          params:
+            - name: fulfillmentText
+              string: ${fulfillmentText}
+      # Simple scroll to top of cart for optimisation
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.navBarTitle
+            - name: direction
+              string: up
+            - name: limit
+              string: 5
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.fulfillmentSection.fulfillmentTypeText
+            - name: direction
+              string: down
+            - name: limit
+              string: 5
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.fulfillmentSection.fulfillmentTypeText
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.fulfillmentSection.itemPartialCheckoutButton
+                  - name: direction
+                    string: down
+                  - name: limit
+                    string: 5
+            - click:
+                identifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:     
+            - if:
+                condition: ${fulfillmentText} == 'Pickup'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cart.fulfillmentSection.itemPartialCheckoutPickupButton
+                        - name: direction
+                          string: down
+                        - name: limit
+                          string: 5
+                  - click:
+                      identifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutPickupButton
+                else:
+                  - if:
+                      condition: ${fulfillmentText} == 'Shipping'
+                      then:
+                        - executeFunction:
+                            name: unified.us.functions.utils.scrollIfNotVisible
+                            params:
+                              - name: identifier
+                                string: us.mappings.cart.fulfillmentSection.itemPartialCheckoutShippingButton
+                              - name: direction
+                                string: down
+                              - name: limit
+                                string: 5
+                        - click:
+                            identifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutShippingButton
+                      else:
+                        - if:
+                            condition: ${fulfillmentText} == 'Digital delivery'
+                            then:
+                              - executeFunction:
+                                  name: unified.us.functions.utils.scrollIfNotVisible
+                                  params:
+                                    - name: identifier
+                                      string: us.mappings.cart.fulfillmentSection.itemPartialCheckoutDigitalDeliveryButton
+                                    - name: direction
+                                      string: down
+                                    - name: limit
+                                      string: 5
+                              - click:
+                                  identifier: us.mappings.cart.fulfillmentSection.itemPartialCheckoutDigitalDeliveryButton
+      - storeIn:
+          key: altFulfillmentText
+          value: "null"
+
+  - name: unified.us.functions.cart.selectPreferredDay
+    flow:
+      - log: "InSide the Preferred day Selection Flow"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.preferredDay.keepItemInCart
+          then:
+            - log: "The Preferred day keep Item In Cart option is available."
+            - sleep:
+                duration: 1500
+            - click:
+                identifier: us.mappings.cart.preferredDay.keepItemInCart
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.preferredDay.option
+                then:
+                  - log: "The Preferred day selection option is available"
+                  - sleep:
+                      duration: 1500
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.preferredDay.yourPreferredDay.radioButton
+                then:
+                  - log: "The Preferred day selection option is available"
+                  - click:
+                      identifier: us.mappings.cart.preferredDay.yourPreferredDay.radioButton
+                  - sleep:
+                      duration: 1500
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.preferredDay.changePreferredDayLink
+      - click:
+          identifier: us.mappings.cart.preferredDay.changePreferredDayLink
+      - sleep:
+          duration: 1500
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.preferredDay.changeDayBottomSheet
+            - identifier: us.mappings.cart.preferredDay.checkoutPreferredDayText
+            - identifier: us.mappings.cart.preferredDay.checkoutPreferredDaySubText
+            - identifier: us.mappings.cart.preferredDay.checkoutPreferredDayCarousel
+            - identifier: us.mappings.cart.preferredDay.savePreferredDayCheckbox
+            - identifier: us.mappings.cart.preferredDay.savePreferredDayText
+            - identifier: us.mappings.cart.preferredDay.checkoutPreferredDaySaveButton
+      - click:
+          identifier: us.mappings.cart.preferredDay.selectDaySlot
+      - sleep:
+          duration: 1500
+      - if:
+          condition: ${savePreferredDay} == true
+          then:
+            - log: "savePreferredDay is Set to True"
+            - click:
+                identifier: us.mappings.cart.preferredDay.savePreferredDayCheckbox
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.preferredDay.checkoutPreferredDaySaveCheckboxSelected
+          then:
+            - log: "Verifying the Saved preferred Day assertions."
+            - sleep:
+                duration: 1500
+            - click:
+                identifier: us.mappings.cart.preferredDay.checkoutPreferredDaySaveButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.preferredDay.yourPreferredDay.ofTheWeek.text
+                  - identifier: us.mappings.cart.preferredDay.changePreferredDayLink
+          else:
+            - log: "Verifying the Selected delivery Day assertions."
+            - click:
+                identifier: us.mappings.cart.preferredDay.checkoutPreferredDaySaveButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.preferredDay.yourSelectedDay.forThisOrder.text
+                  - identifier: us.mappings.cart.preferredDay.changePreferredDayLink
+      - log: "Preferred day is selected Successfully"
+
+  - name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+    flow:
+      - log: ----------Start of function to switch fulfillment type to ${fulfillmentType}----------
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.fulfillmentSelection.basketView
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.getFulfillmentTextsForIntentSelection
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.cart.fulfillmentSelection.basketView.fulfillmentSection
+                then:
+                  - click:
+                      identifier: us.mappings.cart.fulfillmentSelection.basketView
+      # Only way to differentiate between old and new intent module is by checking availablity of shipping intent 
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.fulfillmentSelection.oldBasketViewWithShipping
+                      then:
+                        - log: Old GIC view with shipping intent
+                      else:
+                        - storeIn:
+                            key: newGIC
+                            value: true
+                        - if:
+                            condition: ${fulfillmentType} == 'shipping'
+                            then:
+                              - storeIn:
+                                  key: skipSwitch
+                                  value: true
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.fulfillmentSelection.basketView
+                      then:
+                        - log: Old GIC view with shipping intent
+                        # - if:
+                        #     identifier:
+                        #       present:
+                        #         - identifier: us.mappings.cart.fulfillmentSelection.newBasketView
+                        #     then:
+                      else:
+                              - storeIn:
+                                  key: newGIC
+                                  value: true
+                              - if:
+                                  condition: ${fulfillmentType} == 'shipping'
+                                  then:
+                                    - storeIn:
+                                        key: skipSwitch
+                                        value: true
+            - if:
+                condition: ${skipSwitch}
+                then:
+                  - log: Skipping this for Shipping
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.fulfillmentSelection.basketView.fulfillmentType
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.fulfillmentSelection.basketView.fulfillmentType
+                        - sleep:
+                            duration: 2000
+                        - if:
+                            identifier:
+                              notPresent:
+                                - identifier: us.mappings.cart.fulfillmentSelection.basketView.fulfillmentSection
+                            then:
+                              - click:
+                                  identifier: us.mappings.cart.fulfillmentSelection.basketView
+                        # - verifyIdentifier:
+                        #     present:
+                        #         - identifier: us.mappings.cart.fulfillmentSelection.fulfillmentTypeSelected
+                      else:
+                        - log: Required fulfillment type is either already selected or is disabled or not applicable for the the items selected
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.switching.section
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.getFulfillmentTextsForIntentSelection
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.cart.switching.optionLink
+                        - log: Switch item to ${fulfillmentType} option
+                        - click:
+                            identifier: us.mappings.cart.switching.optionLink
+                        - executeFunction:
+                            name: unified.us.functions.cart.scrollToTopOfCart
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.switching.optionLink
+                            then:
+                              - click:
+                                  identifier: us.mappings.backButton
+                              - executeFunction:
+                                  name: unified.us.functions.global.navigation.toCartFromNavBar
+                        - verifyIdentifier:
+                            notPresent:
+                              - identifier: us.mappings.cart.switching.optionLink
+                        - log: Switch item to ${fulfillmentType} option completed
+                      catch:
+                        flow:
+                          - log: Item fulfillment type is either already in ${fulfillmentType} or no option to switch to ${fulfillmentType} hence skipping
+      - log: ----------End of function to switch fulfillment type to ${fulfillmentType}----------
+
+  - name: unified.us.functions.cart.scrollToSection
+    flow:
+      - log: -------Scroll to ${fulfillmentText} section start-------
+      - log: Scrolls to the required fulfillment section
+      - if:
+          condition: ${resetScrollDetails}
+          then:
+            - storeIn:
+                key: firstCartSection
+                value: 'null'
+      # Get top section fulfillment type text from cart page and save to 'firstCartSection' variable
+      - log: Scroll to top of cart page
+      - if:
+          condition: ${firstCartSection} == null
+          then:
+            # Scroll to cart page top
+            - executeFunction:
+                name: unified.us.functions.cart.scrollToTopOfCart
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.cartIconEmpty
+                then:
+                  - failTest:
+                      message: "FAILURE - ${env} - Added items are not available in cart page"
+            # Store the fulfillment details text for top section
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - getString:
+                      identifier: us.mappings.cart.fulfillmentTopSection.fulfillmentTypeText
+                      attribute: text
+                      storeIn: firstCartSection
+                else:
+                  - getString:
+                      identifier: us.mappings.cart.fulfillmentTopSection.fulfillmentTypeText
+                      attribute: label
+                      storeIn: firstCartSection
+      # Scroll up until top section fulfillment type is not displayed based on 'firstCartSection' variable data saved from above step
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.fulfillmentFirstSection.fulfillmentTypeText
+          then:
+            - log: Already at the top of cart page
+          else:
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.cart.fulfillmentFirstSection.fulfillmentTypeText
+            - log: Scrolled to top of the page
+      - try:
+          flow:
+            # Skips scrolling if required section is already displayed
+            - log: Skip scrolling if required section is already displayed
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.cart.fulfillmentFirstSection.fulfillmentTypeText
+                          contains: ${fulfillmentText}
+                else:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: us.mappings.cart.fulfillmentFirstSection.fulfillmentTypeText
+                          contains: ${fulfillmentText}
+            - log: Required cart ${fulfillmentText} fulfillment section already displayed.
+          catch:
+            flow:
+              # Scrolls to appropriate section
+              - executeFunction:
+                  name: unified.us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: direction
+                      string: down
+                    - name: identifier
+                      string: us.mappings.cart.fulfillmentSection.fulfillmentTypeText
+                    - name: scrollPosition
+                      string: center
+              - log: Required cart ${fulfillmentText} fufillment section is scrolled.
+      # Reset to default
+      - storeIn:
+          key: resetScrollDetails
+          value: false
+      - log: -------Scroll to ${fulfillmentText} section end-------
+
+  # Description: This method use to proceed to checkout from cart
+  - name: unified.us.functions.cart.continueToCheckout
+    flow:
+      - verifyIdentifier:
+          timeout: 30000
+          present:
+            - identifier: us.mappings.cart.checkoutButton
+      - click:
+          identifier: us.mappings.cart.checkoutButton 
+          wait: 2000
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.BYOD.deliveryBottomSheet
+          then:
+            - click:
+                identifier: us.mappings.cart.BYOD.deliveryBottomSheet
+            - sleep:
+                duration: 3000      
+      - executeFunction:
+          name: unified.us.functions.cart.checkOutGetItFasterPopUp
+      - executeFunction:
+          name: unified.us.functions.cart.handleSafetyAdvice
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.missingAnything.headerText
+          then:
+            - click:
+                identifier: us.mappings.cart.missingAnything.ContinueButton  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.selectAddress.selectAddressTitle
+          then:
+            - executeFunction:
+                name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue
+            - sleep:
+                duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.mixedBasketConsolidation.headerText
+          then: 
+              - click: 
+                  identifier:  us.mappings.cart.mixedBasketConsolidation.closeButton
+              - sleep:  
+                  duration: 3000
+      - executeFunction:
+          name: unified.us.functions.cart.handleItemUpdatesBottomTray
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.cart.checkoutButton
+          then:
+            - log: Clicked on Checkout button successfully
+          else:
+            - if:
+                condition: ${skipErrorValidation}
+                then:
+                  - log: Checkout button presence check skipped
+                else:
+                  - click:
+                      identifier: us.mappings.cart.checkoutButton
+                  - log: clicking checkout button again
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.cart.checkoutButton
+                      then:
+                        - log: Clicked on Checkout button successfully
+                      else:
+                        - failTest: 
+                            message: "ENV_FAILURE - ${env} - Review order page not loaded, still displaying cart page after click on checkout button"
+      - if:
+          condition: ${giftItem} && ${platform}=='iOS'
+          then:
+            - executeFunction:
+                name: unified.us.functions.cart.handleCheckoutGiftItemsBottomTray
+      - if:
+          condition: ${doNotCloseWplusPopup}
+          then:
+           - log: leaving Wplus promotion popup open
+          else:
+           - executeFunction:
+               name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+          #  - executeFunction:
+          #      name: unified.us.functions.wplus.handle.SubstitutionPreferencePopup
+
+  - name: unified.us.functions.cart.continueToCheckoutIfPresent
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.checkoutButton
+          then:
+            - executeFunction:
+                name: unified.us.functions.cart.continueToCheckout  
+
+  - name: unified.us.functions.cart.handleItemUpdatesBottomTray
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:  
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      timeout: 5000
+                      present:
+                        - identifier: us.mappings.cart.itemUpdatesTitle
+                  - click:
+                      identifier: us.mappings.cart.itemUpdatesContinueButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.checkoutButton
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.checkoutButton
+                catch:
+                  flow:
+                    - log: No item update pop up
+      - if:
+          condition: ${platform} == 'Android'
+          then:  
+            - if:
+                identifier: 
+                  present:
+                    - identifier: us.mappings.cart.itemUpdatesTitle
+                then:
+                  - if:
+                      identifier: 
+                        present:
+                          - identifier: us.mappings.cart.checkoutButton.checkoutAnywayButton
+                      then: 
+                        - click:
+                            identifier: us.mappings.cart.checkoutButton.checkoutAnywayButton
+
+  - name: unified.us.functions.cart.checkOutGetItFasterPopUp
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: us.mappings.cart.getItFasterTitle
+            - click:
+                identifier: us.mappings.cart.noThanksButton
+          catch:
+            flow:
+              - log: Get It Faster PopUp not visible
+
+  - name: unified.us.functions.wplus.handle.SubstitutionPreferencePopup
+    flow: 
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.viewSubstitutionPopUp
+          then: 
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mapings.reviewOrder.chooseSubscriptionPreferences
+                      scrollLimit: 2
+                  - click:
+                      identifier: us.mappings.reviewOrder.viewSubstitutionPopUpCloseButton
+                      useActions: true  # please download r2 jar 5.6
+            - if: 
+                condition: ${platform} == 'Android'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: direction
+                          string: down
+                        - name: identifier
+                          string: us.mappings.checkout.reviewOrderpopUp.subsPreference.popUp.closeButton
+                  - click:
+                      identifier: us.mappings.checkout.reviewOrderpopUp.subsPreference.popUp.closeButton
+
+  #Get Item name in Cart Page
+  - name: unified.us.functions.cart.getItemName
+    flow:
+      - sleep:
+          duration: 2000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.cart.getItemName
+            - getString:
+                identifier: us.mappings.cart.getItemName
+                attribute: label
+                storeIn: itemName1
+            - log: $itemName1
+            - executeNode:
+                file: us/e2e-tests/helpers/splitpaymentDateString_iOS.js
+                args:
+                  - value: ${itemName1}
+                  - value: Qty 
+                  - value: before
+                getResponse:
+                  storeIn: itemName1
+            - log: $itemName1
+          else:
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.cart.getItemName
+            - getString:
+                identifier: us.mappings.cart.getItemName
+                attribute: text
+                storeIn: itemName1
+            - log:
+                message: $itemName1
+
+  - name: unified.us.functions.cart.shippingAddress.addAddress
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.addShippingAddress
+            - click:
+                identifier: us.mappings.cart.addShippingAddress
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: us.functions.cart.scrollToTopOfCart
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.fcDelivery.alertMessage
+                then:
+                  - click:
+                      identifier: us.mappings.cart.fcDelivery.alertMessage
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: unified.us.functions.account.addAddress
+      - sleep:
+          duration: 2000
+
+  - name: unified.us.functions.cart.verifyLocationSurcharge
+    flow:  
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.verfiyItemLocationSurcharge
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.verfiyItemLocationSurcharge
+            - identifier: us.mappings.cart.verfiyItemLocationSurchargeValue
+        
+  - name: unified.us.functions.cart.increaseToMaxQty
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.increaseQty
+          then:
+            - log: Increase button displayed
+          else:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.increaseQty
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center          
+      - loop:
+          begin: 0
+          end: ${maxQty}
+          storeIndex: i
+          mode: increment
+          flow:
+            - click:
+                identifier: us.mappings.cart.increaseQty
+            - log: $i     
+
+  - name: unified.us.functions.cart.AlcoholRestrictionOnWeekday
+    flow:
+      - executeFunction:
+          name: us.functions.loadBookingSlotScreen
+          params:
+            - name: page
+              string: cart
+            - name: tab
+              string: pickup
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.reservetime.Monday
+          then:
+            - click:
+                identifier: us.mappings.cart.reservetime.Monday
+            - sleep:
+                duration: 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.alcoholRestrictedSlotalert
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.reservetime.Tuesday
+                then:
+                  - click:
+                      identifier: us.mappings.cart.reservetime.Tuesday
+                  - sleep:
+                      duration: 2000
+                  - verifyIdentifier:
+                      present:
+                      - identifier: us.mappings.cart.alcoholRestrictedSlotalert
+  
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.reservetime.Wednesday
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.reservetime.Wednesday
+                        - sleep:
+                            duration: 2000
+                        - verifyIdentifier:
+                           present:
+                            - identifier: us.mappings.cart.alcoholRestrictedSlotalert
+                      else:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.reservetime.Thursday
+                            then:
+                              - click:
+                                  identifier: us.mappings.cart.reservetime.Thursday
+                              - sleep:
+                                  duration: 2000
+                              - verifyIdentifier:
+                                   present:
+                                    - identifier: us.mappings.cart.alcoholRestrictedSlotalert
+
+                            else:
+                              - if:
+                                  identifier:
+                                    present:
+                                      - identifier: us.mappings.cart.reservetime.Friday
+                                  then:
+                                    - click:
+                                        identifier: us.mappings.cart.reservetime.Friday
+                                    - sleep:
+                                        duration: 2000
+                                    - verifyIdentifier:
+                                         present:
+                                          - identifier: us.mappings.cart.alcoholRestrictedSlotalert
+
+  - name: unified.us.functions.cart.AlcoholRestrictionReserveSlot
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.regulations
+          then:
+            - click:
+                identifier: us.mappings.cart.regulations
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+          then:
+            - click:
+                wait: 2000
+                identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+            - click:
+                wait: 2000
+                identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+      - executeFunction:
+          name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.saveButton
+          then:
+            - click:
+                wait: 2000
+                identifier: us.mappings.reserveSlot.saveButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.locallyRestrictedBanner
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.locallyRestrictedBanner
+            - click:
+                wait: 2000
+                identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+            - sleep:
+                duration: 2000
+      - log: Alcohol Restrictions on weekday validation completed
+
+  # Verify Alcohol restriction on both Saturday and Sunday and save Alcohol restricted slot
+  - name: unified.us.functions.cart.AlcoholRestrictionOnSundayOrSaturday
+    flow:
+      - executeFunction:
+          name: us.functions.loadBookingSlotScreen
+          params:
+              - name: page
+                string: cart
+              - name: tab
+                string: pickup
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.locallyRestrictedBanner
+            - sleep:
+                duration: 5000
+            - click:
+                identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.reservetime.particularDay
+          then:
+            - click:
+                identifier: us.mappings.cart.reservetime.particularDay
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reserveSlot.daySelectionView
+            - scroll:
+                direction: left
+                untilIdentifier: us.mappings.cart.reservetime.particularDay
+                withinIdentifier: us.mappings.reserveSlot.daySelectionView
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.reservetime.particularDay
+                then:
+                  - click:
+                      identifier: us.mappings.cart.reservetime.particularDay
+                else:
+                  - failTest:
+                      message: "FAILURE - ${env} - Slot is not available"
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.noSubsMessage
+          then:
+            - click:
+               wait: 2000
+               identifier: us.mappings.reviewOrder.noSubsMessage
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+          then:
+              - click:
+                  wait: 2000
+                  identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+            - click:
+                wait: 2000
+                identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+      - click:
+          wait: 2000
+          identifier: us.mappings.reserveSlot.saveButton
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.locallyRestrictedBanner
+            - sleep:
+                duration: 5000
+            - click:
+                identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+            - sleep:
+                duration: 5000 
+    
+  - name: unified.us.functions.wplus.cart.verifyTryWalmartPlusfromCartAndOptIn
+    flow:
+      - scroll:
+          direction: down
+          position: center
+          untilIdentifier: us.mappings.cart.optInCheckbox
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.optInCheckbox
+      - click:
+          identifier: us.mappings.cart.optInCheckbox
+
+  #Function to Check Delivery charge waved off in Cart Page
+  - name: unified.us.functions.wplus.cart.chargeWaiveOff-deliveryFromStoreCharges
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:   
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                catch:
+                  flow:
+                    - failTest:
+                        message: "FAILURE - ${env} - free Delivery from Store Message is NOT displayed"
+      - if:
+          condition: ${platform} == 'Android'
+          then:   
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+                        - identifier: us.mappings.wplus.cart.pos.deliveryCost
+                catch:
+                  flow:
+                    - failTest:
+                        message: "FAILURE - ${env} - free Delivery from Store Message is NOT displayed"                        
+
+  - name: unified.us.functions.cart.changeTime
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+      - click:
+          identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+      - sleep:
+          duration: 2000
+
+  - name: unified.us.functions.cart.ineligibleReserveTimeBannerText
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.ineligibleItemSubText
+            - identifier: us.mappings.cart.ineligibleTimeHeader
+            - identifier: us.mappings.cart.ineligibleItemIcon
+
+  - name: unified.us.functions.cart.verifySODBanner
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.SODBanner
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cart.verifySODPresentDeliveryTitle
+                    contains: You'll need to be present at delivery
+            - click:
+                 identifier: us.mappings.cart.SODBanner   
+            #Validating all the headers here displayed in Present Delivery address screen.
+            - verifyIdentifier: 
+                present: 
+                 - identifier: us.mappings.cart.verifyHighvalueItemsrequiresignature #Highvalue signature text 
+                 - identifier: us.mappings.cart.verifygotitinpresentdeliveryscreen   #got it button 
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cart.verifyPleasebePresentatDeliveryTitle 
+                    contains : You'll need to be present at delivery  # Validated text here
+            - verifyIdentifier: 
+                text:
+                  - identifier: us.mappings.cart.verifyHighvalueItemsrequiresignature  
+                    contains : require a signature or passcode for extra security. We'll include more info in your order details once it's on the way. # Validated text here                
+            - click:
+                identifier: us.mappings.cart.verifygotitinpresentdeliveryscreen                        
+      - if:
+           condition: ${platform} == 'iOS'
+           then:
+             - verifyIdentifier:
+                present: 
+                   - identifier: us.mappings.cart.SODBanner
+                label:
+                   - identifier: us.mappings.cart.SODBanner
+                     contains : us.data.prod.sod.cxo.deliveryText # Validated text here 
+             - click:
+                  identifier: us.mappings.cart.SODBanner       
+             #Validating all the headers are displayed in Present Delivery address screen.
+             - verifyIdentifier:
+                  timeout: 50000
+                  present: 
+                    - identifier:  us.mappings.cart.verifysignauturetextios #Signaturetext
+                    - identifier: us.mappings.cart-cxo.verifyHighvalueItemsrequiresignatureios #Highvalutext
+                  label:
+                    - identifier: us.mappings.cart.verifysignauturetextios 
+                      contains : us.data.prod.sod.deliveryText2  # Validated text here
+             - verifyIdentifier: 
+                  label:
+                    - identifier: us.mappings.cart-cxo.verifyHighvalueItemsrequiresignatureios
+                      contains : us.data.prod.sod.highValueText # Validated text here                
+             - click:
+                  identifier: us.mappings.cart.verifyHighvalueItemsclose
+                  wait: 2000
+                  
+  - name: unified.us.functions.cart.verifyItemCountinCart
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subtotalPricelabel
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+                  - name: limit
+                    string: 10
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.subtotalPricelabel
+                    contains: 2
+            - executeFunction:
+                name: unified.us.functions.cart.scrollToTopOfCart
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.subTotalItemCount
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cart.subTotalItemCount
+                    contains: 2
+
+  - name: unified.us.functions.cart.registyGiftValidation
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.registryAddress 
+            - name: direction
+              string: down    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.registryAddress
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.ItemFromRegistry
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.gifting.cart.sendOrderAsGiftButton
+
+  - name: unified.us.functions.cart.verifyByChangingItemCount
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - scroll:
+                direction: down
+            - verifyIdentifier:
+                present:
+                  - identifier:  us.mappings.item.ad.SponsoredAd.ATCbutton.increment
+            - click:
+                identifier:  us.mappings.item.ad.SponsoredAd.ATCbutton.increment
+            - log: Item is incremented
+            - sleep:
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.ad.SponsoredAd.ATCbutton.decrement
+            - click:
+                identifier: us.mappings.item.ad.SponsoredAd.ATCbutton.decrement
+            - log: Item is decremented
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.cart.scrollToTopOfCart
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      contentDescription:
+                        - identifier: us.mappings.cart.fulfillmentSelection.basketView.collapseExpandButton
+                          contains: Expanded
+                  - click:
+                      identifier: us.mappings.cart.fulfillmentSelection.basketView.collapseExpandButton
+                catch:
+                  flow:
+                    - log: Fulfillment basket either collapsed or not available
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.nudgeDisplay.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.cart.nudgeDisplay.closeButton
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.item.ad.SponsoredAd.ATCbutton.increment
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.ad.SponsoredAd.ATCbutton.increment
+            - click:
+                identifier: us.mappings.item.ad.SponsoredAd.ATCbutton.increment
+            - log: Item is incremented
+            - sleep:
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.ad.SponsoredAd.ATCbutton.decrement
+            - click:
+                identifier: us.mappings.item.ad.SponsoredAd.ATCbutton.decrement
+            - log: Item is decremented
+            - sleep:
+                duration: 5000
+
+  - name: unified.us.functions.cart.secondItemAddedToSaveForLater
+    flow:
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.saveForLaterLinkButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+           present:
+            - identifier: us.mappings.cart.saveForLaterLinkButton
+      - click:
+          identifier: us.mappings.cart.saveForLaterLinkButton
+      - log: Item Added to Save for Later
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.sflMovetoCart
+            - name: direction
+              string: down
+            - name: limit
+              string: 8
+      - verifyIdentifier:
+           present:
+            - identifier: us.mappings.cart.sflHeader
+            - identifier: us.mappings.cart.sflMovetoCart
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.LearnHowLink
+            - name: direction
+              string: up
+            - name: limit
+              string: 15
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.LearnHowLink
+
+  - name: unified.us.functions.cart.verifyTotalAmount
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.subTotalItemCount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+            - name: scrollLimit
+              string: 10
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.subTotalItemCount
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.estimatedTotalAmount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+            - name: scrollLimit
+              string: 10
+      - verifyIdentifier:
+           present:
+            - identifier: us.mappings.cart.estimatedTotalAmount
+            - identifier: us.mappings.cart.taxLabel
+
+  - name: unified.us.functions.cart.verifyThresholdFeesDisplay
+    flow: 
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.subTotalEffectiveAmount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.cart.subTotalEffectiveAmount
+            - name: delimeter
+              string: '$'
+      - if:
+          condition: ${amountValue} > 35.00
+          then:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.cart.thresholdText
+          else:     
+            - if:
+                condition: ${amountValue} < 35.00     
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                        - identifier: us.mappings.wplus.thresholdLabel
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.cart.thresholdText
+                        - identifier: us.mappings.cart.thresholdValue
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:
+                        - executeFunction:
+                            name: us.functions.utils.fetchAmountDisplayed
+                            params:
+                              - name: identifier
+                                string: us.mappings.cart.thresholdValue
+                              - name: attribute
+                                string: text                      
+                              - name: delimeter
+                                string: '$' 
+                      else:
+                        - executeFunction:
+                            name: us.functions.utils.fetchAmountDisplayed
+                            params:
+                              - name: identifier
+                                string: us.mappings.cart.thresholdValue
+                              - name: attribute
+                                string: value                      
+                              - name: delimeter
+                                string: '$'               
+                  - if:
+                       condition: ${amountValue} > 0
+                       then:  
+                          - log :  Verified below order minimum fee is ${amountValue}   
+                       else:
+                         - if:
+                              condition: ${amountValue} == 0
+                              then:
+                                - failTest:
+                                    message: "FAILURE - ${env} - Below order minimum fee should never be 0" 
+
+  - name: unified.us.functions.cart.handleCheckoutGiftItemsBottomTray
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.checkoutGiftItemsPopUpTitle 
+          then:
+            - click:
+                identifier: us.mappings.cart.checkoutGiftItemsProceedButton
+
+  - name: unified.us.functions.cart.verifyOosInContinueToCheckout
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - sleep:
+                duration: 3000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.amend.startShoppingButton
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.backNavigation
+                  - click:
+                      identifier: us.mappings.navBar.cartIcon
+                else:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.cart.navBarTitle
+                      then:
+                        - executeFunction:
+                            name: unified.us.functions.global.navigation.backNavigation
+                        - click:
+                            identifier: us.mappings.navBar.cartIcon
+            - sleep:
+                duration: 3000
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.addDeliveryorShippingAddress
+          then:
+            - click:
+                identifier: us.mappings.cart.addDeliveryorShippingAddress                
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - click:
+                identifier: us.mappings.selectAddress.continueButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.selectAddress.selectAddressTitle
+                then:
+                  - click:
+                      identifier: us.mappings.reserveSlot.addressselectionButton        
+                  - click:
+                      identifier: us.mappings.cart.saveAddressCTA
+                  - sleep:
+                      duration: 10000
+                  - executeFunction:
+                      name: us.functions.utils.waitForLoadingImageToDisappear
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.outOfStockMessage
+          catch:
+            flow:
+              - failTest:
+                  message: "ENV_FAILURE - ${env} - Item out Of Stock Message missing"
+      - click:
+          identifier: us.mappings.global.closeButton
+      - click:
+          identifier: us.mappings.cart.checkoutButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: us.functions.utils.handleMissingAnythingPopUp
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.outOfStockMessage
+            - identifier: us.mappings.cart.oosPageContinueToCheckout
+      - click:
+          identifier: us.mappings.cart.oosPageContinueToCheckout 
+      - sleep:
+          duration: 3000
+
+
+  - name: unified.us.functions.cart.verifyVisionItemTile
+    flow:  
+     # simple scroll to top of cart page
+       - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.fulfillmentTopSection.fulfillmentTypeText
+            - name: direction
+              string: up
+            - name: limit
+              string: 8
+       - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.verifyPrescriptionAdded
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center    
+       - verifyIdentifier:
+          timeout: 60000
+          present:
+            - identifier: us.mappings.cart.verifyPrescriptionAdded
+            - identifier: us.mappings.cart.prescriptionItems
+            - identifier: us.mappings.cart.removeButton
+  #          - identifier: us.mappings.cart.saveForLaterButton
+            - identifier: us.mappings.cart.stepperButton
+
+  - name: unified.us.functions.cart.P13NCarousel.addNonVisionItem
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselTitle  
+          position: center
+      - log: p13n module is present
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.firstItem
+      - click:
+          identifier: us.mappings.myItems.firstItem
+      - sleep:
+          duration: 4000
+      - executeFunction:
+          name: unified.us.functions.item.validateAndClickAddToCartButton
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: unified.us.functions.item.postAddToCartSteps
+
+  - name: unified.us.functions.cart.verifyOosItemsMovedtoSFL
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: us.functions.cart.changeAddressItemsGoOOS
+
+            - executeFunction:
+                name: us.functions.cart.verifyOosItemsMovedtoSFL
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+                params:
+                  - name: fulfillmentType
+                    string: shipping
+
+            - executeFunction:
+                name: unified.us.functions.cart.selectAddress
+                params:
+                  - name: address
+                    string: 96793
+
+            - executeFunction:
+                name: us.functions.cart.handleUnavailableItemBottomTray
+
+          # Move all items to SFL   
+            - executeFunction:
+                name: us.functions.cart.verifySaveAllForLater
+
+  - name: unified.us.functions.cart.selectAddress
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.selectAddress.selectAddressTitle
+            - click:
+                identifier: us.mappings.selectAddress.addressRadioButton
+            - click:
+                identifier: us.mappings.selectAddress.continueButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.selectAddress.ExistingAdderss
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.selectAddress.ExistingAdderss
+            - click:
+                identifier: us.mappings.selectAddress.ExistingAdderss
+                wait: 2000         
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.selectAddress.selectAddressTitle
+            - click:
+                identifier: us.mappings.selectAddress.existingAddressRadioButton
+            - click:
+                identifier: us.mappings.selectAddress.continueButton
+
+  - name: unified.us.functions.cart.sendOrderAsAGift
+    flow:
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+           - name: identifier
+             string: us.mappings.gifting.cart.giftbadge
+           - name: direction
+             string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gifting.cart.giftbadge
+      - try:
+          flow:
+            - if:
+               condition: ${platform} == 'Android'
+               then:
+                  - verifyIdentifier:
+                     checked:
+                     - identifier: us.mappings.gifting.cart.sendOrderAsGiftButton
+                       value: true
+                  - log: Checkbox already selected
+            - if:
+               condition: ${platform} == 'iOS'
+               then:
+                  - verifyIdentifier:
+                     value:
+                     - identifier: us.mappings.gifting.cart.sendOrderAsGiftButton
+                       equals: 1
+                  - log : checkbox already selected
+          catch:
+            flow:
+              - executeFunction:
+                  name: unified.us.functions.utils.scrollIfNotVisible
+                  params:
+                   - name: identifier
+                     string: us.mappings.gifting.cart.sendOrderAsGiftButton
+                   - name: direction
+                     string: down
+              - sleep:
+                      duration: 2000
+              - click:
+                     identifier: us.mappings.gifting.cart.sendOrderAsGiftButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gifting.cart.thisOrdereIsAGiftText
+
+  - name: unified.us.functions.cart.verifyNonConfigBundleViewDetails
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.nonConfigBundleViewDetailsButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.nonConfigBundleViewDetailsButton
+      - click:
+          identifier: us.mappings.cart.nonConfigBundleViewDetailsButton
+      - sleep:
+          duration: 1000    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.nonConfigBundleViewHideDetailsButton
+            - identifier: us.mappings.cart.oneItemPresent.itemNameLabel
+
+
+  - name: unified.us.functions.cart.editAddress
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - click:
+          identifier: us.mappings.cart.fcDelivery.addressLink
+          wait: 4000
+      - click:
+          identifier: us.mappings.cart.fcDelivery.editAddressLink
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.checkin.locationAccessPopup
+          then:
+            - click:
+                identifier: us.mappings.global.closeButton
+      - executeFunction:
+          name: unified.us.functions.deliveryAddress.editAddress
+          params:
+            - name: firstName
+              string: us.data.flow0122.firstName
+            - name: lastName
+              string: us.data.flow0122.lastName
+            - name: streetAddress
+              string: us.data.deliveryaddress.streetAddress
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.saveAddress
+                then:
+                  - click:
+                      identifier: us.mappings.cart.saveAddress
+          else:
+            - scroll:
+                direction: up
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.navBarTitle
+
+
+  - name: unified.us.functions.cart.recommendedWithYourOrderModule
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.cart.recommendedWithYourOrderModule.title #scroll till recommended carousel
+                position: center
+
+            - log: Recommended with your order module is present
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.myItems.secondItem
+            - click:
+                identifier: us.mappings.myItems.secondItem
+            - sleep:
+                duration: 4000
+            - executeFunction:
+                name: unified.us.functions.item.validateAndClickAddToCartButton
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: unified.us.functions.item.postAddToCartSteps
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.smartNudgeViewClose
+                then:      
+                  - click:
+                      identifier: us.mappings.cart.smartNudgeViewClose    
+            - executeFunction:
+               name: unified.us.functions.cart.scrollToTopOfCart
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.recommendedWithYourOrderModule.carousel
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.recommendedWithYourOrderModule.carouselAddButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center      
+            - log: Recommended with your order module is present   
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.myItems.secondItems
+            - click:
+                identifier: us.mappings.cart.recommendedWithYourOrderModule.carouselAddButton
+
+  - name: unified.us.functions.cart.mpPickupPopUp
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.mpPickupPopUpTitle
+          then:
+            - click:
+                identifier: us.mappings.cart.gotItButton                
+
+  - name: unified.us.functions.cart.majorAppliance.scheduleDelivery
+    flow:
+    - verifyIdentifier:
+        present:
+          - identifier: us.mappings.cart.navBarTitle
+          - identifier: us.mappings.cart.applianceDelivery
+          - identifier: us.mappings.cart.scheduleDeliveryMessage
+          - identifier: us.mappings.cart.scheduledDeliveryButton
+    - click:
+          identifier: us.mappings.cart.scheduledDeliveryButton
+    - if:
+        condition: ${guestuser} == true
+        then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.signInPage
+      # Sign in with default account
+            - executeFunction:
+                name: unified.us.functions.global.authentication.signInAccountWithParams
+                params:                
+                  - name: android.email
+                    string: majorapplianceandroidtcnew3@cloudtest.org
+                  - name: android.password
+                    string: E2epassword$
+                  - name: ios.email
+                    string: majorapplianceiostc3@cloudtest.org
+                  - name: ios.password
+                    string: E2epassword$                    
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - sleep:
+                      duration: 2000
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.global.authentication.passwordKeyChainAlertDon'tAllowButton
+                      then:
+                        - click:
+                            identifier: us.mappings.global.authentication.passwordKeyChainAlertDon'tAllowButton          
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - click:
+                      identifier: us.mappings.global.navigateBackArrow
+                      wait: 3000
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.toCartFromNavBar                 
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.cart.appliance.scheduledDelivery.BottomSheet
+                      then:
+                        - click:
+                              identifier: us.mappings.cart.scheduledDeliveryButton                           
+    - verifyIdentifier:
+        present:
+          - identifier: us.mappings.cart.appliance.scheduledDelivery.BottomSheet
+    - sleep:
+        duration: 5000
+    - click:
+        identifier: us.mappings.cart.appliance.scheduledDelivery.slotBooking.saveButton
+    - sleep:
+        duration: 5000
+    - verifyIdentifier:
+        present:
+          - identifier: us.mappings.cart.appliance.scheduledDelivery.dateConfirmation                
+
+  - name: unified.us.functions.cart.verifyDeliveryCharges
+    flow:
+    - executeFunction:
+        name: unified.us.functions.utils.scrollIfNotVisible
+        params:
+          - name: identifier
+            string: us.mappings.cart.subtotal.haulawayCharge
+          - name: direction
+            string: down
+          - name: scrollPosition
+            string: center
+    - if:
+        condition: ${HaulAway} == true
+        then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.subtotal.haulawayCharge
+    - if:
+        condition: ${RoomOfChoice} == true
+        then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.subtotal.RoomOfChoiceCharge
+    - if:
+        condition: ${DeliveryAndInstallation} == true
+        then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.subtotal.DeliveryAndInstallationCharge  
+
+  - name: unified.us.functions.cart.verifyDiscountOnVisionItem
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.visionItem.promoDiscount
+            - name: direction
+              string: down      
+      - if:
+          condition: ${itemType} == 'Eyeglasses'       
+          then:         
+            - if: 
+                  condition: ${platform} == 'Android'
+                  then:         
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.cart.visionItem.promoDiscount
+                          contains: Saving 20%
+                  - log: Promo discount 'Saving 20%' for second pair of eyeglasses is displayed on cart page
+                  else:
+                    - verifyIdentifier:
+                        label:
+                          - identifier: us.mappings.cart.visionItem.promoDiscount
+                            contains: Saving 20%
+                    - log: Promo discount 'Saving 20%' for second pair of eyeglasses is displayed on cart page                  
+          else:
+            - if:
+                condition: ${itemType} == 'Sunglasses'       
+                then:         
+                  - if: 
+                        condition: ${platform} == 'Android'
+                        then:  
+                        - verifyIdentifier:
+                            text:
+                              - identifier: us.mappings.cart.visionItem.promoDiscount
+                                contains: Saving 35%
+                        - log: Promo discount 'Saving 35%' for second pair of sunglasses is displayed on cart page
+                        else:
+                        - verifyIdentifier:
+                            label:
+                              - identifier: us.mappings.cart.visionItem.promoDiscount
+                                contains: Saving 35
+                        - log: Promo discount 'Saving 35%' for second pair of sunglasses is displayed on cart page                        
+
+  - name: unified.us.functions.cart.checkoutWithSlotBooking
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart    
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+          then:
+            - storeIn:
+                key: page
+                value: cart
+            - executeFunction:
+                name: unified.us.functions.selectBookingSlotWithErrorHandling
+            - executeFunction:
+                name: unified.us.functions.cart.handleItemUpdatesBottomTray
+            # - executeFunction:
+            #     name: unified.us.functions.selectBookingSlot          
+            - executeFunction:
+                name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: us.functions.cart.continueMissingAnythingScreen  
+            - executeFunction:
+                name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue  
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed     
+            - executeFunction:
+                name: unified.us.functions.wplus.handle.SubstitutionPreferencePopup            
+          else:
+            - storeIn:
+                key: page
+                value: 'null'
+            - executeFunction:
+                name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+            - executeFunction:
+                name: unified.us.functions.selectBookingSlot            
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.cart.continueMissingAnythingScreen  
+            - executeFunction:
+                name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue             
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed          
+            - if:
+                condition: ${platform} == 'iOS'
+                then:                
+                  - executeFunction:
+                      name: unified.us.functions.selectBookingSlotWithErrorHandling
+            - executeFunction:
+                name: unified.us.functions.cart.handleItemUpdatesBottomTray
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.cart.continueMissingAnythingScreen  
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - executeFunction:
+                name: unified.us.functions.wplus.handle.SubstitutionPreferencePopup                        
+
+  - name: unified.us.functions.selectBookingSlotWithErrorHandling
+    flow:
+      # Function to load slot booking page either for Home/Cart page or automatically loaded during checkout
+      - executeFunction:
+          name: unified.us.functions.loadBookingSlotScreen
+      # Skips further steps if review page is loaded for unscheduled item
+      - if:
+          condition: ${skipSlotPage}
+          then:
+            - log: Slot booking functionality skipped for unscheduled pickup
+          else:
+            # Skips Day selection for unscheduled item
+            - if:
+                condition: ${timeSlot} == 'unscheduled' || ${timeSlot} == 'expressSlot'
+                then:
+                  - log: Skipping slot day selection process
+                else:
+                  # Function to setup required default data for slot booking selection
+                  - executeFunction:
+                      name: unified.us.functions.slotDataSetUp
+                  # Function to select appropriate day for slot booking
+                  - executeFunction:
+                      name: us.functions.selectDayForSlotDisplay # Needs work Will be part of next PR
+            # Wplus details validation/optIn section
+            - if:
+                condition: ${wplusUser} == 'optIn' || ${wplusUser} == 'optOut'
+                then:
+                  - executeFunction:
+                      name: us.functions.wplus.reserveSlot.optInOrOutWPlusMembership # Needs work Will be part of next PR
+                else:
+                  - if:
+                      condition: ${wplusUser} == 'validate'
+                      then:
+                        - executeFunction:
+                            name: us.functions.wplus.reserveSlot.validateWPlusDetails # Needs work Will be part of next PR
+            # Function to select appropriate slot time
+            - executeFunction:
+                name: us.functions.selectTimeSlot
+            # Function to save selected time slot
+            - executeFunction:
+                name: us.mappings.confirmSlotSelection # Needs work Will be part of next PR
+      # Function to reset data
+      - executeFunction:
+          name: unified.us.functions.slotDataReset                
+
+  - name: unified.us.functions.loadBookingSlotScreen
+    flow:
+      # Based on param, bookinf slot page is loaded either from home / cart page
+      - log: ------ Loading booking slot screen ------
+      - if:
+          condition: ${page} == 'home'
+          then:
+            - log: ------ Loading booking slot screen from home page ------
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.gic.expandIfCollapsed
+            
+            - if:
+                condition: ${platform} == 'Android'
+                then:        
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.home.seeTimes
+                      then:
+                        # Slot page loading from home
+                        - click:
+                            identifier: us.mappings.home.seeTimes
+                      else:
+                        # Slotpage loading from GIC
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.home.gic.collapseIcon
+                            then:
+                              - click:
+                                  identifier: us.mappings.home.gic.collapseIcon            
+            
+            - executeFunction:
+                name : unified.us.functions.gic.setFulfillment 
+                params:
+                  - name: option
+                    string: Pickup
+            - sleep:
+                duration: 3000                    
+            - if:
+                identifier:
+                  present:  
+                    - identifier: us.mappings.error.retryButton                       
+                then:                        
+                  - click:
+                      identifier: us.mappings.error.retryButton            
+            - if:
+                condition: ${platform} == 'ios'
+                then:
+                  - click:
+                      identifier: us.mappings.home.gic.seeTimes
+            - if:
+                condition: ${platform} == 'Android'
+                then: 
+                  - if:
+                      condition: ${optimize}
+                      then:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.reserve.shortcutSlotView
+                            then:
+                              - click:
+                                  identifier: us.mappings.cart.slotShortcutThirdSlot
+                              - storeIn:
+                                  key: skipReserve
+                                  value: true
+                            else:
+                              - click:
+                                  identifier: us.mappings.home.gic.seeTimes
+                      else:
+                        - click:
+                            identifier: us.mappings.home.gic.seeTimes                                         
+          else:
+            - if:
+                condition: ${page} == 'cart'
+                then:
+                  - log: ------ Loading booking slot screen from cart page ------
+                  - executeFunction:
+                      name: unified.us.functions.cart.scrollToTopOfCart
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cart.sc.noSlotBooked.reserveTime
+                        - name: direction
+                          string: down
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:
+                      - click:
+                          identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+                  - if:
+                        condition: ${platform} == 'Android'
+                        then:
+                          # Selecting time slot from cart page 
+                          - if:
+                              condition: ${optimize}
+                              then:
+                                - if:
+                                    identifier:
+                                      present:
+                                        - identifier: us.mappings.cart.reserve.shortcutSlotView
+                                    then:
+                                      - try:
+                                          flow:
+                                            - executeFunction:
+                                                name: us.functions.utils.getFulfillmentTextsForIntentSelection
+                                                params:
+                                                  - name: fulfillmentType
+                                                    string: ${tab}
+                                            - verifyIdentifier:
+                                                timeout: 1000
+                                                present:
+                                                  - identifier: us.mappings.cart.fulfillmentSection.fulfillmentTypeText.shortcutSlot
+                                          catch:
+                                            flow:                                     
+                                              - executeFunction:
+                                                  name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+                                                  params:
+                                                    - name: fulfillmentType
+                                                      string: ${tab}
+                                      - click:
+                                          identifier: us.mappings.cart.slotShortcutThirdSlot
+                                      - storeIn:
+                                          key: skipReserve
+                                          value: true
+                                    else:
+                                      - click:
+                                          identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+                              else:
+                                - click:
+                                    identifier: us.mappings.cart.sc.noSlotBooked.reserveTime
+      # SignIn to user acccount if not signedIn already
+      - if:
+          condition: ${signInRequired}
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.handleTechnicalErrorPopup          
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reserveSlot.signInButton
+                then:
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: us.mappings.reserveSlot.signInButton
+            - executeFunction:
+                name: unified.us.functions.global.authentication.signInAccount
+            - executeFunction:
+                name: unified.us.functions.utils.handleTechnicalErrorPopup
+            # To Reset store after sign in
+            - executeFunction:
+                name: unified.us.functions.reserveSlot.changeStore # Needs changes 
+                params:
+                  - name: store
+                    string: 32144
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup
+      - if:
+          condition: ${errorRemoved} == false
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} booking slot page not loaded"
+
+      # Check if booking slot needs to be skipped if Review order page is loaded for unscheduled scenario
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.reviewOrderPageTitle
+          then:
+            - storeIn:
+                key: skipSlotPage
+                value: true
+
+      - if:
+          condition: ${skipSlotPage}
+          then:
+            - log: Skipping booking slot for unscheduled pickup as screen is not loaded
+          else:
+            # After screen is loaded, load the required tab as per param
+            - log: ------ Loading booking slot screen completed ------
+            - log: ------ Loading required tab ------
+            - if:
+                condition: ${tab} == 'pickup'
+                then:
+                  - log: ------ Loading Pickup tab ------
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reserveSlot.scheduledDelivery.addAddressButton
+                      then:
+                        - click:
+                            identifier: us.mappings.reserveSlot.scheduledDelivery.closeAddAddressButton
+                  - executeFunction:
+                      name: us.functions.selectTabForSlotBooking # needs work
+            - if:
+                condition: ${tab} == 'delivery'
+                then:
+                  - log: ------ Loading Delivery tab ------
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reserveSlot.scheduledDelivery.addAddressButton
+                      then:
+                        - log: Required tab already loaded
+                      else:
+                        - executeFunction:
+                            name: us.functions.selectTabForSlotBooking
+            - log: ------ Loading required tab completed ------
+
+            # After tab is loaded, flow to add address based on param
+            - if:
+                condition: ${addAddress}
+                then:
+                  - log: New address is to be added
+                  - if:
+                      condition: ${addressAdded}
+                      then:
+                        - log: Address already added, skipping
+                      else:
+                        - log: ------ Adding address ------
+                        # If an address is being added for the first time
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.reserveSlot.scheduledDelivery.addAddressButton
+                            then:
+                              - click:
+                                  identifier: us.mappings.reserveSlot.scheduledDelivery.addAddressButton
+                              - if:
+                                  identifier:
+                                    present:
+                                      - identifier: us.mappings.reserveSlot.addAddress.selectFirstAddress
+                                  then:
+                                    - if:
+                                        condition: ${addExistingAddress}
+                                        then:
+                                          - log: Adding existing address
+                                          - click:
+                                              identifier: us.mappings.reserveSlot.addAddress.selectFirstAddress
+                                          - click:
+                                              identifier: us.mappings.selectAddress.continueButton
+                                          - sleep:
+                                              duration: 10000
+                                          - storeIn:
+                                              key: addressAdded
+                                              value: true
+                                        else:
+                                          - click:
+                                              identifier: us.mappings.deliveryAddress.addNewAddressButton
+                            else:
+                              # If an address is already existing/add address pop up is not displayed and a new address needs to be added
+                              - log: Changing address
+                              - click:
+                                  identifier: us.mappings.reserveSlot.deliveryfromStoreTab.changeAddressLink
+                              - if:
+                                  identifier:
+                                    present:
+                                      - identifier: us.mappings.reserveSlot.addAddress.selectFirstAddress
+                                  then:
+                                    - if:
+                                        condition: ${addExistingAddress}
+                                        then:
+                                          - log: Adding existing address
+                                          - click:
+                                              identifier: us.mappings.reserveSlot.addAddress.selectFirstAddress
+                                          - click:
+                                              identifier: us.mappings.selectAddress.continueButton
+                                          - sleep:
+                                              duration: 10000
+                                          - storeIn:
+                                              key: addressAdded
+                                              value: true
+                                          - if:
+                                              condition: ${platform} == 'Android'
+                                              then:                                     
+                                                - if:
+                                                    identifier:
+                                                      present:
+                                                        - identifier: us.mappings.reserveSlot.scheduledDelivery.changeButton
+                                                    then:
+                                                      - log: Required tab already loaded
+                                                    else:
+                                                      - executeFunction:
+                                                          name: us.functions.selectTabForSlotBooking                                        
+                                        else:
+                                          - click:
+                                              identifier: us.mappings.deliveryAddress.selectAddress.addNewAddressLink
+                        - if:
+                            condition: ${addressAdded}
+                            then:
+                              - log: Address already added
+                            else:
+                              - executeFunction:
+                                  name: unified.us.functions.deliveryAddress.addAddress
+                        - executeFunction:
+                            name: unified.us.functions.utils.handleTechnicalErrorPopup
+                        - storeIn:
+                            key: addressAdded
+                            value: true
+                        - if:
+                            condition: ${platform} == 'Android'
+                            then:    
+                              - sleep:
+                                  duration: 3000
+                              - if:
+                                  identifier:
+                                    checked:
+                                      - identifier: us.mappings.reserveSlot.scheduledDelivery.tab
+                                        value: true
+                                  then:
+                                    - log: Delivery from store tab loaded
+                                  else:
+                                    - log: Need to select Delivery from store tab again after address selection
+                                    - click:
+                                        identifier: us.mappings.reserveSlot.scheduledDelivery.tab                                                  
+                else:
+                  - log: Skipping address addition as it is not required
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reserveSlot.scheduledDelivery.addAddressButton
+                      then:
+                        - click:
+                            identifier: us.mappings.reserveSlot.scheduledDelivery.closeAddAddressButton          
+
+  - name: unified.us.functions.cart.continueToCheckoutAndSignIn
+    flow:
+      - verifyIdentifier:
+          timeout: 30000
+          present:
+            - identifier: us.mappings.cart.checkoutButton
+      - click:
+          identifier: us.mappings.cart.checkoutButton 
+          wait: 2000
+      - sleep:
+          duration: 3000
+
+# Validating Back order badge on Cart
+  - name: unified.us.functions.cart.verifyBackorderBadgeIsVisible
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.backOrderBadge
+          then:
+            - log: "Backorder badge is shown as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Backorder badge should be present in cart but is not"
+
+# Validating Details link and Bottomsheet on Cart
+  - name: unified.us.functions.cart.validateBackorderPriceGuarantee
+    flow:
+      - executeFunction:
+          name: unified.us.functions.item.verifyBackOrderPriceGuaranteeDetailsLink
+      - executeFunction:
+          name: unified.us.functions.item.verifyBackorderPriceGuaranteeBottomsheet
+
+  - name: unified.us.functions.cart.addMqdEligibleItemOnCartPage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.addMqdEligibleItemButton
+      - click:
+          identifier: us.mappings.cart.addMqdEligibleItemButton
+      - sleep:
+          duration: 2000
+      - click: 
+          identifier: us.mappings.MqdCartCta
+      - sleep:
+          duration: 2000
+      - click: 
+          identifier: us.mapping.MqdCloseButton
+
+  - name: unified.us.functions.cart.VerifyRewardsEarnedBanner
+    flow:
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string:  us.mappings.cart.ibottaPromotionalRewardBanner
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.wplus.rewardsInstructionalButton
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.wplus.rewardsInstructionalButton
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cartdetailpage.cartbasketrewardsbanner.text
+                  - identifier: us.mappings.cartdetailpage.cartbasketrewardsbanner.icon
+
+  - name: unified.us.functions.cart.scheduledDelivery.verifyEBTDetails
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.seeDetailsLink
+          then:
+              - click:
+                  identifier: us.mappings.cart.seeDetailsLink
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.scheduledDelivery.EBTDetails
+
+
+# EDC/A2H
+  - name: unified.us.functions.cart.verifyA2HSlot
+    flow:
+      - if:
+          condition: ${page} == 'cart'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.A2HTimeSlots
+            - click:
+                identifier: us.mappings.cart.timeSlotSelectionViewChevronRight
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.A2HTimeSlots.viewAll
+
+      - if:
+          condition: ${page} == 'review order'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.A2HSelectedTimeSlotInReviewOrder
+
+      - if:
+          condition: ${page} == 'order confirmation'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderConfirmation.A2HSelectedTimeSlotInOrderConfirmation
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderConfirmation.A2HSelectedTimeSlotInOrderConfirmation
+
+  - name: unified.us.functions.cart.reserveA2HSlot
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserveSlot.title
+      - click:
+          identifier: us.mappings.evergreen.deliveryFromStore.text.on.reviewOrder.page
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.A2HselectedTimeSlot
+      - click:
+          identifier: us.mappings.cart.tommorrowSlotTime         
+
+
+  - name: unified.us.functions.cart.EDCBanner
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.EDCBanner
+      - log: "EDC Banner present in cart as expected"
+
+  - name: unified.us.functions.cart.SetUpSubscriptionScreenValidationsForSubscribedAndSubEligibleItems
+    flow:
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+              
+      - click:
+          identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+                
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscriptionSetupScreen.header
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscriptionSetupScreen.subscriptionItem
+                  - identifier: us.mappings.subscriptionSetupScreen.subscriptionItemAmount
+                  - identifier: us.mappings.subscriptionSetupScreen.subscriptionItemQuantityBar
+                  - identifier: us.mappings.subscriptionSetupScreen.gotItEverySection
+                  - identifier: us.mappings.subscriptionSetupScreen.confirmCTA
+                  - identifier: us.mappings.subscriptionSetupScreen.closeButton
+            - click:
+                identifier: us.mapping.cart.subscriptionSetupScreen.setUpSubscriptionCta
+            - sleep:
+                duration: 2000
+            - verifyIdentifier: 
+                present:
+                  - identifier: us.mappings.cart.subscribedItem.every4WeeksLink
+          else: 
+            - failTest:
+                message: "FAILURE - ${env} - No items were sbuscribed yet"
+
+  - name: unified.us.functions.cart.verifyCartItems 
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.cart.navBarTitle
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.itemsAvailable     
+      # - scroll:
+      #     direction: down
+      #     scrollLimit: 1
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.cart.itemsAvailable
+      - log: "4 items present in cart"
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.cart.estimatedTotalAmount
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.estimatedTotalAmountValue 
+      - getString:
+          identifier: us.mappings.cart.estimatedTotalAmountValue
+          storeIn: Price 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${Price}
+          getResponse:
+            storeIn: PriceAmount
+      - log: "Price is stored in a variable"
+
+  - name: unified.us.functions.cart.deselectItemInCart
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.cart.navBarTitle
+      - executeFunction:
+          name: unified.us.functions.cart.seeDetails
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.cart.checkBox
+          then:
+            - scroll:
+                direction: down
+                scrollLimit: 1
+                untilIdentifier: us.mappings.cart.checkBox
+      - click:
+          identifier: us.mappings.cart.checkBox
+      - getString:
+          identifier: us.mappings.cart.leftOverCartItems
+          storeIn: uncheckedItem 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${uncheckedItem}
+          getResponse:
+            storeIn: uncheckedItem
+      - log: " ${uncheckedItem} item is unchecked" 
+
+  - name: unified.us.functions.cart.verifyItemsAfter
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.cart.navBarTitle
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.itemsAvailableInCartAfter
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.itemsAvailableInCartAfter
+      - log: "3 item present in cart"
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.cart.estimatedTotalAmountValue
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.estimatedTotalAmountValue
+      - getString:
+          identifier: us.mappings.cart.estimatedTotalAmountValue
+          storeIn: ChangedPrice 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${ChangedPrice}
+          getResponse:
+            storeIn: ChangedPriceAmount
+      - log: "Price is stored in a variable"
+      - if:
+          condition: ${Price} == ${ChangedPrice}
+          then:
+            - failTest:
+                message: "Prices are same: ${Price} - ${ChangedPrice}"
+          else:
+            - log:
+                message: Prices are different as Expected !
+                color: CYAN
+
+  - name: unified.us.functions.cart.leftOverItemsInCart
+    flow:
+      - getString:
+          identifier: us.mappings.cart.leftOverItemInCart
+          storeIn: uncheckedItemCrossCheck 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${uncheckedItemCrossCheck}
+          getResponse:
+            storeIn: uncheckedItemCrossCheck
+      - log: " ${uncheckedItemCrossCheck} This item is present in Cart" 
+      - if:
+          condition: ${uncheckedItem} == ${uncheckedItemCrossCheck}
+          then:
+            - log:
+                message: "${uncheckedItemCrossCheck} is expected to be here and it is Present ! "
+                color: CYAN            
+          else:
+            - failTest:
+                message: "Item is different"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.itemsLeftInCartBar          
+  
+  # Verifying temporary hold CTA on amends page
+  - name: unified.us.functions.cart.amendsPage.verifyTemporaryHold
+    flow:
+      - sleep:
+          duration: 10000
+      - scroll:
+          direction: up
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.addToExistingOrderButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.addToExistingOrderButton
+            - identifier: us.mappings.cart.whatIsTemporaryHoldLink
+      - click:
+          identifier: us.mappings.cart.whatIsTemporaryHoldLink
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+            - identifier: us.mappings.cart.amendsPage.temporaryHold.bottomSheet.title
+            - identifier: us.mappings.cart.amendsPage.temporaryHold.bottomSheet.description
+            - identifier: us.mappings.cart.amendsPage.temporaryHold.bottomSheet.gotIt
+      - click:
+          identifier: us.mappings.cart.amendsPage.temporaryHold.bottomSheet.gotIt
+
+  - name: unified.us.functions.cart.addToExistingOrder
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.addToExistingOrderButton
+            - click:
+                identifier: us.mappings.cart.addToExistingOrderButton
+            - sleep:
+                duration: 7000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.amend.alcoholDisclosure.bottomSheet.navigationBar
+                then:
+                  - executeFunction:
+                      name: us.functions.amend.alcoholItemToSCPickup.changeSlot.alcoholRestrictedToAllowed
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.checkout.wallet.title
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.confirmCvv.cvvField            
+                  - enterText:
+                      identifier: us.mappings.reviewOrder.confirmCvv.cvvField
+                      string: ${cvv}
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton    
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton                                      
+            - executeFunction:
+                name: us.functions.utils.handleTechnicalErrorPopup       
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.addToExistingOrderButton
+                then:
+                  - click:
+                      identifier: us.mappings.cart.addToExistingOrderButton
+            - verifyIdentifier:
+                timeout: 30000
+                present:
+                  - identifier: us.mappings.amend.itemAddedConfimationMessage
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - sleep:
+                duration: 10000
+            - scroll:
+                direction: up
+            - if:
+                condition: ${fulfillmentType} == 'Pickup'
+                then:
+                  - log: Switch to PickUp Button Present on the Cart 
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cart.switching.switchtopickupButton
+                      then:
+                        - click:
+                            identifier: us.mappings.cart.switching.switchtopickupButton
+                            wait: 2000
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.addToExistingOrderButton
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.addToExistingOrderButton
+            - click:
+                identifier: us.mappings.cart.addToExistingOrderButton
+                wait: 3000
+            - executeFunction:
+                name: us.functions.amend.creditCard.InCart
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.cart.itemAddedToExistingOrderText
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.popup.technicalError
+                then:
+                  - click:
+                      identifier: us.mappings.error.dismissButton
+                  - click:
+                      identifier: us.mappings.cart.addToExistingOrderButton
+                  - sleep:
+                      duration: 3000
+                  - verifyIdentifier:
+                      present:
+                      - identifier: us.mappings.cart.itemAddedToExistingOrderText
+
+  # Select saved address
+  - name: unified.us.functions.cart.selectExistingAddress
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart    
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.addShippingAddress
+          then:      
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.addShippingAddress
+            - click:
+                identifier: us.mappings.cart.addShippingAddress
+            - sleep:
+                duration: 10000
+            - executeFunction:
+                name: unified.us.functions.cart.selectAddress
+            - if:
+               condition: ${platform} == 'Android'
+               then:
+                - click:
+                   identifier: us.mappings.buyNow.selectAddress.saveButton
+            - sleep:
+                duration: 5000
+
+  # Verify the VP items added to the cart
+  - name: unified.us.functions.cart.verifyVPItemsInCart
+    flow:
+      - executeFunction:
+          name: unified.us.functions.cart.scrollToTopOfCart
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.findMultiPackCartItem
+            - name: direction
+              string: down
+      - sleep:
+          duration: 1500
+      - verifyIdentifier:
+          present:
+            #- identifier: us.mappings.cart.findSinglePackCartItem
+            - identifier: us.mappings.cart.findMultiPackCartItem
+
+  - name: unified.us.functions.cart.addDirectSpendCard
+    flow:
+      - if:
+          condition: ${platform} == 'Android' 
+          then:
+          - storeIn:
+              key: executionStage
+              value: Transactions
+          - log: "Adding the Direct Spend card to the account!!!!"
+          - log: "Entering the Direct Spend card details!!!!"
+          - if:
+              identifier:
+                notPresent:
+                  - identifier: us.mappings.reviewOrder.editPayment
+              then:
+                - scroll:
+                    direction: down
+                    untilIdentifier: us.mappings.reviewOrder.editPayment
+                - click:
+                    identifier: us.mappings.reviewOrder.editPayment
+                - sleep:
+                    duration: 4000
+                - if:
+                    identifier:
+                      notPresent:
+                        - identifier: us.mappings.cart.addNewPaymentButton
+                    then:
+                      - scroll:
+                          direction: down
+                          untilIdentifier: us.mappings.cart.addNewPaymentButton
+                - click:
+                    identifier: us.mappings.cart.addNewPaymentButton
+                - sleep:
+                    duration: 3000
+                - click:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                - enterText:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                    string: ${directSpendCardNumber}
+                - sleep:
+                    duration: 1000
+                - click:
+                    identifier: us.mappings.cart.directSpend.pin
+                - enterText:
+                    identifier: us.mappings.cart.directSpend.pin
+                    string: ${directSpendCardPin}
+                - sleep:
+                    duration: 1000
+              else:
+                - click:
+                    identifier: us.mappings.reviewOrder.editPayment
+                - sleep:
+                    duration: 4000
+                - if:
+                    identifier:
+                      notPresent:
+                        - identifier: us.mappings.cart.addNewPaymentButton
+                    then:
+                      - scroll:
+                          direction: down
+                          untilIdentifier: us.mappings.cart.addNewPaymentButton
+                - click:
+                    identifier: us.mappings.cart.addNewPaymentButton
+                - sleep:
+                    duration: 3000
+                - click:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                - enterText:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                    string: ${directSpendCardNumber}
+                - sleep:
+                    duration: 1000
+                - click:
+                    identifier: us.mappings.cart.directSpend.pin
+                - enterText:
+                    identifier: us.mappings.cart.directSpend.pin
+                    string: ${directSpendCardPin}
+                - sleep:
+                    duration: 1000
+          - click:
+              identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+          - sleep:
+              duration: 5000
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.cart.directSpend.addCardAlertWindowTitle
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.capOne.paymentsOptionsContinueButton
+          - click:
+              identifier: us.mappings.capOne.paymentsOptionsContinueButton
+          - sleep:
+              duration: 5000
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.reviewOrder.clickPlaceOrder
+          - log: "The Direct Spend card added successful to the account!!!!"
+          - scroll:
+              direction: up
+              position: center
+              scrollLimit: 4
+      - if:
+          condition: ${platform} == 'iOS' 
+          then:
+            - storeIn:
+                key: executionStage
+                value: Transactions
+            - log: "Adding the Direct Spend card to the account!!!!"
+            - log: "Entering the Direct Spend card details!!!!"
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.reviewOrder.paymentMethod.changeLink
+            - click:
+                identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.cart.addNewPaymentMethod.button
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cart.addNewPaymentMethod.button
+            - click:
+                identifier: us.mappings.cart.addNewPaymentMethod.button
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                string: ${directSpendCardNumber}
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton
+            - sleep:
+                duration: 1000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.cardTypeField
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.cardTypeField
+                  - click:
+                      identifier: us.mappings.paymentMethod.cardTypeFieldPickerWheel
+                      coordinates: 30%,70%
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.cardTypeFieldPickerWheel
+                      string: Walmart Gift card
+                  - click:
+                      identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+            - enterText:
+                identifier: us.mappings.paymentMethod.giftCard.pin
+                string: ${directSpendCardPin}
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.cart.directSpend.saveCardButton
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.directSpend.addCardAlertWindowTitle
+                then:
+                  - log: "See the Add card alert window, handling that."
+                  - click:
+                      identifier: us.mappings.cart.directSpend.addCardButton.onAlertWindow
+                  - sleep:
+                      duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.directSpend.addCardAlertWindowTitle
+                then:
+                  - log: "See the Add card alert window, handling that."
+                  - click:
+                      identifier: us.mappings.cart.directSpend.addCardButton.onAlertWindow
+                  - sleep:
+                      duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.capOne.paymentsOptionsContinueButton
+                then:
+                  - click:
+                      identifier: us.mappings.capOne.paymentsOptionsContinueButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.walmartCashCard.confirmButton
+                then:
+                  - click:
+                      identifier: us.mappings.account.walmartCashCard.confirmButton
+            - sleep:
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.placeOrderButton
+            - log: "The Direct Spend card added successful to the account!!!!"
+            - scroll:
+                direction: up
+                position: center
+                scrollLimit: 4
+
+
+  # Drone Delivery via cart reserve-slot upsell CTA / Slot auto-reserved via landing page
+  - name: unified.us.functions.cart.verifyAndReserveDroneSlot
+    flow:
+      - sleep:
+          duration: 3000
+      - scroll:
+          direction: Up
+          untilIdentifier: us.mappings.cart.scheduledDelivery.cardTitle
+      - if:
+          identifier:
+            timeout: 5000
+            present:
+              - identifier: us.mappings.cart.droneDeliveryUpsell.badge
+          then:
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.cart.droneDeliveryUpsell.reserve.cta
+            - click:
+                identifier: us.mappings.cart.droneDeliveryUpsell.reserve.cta
+      # Once drone slot is reserved verify cart updates with Drone Delivery details.    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.droneDelivery.header 
+            - identifier: us.mappings.cart.droneDelivery.arrivesText
+            - identifier: us.mappings.cart.droneDelivery.fee
+            - identifier: us.mappings.cart.droneCapacity.header
+            - identifier: us.mappings.cart.droneCapacity.info
+            - identifier: us.mappings.cart.droneDelivery.droneTimerText
+            - identifier: us.mappings.cart.droneDelivery.droneTimer
+      - click:
+          identifier: us.mappings.cart.droneCapacity.info
+          wait: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.droneCapacity.header.bottomSheet
+            - identifier: us.mappings.cart.droneCapacity.textBody.bottomSheet
+      - click:
+          identifier: us.mappings.cart.droneCapacity.textBody.gotIt.cta
+          wait: 3000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.cart.estimatedTotalAmount
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.droneDelivery.fee.pos.text
+            - identifier: us.mappings.cart.droneDelivery.fee.pos.price 
+
+  - name: unified.us.functions.reviewOrder.applyWalmartCash
+    flow:
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.applyWalmartCashButtom    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.applyWalmartCashButtom
+      - click:
+          identifier: us.mappings.reviewOrder.applyWalmartCashButtom
+      - sleep:
+          duration: 5000
+
+ # Validate delivery from store charges for a paused member in cart
+  - name: unified.us.functions.pause.cart.verifyDeliveryFromStoreCharge
+    flow :
+      - if:
+          condition: ${platform} == 'iOS' 
+          then:
+            - if:
+                identifier:
+                    present:
+                    - identifier: us.mappings.cart.navBarTitle
+                then:
+                - log: Cart is displayed. Verify delivery from store fulfillment fee.
+                - try:
+                      flow:
+                        - verifyIdentifier:
+                            label:
+                              - identifier: us.mappings.cart.fulfillmentFee
+                                contains: $5
+                        - log: $5 delivery fee is displayed
+                      catch:
+                        flow:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.cart.fulfillmentFee
+                                  contains: $9.95
+                          - log: $9.95 delivery fee is displayed
+      - if:
+          condition: ${platform} == 'Android' 
+          then:
+            - if:
+                identifier:
+                    present:
+                    - identifier: us.mappings.cart.navBarTitle
+                then:
+                - log: Cart is displayed. Verify delivery from store fulfillment fee.
+                - verifyIdentifier:
+                    present:
+                    - identifier: us.mappings.cart.fulfillmentFee
+                - scroll:
+                    direction: down
+                    position: center
+                    untilIdentifier: us.mappings.cart.subTotalItemCount
+                - verifyIdentifier:
+                    present:
+                      - identifier: us.mappings.cart.fulfillmentFee.desc
+
+  - name: unified.us.functions.item.visionItem.verifyNon-Rx-flow
+    flow:     
+      - scroll:
+          direction: down
+          position: center
+          untilIdentifier: us.mappings.itempage.vision.customLenses                              
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.itempage.vision.customLenses
+            - identifier: us.mappings.itempage.vision.framesOnly
+      - click: 
+          identifier: us.mappings.itempage.vision.customLenses
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.verifySelectLensesCTA
+      - click: 
+          identifier: us.mappings.item.verifySelectLensesCTA
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.verify.nonPrescriptionBlueLightFiltering 
+            - name: direction
+              string: down
+            - name: limit
+              string: 1
+      - click: 
+          identifier: us.mappings.item.verify.nonPrescriptionBlueLightFiltering
+      - verifyIdentifier:
+          timeout: 60000
+          present:
+            - identifier: us.mappings.item.verify.nonPrescriptionBlueLightFiltering      #Non-prescriptionblue light filtering
+            - identifier: us.mappings.item.verifySingleVisionLense
+            - identifier: us.mappings.item.verifyWhat'sYourPrescriptionType
+            - identifier: us.mappings.item.verifySubTotalText                 
+            - identifier: us.mappings.item.continueButton 
+            - identifier: us.mappings.item.closeItemDetailsPage 
+      - click: 
+          identifier: us.mappings.item.continueButton   
+          
+  - name: unified.us.functions.cart.increaseItemQtyInCart
+    flow:
+      - loop:
+          begin: 1
+          end: ${quantity}
+          mode: increment
+          flow:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.cart.increaseQuantity.button
+                position: center
+            - click:
+                identifier: us.mappings.cart.increaseQuantity.button
+                wait: 2000
+
+  # This function validates the waiver of the minimum order fee for pharmacy items in the cart
+  - name: unified.us.functions.cart.pharmacy.minOrderFeeWaiveoffValidation
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.estimatedTotalAmount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.pharmacy.chargeWaiveOff
+
+
+  # Function to validate DSSnapBadge on Cart Page
+  - name: unified.us.functions.cart.validateDSSnapBadgeOnCartPage
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.snapEligibleLabelOnCartPage
+      - log:
+          message: us.mappings.item.snapEligibleLabelOnCartPage
+          color: PURPLE
+
+
+  
+  - name: unified.functions.cart.navigateToBookSlot
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.changeSlot
+          then:
+            - click:
+                identifier: us.mappings.cart.changeSlot
+
+  # Function to validate EBT min banner and Price on Cart Page
+  - name: unified.us.functions.cart.validateEBTMinBannerandPriceOnCartPage
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.EBTMin.banner
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.POS.thresholdAmount 
+                  - name: direction
+                    string: down
+                  - name: limit
+                    string: 5
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.reviewOrder.POS.thresholdAmount    
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart.belowMinFee
+                  - name: direction
+                    string: down
+                  - name: limit
+                    string: 5
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.cart.belowMinFee  
+
+                 
+

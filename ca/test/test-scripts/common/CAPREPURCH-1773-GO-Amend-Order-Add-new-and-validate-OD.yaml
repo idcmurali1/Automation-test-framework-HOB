@@ -1,0 +1,158 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Amend Order : Amend order from cart
+# Scenarios covered:
+# Navigate onboarding to home
+# Place an GO order with 1 items using astro api
+# Navigate to purchase history page
+# Add another item to cart
+# Add to existing order
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  tags: flow302
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.flow302.onboardingZipCode
+
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.apis.createAccount
+
+      # Create Go order with one items 
+      - executeFunction:
+          name: ca.test.functions.astro.placeOrder.scheduledPickup
+          params:
+            - name: email
+              string: ${emailId}
+            - name: password
+              string: ${password}
+            - name: payLoad
+              string: ca.data.flow.amendablePayload302
+
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+     # Sign In Page 
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ${emailId}
+            - name: password
+              string: ${password}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+         
+      # Navigate to account page
+      - executeFunction:
+          name: ca.test.functions.homePage.accountButton
+    
+     # Tap Purchase History in Account Page
+      - executeFunction:
+          name: ca.test.functions.accountPage.tapPurchaseHistory
+
+     # Tap on View Details in Purchase History
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.tapViewDetailsButton
+
+      # Verify Order details Page
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.validateOrderDetailsPage      
+          params:
+          - name: itemCount
+            string: ca.test.data.flow302.ODP.itemCountBeforeAmendingOrder
+         
+      # Tap Add items
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.tapAddItems     
+
+      # Add a new GO item
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:
+            - name: product
+              string: ca.test.data.flow302.amendItem
+        
+      # SRP to PDP
+      - executeFunction:
+          name: ca.test.functions.pdp.srpToPdp
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.PDPpage.addToCart
+          params:
+            - name: quantity
+              string: ca.test.data.flow302.productQty
+
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage      
+
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigationToCart
+
+      # Verify Cart Page Details
+      - executeFunction:
+          name: ca.test.functions.cartPage.amendOrder.verifyCartDetailsForAmendOrder
+
+      # Tap on add item button
+      - executeFunction:
+          name: ca.test.functions.cartPage.amendOrder.tapOnAddItemsToOtherOrdersButton
+      
+      # Asserting Amend Message
+      - executeFunction:
+          name: ca.test.functions.cartPage.amendOrder.itemAmendSuccessMessage
+      
+      # Tap on Success Message
+      - executeFunction:
+          name: ca.test.functions.cartPage.amendOrder.tapOnViewDetailsButton
+
+      # Verify ODP after amending the order        
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.verifyItemDetails
+          params:
+            - name: itemCount
+              string: ca.test.data.flow302.ODP.itemCountAfterAmendingOrder
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: CAPREPURCH-1773-GO-Amend-Order-Add-new-and-validate-OD
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps
+

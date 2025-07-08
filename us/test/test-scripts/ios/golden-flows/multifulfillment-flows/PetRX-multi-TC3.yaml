@@ -1,0 +1,403 @@
+general:
+  platform: ios
+  tags: C2126532, PetRXTC3, sanity, us-golden-flows-ecom-p1, us-golden-flows
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.ios.flowPetRX.email
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.email
+            - name: password
+              string: us.data.ios.flowPetRX.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+  
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup
+  
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 75006
+              - name: storeName
+                string: Carrollton Pharmacy
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: backupItem
+              string: 967762968
+            - name: store
+              string: 32144
+
+      # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      # # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: backupItem
+              string: 945213102
+            - name: store
+              string: 32144
+
+      # # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: MP_WFS_DELIVERY
+            - name: backupItem
+              string: 848010073
+            - name: store
+              string: 32144
+
+      # # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+          ## Add petrx items to cart 
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/373687797 # walmart://ip/22471997 Did not work 
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+
+      # Verify cart
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      # Book slot
+      - executeFunction:
+          name: us.functions.cart.checkoutWithSlotBooking
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: dayAfter
+            - name: slotIndex
+              string: 3 
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true      
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery    
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyingTip
+
+      # - executeFunction:
+      #     name: us.functions.checkout.placeOrder
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      # Verify order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      # Verify order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      # - executeFunction: //uncomment once GPMNETE-46021 is resolved
+      #     name: us.functions.orderConfirmation.verifyEBTDetailsDisplay
+
+      
+#***************************************************************************************************************
+
+   # Astro - Move order to Out for delivery / Shipped
+
+#***************************************************************************************************************
+
+      # - executeFunction:
+      #     name: us.functions.utils.cucumber.getAndSetOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: STORE_SCHEDULED_DELIVERY
+      #       - name: status
+      #         string: PO Out for Delivery
+
+
+      # - executeFunction:
+      #     name: us.functions.orderDetails.verifyStoreDeliveryTip.PoOutForDeliveryStatus
+
+      # - executeFunction:
+      #     name: us.functions.utils.cucumber.getAndSetOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: FC_DELIVERY
+      #       - name: status
+      #         string: Shipped
+      
+      # - executeFunction:
+      #     name: us.functions.utils.cucumber.getAndSetOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: MP_DELIVERY 
+      #       - name: status
+      #         string: Shipped
+
+      # Close order confirmation
+      #- click:
+          #wait: 300000 # Wait for order to move properly in backend
+          #identifier: us.mappings.orderConfirmation.closeButton
+
+      # - executeFunction:
+      #     name: us.functions.orderConfirmation.closeOrderConfirmation
+
+      # Deeplink into order details page
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://orders/$orderNo
+
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Delivery from store
+      #       - name: orderStatus
+      #         string: On the way
+      #       - name: index
+      #         string: 1
+      #       - name: scroll
+      #         string: false
+              
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Shipping
+      #       - name: orderStatus
+      #         string: On the way
+      #       - name: index
+      #         string: 1
+      #       - name: scroll
+      #         string: true
+      
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Shipping
+      #       - name: orderStatus
+      #         string: On the way
+      #       - name: index
+      #         string: 1
+              
+      # Verify threshold fees
+      # - executeFunction:
+      #     name: us.functions.verifyThresholdFeesOnOrderDetails
+
+#***************************************************************************************************************
+
+   # Astro - Move order to Delivered
+
+#***************************************************************************************************************
+
+      # - executeFunction:
+      #     name: us.functions.utils.cucumber.getAndSetOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: STORE_SCHEDULED_DELIVERY
+      #       - name: status
+      #         string: Delivered # need to confirm the correct status
+
+      # - executeFunction:
+      #     name: us.functions.utils.cucumber.getAndSetOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: FC_DELIVERY
+      #       - name: status
+      #         string: Delivered
+
+      # - executeFunction:
+      #     name: us.functions.utils.cucumber.getAndSetOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: MP_DELIVERY
+      #       - name: status
+      #         string: Delivered
+
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://orders/$orderNo
+
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Delivery from store
+      #       - name: orderStatus
+      #         string: Delivered
+      #       - name: index
+      #         string: 1
+      #       - name: scroll
+      #         string: false
+              
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Shipping
+      #       - name: orderStatus
+      #         string: Delivered
+      #       - name: index
+      #         string: 1
+      #       - name: scroll
+      #         string: true
+    
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Shipping
+      #       - name: orderStatus
+      #         string: Delivered
+      #       - name: index
+      #         string: 1
+      #       - name: scroll
+      #         string: true
+              
+      - storeIn:
+          key: testStatus
+          value: passed  
+      
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,157 @@
+configuration:
+  runtime: "concord-v2"
+  processTimeout: "PT4H"
+  dependencies:
+    - "mvn://com.walmartlabs.concord.plugins:looper-task:latest"
+  arguments:
+    username: svcstoreautomation
+    baseUrl: "https://looperpro-cigateway.prod.walmart.com"
+    apiToken: ${crypto.decryptString("zbcoDYzeK71GaXIv+ss/Gt5lg8eg5lFt+eVze3NueMAnzN8ZLZcnJYcCEUrn229R")}
+    sauceApp: "storage:filename=us-development-latest.zip"
+    postToSplunk: "false"
+    appBuildBranch: development-latest
+  meta:
+    testTags: ""
+    appBuildBranch: ""
+    dependencyProfile: ""
+
+flows:
+  runTests:
+    - task: looper
+      in:
+        username: ${username}
+        baseUrl: ${baseUrl}
+        apiToken: ${apiToken}
+        jobName: glass-automation/wcp/looperpro/mx-e2e-release/ios-prod
+        call: ${looperFlow}
+        suspend: true
+        sync: true
+        parameters:
+          TEST_TAGS: ${testTags}
+          SAUCE_APP: ${sauceApp}
+          DEPENDENCY_PROFILE: ${dependencyProfile}
+          POST_TO_SPLUNK: ${postToSplunk}
+          APP_BUILD_BRANCH: ${appBuildBranch}
+          MAPPING_LABELS: ${mappingLabels} 
+
+  onPr:
+    - checkpoint: " CI build for PR flow "
+    - log: " branch :::   ${event.branch}"
+    - log: ${event.payload}
+    - set:
+        prBranch: ${event.payload.pull_request.head.ref}
+        sha: ${event.payload.pull_request.head.sha}
+        baseBranch: ${event.payload.pull_request.base.ref}
+        prNumber: ${event.payload.pull_request.number}
+    - log: "Pr branch: ${prBranch}, base branch: ${baseBranch}, Concord process: ${txId}"
+    - task: looper
+      in:
+        username: ${username}
+        baseUrl: ${baseUrl}
+        apiToken: ${apiToken}
+        jobName: glass-automation/wcp/looperpro/mx-e2e-release/android-prod
+        commitHash: ${sha}
+        processId: ${txId}
+        processType: "concord"
+        prNumber: ${prNumber}
+        suspend: true
+        call: pr
+      out: looperJob
+    - log: "looperJob Details :: ${looperJob.status}, url: ${looperJob.url} Log: ${looperJob.log} ${looperJob.message} ${looperJob.scmEventsLog}"
+
+triggers:
+
+
+  - manual:
+      name: "Release - MX-iOS-Prod-Release"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_Prod
+        testTags: p1-mx-ea-prod
+        dependencyProfile: looper-mx-prod
+        mappingLabels: mx_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  - cron:
+      spec: "20 8 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_Prod
+        testTags: p1-mx-ea-prod
+        dependencyProfile: looper-mx-prod
+        mappingLabels: mx_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  
+  - manual:
+      name: "Release - MX-iOS-Prod-Release-Testrail"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_TestRail
+        testTags: p1-mx-ea-prod
+        dependencyProfile: looper-mx-prod
+        mappingLabels: mx_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  - cron:
+      spec: "20 8 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_TestRail
+        testTags: p1-mx-ea-prod
+        dependencyProfile: looper-mx-prod
+        mappingLabels: mx_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  - manual:
+      name: "Release - MX-Bodega-iOS-Prod-Release"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_Prod
+        testTags: p1-bodega-ea-prod
+        dependencyProfile: looper-mx-bodega-prod
+        mappingLabels: bo_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  - cron:
+      spec: "30 8 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_Prod
+        testTags: p1-bodega-ea-prod
+        dependencyProfile: looper-mx-bodega-prod
+        mappingLabels: bo_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  - manual:
+      name: "Release - MX-Bodega-iOS-Prod-Release_Testrail"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_TestRail
+        testTags: p1-bodega-ea-prod
+        dependencyProfile: looper-mx-bodega-prod
+        mappingLabels: bo_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+
+  - cron:
+      spec: "30 8 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: Run_Build_TestRail
+        testTags: p1-bodega-ea-prod
+        dependencyProfile: looper-mx-bodega-prod
+        mappingLabels: bo_ea_ios_production
+        sauceApp: "storage:filename=mx-release-latest.zip"
+  
+
+  # pr
+  - github:
+      version: 2
+      entryPoint: "onPr"
+      conditions:
+        type: "pull_request"
+        status: "(opened|synchronize)"

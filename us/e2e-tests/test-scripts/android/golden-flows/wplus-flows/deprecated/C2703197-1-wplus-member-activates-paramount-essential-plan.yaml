@@ -1,0 +1,111 @@
+# Day 0 - Video Streaming Paramount Plus - Manage Membership 
+#User Scenario #1
+# As a Paid Annual Wplus Member
+# Enable Paramount+ Streaming Benefit by using Astro API
+# Navigate to Wplus Benifits Page
+# Verify the Paramount Video Streaming Benifits Option Enabled
+
+general:
+  platform: android
+  tags:  C2703197, Scenario-1
+  testCaseId: C2703197
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+  # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$  
+      
+      #Create a Wplus Account with Paramount+ Essential Plan
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow030.createAccountPayload.wplus
+            - name: withoutPayment
+              string: false
+
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome.paramZip
+          params:
+            - name: ZIP_CODE
+              string: 72712
+
+       # signing in to the account
+      - executeFunction:
+                name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with above created account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.member.email
+            - name: password
+              string: us.data.prod.member.password
+
+      #Navigate to New Redesigned Hub Screen
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?expo_preview=true&experiment_spec=TQN4z&variation_specs=ECNNE&experiment_count=0
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: us.functions.wplus.benefits.hub.validations
+
+      # Verify the Paramount+ Essential Plan with Benefit Option
+      - executeFunction:
+          name: us.functions.wplus.benefits.paramount
+          params:
+            - name: collapsed
+              string: y
+
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

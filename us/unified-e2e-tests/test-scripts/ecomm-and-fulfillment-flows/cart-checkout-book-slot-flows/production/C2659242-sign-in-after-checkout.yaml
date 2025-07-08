@@ -1,0 +1,130 @@
+general:
+  tags: C2659242, unified-prod-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2659242
+  metadata:
+    - name: scenarioId
+      string: EC053 #"137"
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+        #Search Item
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: Bed
+
+      #Click on First Item
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      #Add Item to Cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Navigate to Cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Get the title of item added to cart by guest user
+      - executeFunction:
+          name: unified.us.functions.cart.getItemName
+            
+      #Continue to Checkout and Sign In
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutAndSignIn
+
+
+      # Accoount info
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.prod.flow003a.android.email
+            - name: android.password
+              string: us.data.prod.flow003a.android.password
+            - name: ios.email
+              string: us.data.prod.flow9242.ios.email 
+            - name: ios.password
+              string: us.data.prod.flow9242.ios.password 
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      - executeFunction:
+          name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue
+
+      # Verify Item Details in Revew Order Page
+      - executeFunction:
+          name: unified.us.function.checkout.reviewOrder.verifyItemDetails
+
+      # Verify review order page
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      #back Navigation
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      #Handle Checkout Alert
+      - executeFunction:
+          name: unified.us.functions.checkout.handleCheckoutAlert
+
+      # Verify cart page
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      #Update Report
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # Tear Down and Close
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

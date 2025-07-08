@@ -1,0 +1,142 @@
+general:
+  tags: C2644997, unified-p1-wplus-prod-batch2-e2e, unified-prod-wplus-e2e-2
+  testCaseId: C2644997
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 336, C2644997
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: prodflow155andoriduser_ta@walmart.com # us.data.prod.flow155.android.email temp replacement
+            - name: android.password
+              string: us.data.prod.flow155.android.password
+            - name: ios.email
+              string: us.data.prod.pickuppriority.ios.email1
+            - name: ios.password
+              string: us.data.prod.pickuppriority.ios.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Removing items from cart if any
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      # Removing unavailable items from cart if any
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # Going back to the Home page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      # Searching for an item to add to cart
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: bread
+
+      # Selecting the first item in the search results
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      # Adding the first item to cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart             
+
+      # Navigating to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+      
+      # adding this extra step to ensure execution ends up on delivery tab of bookslot page, this is added as workaround to issue CEPG-304634,
+      # this testcase will be revisted and this step will be removed once issue is fixed, to avoid rest of the testcase from failing due to this issue.
+      - executeFunction:
+          name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: delivery
+
+      # Reserving a delivery/pick up slot or Changing it as per the scenario
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 2
+            - name: wplusUser
+              string: optIn
+
+      # Navigating to the Review Order page
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Review unScheduledPickup order details
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      #Choose the Wplus plan on Review Order page - Not added 
+      - executeFunction:
+          name: unified.us.functions.wplus.reviewOrder.selectWplusTenure
+              
+      # performing After steps
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

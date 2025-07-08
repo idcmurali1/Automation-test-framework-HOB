@@ -1,0 +1,181 @@
+functions: 
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Flow to navigate from checkout to add Credit/Debit Card Page
+  # No params
+  - name: functions.addCreditDebitCardPage.navigateFromCheckoutPaymentMethod
+    flow: 
+      - executeFunction:
+          name: functions.checkoutPage.tapAddPaymentMethodBtn
+      - executeFunction:
+          name: functions.checkoutPage.walletPopup.assertDisplayed.basic
+      - executeFunction:
+          name: functions.checkoutPage.walletPopup.hasPaymentAttached
+      - if:
+          condition: ${walletStatus} != 'noPaymentAttached' && ${paymentType} != 'Klarna'
+          then:
+            - executeFunction:
+                name: functions.walletPage.tapAddPaymentMethod
+      - if:
+          condition: ${paymentType} == 'creditCard' || ${paymentType} == 'debitCard' || ${paymentType} == 'walmartRewardsCard'
+          then:
+            - executeFunction:
+                name: functions.walletPage.tapCredit$DebitCardBtn
+          else:
+            - if:
+                condition: ${paymentType} == 'Gift Card'
+                then:
+                  - executeFunction:
+                      name: functions.walletPage.addPaymentMethod.tapGiftCardButton
+                else:
+                  - if:
+                      condition: ${paymentType} == 'Klarna''
+                      then:
+                        - executeFunction:
+                            name: functions.walletPage.tapKlarnaBtn
+                      else:
+                        - log:
+                            message: Incorrect payment method select. This function supports Credit, Debit, WMC, Gift cards and Klarna.
+                            color: RED_BOLD
+      - log: 
+          message: "End flow: addCreditDebitCardPage.navigateFromCheckoutPaymentMethod"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Fill the form for Credit/Debit Card Information 
+  # Params:      ${cardNumber}           [Mandatory]  The Card Number of the Credit/Debit Card to be added.
+  #              ${cardLast4Digits}      [Mandatory]  The last 4 digits of the Card Number of the Credit/Debit Card to be added.
+  #              ${cardHolderFirstName}  [Mandatory]  The First Name of the Credit/Debit Card to be added.
+  #              ${cardHolderLastName}   [Mandatory]  The Last Name of the Credit/Debit Card to be added.
+  #              ${expirationMonth}      [Mandatory]  The Expiration Month of the Credit/Debit Card to be added. * Provide value in english as per locale 'es-mx'.
+  #              ${expirationYear}       [Mandatory]  The Expiration Year of the Credit/Debit Card to be added.
+  #              ${expirationDate}       [Mandatory]  The Expiration Date of the Credit/Debit Card to be added in string format 0229 means 02/29.
+  #              ${cvv}                  [Mandatory]  The CVV (security code) of the Credit/Debit Card to be added.
+  #              ${phoneNumber}          [Mandatory]  The Phone Number of the Credit/Debit Card to be added.
+  #              ${sameBillingAddress}   [Mandatory]  Whether or not to use the Delivery Address as Billing Address.
+  #              ${defaultCard}          [Mandatory]  Whether ot not to set the new card as default card.
+  #              ${addressField}         [Optional]   The address for Billing Address to be added
+  #              ${exteriorNumber}       [Optional]   Exterior number for Billing Address to be added.
+  #              ${zipcode}              [Optional]   Zipcode for Billing Address to be added.
+  #              ${colonia}              [Optional]   Colonia name for Billing Address to be added.
+  #              ${state}                [Optional]   State name for Billing Address to be added.
+  #              ${city}                 [Optional]   City name for Billing Address to be added.
+  - name: functions.addCreditDebitCardPage.fillCreditDebitCardInformationForm
+    flow:
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterCardNumber # <-- ${cardNumber}
+      - if:
+          condition: ${platform} != 'iOS'
+          then:
+            - executeFunction:
+                name: functions.addCreditDebitCardPage.enterFirstName # <-- ${cardHolderFirstName}
+            - executeFunction:
+                name: functions.addCreditDebitCardPage.enterLastName # <-- ${cardHolderLastName}
+            - executeFunction:
+                name: functions.utils.hideKeyboard
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterExpirationDate # <-- ${expirationDate} || ${expirationMonth}, ${expirationYear}
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterCVV # <-- ${cvv}
+      - if:
+          condition: ${market} == 'CA'
+          then:
+           - executeFunction:
+               name: functions.addCreditDebitCardPage.isPhoneNumberFieldDisplayed
+           - if:
+               condition: ${phoneNumFieldIsDisplayed}
+               then:
+                - executeFunction:
+                    name: functions.addCreditDebitCardPage.enterPhoneNumber # <-- ${phoneNumber}
+                - executeFunction:
+                    name: functions.utils.hideKeyboard
+      - if: 
+          identifier:
+            present:
+              - identifier: walletPage.addCreditOrDebitCard.billingAddress
+          then:
+            - if:
+                condition: ${sameBillingAddress} == true
+                then:
+                  - executeFunction:
+                      name: functions.addCreditDebitCardPage.setBillingAddressToSameAsDeliveryAddress
+                else:
+                  - executeFunction:
+                      name: functions.addCreditDebitCardPage.addBillingAddress
+          else:
+            - executeFunction:
+                name: functions.addCreditDebitCardPage.addBillingAddress
+      - if:
+          condition: "!${defaultCard} && ${market} == 'CA'"
+          then:
+            - executeFunction:
+                name: functions.addCreditDebitCardPage.unsetAsDefaultCard
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.tapSaveCardBtn
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${fromAccount} == true
+          then:
+            - if: # Remove this condition when IDC-2205 gets fixed or when we are able to run ARM builds
+                condition: ${platform} != 'iOS'
+                then:
+                  - executeFunction:
+                      name: functions.walletPage.assertCardListed # <-- ${cardLast4Digits}
+                  - executeFunction:
+                      name: functions.walletPage.tapBackNavigationButton 
+          else:
+            - executeFunction:
+                name: functions.checkoutPage.walletPopup.cardSavedConfirmationMsg.assertDisplayed
+            - executeFunction:
+                name: functions.checkoutPage.walletPopup.assertCardListed # <-- ${cardLast4Digits}
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapContinueButton
+            - executeFunction:
+                name: functions.checkoutPage.paymentMethod.assertCreditOrDebitCardSelected # <-- ${cardLast4Digits}
+      - log:
+          message: "End flow: addCreditDebitCardPage.fillCreditDebitCardInformationForm"
+          color: BLUE
+  
+  #------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions add address while adding credit and debit card form. 
+  # params       ${addressFirstLine}      [Mandatory]  Street address to wallet credit & debit card form.
+  #              ${city}                  [Mandatory]  City for waller credit & debit card form.
+  #              ${state}                 [Mandatory]  State for wallet credit & debit card form.
+  #              ${postalCode}            [Mandatory]  Postal code for wallet credit & debit card form.
+  - name: functions.addCreditDebitCardPage.addBillingAddress
+    flow:
+      - if: 
+          identifier:
+              present:
+                - identifier: walletPage.addAddress.addressField
+          then:
+            - executeFunction:
+                name: functions.addcreditDebitCardPage.scrollDownToZipCode
+          else:
+            - executeFunction:
+                name: functions.walletPage.billingAddress
+            - executeFunction:
+                name: functions.walletPage.tapAddAddressLink
+      - executeFunction:
+          name: functions.walletPage.verifyAddAddressFields
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterAddressField
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterExteriorNumber # <-- ${exteriorNumber}
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterPostal$Zipcode # <-- ${zipcode}
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.coloniaSelector # <-- ${colonia}
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.cityName # <-- ${city}
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.stateName # <-- ${state}
+      - log:
+          message: "End flow: addCreditDebitCardPage.billingAddress"
+          color: BLUE
+
+  #------------------------------------------------------------------------------------------------------------------

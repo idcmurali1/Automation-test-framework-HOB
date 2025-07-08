@@ -1,0 +1,102 @@
+general:
+  platform: ios
+  tags: HP-002, ca-function-run
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: false
+    flow:
+      - log: Execute before steps
+ 
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Verify guest user is prompted to login while navigating to change location link.
+    flow:  
+      - log:
+          message: Verify guest user is prompted to login while navigating to change location link.
+          color: GREEN_BOLD 
+
+      # Navigate onboarding to home
+      - log:
+          message: Onboarding using zip code.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+
+      # Navigate location link
+      - log: 
+          message: Navigating to location link.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.home.naviagteToLocationLink
+
+      # Login us registered user
+      - log:
+          message: Entering user credentials.
+          color: GREEN_BOLD      
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.function001.emailIdIos
+            - name: password
+              string: ca.test.data.function001.passwordIos 
+
+      # Printing available address in select address page
+      - log:
+          message: Printing available address in select address page.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.home.selectAddress.printAddress
+      - executeFunction:
+          name: ca.test.functions.home.closAddressePage
+
+      - executeFunction:
+          name:  ca.test.functions.global.authentication.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.edmontonZipCode
+            - name: storeName
+              string: ca.test.data.edmontonStoreName
+
+      - log:
+          message: Asserting selected store in HP.
+          color: GREEN_BOLD     
+
+      # Selecting address at home page
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: address
+              string: ca.test.data.selectAddressZipCode
+
+      - log:
+          message: Asserting delivery address at HP.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.home.deliveryAddressAssertion
+          params:
+            - name: addressFirstLine
+              string: ca.test.data.deliveryAddressAssertion
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: HP-002-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps             

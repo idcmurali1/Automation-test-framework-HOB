@@ -1,0 +1,155 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: opif*
+    scheduling: concurrent
+
+    triggers:
+      - push: disabled
+      - pr: disabled
+      - manual:
+          name: '>> Default Build <<'
+          call: default
+
+
+      - manual:
+          name: MX-teflon
+          call: build_teflon
+
+      - manual:
+          name: MX-production
+          call: build_prod
+
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - push: disabled
+      - pr: disabled
+      - manual:
+          name: '>> Default Build <<'
+          call: default
+
+
+      - manual:
+          name: MX-teflon
+          call: build_teflon
+
+      - manual:
+          name: MX-production
+          call: build_prod
+
+parameters:
+  - APP_PLATFORM: {type: choice, choices: "android,ios"}
+
+envs:
+  global:
+    variables:
+      SLACK_CHANNEL: merge-hallways-native-apps-report
+      SAUCE_USERNAME: wcp-apps-e2e
+      SAUCE_ACCESS_KEY: ENC[rnmbZWq+9q4Y2NblUl3yKduKKFO9zq86fEbKAl0j4lm4uh5bgYho+//5ZRtDYEqx]
+      POST_TO_SPLUNK: false
+      POST_TO_XRAY: false
+      ELK_HOST: ENC[1daRK3FgaXEjV7OCVK+66P0fcD+RYxs47xG01WmiaDCl0xeJURP612vwYH8/8BZ31h2tnp5FT1B18us0Ag4n6fjGS3DghPw4vafKEr04BII=]
+      TEST_RESULTS_INDEX: testresults_apps_wcp
+      POST_TO_ES: true
+      MARKET: wcp
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/${APP_PLATFORM}/${APP_PLATFORM}-default.yaml
+
+  android_platform_variables:
+    variables:
+      VERSION_NAME: 'version'
+      SAUCE_APP: 'storage:filename=mx-development-latest.apk'
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}\n
+        *Execution Owner*: <@${LOOPER_BUILD_USER_ID}>_\n"
+
+  ios_platform_variables:
+    variables:
+      VERSION_NAME: 'short_version'
+      SAUCE_APP: 'storage:filename=mx-development-latest.zip'
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}\n
+        *Execution Owner*: <@${LOOPER_BUILD_USER_ID}>_\n"
+
+flows:
+  setup:
+    - hygieia.publishBuild()
+    - shell (name Remove node_modules): |
+        rm -frv node_modules
+    - shell (name npm cache clear): |
+        npm cache clear --force
+    - shell (name sleep 10): |
+        sleep 10
+    - shell (name npm install): |
+        npm install
+    - shell (name npm install node fetch): |
+        npm install node-fetch
+    - if: |
+        %{USE_CUSTOM_R2_JAR == 'false'}
+      then:
+        - shell (name download r2 binary): |
+            npm run download-r2
+      else:
+        - shell: echo Using custom R2 jar
+    - shell (name npm run r2-verifier): |
+        java -jar r2-binary/r2.jar -a ${R2_VERIFIER_PATH} -d r2-verifier-dependencies.yaml -v
+    - shell (name npm run lint): |
+        npm run lint
+
+  # Getting app version from saucelabs using api
+  get_build_app_version:
+    try:
+      - var(STORAGE_NAME):
+          - shell (name STORAGE_NAME): echo ${SAUCE_APP} | cut -f2 -d'='
+      - var(BUILD_APP_VERSION):
+          - shell (name BUILD_APP_VERSION): |
+              curl -s -u "$SAUCE_USERNAME:$SAUCE_ACCESS_KEY" "https://api.us-west-1.saucelabs.com/v1/storage/files?per_page=1&name=${STORAGE_NAME}" | grep -o "\"${VERSION_NAME}\": \"[^\"]*\"" | cut -f4 -d'"' | cut -f1 -d"-"
+      - echo "${BUILD_APP_VERSION}"
+    catch:
+      - echo "Unable to get build appVersion - $flowErrorMessage"
+
+  # Assigning to variable and printing on report
+  get_app_version:
+    - call: get_build_app_version
+    - var(APP_VERSION):
+        - shell  (name Get App Version): echo ${BUILD_APP_VERSION}
+  
+  build_teflon:
+    # setting specific variables depending on env
+    - var(GLASS_ENV):
+        - shell  (name Set GLASS_ENV): echo teflon
+    - var(TEST_TAGS):
+        - shell  (name Set TEST_TAGS): echo 'p1-mh-opif-teflon-d-feb'
+    - var(MAPPING_LABELS):
+        - shell  (name Set MAPPING_LABELS): echo mx_ea_${APP_PLATFORM}_teflon_merge_hallways
+    - var(DEPENDENCY_PROFILE):
+        - shell  (name Set DEPENDENCY_PROFILE): echo 'looper-mx-teflon-opif'
+    # trigger job
+    - call: build(${APP_PLATFORM}_platform_variables)
+  
+  build_prod:
+    # setting specific variables depending on env
+    - var(GLASS_ENV):
+        - shell  (name Set GLASS_ENV): echo prod
+    - var(TEST_TAGS):
+        - shell  (name Set TEST_TAGS): echo 'p1-mh-opif-prod'
+    - var(MAPPING_LABELS):
+        - shell  (name Set MAPPING_LABELS): echo mx_ea_${APP_PLATFORM}_prod_merge_hallways
+    - var(DEPENDENCY_PROFILE):
+        - shell  (name Set DEPENDENCY_PROFILE): echo 'looper-mx-prod-opif'
+    # trigger job
+    - call: build(${APP_PLATFORM}_platform_variables)

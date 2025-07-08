@@ -1,0 +1,73 @@
+inherit: 'job:///MP-Test'
+
+branches:
+  - spec: mp_test_looper
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: mp_android_daily
+          call: mp_tests
+
+      - cron:
+          spec: 5 0-2/1 * * 1-5
+          call: mp_tests
+
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      APP_PLATFORM: android
+      SLACK_CHANNEL: marketplace-apps-parallel-run
+      POST_TO_ES: true
+      POST_TO_ANIVIA: true
+      # TESTRAIL_PLAN_ID: 596894
+      APPLITOOLS_API_KEY: ENC[Rt+/oXg4fNf9b2Pq2MQ47frfGB42KVDp7l7/tQ/1na985VV7Ia42QMgDDOppIoaDTWfXJmsQW0Imo7rpXjXaQQ==]
+
+  # Environment profiles can be specified here with specific environment variable values.
+  env_android_teflon:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/functional-tests/dependencies/android/android-default.yaml
+      GLASS_ENV: teflon
+      MAPPING_LABELS: teflon
+      R2_THREADS: 10
+      SAUCE_APP: 'storage:filename=glass.apk'
+      APP_BUILD_BRANCH: 'development-latest'
+      DEPENDENCY_PROFILE: 'looper'
+      TEST_ENV: Teflon
+      PLATFORM: android
+      PRIORITY: p1
+      TEAM: Marketplace
+
+flows:
+  mp_tests:
+    - call: build_carta(env_android_teflon)
+
+  build_carta:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: setup
+          - call: get_app_version
+          - call: get_repository_build
+          - call: return_sauce_app_location
+          - call: get_build_app_version
+          - call: execute_test
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          - call: get_test_failures
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          - call: slack_test_run_helper
+          - call: generate_email_template
+          - call: post_email
+          - call: post_to_anivia

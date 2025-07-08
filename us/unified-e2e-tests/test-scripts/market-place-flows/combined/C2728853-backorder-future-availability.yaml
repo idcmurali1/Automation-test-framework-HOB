@@ -1,0 +1,239 @@
+general:
+  tags: unified-prod-e2e, C2728853, unified-mp-e2e, unified-p0-ecomm-teflon-e2e, unified-prod-e2e-mp, unified-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2728853
+  metadata:
+    - name: scenarioId
+      string: MP008
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+       # Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+  
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+
+      - log: Start Main
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+          - getTimestamp:
+              asDate: false
+              storeIn: timestamp
+
+          - storeIn:
+              key: customerEmail
+              value: wmtuser${timestamp}@walmart.com
+                
+          - storeIn:
+              key: password
+              value: E2epassword$ 
+          
+          # Create Accountusing astro api
+          - executeFunction:
+              name: unified.us.functions.utils.astro.createAccount
+              params:
+                - name: email
+                  string: $customerEmail
+                - name: payload
+                  string: us.data.flow030.createAccountPayload
+     
+     # Storing user info in email and password params
+      - if:
+          condition: ${env} == 'production'
+          then:
+          - executeFunction:
+              name: unified.us.functions.authentication.signInInfo
+              params:
+                - name: android.email
+                  string: us.data.prod.flow016.android.email
+                - name: android.password
+                  string: us.data.android.prod.password.flow016
+                - name: ios.email
+                  string: us.data.prod.flow016.android.email
+                - name: ios.password
+                  string: us.data.android.prod.password.flow016
+      
+       # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Signing in with user account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHomeDeeplink
+      
+      # Set store
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+              - name: storeOnly 
+                string: true
+
+      - if: 
+          condition: ${env} == 'production'
+          then: 
+          # Navigate to cart and clear cart items
+          - executeFunction:
+              name: unified.us.functions.global.navigation.toCartFromNavBar
+
+          - executeFunction:
+              name: unified.us.functions.cart.removeAllCartItems
+
+          - executeFunction:
+              name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+          - executeFunction:
+              name: unified.us.functions.global.navigation.backNavigation
+      
+          # Search for 3P backorder item in prod
+          - executeFunction:
+              name: unified.us.functions.search.backOrderItem
+              params:
+                - name: backOrderItem
+                  string: 3PbackOrderItemArray
+      
+          - executeFunction:
+              name: unified.us.functions.searchResults.verifyBackorderBadgePresent
+
+          - executeFunction:
+              name: unified.us.functions.search.clickOnFirstItem
+          
+           # Validate backorder badges on PDP, Cart and Revieworder
+          - executeFunction:
+              name: unified.us.function.marketPlace.backOrder.badgeValidations
+    
+          - log: Verified 3P backOrder badges successfully in all the pages on ${env}! 
+
+      # Navigae to item page - 3P item in teflon
+      - if: 
+          condition: ${env} == 'teflon'
+          then: 
+          - executeFunction:
+              name: unified.us.functions.global.navigation.goToDeepLink
+              params:
+                - name: deepLinkUrl
+                  string: walmart://item/5026912587
+          
+
+          # Validate backorder badge on item page
+          - executeFunction:
+              name: unified.us.functions.item.verifyBackOrderTagIsSeenInItemDetailsPage
+
+          - executeFunction:
+              name: unified.us.functions.item.addItemToCart
+
+          - log: Verified 3P backOrder badge successfully on ${env}! 
+
+        # Deeplink to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHomeDeeplink
+
+      # Search for 1P backorder item in Prod
+      - if: 
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.search.backOrderItem
+                params:
+                  - name: backOrderItem
+                    string: 1PbackOrderItemArray
+            
+            - executeFunction:
+                name: unified.us.functions.searchResults.verifyBackorderBadgePresent
+
+            - executeFunction:
+                name: unified.us.functions.search.clickOnFirstItem
+
+            # Validate backorder badges on PDP, Cart and Revieworder
+            - executeFunction:
+                name: unified.us.function.marketPlace.backOrder.badgeValidations
+          
+            - log: Verified 1P backOrder badges successfully in all the pages on ${env}!
+
+
+       # Navigate to item page - 1P item
+      - if: 
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://item/5026868694
+
+            # Validate backorder badge on item page
+            - executeFunction:
+                name: unified.us.functions.item.verifyBackOrderTagIsSeenInItemDetailsPage
+            
+            - executeFunction:
+                name: unified.us.functions.item.addItemToCart
+          
+            - log: Verified 1P backOrder badge successfully on ${env}!
+
+            - executeFunction:
+                name: unified.us.functions.global.navigation.toCartFromNavBar
+
+            - executeFunction:
+                name: unified.us.functions.cart.continueToCheckout
+
+            # Place order with 3P and 1P backorder item in teflon
+            - executeFunction:
+                name: unified.us.functions.checkout.confirmCvvAndPlaceOrder
+            
+          # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'R2_SUBFLOW_POST_TRANSACTION'
+          # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+            - executeFunction:
+                name: unified.us.functions.orderConfirmation.ratings
+            
+            - log: Placed Order with 3P and 1P backorder items!
+
+            - executeFunction:
+                name: unified.us.functions.orderConfirmation.getOrderNumber
+            
+            - log: ${orderNo}
+
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+            
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

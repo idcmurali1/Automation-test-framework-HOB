@@ -1,0 +1,320 @@
+configuration:
+  runtime: "concord-v2"
+  processTimeout: "PT4H"
+  dependencies:
+    - "mvn://com.walmartlabs.concord.plugins:looper-task:latest"
+  arguments:
+    username: svcstoreautomation
+    baseUrl: "https://looperpro-cigateway.prod.walmart.com"
+    apiToken: ${crypto.decryptString("azMuXp9DZxrEcxM3Ru77pPcRLqRcCpkaMcdQgR/a4wkahJa1saKXKNaYsqNzPsMY")}
+    sauceApp: "storage:filename=glass-development-latest.apk"
+    dependencyProfile: looper-prod
+    postToSplunk: "false"
+    appBuildBranch: development-latest
+  meta:
+    testTags: ""
+    appBuildBranch: ""
+    dependencyProfile: ""
+
+flows:
+  runTests:
+    - task: looper
+      in:
+        username: ${username}
+        baseUrl: ${baseUrl}
+        apiToken: ${apiToken}
+        jobName: glass-automation/us/e2e-tests/looperpro/android-prod
+        call: ${looperFlow}
+        suspend: true
+        sync: true
+        parameters:
+          TEST_TAGS: ${testTags}
+          SAUCE_APP: ${sauceApp}
+          DEPENDENCY_PROFILE: ${dependencyProfile}
+          POST_TO_SPLUNK: ${postToSplunk}
+          APP_BUILD_BRANCH: ${appBuildBranch}
+
+  onPr:
+    - checkpoint: " CI build for PR flow "
+    - log: " branch :::   ${event.branch}"
+    - log: ${event.payload}
+    - set:
+        prBranch: ${event.payload.pull_request.head.ref}
+        sha: ${event.payload.pull_request.head.sha}
+        baseBranch: ${event.payload.pull_request.base.ref}
+        prNumber: ${event.payload.pull_request.number}
+    - log: "Pr branch: ${prBranch}, base branch: ${baseBranch}, Concord process: ${txId}"
+    - task: looper
+      in:
+        username: ${username}
+        baseUrl: ${baseUrl}
+        apiToken: ${apiToken}
+        jobName: glass-automation/us/e2e-tests/looperpro/android-prod
+        commitHash: ${sha}
+        processId: ${txId}
+        processType: "concord"
+        prNumber: ${prNumber}
+        suspend: true
+        call: pr
+      out: looperJob
+    - log: "looperJob Details :: ${looperJob.status}, url: ${looperJob.url} Log: ${looperJob.log} ${looperJob.message} ${looperJob.scmEventsLog}"
+
+triggers:
+
+  ## development ##
+
+  # example test for PR review
+  - manual:
+      name: "Development - Run Example Test"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests
+        testTags: example-test
+
+  - cron:
+      spec: "20 11 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests
+        testTags: example-test
+
+  # Run Unified E2E flows on Prod on development build
+  - manual:
+      name: "Development - Run Unified Android Prod Regression flows - All"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows
+        testTags: unified-prod-e2e
+        dependencyProfile: looper-prod
+
+  - cron:
+      spec: "0 11,17,23 * * 3-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows
+        testTags: unified-prod-e2e
+        dependencyProfile: looper-prod
+
+  - manual:
+      name: "Development - Run Unified Android Prod Regression flows - Exp and Evergreen"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_1_flows
+        testTags: unified-prod-e2e-1
+        dependencyProfile: looper-prod
+
+  - cron:
+      spec: "30 13,16 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_1_flows
+        testTags: unified-prod-e2e-1
+        dependencyProfile: looper-prod
+
+  - manual:
+      name:  "Development - Run Android Prod Spanish flows - All"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_spanish_prod_regression_flows
+        testTags: p1-spanish-prod-e2e
+        dependencyProfile: looper-prod-spanish
+
+  - cron:
+      spec: "0 14 * * 1,3-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_spanish_prod_regression_flows
+        testTags: p1-spanish-prod-e2e
+        dependencyProfile: looper-prod-spanish
+
+  # Run Unified Walmart plus E2E flows batch 1 on Prod on development build sequentially
+  - manual:
+      name: "Development - Run Unified Android Prod Wplus Tests Sequential Batch 1"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests
+        testTags: unified-prod-wplus-e2e
+        dependencyProfile: looper-prod-wplus
+
+  - cron:
+      spec: "0 10 * * 1-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests
+        testTags: unified-prod-wplus-e2e
+        dependencyProfile: looper-prod-wplus
+
+  # Run Unified Walmart plus E2E flows on Prod on development build parallel
+  - manual:
+      name: "Development - Run Unified Android Prod Wplus Tests Parallel"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests
+        testTags: unified-prod-wplus-e2e-2
+        dependencyProfile: looper-prod-wplus-parallel
+
+  - cron:
+      spec: "0 14 * * 1-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests
+        testTags: unified-prod-wplus-e2e-2
+        dependencyProfile: looper-prod-wplus-parallel
+
+  # Run Quantum Metric Session flows on Prod on development build
+  - manual:
+      name: "Development - Run Android Prod Regression flows - Quantum Metric Session"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows_quantum
+        testTags: qmprod
+        dependencyProfile: looper-prod
+
+  - cron:
+      spec: "0 8 * * 1-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows_quantum
+        testTags: qmprod
+        dependencyProfile: looper-prod
+
+  # Run OTT flows on Prod on development build
+  - manual:
+      name: "Development - Run Android Prod Regression flows - OTT Session"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows_ott
+        testTags: prod-e2e
+        dependencyProfile: looper-prod-ott
+
+  - cron:
+      spec: "0 2 * * 2"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows_ott
+        testTags: prod-e2e
+        dependencyProfile: looper-prod-ott
+
+  ## release ##
+  - manual:
+      name: "Release - Run Example Test"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests
+        testTags: example-test
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  # Run unified flows on Prod on Release branch build
+  - manual:
+      name: "Release - Run Unified Android Prod Regression flows - All"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows
+        testTags: unified-prod-e2e
+        dependencyProfile: looper-prod-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  - cron:
+      spec: "00 14 * * 1,3-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows
+        testTags: unified-prod-e2e
+        dependencyProfile: looper-prod-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  - manual:
+      name: "Release - Run [unified-prod-e2e-1] Android E2E Golden Flows - Ecomm Exp and Evergreen"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_1_flows
+        testTags: unified-prod-e2e-1
+        dependencyProfile: looper-prod-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  - cron:
+      spec: "30 18 * * 1,3,4"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_1_flows
+        testTags: unified-prod-e2e-1
+        dependencyProfile: looper-prod-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  # Run Unified Walmart plus E2E flows batch 1 on Prod on Release branch build sequentially
+  - manual:
+      name: "Release - Run [unified-prod-wplus-e2e] Android Prod Wplus Tests Sequential Batch 1"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests_release
+        testTags: unified-prod-wplus-e2e
+        dependencyProfile: looper-prod-wplus-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  - cron:
+      spec: "00 12 * * 1,3-7"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests_release
+        testTags: unified-prod-wplus-e2e
+        dependencyProfile: looper-prod-wplus-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  # Run Unified Walmart plus E2E flows on Prod on Release branch build parallel
+  - manual:
+      name: "Release - Run [unified-prod-wplus-e2e-2] Android Prod Wplus Tests Parallel"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests_release
+        testTags: unified-prod-wplus-e2e-2
+        dependencyProfile: looper-prod-wplus-release-parallel
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  - cron:
+      spec: "30 12 * * 1,3"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_android_prod_wplus_tests_release
+        testTags: unified-prod-wplus-e2e-2
+        dependencyProfile:  looper-prod-wplus-release-parallel
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  # Run Marketplace flows on Prod on Release branch build
+  - manual:
+      name: "Release - Run Prod Android Marketplace Flows"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_prod_regression_flows
+        testTags: unified-prod-e2e-mp
+        dependencyProfile: looper-prod-release
+        sauceApp: "storage:filename=glass-release-latest.apk"
+        appBuildBranch: release-latest
+
+  # pr
+  - github:
+      version: 2
+      entryPoint: "onPr"
+      conditions:
+        type: "pull_request"
+        status: "(opened|synchronize)"

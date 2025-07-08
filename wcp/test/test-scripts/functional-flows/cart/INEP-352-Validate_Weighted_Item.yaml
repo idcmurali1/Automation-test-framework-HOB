@@ -1,0 +1,159 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-352
+#       Flow - MH: Validate Weighted Item
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179333
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-352
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-343
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-352
+  tags: INEP-352, OPIF-179333, p1-mh-opif-teflon-d-feb, INEP-343, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   M A I N   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Cart Item Info - Validate weighted item in the cart"
+    flow:
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded   
+
+      # Add a weighted item to cart.
+      - log:
+          message: "Add a weighted item to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.weighted
+      - executeFunction:
+          name: functions.searchResultPage.getProductName # --> Returns: ${productName}
+      - executeFunction:
+          name: functions.searchResultPage.getProductPrice # --> Returns: ${productPrice}
+          params:
+            - name: productName
+              string: ${productName}
+
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart"
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon   
+
+      # Validating "parts and grams" button are displayed.
+      - log:
+          message: "Validating 'parts and grams' button are displayed"
+          color: PURPLE_BOLD_BRIGHT 
+      - executeFunction:
+          name: functions.cartPage.assertUnitOfMeasureDisplayed
+
+      # Validating price is same when either parts or grams is selected.
+      - log:
+          message: "Validating price is same when either parts or grams is selected"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.switchProductToPieces
+          params:
+            - name: productName
+              string: ${productName}
+      - executeFunction:
+          name: functions.cartPage.validateProductPrice
+          params:
+            - name: productName
+              string: ${productName}
+            - name: productPrice
+              string: ${productPrice}
+      - executeFunction:
+          name: functions.cartPage.switchProductToWeight
+          params:
+            - name: productName
+              string: ${productName}
+      - executeFunction:
+          name: functions.cartPage.validateProductPrice
+          params:
+            - name: productName
+              string: ${productName}
+            - name: productPrice
+              string: ${productPrice}
+
+      # Validating the value in quantity stepper when grams is selected.
+      - log:
+          message: "Validating the value in quantity stepper when grams is selected"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateQuantityLabelDisplayed
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+      - log: 'INEP-352: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'AFTER SCENARIO START'
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+      - log: 'AFTER SCENARIO END'
+      

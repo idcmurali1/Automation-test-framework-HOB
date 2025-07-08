@@ -1,0 +1,278 @@
+functions:
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This method enters user's password.
+  # Param:        ${userPassword} [Mandatory] Password for registered user.
+  #               ${userEmail}    [Mandatory] Email for registered user.
+
+  - name: ca.test.functions.login.userLogin
+    flow:
+      - executeFunction:
+          name: ca.test.functions.login.isSignInPageDisplayed
+      - if:
+          condition: ${returnedIsDisplayed} == true
+          then:
+            - log:
+                message: "Sign In page displayed"
+                color: CYAN
+            - executeFunction:
+                name: ca.test.functions.login.vaidateSignInPage
+            - executeFunction:
+                name: ca.test.functions.login.enterEmail
+            - executeFunction:
+                name: ca.test.functions.login.enterPassword
+            - executeFunction:
+                name: ca.test.functions.login.tapLogin
+            - log:
+                message: "End flow: signIn.loginFromPopup"
+                color: BLUE
+
+#------------------------------------------------------------------------------------------------------------------------
+
+  # Description: This Functions is used Create New Account from both Home Page and Account Page
+  # If User want to validate Invalid Password condition then give ${pwdSuggestion} == true & ${pwdCondition} in Test Script.
+  # Param   ${firstName}                  [Mandatory] >> Used to enter First Name 
+  #         ${lastName}                   [Mandatory] >> Used to enter Last Name
+  #         ${email}                      [Mandatory] >> Used to enter Email
+  #         ${password}                   [Mandatory] >> Used to enter Password
+  #         ${pwdCondition}               [Optional] >> Used to enter Password after Password suggestion
+  #         ${pwdSuggestion}              [Optional] >> Used to Validate Invalid Password Condition
+  #         ${createAccountFromHomePage}  [Optional] >> Mark As True
+  # @Author - pratik.shete [vn55ofc]
+  # @Last Update - 
+
+  - name: ca.test.functions.loginPage.createAccountPage.createNewAccount
+    flow:
+      - if:
+          condition: ${firstName} == "null"
+          then:
+            - storeIn:
+                key: firstName
+                value: "Walmart"
+      - if:
+          condition: ${lastName} == "null"
+          then:
+            - storeIn:
+                key: lastName
+                value: "Glass"
+      - if:
+          condition: ${email} == "null"
+          then:
+            - getTimestamp:
+                asDate: false
+                storeIn: timestamp
+            - storeIn:
+                key: email
+                value: "automationTesting_${timestamp}@icloud.com"
+      - if:
+          condition: ${password} == "null"
+          then:
+            - storeIn:
+                key: password
+                value: "Astro123$"
+      - try:
+          flow:
+            - if:
+                condition: ${createAccountFromHomePage}
+                then:
+                  - executeFunction:
+                      name: ca.test.functions.login.isSignInPageDisplayed
+                  - if: 
+                      condition: "!${returnedIsDisplayed}"
+                      then:
+                        - failTest:
+                            message: "End Functions: login.isSignInPageDisplayed (Not Displayed)"
+                      else:
+                        - log:
+                            message: "Sign In Page Displayed!"
+                            color: GREEN_BOLD
+            - executeFunction:
+                name: ca.test.functions.signInPage.tapCreateAccountLink
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.isPageDisplayed
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.validateErrorMsgNotDisplayed
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.validateCreateAccountPage
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.tapCreateAccountBtn
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.validateErrorMsgDisplayedForEmptyField
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.enterFirstName
+                params:
+                  - name: firstName
+                    string: ${firstName}
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.enterLastName
+                params:
+                  - name: lastName
+                    string: ${lastName}
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.enterEmail
+                params:
+                  - name: email
+                    string: ${email}
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.enterPassword
+                params:
+                  - name: password
+                    string: ${password}
+            - executeFunction:
+                name: ca.test.functions.signInPage.createAccountPage.tapCreateAccountBtn
+            - if:
+                condition: ${pwdSuggestion} == true
+                then:
+                  - executeFunction:
+                      name: ca.test.functions.loginPage.createAccountPage.validatePasswordConditions
+                  - executeFunction:
+                      name: ca.test.functions.signInPage.createAccountPage.pwdConditions.enterPassword
+                      params:
+                        - name: pwdCondition
+                          string: ${pwdCondition}
+                  - executeFunction:
+                      name: ca.test.functions.signInPage.createAccountPage.tapCreateAccountBtn
+                  - log:
+                      message: "End Functions: loginPage.createAccountPage.validatePasswordConditions (Displayed)"
+                      color: GREEN_BOLD
+                else:
+                  - log:
+                      message: "End Functions: loginPage.createAccountPage.validatePasswordConditions (Not Displayed)"
+                      color: GREEN_BOLD
+          catch:
+            flow:
+              - executeFunction:
+                  name: ca.test.functions.loginPage.isSignInOrCreateAccountPageDisplayed
+              - if:
+                  condition: "!${returnedIsDisplayed}"
+                  then:
+                    - failTest:
+                        message: "End Function: loginPage.isSignInOrCreateAccountPageDisplayed (Not Displayed)"
+                  else:
+                    - log:
+                        message: "SignIn Or Create Account Page Displayed"
+                        color: GREEN_BOLD
+              - executeFunction:
+                  name: ca.test.functions.loginPage.emailPage.isPageDisplayed
+              - executeFunction:
+                  name: ca.test.functions.loginPage.emailPage.enterEmail
+                  params:
+                    - name: email
+                      string: ${email}
+              - executeFunction:
+                  name: ca.test.functions.loginPage.emailPage.tapContinueBtn
+              - executeFunction:
+                  name: ca.test.functions.signInPage.createAccountPage.isPageDisplayed
+              - if:
+                  condition: "!${isReturnedDisplayed}"
+                  then:
+                    - failTest:
+                        message: "End Function: signInPage.createAccountPage.isPageDisplayed (Not Displayed)"
+                  else:
+                    - log:
+                        message: "Create Account Page Displayed"
+                        color: GREEN_BOLD
+              - executeFunction:
+                  name: ca.test.functions.signInPage.createAccountPage.enterFirstName
+                  params:
+                    - name: firstName
+                      string: ${firstName}
+              - executeFunction:
+                  name: ca.test.functions.signInPage.createAccountPage.enterLastName
+                  params:
+                    - name: lastName
+                      string: ${lastName}
+              - executeFunction:
+                  name: ca.test.functions.signInPage.createAccountPage.enterPassword
+                  params:
+                    - name: password
+                      string: ${password}
+              - executeFunction:
+                  name: ca.test.functions.signInPage.createAccountPage.tapCreateAccountBtn
+              - executeFunction:
+                  name: ca.test.function.escape-route.icloudPopup
+              - executeFunction:
+                 name: ca.test.function.escape-route.closeAddPhoneNumberPopup
+      - log:
+          message: "End Functions: loginPage.createAccountPage.createNewAccount"
+          color: GREEN_BOLD
+
+#-----------------------------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function is used to Login
+  # Param  ${email}                  [Mandatory] >> Used to Enter Email
+  #        ${password}               [Mandatory] >> Used to Enter Password
+  #        ${emailPageValidation}    [Optional]  >> Used to Validate Email Page
+  #        ${passwordPageValidation} [Optional]  >> Used to Validate Password Page
+  #        ${signInBtnAccountPage}   [Optional]  >> Used to tap on Sign in btn from Account Page
+  # @Author: pratik.shete [vn55ofc]
+  # @LastUpdate:
+ 
+  - name: ca.test.functions.loginPage.userLogin
+    flow:
+      - if:
+          condition: ${email} == "null"
+          then:
+            - getTimestamp:
+                asDate: false
+                storeIn: timestamp
+            - storeIn:
+                key: email
+                value: "automationTesting_${timestamp}@icloud.com"
+      - if:
+          condition: ${password} == "null"
+          then:
+            - storeIn:
+                key: password
+                value: "Astro123$"
+      - if:
+          condition: ${signInBtnAccountPage}
+          then:
+            - executeFunction:
+                name: ca.test.functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: ca.test.functions.loginPage.emailPage.isPageDisplayed
+      - if:
+          condition: '!${returnedIsDisplayed}'
+          then:
+            - failTest:
+                message: "End Function: loginPage.emailPage.isPageDisplayed"
+      - if:
+          condition: ${emailPageValidation}
+          then:
+            - executeFunction:
+                name: ca.test.functions.loginPage.emailPage.validateEmailPage
+      - executeFunction:
+          name: ca.test.functions.loginPage.emailPage.enterEmail
+          params:
+            - name: email
+              string: ${email}
+      - executeFunction:
+          name: ca.test.functions.loginPage.emailPage.tapContinueBtn
+      - if:
+          condition: ${passwordPageValidation}
+          then:
+            - executeFunction:
+                name: ca.test.functions.loginPage.passwordPage.validatePasswordPage
+      - executeFunction:
+          name: ca.test.functions.loginPage.passwordPage.enterPassword
+          params:
+            - name: password
+              string: ${password}
+      - executeFunction:
+          name: ca.test.functions.loginPage.passwordPage.tapSignInBtn
+      - executeFunction:
+         name: ca.test.function.escape-route.icloudPopup    
+      - executeFunction:
+         name: ca.test.functions.escape-route.addressSelector.popUp
+         params:
+          - name: userNameInAddress
+            string: ca.test.data.userName
+      - executeFunction:
+         name: ca.test.functions.utils.handlePopUpsAfterLogin
+      - log:
+          message: "End Function: loginPage.userLogin"
+          color: GREEN_BOLD
+
+#--------------------------------------------------------------------------------------------------------------------------------------------

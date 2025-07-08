@@ -1,0 +1,714 @@
+#======================================================================================================================
+#  AUTHOR: Gustavo Antonio López Cambambia (vn53g21)
+#  CREATED: Jul/17/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-sanity-production-android-020, qaa-od-sanity-production-android
+  debug: true
+  testCaseId: MXMOB-1353
+
+scenarios:
+
+  #####################################################################################################################
+  #
+  # TEST CASE DESCRIPTION:
+  #
+  #   Main Objectives:
+  #     - Reorder from List page adding random multiple products to cart.
+  #     - Place an Order to be delivered to Home.
+  #     - Pay Order at Delivery.
+  #
+  # Flags Used:
+  #   N/A
+  #
+  #####################################################################################################################
+
+  - name: Main
+    flow:
+      - log: "TEST START: QAA - OD - PRODUCTION SANITY - OD-020"
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## STEP 1-2: Navigate through Onboarding and select OD Banner... 
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1-2: Navigate through Onboarding and select OD Banner..."
+            - name: squadNames
+              string: CORE | QAA
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: banner
+              string: mx.data.qaa.sanity.od020.banner
+            - name: zipCode
+              string: mx.data.qaa.sanity.od020.zipCode
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## STEP 3: Login from Profile...
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3: Login from Profile..."
+            - name: squadNames
+              string: CUSTOMER | QAA
+      
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.sanity.od020.user.email
+            - name: userPassword
+              string: mx.data.qaa.sanity.od020.user.password
+            - name: userName
+              string: mx.data.qaa.sanity.od020.user.name
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 4-5: Go to my items - Go to Reorder List"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4-5: Go to my items - Go to Reorder List"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.products-and-lists.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.reorder.getAllProductsQuantity
+      
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 6: Add multiple Products to Cart"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 6: Add multiple Products to Cart"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - storeIn:
+          key: OD_020_IS_CART_EMPTY
+          value: false
+
+      - executeFunction:
+          name: mx.functions.reorder.addFirstThreeProductsToCart
+ 
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 7: Open Cart"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 7: Open Cart"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${returnedProductName1}
+
+      - executeFunction:
+          name: mx.functions.cart.assertProductSubtotal
+          params:
+            - name: productName
+              string: ${returnedProductName1}
+            - name: expectedSubtotal
+              string: ${returnedProductPrice1}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${returnedProductName2}
+
+      - executeFunction:
+          name: mx.functions.cart.assertProductSubtotal
+          params:
+            - name: productName
+              string: ${returnedProductName2}
+            - name: expectedSubtotal
+              string: ${returnedProductPrice2}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${returnedProductName3}
+
+      - executeFunction:
+          name: mx.functions.cart.assertProductSubtotal
+          params:
+            - name: productName
+              string: ${returnedProductName3}
+            - name: expectedSubtotal
+              string: ${returnedProductPrice3}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertProductsCountInSubtotalLabel
+          params:
+            - name: expectedProductsCount
+              string: mx.data.qaa.sanity.od020.totalProductsNumber
+
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.cart.reserveSlotButton
+
+      - arithmetic:
+          expression: ${returnedProductPrice1} + ${returnedProductPrice2} + ${returnedProductPrice3}
+          storeIn: expectedEstimatedTotal
+
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromBottom
+          params:
+            - name: expectedEstimatedTotal
+              string: ${expectedEstimatedTotal}
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 8: Hit 'Reservar un horario'"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 8: Hit 'Reservar un horario'"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 9: SELECT 'PICKUP' AND SELECT TIME SLOT FROM THE LATEST DAY DISPLAYED"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: SELECT 'PICKUP' AND SELECT TIME SLOT FROM THE LATEST DAY DISPLAYED"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      
+      - sleep:
+          duration: 2000
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapChange
+
+      - sleep:
+          duration: 2000
+
+      - executeFunction:
+          name: mx.functions.store-selector-popup.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.store-selector-popup.selectFirstODStore
+
+      - storeIn:
+          key: returnedAddress
+          value: ${returnedStoreAddress}
+
+      - executeFunction:
+          name: mx.functions.store-selector-popup.tapSave
+
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedStore
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectLastAvailableDateSlot
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectLastAvailableTimeSlot  
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedDaySlot
+        
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlot
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedAddress
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapReserve
+
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+      - getString:
+          identifier: mx.mappings.cart.userShortAddress
+          storeIn: storeNameSelected
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'Cart'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+
+      - executeFunction:
+          name: mx.functions.cart.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+
+      - executeFunction:
+          name: mx.functions.cart.assertDeliveryMethod
+          params:
+            - name: deliveryMethod
+              string: "PickupDelivery"
+
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.cart.subtotalLabel
+          position: center
+          scrollLimit: 8
+
+      - if: 
+          identifier:
+            present:
+              - identifier: mx.mappings.cart.subtotalDiscountAmount
+          then:
+              - executeFunction:
+                  name: mx.functions.cart.getTotalDiscount
+              - arithmetic:
+                  expression: ${returnedCartDiscount} * -1
+                  storeIn: returnedCartDiscount
+              - arithmetic:
+                  expression: ${returnedPositiveCartDiscount} + ${subtotal}
+                  storeIn: orderDetailsSubtotal
+              - storeIn:
+                  key: isThereDiscountAmount
+                  value: "true"
+          else:
+              - storeIn:
+                  key: isThereDiscountAmount
+                  value: "false"
+              - storeIn:
+                  key: returnedCartDiscount
+                  value: "null"
+              - storeIn:
+                  key: orderDetailsSubtotal
+                  value: ${subtotal}
+          
+      ##----------------------------------------------------------------------------------------------------------------
+      ## "STEP 10: Continue Checkout"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: Continue Checkout"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+
+      - if:
+          identifier:
+              present:
+                - identifier: mx.mappings.utils.something-went-wrong-popup.popupTitle
+          then:
+            - executeFunction:
+                name: mx.functions.utils.something-went-wrong-popup.tapRetryIfPopupDisplayed
+
+      - executeFunction:
+          name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.od-020.deliveryMethod
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+
+      - executeFunction:
+          name: mx.functions.review-order.tapAddDeliveryInstructions
+
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.enterTestOrderDisclaimer
+
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.tapSave
+
+      - scroll:
+          direction: down
+          scrollLimit: 3
+          
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 11: GO TO PAYMENT METHODS AND SELECT SELECT PAY AT DELIVERY"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11: GO TO PAYMENT METHODS AND SELECT SELECT PAY AT DELIVERY"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToWallet
+
+      - executeFunction:
+          name: mx.flows.od.review-order.forceSelectPayAtDeliveryMethod
+          params:
+            - name: payAtDeliveryOption
+              string: mx.data.e2e-regression.od-020.review-order.payAtDeliveryMethod
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: mx.data.e2e-regression.od-020.review-order.telephoneNumberSection
+
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.od-020.review-order.phoneNumber
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: Total
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 12: PLACE ORDER"
+      - executeFunction: 
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12: PLACE ORDER"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+
+      - storeIn:
+          key: OD_020_IS_CART_EMPTY
+          value: true
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliverySlot
+          params:
+            - name: expectedDeliverySlot
+              string: ${returnedDeliverySlot}
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: PickupDelivery
+
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: mx.functions.order-confirmation.assertStoreAddressName
+                params:
+                  - name: expectedStoreAddressName
+                    string: ${storeNameSelected}
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 13: Hit 'Descubrir mas productos' button"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 13: Hit 'Descubrir mas productos' button"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+
+      - executeFunction:
+          name: mx.functions.customized-buy-experience-popup.isPopupDisplayed
+
+      - executeFunction:
+          name: mx.functions.customized-buy-experience-popup.dismissPopupIfDisplayed 
+
+      - executeFunction:
+          name: mx.functions.home.scrollUpToLocationBanner
+
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 14: Go to Profile screen and select 'Pedidos'"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 14: Go to Profile screen and select 'Pedidos'"
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+          
+      - executeFunction:
+          name: mx.flows.od.orders-history.assertOrder
+          params:
+            - name: orderNumber
+              string: ${returnedOrderNumber}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.od-020.deliveryMethod
+            - name: expectedTotal
+              string: ${expectedEstimatedTotal}
+            - name: expectedBanner
+              string: Walmart
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedOrderStatus
+              string: mx.data.e2e-regression.od-020.expectedOrderStatus
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.od-020.differentProducts
+
+      #----------------------------------------------------------------------------------------------------------------
+      ## "STEP 15: Select the newest placed order"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 15: Select the newest placed order"
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: position
+              string: "1"
+
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderDetailsWithoutDeliveryLocationAssertion
+          params:
+            - name: orderNumber
+              string: ${returnedOrderNumber}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.od-020.deliveryMethod
+            - name: expectedOrderStatus
+              string: mx.data.e2e-regression.od-020.expectedOrderStatus
+            - name: expectedBanner
+              string: Walmart
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.od-020.differentProducts
+            - name: expectedPaymentMethod
+              string: PayAtDelivery
+            - name: expectedSubtotal
+              string: ${expectedEstimatedTotal}
+            - name: expectedDeliveryFee
+              string: "null"
+            - name: expectedTotal
+              string: ${expectedEstimatedTotal}
+            - name: expectedOrderedDate
+              string: ${returnedOrderedDate}
+            - name: assertDiscount
+              string: ${isThereDiscountAmount}
+            - name: expectedDiscount
+              string: ${returnedCartDiscount}
+
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.order-details.orderNumber
+          position: up
+          scrollLimit: 3
+
+      - executeFunction:
+          name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+      
+      - executeFunction:
+          name: mx.functions.order-details.assertProductListed
+          params:
+            - name: productName
+              string: ${returnedProductName1}
+
+      - executeFunction:
+          name: mx.functions.order-details.assertProductSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${returnedProductPrice1}
+
+      - executeFunction:
+          name: mx.functions.order-details.assertProductListed
+          params:
+            - name: productName
+              string: ${returnedProductName2}
+
+      - executeFunction:
+          name: mx.functions.order-details.assertProductSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${returnedProductPrice2} 
+
+      - executeFunction:
+          name: mx.functions.order-details.assertProductListed
+          params:
+            - name: productName
+              string: ${returnedProductName3}
+
+      - executeFunction:
+          name: mx.functions.order-details.assertProductSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${returnedProductPrice3} 
+
+      #----------------------------------------------------------------------------------------------------------------
+
+      - storeIn:
+          key: OD_020_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: QAA - OD - PRODUCTION SANITY - OD-020"
+
+
+  #####################################################################################################################
+
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - log:
+                message: "WORKAROUND: RELAUNCHING APP TO FIX ISSUE REGARDING INTERNAL APP FLAGS"
+                color: YELLOW
+            - executeFunction:
+                name: mx.functions.utils.relaunchApp
+      - storeIn:
+          key: OD_020_SUCCESSFUL_EXECUTION
+          value: false
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_OD_Sanity_PROD_Android_020
+      - log: "BEFORE SCENARIO END"
+
+# #####################################################################################################################
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${OD_015_SUCCESSFUL_EXECUTION}
+      - if:
+          condition: ${OD_020_SUCCESSFUL_EXECUTION} != true
+          then:
+            - executeFunction:
+                name: mx.flows.od.after-scenario-exclusive.emptyCart
+                params:
+                  - name: userEmail
+                    string: mx.data.e2e-regression.od-020.userEmail
+                  - name: userPassword
+                    string: mx.data.e2e-regression.od-020.userPassword
+                  - name: isCartEmpty
+                    string: ${OD_020_IS_CART_EMPTY}
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: CYAN
+      - log: "AFTER SCENARIO END"

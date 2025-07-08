@@ -1,0 +1,776 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Feb/15/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function selects the pay at delivery if not selected.
+  # Param        ${payAtDeliveryFormat}  [Mandatory]  (Input: [ cash | card ])
+  # AUTHOR: Rodrigo PC - vn53p0i
+  - name: mx.flows.od.review-order.selectPayAtDeliveryMethod
+    flow:
+      - log:
+          message: "Pay at Delivery Format: ${payAtDeliveryFormat}"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertBlueManagePaymentMethodsMessageDisplayed
+      - if:
+          condition: ${payAtDeliveryFormat} == 'cash'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.review-order.payment-section.payAtDeliveryCashOptionLabel
+                then:
+                  - log:
+                      message: "Pay at Delivery method with 'cash' option not detected, selecting desired method..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+                  - sleep:
+                      duration: 5000
+                  - executeFunction:
+                      name: mx.functions.payment.selectPayAtDeliveryOption
+                  - executeFunction:
+                      name: mx.functions.payment.tapContinue
+      - if:
+          condition: ${payAtDeliveryFormat} == 'card'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.review-order.payment-section.payAtDeliveryCardOptionLabel
+                then:
+                  - log:
+                      message: "Pay at Delivery method with 'card' option not detected, selecting desired method..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+                  - sleep:
+                      duration: 5000
+                  - executeFunction:
+                      name: mx.functions.payment.selectPayAtDeliveryOption
+                  - executeFunction:
+                      name: mx.functions.payment.tapContinue
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedPayAtDeliveryOption
+          params:
+            - name: expectedOption
+              string: ${payAtDeliveryFormat}
+      - log:
+          message: "End flow: od.review-order.selectPayAtDeliveryMethod"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${payAtDeliveryOption}  [Mandatory]  Pay at Delivery Option to select. Values: [ cash | card ]
+  # AUTHOR:  Sergio Fernandez (vn0t1qt)
+  # EDITORS: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.review-order.forceSelectPayAtDeliveryMethod
+    flow:
+      - log:
+          message: "Pay at Delivery Option: ${payAtDeliveryOption}"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.review-order.payment-section.editOrAddPaymentMethod
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.payment.selectPayAtDeliveryOption
+          params:
+            - name: payAtDeliveryFormat
+              string: ${payAtDeliveryOption}
+      - executeFunction:
+          name: mx.functions.payment.tapContinue
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedPaymentMethod
+          params:
+            - name: paymentMethod
+              string: PayAtDelivery
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedPayAtDeliveryOption
+          params:
+            - name: expectedOption
+              string: ${payAtDeliveryOption}
+      - log:
+          message: "End flow: od.review-order.forceSelectPayAtDeliveryMethod"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function will first verify if Pay at Delivery is already selected on the payment section, and
+  #                 will run mx.flows.od.review-order.forceSelectPayAtDeliveryMethod if it isn't.
+  # NOTE:         This is meant to be used when the TC requires an existing account.
+# PARAMS:         ${payAtDeliveryOption}  [Mandatory]  Pay at Delivery Option to select. Values: [ cash | card ]
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.review-order.selectPayAtDeliveryMethodIfNotSelected
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.review-order.payment-section.payAtDeliveryMethodIsSelected
+          then:
+            - log:
+                message: "Pay at Delivery is already selected, flow will continue..."
+                color: CYAN
+          else:
+            - log:
+                message: "Pay at Delivery is not selected, performing payment method selection..."
+                color: CYAN
+            - executeFunction:
+                name: mx.flows.od.review-order.forceSelectPayAtDeliveryMethod
+                params:
+                  - name: payAtDeliveryOption
+                    string: ${payAtDeliveryOption}
+      - log:
+          message: "End flow: od.review-order.selectPayAtDeliveryMethodIfNotSelected"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function selects the PayPal payment method if or not selected.
+  # Param              ${userPaypalEmail}  [Mandatory]  Expected PayPal account email.
+  # Param           ${userPaypalPassword}  [Mandatory]  PayPal password.
+  # Param                ${expectedTotal}  [Mandatory]  Expected total to assert.
+  # Param  ${savePaypalDataCheckboxState}  [Mandatory]  If account number limit has been reached, this must be set to false
+  #                                                         for the flow to be able to continue.
+  #                                                         Values: [ true | false ]
+  # Param       ${expectedPaypalUserName}  [Mandatory]  Expected paypal user name.
+  # Param         ${paypalCardFourDigits}  [Mandatory]  Paypal card's last four digits.
+  # Param           ${paypalMethodAction}  [Mandatory]  Action to be performed upon the PayPal method.
+  #                                                         Values: [ Keep | ChangeAccount | AddAccount ]
+  #                                                           - 'Keep':
+  #                                                                 If there's already a selected account,
+  #                                                                 it will perform the necessary assertions.
+  #                                                           - 'ChangeAccount':
+  #                                                                 Taps the change/edit payment method button and selects
+  #                                                                 a different paypal account from the carousel list in
+  #                                                                 the 'payment' popup page.
+  #                                                           - 'AddAccount':
+  #                                                                 Taps the change/edit payment method, then taps the add paypal
+  #                                                                 account button, logs in, and depending on the ${paypalCardAction}
+  #                                                                 variable it adds or selects a card, then continues and validates
+  #                                                                 the selected account in payment popup and then in review order.
+  - name: mx.flows.od.review-order.selectPaypalMethod
+    flow:
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertBlueManagePaymentMethodsMessageDisplayed
+      # Paypal Method Action part...
+      - log:
+          message: "Desired payment method: PayPal"
+          color: CYAN
+      - storeIn:
+          key: paypalActionFlag
+          value: false
+      - if:
+          # Keep the selected PayPal account and perform assertions...
+          condition: ${paypalActionFlag} == false && ${paypalMethodAction} == 'Keep'
+          then:
+            - log:
+                message: "Selected action: 'Keep', flow will continue with the selected PayPal account assertions..."
+                color: CYAN
+            - storeIn:
+                key: paypalActionFlag
+                value: true
+      - if:
+          # If there are some accounts already added, this flow will select one...
+          condition: ${paypalActionFlag} == false && ${paypalMethodAction} == 'ChangeAccount' 
+          then:
+            ##### TODO: CODE THIS BRANCH ONCE IT IS NEEDED IN ANY OF THE TEST CASES !!!!!
+            - log:
+                message: "Selected action: 'ChangeAccount', flow will continue by selecting a different existing PayPal account..."
+                color: CYAN
+            - log:
+                message: "BRANCH 'ChangeAccount' IS NOT DOING ANY ACTIONS YET."
+                color: YELLOW
+            - log:
+                message: "CODE THIS BRANCH ONCE IT IS REQUIRED IN ANY OF THE TEST CASES ('TODO' IS STILL PENDING)."
+                color: YELLOW
+            - storeIn:
+                key: paypalActionFlag
+                value: true
+      - if:
+          # If there are no accounts added, this flow will add one...
+          condition: ${paypalActionFlag} == false && ${paypalMethodAction} == 'AddAccount' 
+          then:
+            - log:
+                message: "Selected action: 'AddAccount', flow will continue with the addition of a new PayPal account..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+            - executeFunction:
+                name: mx.functions.payment.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.utils.searchItemInPage
+                params:
+                  - name: elementToFind
+                    string: mx.mappings.payment.addPaypalAccountButton
+                  - name: direction
+                    string: down
+            # Validating if 'Save PayPal data checkbox' should be marked...
+            - if:
+                condition: ${savePaypalDataCheckboxState} == "true"
+                then:
+                  - log:
+                      message: "Selected checkbox state = 'true', flow will continue by marking checkbox..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.payment.markRememberPaypalDataCheckbox
+                else:
+                  - if:
+                      condition: ${savePaypalDataCheckboxState} == "false"
+                      then:
+                        - log:
+                            message: "Selected checkbox state = 'false', flow will continue by unmarking checkbox..."
+                            color: CYAN
+                        - executeFunction:
+                            name: mx.functions.payment.unmarkRememberPaypalDataCheckbox
+                      else:
+                        - log:
+                            message: "The 'savePaypalDataCheckboxState' option not provided, flow will not interact with checkbox..."
+                            color: CYAN
+            - executeFunction:
+                name: mx.functions.payment.tapAddPayPalAccount
+            - executeFunction:
+                name: mx.functions.payment.continue-to-paypal-popup.assertPopupDisplayed
+            - executeFunction:
+                name: mx.functions.payment.continue-to-paypal-popup.tapConfirm
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.payment.paypal-use-request-popup.popupContainer
+                then:
+                  - click:
+                      identifier: mx.mappings.payment.paypal-use-request-popup.continueButton
+            # PayPal login...
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.paypal-card-selection.notYouButton
+                then:
+                  - click:
+                      identifier: mx.mappings.paypal-card-selection.notYouButton
+            - executeFunction:
+                name: mx.functions.paypal-login.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.paypal-login.enterEmail
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.paypal-login.nextButton
+                then:
+                  - click:
+                      identifier: mx.mappings.paypal-login.nextButton
+            - executeFunction:
+                name: mx.functions.paypal-login.enterPassword
+            - executeFunction:
+                name: mx.functions.paypal-login.tapLogin
+            # Selecting card...
+            - log:
+                message: "Flow will select an existing PayPal card..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.paypal-card-selection.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.paypal-card-selection.assertUserLoggedIn
+            - executeFunction:
+                name: mx.functions.paypal-card-selection.selectCard
+            - executeFunction:
+                name: mx.functions.paypal-card-selection.assertSelectedCard
+                params:
+                  - name: expectedPaypalCardFourDigits
+                    string: ${paypalCardFourDigits}
+            - executeFunction:
+                name: mx.functions.paypal-card-selection.tapAgreeAndContinue
+            # Needed time to be able to click the continue button in the right moment, otherwise flow will click a non-active button and fail.
+            - sleep:
+                duration: 10000
+            - executeFunction:
+                name: mx.functions.payment.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.payment.tapContinue
+            - storeIn:
+                key: paypalActionFlag
+                value: true
+      - if:
+          condition: ${paypalActionFlag} == false # Invalid action provided...
+          then:
+            - failTest:
+                message: "Fail: 'paypalMethodAction' option not valid: ${paypalMethodAction}"
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedPaymentMethod
+          params:
+            - name: paymentMethod
+              string: 'PayPal'
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertPaypalEmail
+          params:
+            - name: expectedUserPaypalEmail
+              string: ${userPaypalEmail}
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertTotal
+      - log:
+          message: "End flow: od.review-order.selectPaypalMethod"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: Asserts all the information related to the Delivery Method. In the case of Home Delivery, the Address can be
+  #   asserted as a single string provided in the parameter ${expectedStoreOrHomeAddress}, or asserted by individual values
+  #   provided in the parameters ${expectedUserStreet}, ${expectedUserExteriorNumber}, ${expectedUserCity}, ${expectedUserState}
+  #   and ${expectedUserZipCode}.
+  #
+  # PARAMS:
+  #   ${deliveryMethod}              [Mandatory]  Expected delivery method to be displayed. Options: [ PickupDelivery | HomeDelivery ]
+  #
+  #   ${expectedDaySlot}             [Mandatory]  Expected day slot to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedDaySlot
+  #
+  #   ${expectedTimeSlot}            [Mandatory]  Expected time slot to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedTimeSlot
+  #
+  #   ${expectedStoreOrHomeName}     [Mandatory]  Expected Store Name or Home Delivery Address Name to be displayed.
+  #
+  #   ${expectedStoreOrHomeAddress}  [Mandatory]  Expected Store Address or Home Delivery Address to be displayed.
+  #
+  #                                               NOTE: In the case of Home Delivery, set it to 'null' instead of providing the expected
+  #                                                     Home Delivery Address if you want to assert the address by providing the individual
+  #                                                     address values using the parameters below.
+  #
+  #   ${expectedUserStreet}          [Optional]   (Used only when ${expectedStoreOrHomeAddress} == null)
+  #                                               Expected Home Street to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedAddress, or
+  #                                                 - mx.functions.address-selector-popup.getSelectedAddress
+  #
+  #   ${expectedUserExteriorNumber}  [Optional]   (Used only when ${expectedStoreOrHomeAddress} == null)
+  #                                               Expected Home Exterior Number to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedAddress, or
+  #                                                 - mx.functions.address-selector-popup.getSelectedAddress
+  #
+  #   ${expectedUserCity}            [Optional]   (Used only when ${expectedStoreOrHomeAddress} == null)
+  #                                               Expected Home City to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedAddress, or
+  #                                                 - mx.functions.address-selector-popup.getSelectedAddress
+  #
+  #   ${expectedUserState}           [Optional]   (Used only when ${expectedStoreOrHomeAddress} == null)
+  #                                               Expected Home State to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedAddress, or
+  #                                                 - mx.functions.address-selector-popup.getSelectedAddress
+  #
+  #   ${expectedUserZipCode}         [Optional]   (Used only when ${expectedStoreOrHomeAddress} == null)
+  #                                               Expected Home ZIP Code to be displayed. Use the value returned by function:
+  #                                                 - mx.functions.reserve-slot.getSelectedAddress, or
+  #                                                 - mx.functions.address-selector-popup.getSelectedAddress
+  #
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.review-order.assertDeliveryInformation
+    flow:
+      - if:
+          condition: ${deliveryMethod} != 'HomeDelivery' && ${deliveryMethod} != 'PickupDelivery'
+          then:
+            - failTest:
+                message: "Function Failure: Delivery Method option is not valid: '${deliveryMethod}'"
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: ${deliveryMethod}
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${expectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${expectedTimeSlot}
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+      - if:
+          condition: ${deliveryMethod} == 'PickupDelivery'
+          then:
+            - executeFunction:
+                name: mx.functions.review-order.assertStoreName
+                params:
+                  - name: expectedStoreName
+                    string: ${expectedStoreOrHomeName}
+            - executeFunction:
+                name: mx.functions.review-order.assertStoreAddress
+                params:
+                  - name: expectedStoreAddress
+                    string: ${expectedStoreOrHomeAddress}
+          else:
+            - executeFunction:
+                name: mx.functions.review-order.assertHomeDeliveryAddressName
+                params:
+                  - name: expectedAddressName
+                    string: ${expectedStoreOrHomeName}
+            - if:
+                condition: ${expectedStoreOrHomeAddress} == null
+                then:
+                  - executeFunction:
+                      name: mx.functions.review-order.assertHomeDeliveryAddressByIndividualValues
+                      params:
+                        - name: streetName
+                          string: ${expectedUserStreet}
+                        - name: exteriorNumber
+                          string: ${expectedUserExteriorNumber}
+                        - name: city
+                          string: ${expectedUserCity}
+                        - name: state
+                          string: ${expectedUserState}
+                        - name: zipCode
+                          string: ${expectedUserZipCode}
+                else:
+                  - executeFunction:
+                      name: mx.functions.review-order.assertHomeDeliveryAddress
+                      params:
+                        - name: expectedUserAddress
+                          string: ${expectedStoreOrHomeAddress}
+      - log:
+          message: "End flow: od.review-order.assertDeliveryInformation"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function expands the promotional code section (if not expanded) types and applies the supplied
+  #              promotional code, asserts there's no error message and that the coupon was applied correctly.
+  # Param        ${promoCode}  [Mandatory]  Promotional Code.
+  - name: mx.flows.od.review-order.applyCoupon
+    flow:
+      # With this 'if' statement the test can loop itself if, for any reasons, the test fails.
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.review-order.deleteAppliedPromotionalCodeButton
+          then:
+            - click:
+                identifier: mx.mappings.review-order.deleteAppliedPromotionalCodeButton
+      - executeFunction:
+          name: mx.functions.review-order.expandCouponsOption
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.review-order.applyPromotionalCodeButton
+      - executeFunction:
+          name: mx.functions.review-order.applyCoupon
+      - executeFunction:
+          name: mx.functions.review-order.assertCouponNotValidErrorMessageNotDisplayed
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            # This will hide the keyboard that re-opens after applying the promo code.
+            - executeFunction:
+                name: mx.functions.utils.tapCloseKeyboardButton
+      - executeFunction:
+          name: mx.functions.review-order.assertCouponApplied
+          params:
+            - name: expectedPromoCode
+              string: ${promoCode}
+      # This will prevent the next instances of mx.functions.review-order.scrollDownToSection to fail.
+      - storeIn:
+          key: expectedPromoCode
+          value: ''
+      - log:
+          message: "End flow: od.review-order.applyCoupon"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function removes an added coupon and asserts the promotional code has been
+  #              removed.
+  # Param        ${promoCode}  [Mandatory]  Promotional Code.
+  - name: mx.flows.od.review-order.removeCoupon
+    flow:
+      - executeFunction:
+          name: mx.functions.review-order.removeCoupon
+
+      - executeFunction:
+          name: mx.functions.review-order.assertCouponRemoved
+          params:
+            - name: promoCode
+              string: ${promoCode}
+
+      - executeFunction:
+          name: mx.functions.review-order.contractCouponsOption
+      - log:
+          message: "End flow: od.review-order.removeCoupon"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Performs the following assertions in the review-order page.
+  # NOTE:         If Discounts are not present, this function will run the next assertion:
+  #                 1. Assert the total products count.
+  #                 2. Assert Delivery Fee (if param equals 'true').
+  #                 3. Assert the Subtotal.
+  #                 4. Assert Estimated Total from bottom.
+  #                 5. Assert Estimated Total from button.
+  #
+  #               If Discounts are present, this function will run the next assertions in this order:
+  #                 1. Assert the total products count.
+  #                 2. Assert Delivery Fee (if param equals 'true').
+  #                 3. Assert the Subtotal AFTER the discount.
+  #                 4. Retrieve the value from the "Ahorras" label.
+  #                 5. Calculate the Subtotal BEFORE discount by adding the Subtotal AFTER discount plus Discount value.
+  #                 6. Assert the Subtotal BEFORE discount.
+  #                 7. Assert Estimated Total from bottom.
+  #                 8. Assert Estimated Total from button.
+  #
+  # PARAMS:  ${expectedSubtotalProductsCount}  [Mandatory]  Expected products count to be displayed in the subtotal label.
+  #
+  #          ${expectedSubtotal}               [Mandatory]  Expected subtotal to be displayed. If there were not discounts
+  #             in cart, then this value must be equal to the sum of all products subtotals.
+  #             If your products had discounts but no products with 'Multi-Savings' promotion, then this value must be
+  #             equal to the sum of all products subtotals (same as previous point).
+  #             If there were products with 'Multi-Savings' promotion in cart, then this value must be equal to the sum of
+  #             all products subtotals minus the discounts from the products that have 'Multi-Savings' promotion.
+  #
+  #          ${expectedDeliveryFee}            [Optional]  Expected delivery fee to be displayed.
+  #             If the provided value is 'true', then the following parameter must be provided in order to assert the
+  #             specific delivery fee value to be displayed. The method will also consider the same value to add it up
+  #             to the expected subtotal to assert the expected total.
+  #             If the provided value is 'false', the method skips the assertion and expected Delivery Fee will be "0.00".
+  #
+  # RETURNS:  ${returnedEstimatedTotal}  Gotten from the addition of the Subtotal plus the delivery fee (if it applies).
+  - name: mx.flows.od.review-order.assertTotalsInformation
+    flow:
+      # Products Count Assertion...
+      - log:
+          message: "Products Count assertion..."
+          color: CYAN
+      - log:
+          message: "Expected Products Count: '${expectedSubtotalProductsCount}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.review-order.assertSubtotalProductsCount
+          params:
+            - name: expectedProductsCount
+              string: ${expectedSubtotalProductsCount}
+
+      # Delivery Fee assertion...
+      - log:
+          message: "Delivery Fee assertion..."
+          color: CYAN
+
+      - if:
+          condition: ${expectedDeliveryFee} == null
+          then:
+            - log:
+                message: "Delivery Fee Assertion Skipped (expectedDeliveryFee = null)"
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.review-order.getDeliveryFee
+            - if:
+                condition: ${returnedDeliveryFee} == null
+                then:
+                  - storeIn:
+                      key: expectedDeliveryFee
+                      value: '0.00'
+                else:
+                  - storeIn:
+                      key: expectedDeliveryFee
+                      value: ${returnedDeliveryFee}
+          else:
+            - executeFunction:
+                name: mx.functions.review-order.assertDeliveryFee
+                params:
+                  - name: deliveryFee
+                    string: ${expectedDeliveryFee}
+
+      # Subtotal assertion...
+      - log:
+          message: "Subtotal assertion..."
+          color: CYAN
+      - log: 
+          message: "Checking if Review-Order has Discounts"
+          color: CYAN
+      - storeIn: # Because this flow runs functions with similar variable names, the variable ${expectedSubtotal} gets overwritten after some calculations.
+          key: expectedSubtotalFromFlow
+          value: ${expectedSubtotal}
+      # Checking if Review-Order has discounts...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.review-order.discountIndicator
+          then:
+            - log:
+                message: "No Discounts detected..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.review-order.assertSubtotal
+                params:
+                  - name: subtotal
+                    string: ${expectedSubtotal}
+          else:
+            - log:
+                message: "Discounts detected..."
+                color: CYAN
+            - executeFunction:
+                name: mx.flows.od.review-order.assertSubtotalsIfThereAreDiscounts
+                params:
+                  - name: subtotalAfterDiscount
+                    string: ${expectedSubtotal}
+
+      # Estimated Total assertion...
+      - arithmetic:
+          expression: ${expectedSubtotalFromFlow} + ${expectedDeliveryFee}
+          numberOfDecimalPlaces: 2
+          storeIn: returnedEstimatedTotal
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${returnedEstimatedTotal}
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotalFromButton
+              string: ${returnedEstimatedTotal}
+      - log:
+          message: "Returned Estimated Total: '${returnedEstimatedTotal}'"
+          color: CYAN
+      - log:
+          message: "End flow: review-order.assertTotalsInformation"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function adds the test delivery instructions so Walmart does not deliver the products for
+  #              the test order.
+  # AUTHOR: Rodrigo Pacheco C.
+  # EDITOR: Isis Tolentino (vn53dge)
+  - name: mx.flows.od.review-order.enterTestOrderDisclaimer
+    flow:
+      - executeFunction:
+          name: mx.functions.review-order.tapAddDeliveryInstructions
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.enterTestOrderDisclaimer
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.tapSave
+      - log:
+          message: Pickup delivery is not displaying element containing delivery instructions for iOS
+          color: YELLOW
+
+      #### NOTE: Pickup delivery is not displaying element containing delivery instructions for iOS 
+
+      # - sleep:
+      #    duration: 2000
+      # - getString:
+      #     identifier: mx.mappings.review-order.deliveryInstructionsMessage
+      #     storeIn: displayedDeliveryInstructions
+      # - if:
+      #     condition: ${displayedDeliveryInstructions} == 'Compra de pruebas Walmart, favor de NO SURTIR PEDIDO'
+      #     then:
+      #       - log:
+      #           message: "End flow: review-order.enterTestOrderDisclaimer"
+      #           color: BLUE
+      #     else:
+      #       - failTest:
+      #           message: "Displayed Delivery Instructions not correct: '${displayedDeliveryInstructions}'"
+      
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates if the desired phone number is already displayed in the phone number section,
+  #               if it's not then it enters the number, if it is, then the flow continues without any modification.
+  # Param ${userPhoneNumber} [Mandatory] User phone number to input.
+  # AUTHOR: Rodrigo Pacheco C.
+  - name: mx.flows.od.review-order.enterCellphoneNumber
+    flow:
+      - executeNode:
+          file: mx/test/helpers/review-order/parsePhoneNumberForAssertion.js
+          args:
+            - value: ${userPhoneNumber}
+          # The name of this variable will be used in the next mapping, please do not change or change accordingly.
+          getResponse:
+            storeIn: expectedPhoneNumber
+      - log:
+          message: "Expected Phone Number to be displayed: ${expectedPhoneNumber}"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.review-order.displayedPhoneNumber
+          then:
+            - log:
+                message: "Expected Phone Number is already typed and displayed, flow will continue execution..."
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.review-order.enterCellphoneNumber
+      - log:
+          message: "End flow: review-order.enterCellphoneNumber"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+ 
+  # Description:
+  #   This method asserts the subtotal before and after discounts, it assumes there are discounts in the cart.
+  # PARAMS:
+  #   ${subtotalAfterDiscount}  [Mandatory]  Review-Order Subtotal after discount Amount.
+  #                                   If cart has discounts, cart subtotal should be equal to all products subtotals after discounts.
+  #                                   If no discounts are found, cart subtotal should be equal to all products subtotals (without any discounts).
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.review-order.assertSubtotalsIfThereAreDiscounts
+    flow:
+      - executeFunction:
+          name: mx.functions.review-order.assertSubtotalAfterDiscount
+          params:
+            - name: expectedSubtotalAfterDiscount
+              string: ${subtotalAfterDiscount}
+      # Retrieving displayed discount value...
+      - executeFunction:
+          name: mx.functions.review-order.getDiscountValueInTotalsSection #--[RETURNS]--${returnedDiscount}-->
+      # Calculating Subtotal value before Discount...
+      - log:
+          message: Calculating Subtotal value before Discount...
+          color: CYAN
+      - arithmetic:
+          expression: ${subtotalAfterDiscount} + (${returnedDiscount} * (-1)) # This is because the discount value contains the minus sign.
+          numberOfDecimalPlaces: 2
+          storeIn: returnedSubtotalBeforeDiscount
+      - log:
+          message: "Calculated Subtotal value before discount got: '${returnedSubtotalBeforeDiscount}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.review-order.assertSubtotal # This function always runs the validation on the subtotal value before discount (if any).
+          params:
+            - name: subtotal
+              string: ${returnedSubtotalBeforeDiscount}
+      - log:
+          message: "End function: review-order.assertSubtotalsIfThereAreDiscounts"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description:
+  #   This flow validates the product is displayed correctly in the Product Details section
+  # PARAMS:
+  #   ${productName}              [Mandatory]  Review-Order Subtotal after discount Amount.
+  #   ${expectedProductPrice}     [Mandatory]  Review-Order Subtotal after discount Amount.
+  #   ${expectedProductQuantity}  [Mandatory]  Review-Order Subtotal after discount Amount.
+  # AUTHOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.review-order.validateProductDetails
+    flow:
+      - executeFunction:
+          name: mx.functions.review-order.productDetails.tapView
+      - executeFunction:
+          name: mx.functions.review-order.productDetails.assertProductIsDisplayed
+      - executeFunction:
+          name: mx.functions.review-order.productDetails.assertProductPriceByName
+      - executeFunction:
+          name: mx.functions.review-order.productDetails.assertProductQuantityByName
+      - executeFunction:
+          name: mx.functions.review-order.productDetails.close
+

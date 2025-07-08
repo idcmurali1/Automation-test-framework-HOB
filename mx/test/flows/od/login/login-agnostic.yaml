@@ -1,0 +1,281 @@
+#======================================================================================================================
+#    AUTHOR: Isis Rojas Tolentino (vn53dge)
+#   CREATED: January/31/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function navigates to account from home and completes the login as existing user.
+  # Param  ${userEmail}     [Mandatory] User's e-mail.
+  # Param  ${userPassword}  [Mandatory] User's password.
+  # Param  ${userName}      [Mandatory] User's name.
+  - name: mx.flows.od.login.navigateToAccountAndLogin
+    flow:
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.tapLogin
+      - executeFunction:
+          name: mx.flows.od.login.loginFromPopup
+          params:
+            - name: userEmail
+              string: ${userEmail} 
+            - name: userPassword
+              string: ${userPassword}
+      - executeFunction:
+          name: mx.functions.confirm-phone-number-popup.closePopupIfDisplayed
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: mx.functions.account.cellphone-collection-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.account.cashi-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+          params:
+            - name: userName
+              string: ${userName}
+      - log:
+          message: "End flow: od.login.navigateToAccountAndLogin"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function completes the login process from the pop-up as an existing user.
+  # Param  ${userEmail}     [Mandatory] User's e-mail.
+  # Param  ${userPassword}  [Mandatory] User's password.
+  # Author: ??
+  # Editor: Osmar Juárez (vn56dce)
+  - name: mx.flows.od.login.loginFromPopup
+    flow:
+      # NOTE: this function dismiss a popup part of the redisign of the login workflow in Android Walmart
+      - executeFunction:
+          name: mx.functions.login.dissmissOneExlcusiveAccountIfDisplayed
+      - executeFunction:
+          name: mx.functions.login.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.login.enterEmail
+      # TODO: Once new login is released and the old logins is deprecated, delete this if statemt and adjust steps 
+      #       since now is neccesary to enter email and click continue to enter password. 
+      # NOTE: continue button and login button is the same element thats why it used tapLogin function for both. 
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.login.passwordField
+          then:
+            - executeFunction:
+                name: mx.functions.login.tapLogin
+      - executeFunction:
+          name: mx.functions.login.enterPassword
+      - executeFunction:
+          name: mx.functions.login.tapLogin
+      - sleep:
+          duration: 3000  
+      - executeFunction:
+          name: mx.functions.login.assertIncorrectCredentialsErrorNotDisplayed
+      - if: 
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeFunction:
+                name: mx.functions.login.save-password.tapDontAllowIfDisplayed
+            - executeFunction:
+                name: mx.functions.login.save-password.bottom-popup.closePopupIfDisplayed
+      - log:
+          message: "End flow: login.loginFromPopup"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Tap in Create Accout button from Login Popup and fill up form using data from params to create new user account 
+  #              if any user email is sent it will generating automatically an unique email.
+  # PARAMS:  
+  #        ${userFirstName}        [Mandatory] User's first name.
+  #        ${userLastName}         [Mandatory] User's last name.
+  #        ${userEmail}            [Optional]  User's email address. [Fallback = "null"]
+  #        ${userPassword}         [Mandatory] User's password.
+  #        ${testCaseNum}          [Optional]  Number of the current Test Case. Can be optional if [userEmail != "null"] 
+  #        ${skipEmailAndPsswrd}   [Optional]  Flag to skip input Email and password in case there already auto-filled up. [Fallback = "false"]
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.od.login.createAccountFromLoginPopup
+    flow:
+      - executeFunction:
+          name: mx.functions.login.tapCreateAccount
+      - executeFunction:
+          name: mx.flows.login.createAccount
+          params:
+           - name: userFirstName
+             string: ${userFirstName}
+           - name: userLastName
+             string: ${userLastName}
+           - name: userEmail
+             string: ${userEmail:null}
+           - name: userPassword
+             string: ${userPassword}
+           - name: testCaseNum
+             string: ${testCaseNum:null}
+           - name: skipEmailAndPsswrd
+             string: ${skipEmailAndPsswrd:false}      
+      - log:
+          message: "End flow: od.login.createAccountFromLoginPopup"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: function to fill up the whole create account form and create account with assertions for no errors in create account process.
+  # PARAMS:  
+  #        ${userFirstName}        [Mandatory]  User's first name.
+  #        ${userLastName}         [Mandatory]  User's last name.
+  #        ${userEmail}            [Mandatory]  User's email address.
+  #        ${userPassword}         [Mandatory]  User's password.
+  #        ${testCaseNum}          [Mandatory]  Number of the current Test Case. Can be optional if [userEmail != null]
+  #        ${skipEmailAndPsswrd}   [Mandatory]  Flag to skip input Email and password in case there already auto-filled up 
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.login.createAccount
+    flow:
+      - if:
+         condition: ${userEmail} == null || ${userEmail} == "null"
+         then:
+           - executeFunction:
+                name: mx.functions.utils.getUniqueEmail # RETURNS: --${returnedUniqueEmail}--
+                params:
+                 - name: testCaseNum
+                   string: ${testCaseNum}
+           - storeIn:
+                key: userEmail
+                value: ${returnedUniqueEmail}
+      - if:
+         identifier:
+           present:
+             - identifier: mx.mappings.login.emailField 
+         then:
+            - executeFunction:
+               name: mx.functions.login.enterEmail
+               params:
+                  - name: userEmail
+                    string: ${userEmail}
+            - executeFunction:
+               name: mx.functions.login.tapLogin
+      - executeFunction:
+          name: mx.functions.login.create-account.enterName
+      - executeFunction:
+          name: mx.functions.login.create-account.enterLastName
+      - if:
+         condition: ${skipEmailAndPsswrd} == "false"
+         then:
+           - executeFunction:
+                name: mx.functions.login.create-account.enterEmail
+                params:
+                    - name: userEmail
+                      string: ${userEmail}
+           - if:
+              condition: ${APP_PLATFORM} == 'android'
+              then:
+                - executeFunction:
+                    name: mx.functions.utils.tapCloseKeyboardButton
+                - executeFunction:
+                    name: mx.functions.login.create-account.enterPassword
+                - goBack: true
+              else:
+                - executeFunction:
+                    name: mx.functions.login.create-account.enterPassword
+         else:
+            - verifyIdentifier:
+               value:
+                 - identifier: mx.functions.login.create-account.enterEmail
+                   equals: ${userEmail}
+            - log:
+                message: "Email input and Password will skip, email input already filled up with: '${userEmail}'"
+                color: GREEN_BOLD
+      - executeFunction:
+          name: mx.functions.login.create-account.tapCreateAccount
+      - executeFunction:
+          name: mx.functions.login.create-account.assertErrorsNotDisplayed
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeFunction:
+                name: mx.functions.login.save-password.tapDontAllowIfDisplayed
+            - executeFunction:
+                name: mx.functions.login.save-password.bottom-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.confirm-phone-number-popup.closePopupIfDisplayed
+      - log:
+          message: "End flow: login.createAccount"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Tap in Create Accout button from Account screen or if new login design is present tap in the unified 
+  #              login-create account button and fill up form using data from params to create new user account if any 
+  #              user email is sent it will generating automatically an unique email.
+  # PARAMS:  
+  #        ${userFirstName}        [Mandatory] User's first name.
+  #        ${userLastName}         [Mandatory] User's last name.
+  #        ${userEmail}            [Optional]  User's email address. [Fallback = "null"]
+  #        ${userPassword}         [Mandatory] User's password.
+  #        ${testCaseNum}          [Optional]  Number of the current Test Case. Can be optional if [userEmail != "null"]
+  #        ${skipEmailAndPsswrd}   [Optional]  Flag to skip input Email and password in case there already auto-filled up. [Fallback = "false"]
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.login.createAccountFromAccountScreen
+    flow:
+      - if:
+         identifier:
+           notPresent:
+             - identifier: mx.mappings.account.createAccountButton
+         then:
+           - executeFunction:
+              name: mx.functions.account.tapLogin
+         else:
+           - executeFunction:
+              name: mx.functions.account.tapCreateAccount
+      - executeFunction:
+          name: mx.flows.login.createAccount
+          params:
+           - name: userFirstName
+             string: ${userFirstName}
+           - name: userLastName
+             string: ${userLastName}
+           - name: userEmail
+             string: ${userEmail:null}
+           - name: userPassword
+             string: ${userPassword}
+           - name: testCaseNum
+             string: ${testCaseNum:null}
+           - name: skipEmailAndPsswrd
+             string: ${skipEmailAndPsswrd:false}
+      - log:
+          message: "End flow: login.createAccountFromAccountScreen"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function logs out the user and validates user data is not present. Bottom menu must be available.
+  # Param ${userName} [Mandatory] User's name.
+  # AUTHOR: Rodrigo Pacheco C.
+  - name: mx.flows.od.login.userLogout
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              # Here we verify if we are already in account page.
+              - identifier: mx.mappings.account.genericHeaderLabel
+              - identifier: mx.mappings.account.genericOptionsContainer
+          then:
+            - executeFunction:
+                name: mx.functions.bottom-menu.tapAccount
+            - executeFunction:
+                name: mx.functions.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+      - executeFunction:
+          name: mx.functions.account.tapLogout
+      - executeFunction:
+          name: mx.functions.account.assertUserNotLogged
+      - log:
+          message: "End flow: login.userLogout"
+          color: BLUE

@@ -1,0 +1,145 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS:
+#
+#   TC - INEP-569
+#       Flow - MH: Bookslot Delivery - DeliverySlot_verifyAddressOnBAS
+#
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179348
+#
+#   JIRA SUBTASK ID:
+#     https://jira.walmart.com/browse/INEP-570
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-569
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-568
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-569
+  tags: INEP-569, OPIF-179348, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   M A I N   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Bookslot - User is able to see the delivery address on the BAS panel."
+    flow:
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - executeFunction: 
+          name: functions.login.storeEmail # -> ${userEmail}
+          params:
+            - name: userAndroidEmail
+              string: data.mh.inep569.userEmail.android 
+            - name: useriOSEmail
+              string: data.mh.inep569.userEmail.ios  
+
+      # login to application.
+      - log:
+          message: "Login to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password2
+
+      # Add a GR item to cart.
+      - log:
+          message: "Add a GR item to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.groceryByPieces
+
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.cartPage.tapDeliveryOption
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      - executeFunction:
+          name: functions.reserveATime.validateDeliveryAddress
+          params:
+            - name: expectedDeliveryAddress
+              string: data.mh.inep569.expectedDeliveryAddress
+
+
+  #  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  # #   A F T E R   S C E N A R I O
+  # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

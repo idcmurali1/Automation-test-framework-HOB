@@ -1,0 +1,1998 @@
+functions:
+
+  - name: us.functions.account.signOutAccount
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.account.yourOrdersButton
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.signOutButton
+          position: center
+    #   - scroll:
+    #       direction: down
+    #   - scroll:
+    #       direction: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.signOutButton
+      - sleep:
+          duration: 5000
+      - click:
+          wait: 5000
+          identifier: us.mappings.account.signOutButton
+      - sleep:
+           duration: 5000          
+      - try:
+          flow: 
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.account.signOutButton
+          catch:
+            flow:
+              - executeFunction:
+                   name: us.functions.utils.scrollIfNotVisible
+                   params:
+                     - name: identifier
+                       string: us.mappings.account.signInButton
+                     - name: direction
+                       string: up
+                     - name: scrollPosition
+                       string: center
+              - sleep:
+                  duration: 2000
+              - verifyIdentifier:
+                  notPresent:
+                    - identifier: us.mappings.account.signOutButton
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.account.invaildAddress.addAddress
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.deliveryAddress.addAddress
+      - verifyIdentifier:
+          present:
+             - identifier: us.mappings.deliveryAddress.invalidZipCodeMessage
+      - click:
+          identifier: us.mappings.global.closeButton
+
+
+  - name: us.functions.account.deliveryAddress.addAddress
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier:  us.mappings.deliveryAddress.add.firstName
+          then:
+            - log: "Add Address Screen loaded"
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.deliveryAddress.addNewAddress
+            - click:
+                identifier: us.mappings.account.deliveryAddress.addNewAddress
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.add.title
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.firstName
+          string: Mobile
+      - click:
+          identifier: us.mappings.deliveryAddress.add.lastName
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.lastName
+          string: user
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.streetAddress
+          string: ${streetAddress}
+      # Handling Address suggestion if displayed
+      - sleep:
+          duration: 10000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.addressSuggestionList
+          then:
+            - click:
+                identifier: Done
+            - scroll:
+                direction: up
+            - sleep:
+                duration: 5000
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.city
+          string: ${city}
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.deliveryAddress.add.state
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.statePickerWheel
+          string: ${state}
+      - click:
+          identifier: Done
+      - scroll:
+          direction: down
+      - click:
+          identifier: us.mappings.deliveryAddress.add.phoneNumber
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.phoneNumber
+          string: ${phoneNumber}
+      - click:
+          identifier: us.mappings.deliveryAddress.add.zipcode
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.zipcode
+          string: ${zipcode}
+      - click:
+          identifier: Done
+      # - click:
+      #     identifier: Done
+      - if:
+          condition: ${addDeliveryInstructions}
+          then:
+            - executeFunction:
+                name: us.functions.reviewOrder.editDeliveryInstructions
+      - click:
+          identifier: us.mappings.deliveryAddress.add.saveButton
+
+  #Utility to navigate within accounts subtabs
+  # [mandatory] ${accountTabName}  - Purchase history / Wallet / Address / Walmart+ / Protection plans
+  - name: us.functions.account.navigation.fromAccountsToTab
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Account
+      - if:
+          condition: ${accountTabName} == 'Walmart+' || ${accountTabName} == 'Protection plans'
+          then:
+            - storeIn:
+                key: sectionName
+                value: Subscription
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.account.navigation.subSectionLink
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.account.navigation.subSectionLink
+      - click:
+          identifier: us.mappings.account.navigation.subTabLink
+
+  #Utility to navigate back to accounts tab
+  - name: us.functions.account.navigation.backToAccountsTab
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Account
+
+  - name: us.functions.account.paymentMethod.addCardDetailsAndAddress
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton 
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.creditCard.editFirstNameField
+          string: ${firstName}
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.creditCard.editLastNameField
+          string: ${lastName}
+                   
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+          string: ${expirationMonth}
+          clearField: false
+          clickFirst: false
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${expirationYear}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      # If the Address is already present then we will skip adding new address.
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+          then:
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                string: ${streetAddress}
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                string: ${city}
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                string: ${state}
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                string: ${zipcode}
+          else:   
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+                wait: 10000
+          
+          
+  - name: us.functions.account.verifyRewardsBalanceAfterCancellation
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.tabBar.account
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.rewardsBalanceAmount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center            
+      - verifyIdentifier:
+          label: 
+            - identifier: us.mappings.account.rewardsBalanceAmount
+              contains: $0
+
+  - name: us.functions.account.naviagteToMenuItems
+    platform: ios
+    flow:
+      - if:
+          condition: ${noScrollRequired}
+          then:
+            - log: Skipping scroll
+          else:
+            - scroll:
+                direction: up
+                scrollLimit: 3
+      - sleep:
+          duration: 10000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.menuSettingsButton
+          then:
+            - if:
+                condition: ${menuItemName} == 'Wallet' || ${menuItemName} == 'Addresses'
+                then:
+                  - click:
+                      identifier: us.mappings.account.menuSettingsButton
+                  - sleep:
+                      duration: 3000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.menuItemName
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.menuItemName
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.account.menuItemName
+      #     then:
+      #       - verifyIdentifier:
+      #           present:
+      #             - identifier: us.mappings.account.menuItemName
+      #     else:
+      #       - scroll:
+      #           direction: down
+      #           untilIdentifier: us.mappings.account.menuItemName
+      #           position: center
+      #       - verifyIdentifier:
+      #           present:
+      #             - identifier: us.mappings.account.menuItemName
+      - click:
+          identifier: us.mappings.account.menuItemName
+          wait: 1000
+      - sleep:
+          duration: 10000
+
+  - name: us.functions.account.removeAddress
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.editItem.removeLink   
+          then:               
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cancellation.editItem.removeLink
+            - click:
+                identifier: us.mappings.cancellation.editItem.removeLink
+                wait: 1000      
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.removeAddressButton
+            - click:
+                identifier: us.mappings.account.removeAddressButton
+                wait: 1000
+            - sleep:
+                duration: 5000    
+          else:
+            - log: No existing address that has to be removed
+            
+######################################################## Android ####################################################################
+
+  #Utility to navigate within accounts subtabs
+  # [mandatory] ${accountTabName}  - Purchase history / Wallet / Addresses / Walmart+ / Protection plans
+  - name: us.functions.account.navigation.fromAccountsToTab
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Account
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.navigation.subTabLink
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.account.navigation.subTabLink
+
+  - name: us.functions.account.navigation.walmartCashPage
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.navigation.walmartCash
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.account.navigation.walmartCash
+      - sleep:
+          duration: 2000
+
+  - name: us.functions.account.verifyRewardsBalanceAfterCancellation
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.orderHistory.backNavigationFromOrderDetail
+      - sleep:
+          duration: 2000
+      # Navigate back to Home
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+      - sleep:
+          duration: 2000             
+      - scroll:
+          direction: down
+      - if:
+          identifier:
+            notPresent:
+            - identifier: us.mappings.tabBar.account
+          then:
+            - scroll:
+                direction: up                 
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.rewardsBalanceAmount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center            
+      - verifyIdentifier:
+          text: 
+            - identifier: us.mappings.account.rewardsBalanceAmount
+              contains: $0
+              
+  #Utility to navigate back to accounts tab
+  - name: us.functions.account.navigation.backToAccountsTab
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.global.navigation.backNavigation
+      - click:
+          identifier: us.mappings.global.navigation.backNavigation
+      - executeFunction:
+          name: us.functions.wplus.switchToOriginalAppTileClose
+
+  - name: us.functions.account.goToAccountForSignIn
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.reserveSlot.signInButton
+          
+  - name: us.functions.account.invaildAddress.addAddress
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.deliveryAddress.addNewAddress
+          then:
+            - click:
+                identifier: us.mappings.account.deliveryAddress.addNewAddress  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.add.title
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.firstName
+          string: ${firstName}
+      - click:
+          identifier: us.mappings.deliveryAddress.add.lastName
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.lastName
+          string: ${lastName}
+      - goBack: true
+      - sleep:
+          duration: 3000      
+      - click:
+          identifier: us.mappings.deliveryAddress.add.streetAddress
+      # Accept share precise location pop up if displayed
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.sharePreciseLocation
+          then:
+            - click:
+                identifier: us.mappings.deliveryAddress.add.sharePreciseLocation
+      # Accept location permission pop up if displayed
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.allowLocationPermission
+          then:
+            - click:
+                identifier: us.mappings.deliveryAddress.add.allowLocationPermission
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.streetAddress
+          string: ${streetAddress}
+      - goBack: true
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.deliveryAddress.add.city
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.city
+          string: ${city}
+          clearField: true
+          clickFirst: true          
+      - goBack: true
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.state
+          string: ${state}
+          clearField: true
+          clickFirst: true
+      - goBack: true
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.zipcode
+          string: ${zipcode}
+          clearField: true
+          clickFirst: true
+      - goBack: true
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.phoneNumber
+          string: ${phoneNumber}
+      - goBack: true
+      - click:
+          identifier: us.mappings.deliveryAddress.add.saveButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.invalidZipCodeMessage
+      - log: Incorrect Zip Code. Valid zip code should be a 5-digit number
+      - click: 
+          identifier: us.mappings.global.closeButton
+
+  #signin out
+  - name: us.functions.account.signOutAccount             
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.yourOrdersButton
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.signOutButton
+          position: center
+          wait: 5000
+          withinIdentifier: us.mappings.account.scrollView
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.signOutButton
+      - click:
+          identifier: us.mappings.account.signOutButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.account.signOutButton
+     
+
+  - name: us.functions.account.paymentMethod.addCardDetailsAndAddress
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wPlus.paymentMethod.addPayment
+          then:
+            - click:
+                identifier: us.mappings.wPlus.paymentMethod.addPayment
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+          pressEnter: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+                string: ${expiration}
+                clearField: false
+                clickFirst: false
+                pressEnter: true
+      - if:
+           identifier:
+              present:
+               - identifier: us.mappings.paymentMethod.addPayment.1Pitem.expiry
+           then:
+             - click:
+                identifier: us.mappings.paymentMethod.addPayment.1Pitem.expiry
+             - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.1Pitem.expiry
+                string: ${expiration}
+                clearField: false
+                clickFirst: false
+                pressEnter: true        
+      #- click:
+          #identifier: Done
+
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+          pressEnter: true
+      #- click:
+          #identifier: Done
+      - goBack: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.useExistingAddress.button
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.useExistingAddress.button
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.addaddress.button
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.addaddress.button
+    #  - goBack: true
+      - scroll:
+           direction: down
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+          string: ${streetAddress}
+      - goBack: true
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+          string: ${city}
+      - goBack: true
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+          string: ${state}
+      - goBack: true
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+          string: ${zipcode}
+      - goBack: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          then:
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+                string: ${phoneNumber}
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.1Pitem.phoneNumberField
+          then:
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.1Pitem.phoneNumberField
+                string: ${phoneNumber}
+      - goBack: true
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+                # wait: 3000
+      # commenting below part as this is not required in Android          
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+      #           wait: 3000
+
+  #signin out
+  - name: us.functions.account.signOutAccount             
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+        #    - identifier: us.mappings.account.yourOrdersButton
+            - identifier: us.mappings.account.purchaseHistoryButton
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.signOutButton
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.signOutButton
+      - click:
+          identifier: us.mappings.account.signOutButton
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.account.signOutButton
+
+  - name: us.functions.account.naviagteToMenuItems
+    platform: android
+    flow:
+      - sleep:
+          duration: 10000
+      - scroll:
+          direction: up
+          scrollLimit: 3
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.menuSettingsButton
+          then:
+            - if:
+                condition: ${menuItemName} == 'Wallet' || ${menuItemName} == 'Addresses'
+                then:
+                  - click:
+                      identifier: us.mappings.account.menuSettingsButton
+                  - sleep:
+                      duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.menuItemName
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.menuItemName
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.account.menuItemName
+                position: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.menuItemName
+      - sleep:
+          duration: 10000 
+      - click:
+          identifier: us.mappings.account.menuItemName
+          wait: 1000
+      - sleep:
+          duration: 10000
+
+  - name: us.functions.account.removeAddress
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.address.removeLinkButton
+          then:               
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.address.removeLinkButton
+            - click:
+                identifier: us.mappings.address.removeLinkButton
+                wait: 1000      
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.address.removeLinkButton
+            - click:
+                identifier: us.mappings.address.removeLinkButton
+                wait: 1000
+            - sleep:
+                duration: 5000    
+          else:
+            - log: No existing address that has to be removed                          
+
+  - name: us.functions.global.account.verifyAccountpage
+    platform: android
+    flow:         
+      - sleep:
+          duration: 6000  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.purchaseHistoryButton   
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.signOutButton
+          position: center                       
+      - scroll:
+            direction: up 
+
+  # Navigate to resgitery
+  - name: us.functions.account.navigateToRegisteryView
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.VerifyRegistry.Myitems
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.Registry 
+          then:              
+              - click:
+                  identifier: us.mappings.account.Registry
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.account.goToRegistryButton
+                  then:
+                    - click:
+                        identifier: us.mappings.account.goToRegistryButton
+          else:
+            - click:
+                identifier: us.mappings.account.VerifyRegistry.Myitems        
+            - click:
+                identifier: us.mappings.account.Registry
+
+  # Navigate to resgitery
+  - name: us.functions.account.navigateToRegisteryView
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+      - scroll:
+          direction: up          
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.Registry
+            - name: direction
+              string: down
+      - click:
+          identifier: us.mappings.account.Registry           
+
+#verify Registry
+  - name: us.functions.account.VerifyRegistry
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000       
+      - executeFunction:
+          name: us.functions.account.navigateToRegisteryView
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.FindRegistryCTA
+            - identifier: us.mappings.account.createRegistryCTA 
+            - identifier: us.mappings.account.BabyRegistry
+      - click:
+          identifier: us.mappings.account.registryDetails
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.registryName
+      #Verify Share Registry link
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.shareThisRegistry
+      - click:
+          identifier: us.mappings.myItems.shareThisRegistry
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.copyIcon
+            #- identifier: us.mappings.myItems.readingListIcon
+            - identifier: us.mappings.myItems.shareThisRegistryHeaderText  
+      - click:
+          identifier: us.mappings.myItems.shareThisRegistry.closeButton                
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+      - sleep:
+          duration: 5000
+
+
+  # delete registry
+  - name: us.functions.account.deleteRegistry
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.navigateToRegisteryView
+      - loop:
+         begin: 0
+         end: 5
+         storeIndex: i
+         flow:
+           - log: $i
+           - if:
+               identifier:
+                 present: 
+                   - identifier: us.mappings.account.registryDetails
+               then:
+                 - log: Registry is not empty, removing Registry
+                 - click:
+                     identifier: us.mappings.account.registryDetails
+                     wait: 3000
+                 - if:
+                    identifier:
+                      present:
+                        - identifier: us.mappings.account.registry.registryNotAvailable
+                    then:
+                      - break: true
+                 - if:
+                    identifier:
+                      present:
+                        - identifier: us.mappings.error.dismissButton
+                    then:
+                      - failTest:
+                          message: "ENV_FAILURE - ${env} - Registry page not loading" # CEPG-237906
+                 - if:
+                    identifier:
+                      present:
+                        - identifier: us.mappings.account.registry.myRegistryTab
+                    then:
+                      - click:
+                          identifier: us.mappings.account.registry.myRegistryTab
+                 - click:
+                     identifier: us.mappings.account.deleteRegistry.settings
+                 - executeFunction:
+                     name: us.functions.utils.scrollIfNotVisible
+                     params:
+                       - name: identifier
+                         string: us.mappings.account.deleteRegistry.DeleteRegistryLink
+                       - name: direction
+                         string: down
+                 - click:
+                     identifier: us.mappings.account.deleteRegistry.DeleteRegistryLink
+                 - click:
+                     identifier: us.mappings.account.deleteRegistry.confirmDeleteRegistry
+                 - sleep:
+                     duration: 5000
+               else:
+                    - log: No Registries to Remove 
+                    - break: true
+
+  #red dot notification
+  - name: us.functions.account.reddotnotification
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.allCaughtUp0newMessages
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.account.allCaughtUp0newMessages
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.redDotNotificationsHeader
+            - identifier: us.mappings.account.redDotNotificationsDescription
+      - sleep:
+          duration: 3000
+
+#red dot notification
+  - name: us.functions.account.reddotnotification             
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.account.allCaughtUp0newMessages  
+      - sleep:
+          duration: 3000
+      - click: 
+          identifier: us.mappings.account.allCaughtUp0newMessages
+          wait: 1000
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.account.redDotNotificationsHeader
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.account.redDotNotificationsDescription
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.account.navigateToItemSubs
+    platform: android
+    flow:
+      - executeFunction:
+         name: us.functions.utils.scrollIfNotVisible
+         params:
+          - name: identifier
+            string: us.mappings.account.subscription.itemsubs
+          - name: direction
+            string: down
+          - name: scrollPosition
+            string: center  
+      - click:
+          identifier: us.mappings.account.subscription.itemsubs
+      - sleep:
+          duration: 5000          
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.account.subscription.itemsubs
+          then:
+            - terminateApp: true
+            - openLink: walmart://account 
+            - sleep:
+                duration: 4000
+            - executeFunction:
+                name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.account.subscriptionsAndPlans
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center              
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.subscriptionsAndPlans
+            - click:
+                identifier: us.mappings.account.subscriptionsAndPlans             
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.subscription.itemsubs
+      - click:
+          identifier: us.mappings.account.subscription.itemsubs             
+      - sleep:
+          duration: 5000 
+
+  - name: us.functions.account.validateSubsciptionPage
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.subsManageSubscriptions
+            - identifier: us.mappings.account.deliveryDate
+
+# view reward eligible items
+  - name: us.functions.account.RewardCenterLink
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.WalmartRewardCenterLink
+      - sleep:
+          duration: 5000
+      - click:
+          identifier: us.mappings.account.WalmartRewardCenterLink
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wplus.ViewEligibleItemButton
+      - click:
+          identifier: us.mappings.wplus.ViewEligibleItemButton
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.account.RewardCenterLink
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.wPlus.account.wPlusSeeAllBenefitsButton
+            - name: direction
+              string: down  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wPlus.account.wPlusSeeAllBenefitsButton
+      - click:
+          identifier: us.mappings.wPlus.account.wPlusSeeAllBenefitsButton
+          wait: 1000
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wplus.savingsTab
+      - click:
+          identifier: us.mappings.wplus.savingsTab
+          wait: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wplus.viewRewardsCenterLink
+      - click:
+          identifier: us.mappings.wplus.viewRewardsCenterLink   
+      - sleep:
+          duration: 2000       
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wplus.ViewEligibleItemButton
+      - click:
+          identifier: us.mappings.wplus.ViewEligibleItemButton
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.account.navigateToItemSubs
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscription.subscriptionPageTitle
+            - identifier: us.mappings.subscription.subscriptionFreq
+            - identifier: us.mappings.subscription.subscriptionDeliveryDay
+      - click:
+          identifier: us.mappings.subscription.subscriptionPageNavigation
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.account.verifyChatbotFromHelpCenter
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000  
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.giveFeedback
+      - click:
+          identifier: us.mappings.account.cuntomerSerevice
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.cuntomerSerevice.verifyContactUs
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.account.cuntomerSerevice.verifyContactUs
+      - sleep:
+          duration: 5000
+      # - click:
+      #     identifier: us.mappings.account.cuntomerSerevice.verifyContactUs.signin
+      # - sleep:
+      #     duration: 5000
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.chatbotflow.android.email
+            - name: password
+              string: us.data.prod.chatbotflow.android.password          
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.chatBot
+      - sleep:
+          duration: 5000  
+
+  - name: us.functions.account.verifyChatbot
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000  
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.cuntomerSerevice
+      - click:
+          identifier: us.mappings.account.cuntomerSerevice
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.HelpCenterText          
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.account.cuntomerSerevice.verifyContactUs
+      - click:
+          identifier: us.mappings.account.cuntomerSerevice.verifyContactUs
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+           present:
+             - identifier: us.mappings.account.SigninCta
+          then:   
+            - click: 
+                identifier: us.mappings.account.SigninCta
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+           present:
+             - identifier: us.mappings.global.authentication.emailField
+          then:
+            - log: Sign in is required
+            - executeFunction:
+                name: us.functions.global.authentication.signInAccount
+                params:
+                  - name: email
+                    string: us.data.ios.prod.C2671453.email
+                  - name: password
+                    string: us.data.ios.prod.C2671453.password
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                 present:
+                  - identifier: us.mappings.global.authentication.icloudPopUp
+                then:   
+                  - click: 
+                      identifier: us.mappings.global.onboarding.dontAllowButton
+                  - sleep:
+                      duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.chatBot
+      - log: chatbot launched
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.chatBotAnOrder
+            - identifier: us.mappings.account.chatBotReturnOrRefund
+            - identifier: us.mappings.account.chatBotBillingOrCharges
+            # - identifier: us.mappings.account.chatBotSomethingElse
+            - identifier: us.mappings.account.chatBotSendButton
+
+  # Navigate to reward center and verify clipping component
+  - name: us.functions.account.verifyClippingFromRewardCenter
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.wplus.viewRewardsCenterLink
+          then:
+            - click:
+                identifier: us.mappings.wplus.viewRewardsCenterLink
+      - executeFunction:
+          name: us.functions.wplus.verifyClippingComponent
+
+  # Navigate to reward center and verify clipping component
+  - name: us.functions.account.verifyClippingFromRewardCenter
+    platform: ios
+    flow:
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.account.WalmartRewardCenterLink
+      #       - name: direction
+      #         string: down
+      # - click:
+      #     identifier: us.mappings.account.WalmartRewardCenterLink
+      #     wait: 1000
+      - executeFunction:
+          name: us.functions.wplus.verifyClippingComponent
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigationToShop
+
+  - name: us.functions.account.paymentMethod.addCardDetailsAndAddressZeroAuth
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.creditCard.editFirstNameField
+          string: ${firstName}
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.creditCard.editLastNameField
+          string: ${lastName}
+
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+          string: ${expirationMonth}
+          clearField: false
+          clickFirst: false
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${expirationYear}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+          wait: 10000
+
+  - name: us.functions.account.communications.setPreferences
+    platform: android
+    flow:
+      # Scroll to Communications in Account Tab
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.communicationsButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.communicationsButton
+      - click:
+          identifier: us.mappings.account.communicationsButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.communications.Title
+            - identifier: us.mappings.account.communications.phonenumber       
+            - identifier: us.mappings.account.communications.orderupdates
+      - click:
+          identifier: us.mappings.account.communications.orderupdates
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.account.communications.orderupdates.SMSToggleButton.unchecked
+          then:
+          - log: "SMS Toggle Button is Already Unchecked" 
+          else:   
+            - click:
+                identifier: us.mappings.account.communications.orderupdates.SMSToggleButton
+            - log: "SMS Toggle Button is Unchecked Now"
+      - verifyIdentifier:
+          checked:
+            - identifier: us.mappings.account.communications.orderupdates.PushToggleButton
+              value: true
+      - click:
+          identifier: us.mappings.account.communications.orderupdates.navigateBackButton
+
+  - name: us.functions.account.communications.setPreferences
+    platform: ios
+    flow:
+      # Scroll to  Communications in Account Tab
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.communicationsButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.communicationsButton
+      - click:
+          identifier: us.mappings.account.communicationsButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.communications.Title
+            - identifier: us.mappings.account.communications.phonenumber       
+            - identifier: us.mappings.account.communications.orderupdates
+      - click:
+          identifier: us.mappings.account.communications.orderupdates
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.account.communications.orderupdates.SMSToggleButton.checked
+          then:
+          - click:
+              identifier: us.mappings.account.communications.orderupdates.SMSToggleButton
+          - log: "SMS Toggle Button is Unchecked Now" 
+          - sleep:
+              duration: 3000
+          else:   
+            - log: "SMS Toggle Button is Already Unchecked"
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.account.communications.orderupdates.PushToggleButton
+              value: true
+      - click:
+            identifier: us.mappings.account.communications.orderupdates.navigateBackButton
+
+      # If the Address is already present then we will skip adding new address.
+      # - if:
+      #     identifier:
+      #       notPresent:
+      #       - identifier: us.mappings.paymentMethod.addPayment.overlay.addNewAddres
+      #     then:
+      #       - enterText:
+      #           identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+      #           string: ${streetAddress}
+      #       - enterText:
+      #           identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+      #           string: ${city}
+      #       - enterText:
+      #           identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+      #           string: ${state}
+      #       - enterText:
+      #           identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+      #           string: ${zipcode}
+      #     else:   
+      #       - click:
+      #           identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      #           wait: 10000
+
+  - name: us.functions.account.verifyPurchaseHistory&SignOutButton
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.yourOrdersButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.account.signOutButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.signOutButton
+  
+  - name: us.functions.account.deliveryAddress.addAddress
+    platform: android
+    flow:
+      - sleep:
+         duration: 2000
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.deliveryAddress.selectAddress.title
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.firstName
+          string: ${firstName}
+          clickFirst: true
+          clearField: true
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.lastName
+          string: ${lastName}
+          clickFirst: true
+          clearField: true
+      - goBack: true
+      - click:
+          identifier: us.mappings.deliveryAddress.add.streetAddress
+      - sleep:
+          duration: 3000
+      # Accept location permission pop up if displayed
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.deliveryAddress.add.allowLocationPermission
+          then:
+            - click:
+                identifier: us.mappings.account.deliveryAddress.add.allowLocationPermission
+      - sleep:
+          duration: 2000
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.streetAddress
+          string: ${streetAddress}
+          clickFirst: true
+          clearField: true
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.city
+          string: ${city}
+          clickFirst: true
+      - goBack: true
+      - enterText:
+          identifier: us.mappings.account.deliveryAddress.add.province
+          string: ${state}
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.zipcode
+          string: ${zipcode}
+      - goBack: true
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.phoneNumber
+          string: ${phoneNumber}
+      - goBack: true
+      - sleep:
+          duration: 2000
+      # - click:
+      #     identifier: us.mappings.account.accountPage.setDefaultAddressCheckBox
+      - click:
+          identifier: us.mappings.deliveryAddress.add.saveButton.resourceId
+      - sleep:
+          duration: 2000
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.account.deliveryAddress.addNewAddress.addressSuggestion
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.account.deliveryAddress.addNewAddress.addressSuggestion.selectCurrentAddress
+      #       - click:
+      #           identifier: us.mappings.account.deliveryAddress.addNewAddress.saveAddress
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.account.global.infoMessage
+      #     then: 
+      #       - click:
+      #           identifier: us.mappings.account.deliveryAddress.add.saveButton
+      - sleep:
+          duration: 5000
+  
+  # add Columbia address
+  - name: us.functions.account.deliveryAddress.addCOAddress
+    platform: ios
+    flow:
+
+      - if:
+          identifier:
+            present:
+              - identifier:  us.mappings.deliveryAddress.add.firstName
+          then:
+            - log: "Add Address Screen loaded"
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.deliveryAddress.addNewAddress
+            - click:
+                identifier: us.mappings.account.deliveryAddress.addNewAddress
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.add.title
+      - click:
+          identifier: us.mappings.deliveryAddress.add.firstName
+          
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.firstName
+          string: ${firstName}
+      - click:
+          identifier: us.mappings.deliveryAddress.add.lastName
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.lastName
+          string: ${lastName}
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.streetAddress
+          string: ${streetAddress}
+      
+      # Handling Address suggestion if displayed
+      - sleep:
+          duration: 10000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.addressSuggestionList
+          then:
+            - click:
+                identifier: Done
+            - scroll:
+                direction: up
+            - sleep:
+                duration: 5000
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.city
+          string: ${city}
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.deliveryAddress.add.state
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.statePickerWheel
+          string: ${state}
+      - click:
+          identifier: Done
+      - scroll:
+          direction: down
+      
+      - click:
+          identifier: us.mappings.deliveryAddress.add.zipcode
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.zipcode
+          string: ${zipcode}
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.deliveryAddress.add.phoneNumber
+      - enterText:
+          identifier: us.mappings.deliveryAddress.add.phoneNumber
+          string: ${phoneNumber}
+      
+      - click:
+          identifier: Done
+      - if:
+          condition: ${addDeliveryInstructions}
+          then:
+            - executeFunction:
+                name: us.functions.reviewOrder.editDeliveryInstructions
+      - click:
+          identifier: us.mappings.deliveryAddress.add.saveButton
+
+  # verify track order
+  - name: us.functions.account.nonsignin.verify.trackOrder
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Track order
+
+      - executeFunction:
+          name: us.functions.global.authentication.handleSignInAnotherWayPopup
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.global.authentication.emailField
+      
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation          
+
+  # verify Purchase History
+  - name: us.functions.account.verify.purchaseHistory
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Purchase history
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.purchaseHistory.headerLabel
+      
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+  # Verify Start free trial
+  - name: us.functions.account.wplus.startTrialVerify
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Start your free 30-day trial
+            - name: altMenuItemName
+              string: Join Walmart+ at 50% off
+      - storeIn:
+          key: altMenuItemName
+          value: 'null'
+
+      - verifyIdentifier:
+          present:             
+            - identifier: us.mappings.wplus.account.startFreeTrial.text
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+  # verify Walmart Cash
+  - name: us.functions.account.verify.walmartCash
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Walmart Cash
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.walmartCash.Header
+      
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+  # verify Reorder
+  - name: us.functions.account.verify.reorder
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Reorder
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.messageLabel
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation 
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar     
+
+  # verify Pets
+  - name: us.functions.account.verify.pets
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Pets
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.myPets.petsHeader
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation        
+
+  # verify Pharmacy
+  - name: us.functions.account.verify.pharmacy
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Pharmacy
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.pharmay.pharmacyHeader
+ 
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - scroll:
+          direction: up
+
+# Navigate to Settings
+  - name: us.functions.account.navigateToAccountSettings
+    platform: android
+    flow:
+     - executeFunction:
+        name: us.functions.utils.scrollIfNotVisible
+        params:
+          - name: identifier
+            string: us.mappings.account.settings.button
+          - name: direction
+            string: up
+
+     - click:
+        identifier: us.mappings.account.settings.button     
+
+# Verify Wallet
+  - name: us.functions.account.settings.verify.Wallet
+    platform: android
+    flow:
+     - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Wallet
+
+     - verifyIdentifier:
+          present:
+            - identifier: us.mappings.accounts.wallet.title
+      
+     - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+# Verify Passkey
+  - name: us.functions.account.settings.verify.passkey
+    platform: android
+    flow:
+     - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Passkeys
+
+     - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.settings.Passkey.createNewPasskey.button
+      
+     - executeFunction:
+          name: us.functions.global.navigation.backNavigation     
+
+
+# Verify Addresses
+  - name: us.functions.account.settings.verify.addresses
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Addresses
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.accounts.address.title     
+
+
+# iOS
+  # verify track order
+  - name: us.functions.account.nonsignin.verify.trackOrder
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Track order
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.global.authentication.emailField
+      
+      - click:
+          identifier: us.mappings.home.signView.closeButon    
+
+  # verify Purchase History
+  - name: us.functions.account.verify.purchaseHistory
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Purchase history
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderHistory.title
+      
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar         
+
+  # Verify Start free trial
+  - name: us.functions.account.wplus.startTrialVerify
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: WplusNonMemberBannerView.walmartPlusButton
+
+      - verifyIdentifier:
+          present:             
+            - identifier: us.mappings.wplus.account.startFreeTrial.text
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar 
+
+  # verify Walmart Cash
+  - name: us.functions.account.verify.walmartCash
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Walmart Cash
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.walmartCash.Header
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar       
+
+  # verify Reorder
+  - name: us.functions.account.verify.reorder
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Reorder
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.messageLabel
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar     
+
+  # verify Pets
+  - name: us.functions.account.verify.pets
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Pets
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.myPets.petsHeader
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar      
+
+  # verify photo
+  - name: us.functions.account.verify.photo
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Photo
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.photo.continueOnWebsiteText
+      
+      - click:
+         identifier: us.mappings.account.photo.continueOnWebsite.close
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+# Navigate to Settings
+  - name: us.functions.account.navigateToAccountSettings
+    platform: ios
+    flow:
+     - click:
+        identifier: us.mappings.account.settings.button  
+
+     - verifyIdentifier:
+          present:
+            - identifier: //XCUIElementTypeStaticText[@name="Personal information"]   
+
+# Verify Wallet
+  - name: us.functions.account.settings.verify.Wallet
+    platform: ios
+    flow:
+     - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Wallet
+
+     - verifyIdentifier:
+          present:
+            - identifier: us.mappings.accounts.wallet.title
+      
+     - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+     - executeFunction:
+          name: us.functions.account.navigateToAccountSettings
+
+# Verify Passkey
+  - name: us.functions.account.settings.verify.passkey
+    platform: ios
+    flow:
+     - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Face ID & passkeys, Sign in with biometrics or device pins
+
+     - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.settings.Passkey.createNewPasskey.button
+      
+     - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+          
+     - executeFunction:
+          name: us.functions.account.navigateToAccountSettings        
+
+# Verify Addresses
+  - name: us.functions.account.settings.verify.addresses
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Addresses
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.accounts.address.title     

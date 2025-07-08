@@ -1,0 +1,653 @@
+functions:
+  - name: ca.test.functions.utils.tryAgainWhenThereIsError
+    flow:
+      - loop:
+         begin: 0
+         end: 3
+         storeIndex: i
+         flow:
+           - log: $i
+           - if: 
+               identifier:
+                 present: 
+                   - identifier: ca.test.mappings.item.tryAgainLink
+               then:
+                 - log: 'Trying again to load item page'
+                 - click:
+                     identifier: us.test.mappings.item.tryAgainLink
+                     wait: 5000
+               else:
+                 - break: true
+
+# logging android app version
+  - name: ca.functions.utils.log.appVersionAndroid
+    platform: android
+    flow:
+      - if:
+          condition: "${R2_PROFILE} == 'cucumber'"
+          then:
+            - verifyFile:
+                file: ca/app-versions/android.txt
+                storeIn: glassAppVersionAndroid
+          else:
+            - verifyFile:
+                file: ca/app-versions/android.txt
+                storeIn: glassAppVersionAndroid
+      - log: "Glass Application version: ${glassAppVersionAndroid}"
+
+# Workaround to correctly restart app with Teflon settings
+  - name: ca.test.functions.utils.restartapp
+    platform: android
+    flow:
+      - startActivity:
+          packageName: ${APP_PACKAGE:ca.walmart.ecommerceapp.qa}
+          activityName: com.walmart.glass.integration.splash.SplashActivity
+      - sleep:
+          duration: 10000
+
+  - name: ca.test.functions.utils.relaunchApp
+    platform: android
+    flow:
+      - startActivity:
+          packageName: ${APP_PACKAGE:ca.walmart.ecommerceapp.qa}
+          activityName: com.walmart.glass.integration.splash.SplashActivity
+      - sleep:
+          duration: 15000
+      - verifyIdentifier:
+          timeout: 15000
+          present:
+            - identifier:  ca.mappings.home.livingDesign.shopButton
+      - log:
+          message: "End functions: utils.relaunchApp"
+          color: BLUE
+
+  - name: ca.test.functions.utils.personalizedExperiencePopUp
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.home.personalizedExperience
+          then:
+            - click:
+                identifier: ca.test.mappings.home.personalizedExperienceAllowButton
+      - sleep:
+          duration: 5000
+
+  - name: ca.test.functions.utils.afterSteps
+    platform: android
+    flow:
+      - executeFunction:
+          name: ca.functions.utils.log.appVersionAndroid
+  
+  #Error Logging
+  - name: ca.functions.utils.storeChangeError
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.placeOrder.alertBox
+          then:
+            - getString:
+                identifier: ca.test.mappings.global.errorBoxTitle
+                attribute: text
+                storeIn: errorMessage
+      - log: ${errorMessage}
+
+  #Astro Create order
+  - name: ca.functions.utils.astro.createOrder
+    flow:
+      - log: Create order
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/order
+          requestMethod: POST
+          # wait: 5000
+          verifyResponseCode: 200
+          header:
+            - key: segment
+              value: oaoh
+            - key: market
+              value: ca
+            - key: Content-Type
+              value: application/json
+            - key: payment_version
+              value: smart_allocation
+            - key: response_type
+              value: omni
+          readTimeout: 180000
+          requestBody: ${payload}
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          getValue:
+            - key: astroDetails.orderDetails.orderId
+              storeIn: orderNo
+            - key: astroDetails.orderDetails.orderPriceInfo.subTotal
+              storeIn: subTotalAstro
+            - key: astroDetails.orderDetails.orderPriceInfo.taxTotal
+              storeIn: totalTax
+            - key: astroDetails.orderDetails.orderPriceInfo.total
+              storeIn: estimate_total
+          retriesOnFail: 5
+          retryDelay: 5000
+      - log: ${orderNo}
+      - log: ${subTotalAstro}
+      - log: ${totalTax}
+      - log: ${estimate_total}
+      - sleep:
+          duration: 10000
+      - log: "Order created successful"
+      - sleep:
+          duration: 10000               
+
+#Astro order status change
+  - name: ca.functions.utils.astro.setOrderStatus
+    flow:
+      - log: Set order status for ${orderNo} to ${status} 
+      # orderType Values can be: "STORE_SCHEDULED_PICKUP", "STORE_SCHEDULED_DELIVERY", "STORE_UNSCHEDULED_PICKUP", "FC_DELIVERY"
+      # status values can be: "PO Acknowledged", "PO Pick Complete", "PO Ready For Pickup", "Customer Picked", "Shipped", "Delivered"
+      #Setting Order status to Acknowledged
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/order/${orderNo}
+          header:
+            - key: segment
+              value: oaoh
+            - key: Content-Type
+              value: application/json
+          readTimeout: 180000
+          requestMethod: PUT
+          # wait: 15000
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          retriesOnFail: 3
+          retryDelay: 180000
+          requestBody: '{"fulfillmentGroups": [{"orderType":"$orderType","status": "$status"}]}'
+
+## Astro - Cart Remove
+
+  - name: ca.functions.utils.astro.clearCart
+    flow:
+      - try:
+          flow:
+            - callAPI:
+                url: http://astro.walmart.com/api/v2/teflon/customer/${custEmail}/clearcart?pass=${password}
+                requestMethod: DELETE
+                header:
+                  - key: market
+                    value: ca
+                  - key: Content-Type
+                    value: application/json
+                wait: 10000
+                verifyResponseBodyContains:
+                  - 'SUCCESS'
+                verifyResponseCode: 200
+                retriesOnFail: 5
+                retryDelay: 2000
+                getValue:
+                  - key: astroStatus
+                    storeIn: clearCartStatus
+            - log: 
+                message: Cart cleared for ${custEmail}
+                color: GREEN_BOLD
+          catch:
+            flow:
+              - if:
+                  condition: ${clearCartStatus} != 'SUCCESS'
+                  then:
+                    - log: Clear cart API failed
+                    - failTest:
+                        message: "API_FAILURE - ASTRO - Cart not cleared"
+      - sleep:
+          duration: 8000
+
+
+###################################IOS###################################
+
+  - name: ca.test.functions.utils.tryAgainWhenThereIsErrorIos
+    platform: ios
+    flow:
+      - loop:
+         begin: 0
+         end: 3
+         storeIndex: i
+         flow:
+           - log: $i
+           - if: 
+               identifier:
+                 present: 
+                   - identifier: ca.test.mappings.item.tryAgainLink
+                 timeout: 5000
+               then:
+                 - log: 'Trying again to load item page'
+                 - click:
+                     identifier: ca.test.mappings.item.tryAgainLink
+                 - sleep:
+                    duration: 5000
+               else:
+                 - break: true          
+
+  - name: ca.test.functions.utils.afterSteps
+    platform: ios
+    flow:
+      - if:
+          condition: "${testStatus} == 'passed'"
+          then:
+            - log: 
+                message: "Test passed"
+                color: GREEN_BOLD
+          else: 
+            - log: 
+                message: "Test failed"
+                color: RED_BOLD
+
+  - name: ca.test.functions.global.navigation.goToDeepLink
+    platform: android
+    flow: 
+      - openLink: ${deepLinkUrl}
+
+  - name: ca.test.functions.global.openApp
+    platform: android
+    flow:
+      - startActivity:
+          packageName: ca.walmart.ecommerceapp.qa
+          activityName: com.walmart.glass.integration.splash.SplashActivity
+
+  - name: ca.test.functions.utils.cartMergePop
+    platform: android
+    flow:
+      - log: 
+          message: Checking for cart merge pop up
+          color: GREEN_BOLD
+      - sleep:
+          duration: 15000
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.global.cartMergePop
+          then:
+            - log: Accepting cart merge pop
+            - click:
+                identifier: ca.test.mappings.global.button2
+          else:
+            - log: 
+                message: No cart merge pop up found
+                color: GREEN_BOLD
+      
+  - name: ca.test.functions.utils.closePage
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.global.closeIcon
+          then:
+            - click:
+                identifier: ca.test.mappings.global.closeIcon
+
+  - name: ca.test.functions.utils.goBack
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000   
+      - goBack: true
+      - sleep:
+          duration: 5000     
+
+  - name: ca.test.functions.utils.removePromoCode
+    platform: ios
+    flow:
+      - sleep:
+          duration: 7000
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.checkOut.promoCodeRedeemStatus
+          then:
+            - click:
+                identifier: ca.test.mappings.global.removeButton        
+  
+  # Terminate the application
+  - name: ca.test.functions.utils.terminateApp
+    platform: ios
+    flow:
+      - executeAppiumScript:
+          method: "mobile: terminateApp"
+          params:
+            - key: bundleId
+              value: ca.walmart.ecommerceapp.qa
+
+  # Relaunch the application
+  - name: ca.test.functions.utils.relaunchApp
+    platform: ios
+    flow:
+      - executeAppiumScript:
+          method: "mobile: launchApp"
+          params:
+            - key: bundleId
+              value: ca.walmart.ecommerceapp.qa  
+      - sleep:
+         duration: 10000
+
+  - name: ca.test.functions.utils.personalizedExperiencePopUp
+    platform: ios
+    flow:             
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.global.onboarding.personalisedExperienceText
+      - click:
+          identifier: ca.test.mappings.global.onboarding.personaliseExperiencecontinueButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.global.onboarding.personaliseExperienceAllowtext
+      - click:
+          identifier: ca.test.mappings.global.onboarding.personaliseExperienceAllow
+      - executeFunction:
+          name: ca.test.functions.utils.tryAgainWhenThereIsErrorIos
+        
+  - name: ca.test.functions.utils.sanitizeSellerInfoFromPDP
+    platform: android
+    flow:
+      - log:
+          message: Sanitizing Seller Info
+          color: GREEN_BOLD
+      - executeNode:
+          file: ca/test/helpers/sanitizeSellerInfo.js
+          args:
+            - value: ${sellerDetails}
+            - value: android
+          getResponse:
+            storeIn: sanitizedSellerInfo
+  
+  - name: ca.test.functions.utils.removeAddressFromAccountPage
+    platform: android
+    flow:
+      - log:
+          message: Navigating to my address page using deep link to cancel saved address.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: https://www.walmart.ca/my-account
+      - log:
+          message: Opening addresses page in my account.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.accountPage.goToAddresses
+      - log:
+          message: Cancelling address saved from cart page.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.accountPage.removeAddress
+      - goBack: true
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.home.searchBarSelected
+              - identifier: ca.test.mappings.store.link
+              - identifier: ca.test.mappings.location.link
+          then:
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToShopTab
+  
+  - name: ca.test.functions.utils.checkingAndUpdatingGcBalance
+    flow:
+      - log:
+          message: Checking GC Balance
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.astroUrl.checkBalance
+      - log:
+          message: Current Gift card ${cardNumber} balance is $${balance}.
+          color: GREEN_BOLD
+      - if:
+          condition: ${balance} < ${gcAmount}
+          then:
+            - executeFunction:
+                name: ca.test.functions.astroUrl.addBalance
+            - executeFunction:
+                name: ca.test.functions.astroUrl.checkBalance
+            - log:
+                message: Gift card ${cardNumber} is update and available balance is $${balance}.
+                color: GREEN_BOLD
+  
+  - name: ca.test.functions.utils.applitools
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyInApplitools: true
+
+# Work around for Test popup:
+  - name: ca.test.functions.utils.avoidTestPopup
+    flow:
+      - log:
+          message: Test popup
+          color: GREEN_BOLD
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.testPopup.testBtn.dismiss #ca.test.mappings.testPopup.testBtn
+          then:
+            - click:
+                identifier: ca.test.mappings.testPopup.testBtn.dismiss #ca.test.mappings.testPopup.testBtn
+
+# Temp - Work around - User directs to HP after selecting address in cart
+  - name: ca.test.functions.utils.NavigateBackToCart
+    flow:
+      - log:
+          message: Navigate from HP to cart again (work around function)
+          color: GREEN_BOLD
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.cart.cartPage
+          then:
+            - break: true
+          else:
+            - if: 
+                identifier:
+                  present:
+                    - identifier: ca.test.mappings.home.logo
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: ca.test.mappings.cartSummarySubTotal
+                  - click:
+                      identifier: ca.test.mappings.cartSummarySubTotal
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Centers an element vertically within a container. This method first, looks for the element upwards or
+  #   downwards in case the element is not present in the view. If it finds it, it brings it into view, and then compares
+  #   the positions of the elements and the container to try to center the element the most accurate way possible right
+  #   in the middle of the container.
+  # PARAMS:
+  #     ${mappingOfContainer}        [Mandatory]  The mapping of the container to center within.
+  #     ${mappingOfElementToCenter}  [Mandatory]  The mapping of the element to be centered.
+  #     ${searchDirection}           [Mandatory]  The direction where the method will look for the element in case it is
+  #                                               not initially present in the view. Options: [ up | down ]
+  - name: ca.test.functions.utils.centerElementVerticallyWithinContainer
+    platform: android
+    flow:
+      - log:
+          message: "Container: ${mappingOfContainer}"
+          color: CYAN
+      - log:
+          message: "Element: ${mappingOfElementToCenter}"
+          color: CYAN
+      - log:
+          message: "Search Direction: ${searchDirection}"
+          color: CYAN
+
+      # Search for the element to center and bring it to view when it is not in view already...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ${mappingOfElementToCenter}
+          then:
+            - scroll:
+                direction: ${searchDirection}
+                untilIdentifier: ${mappingOfElementToCenter}
+                position: center
+                timeout: 30000
+                wait: 1000
+
+      # At this point the element to center is now present in the view either from the beginning or because the
+      # previous check performed a scroll to find it...
+
+      # Execute a process to center it properly within the provided container...
+
+      # Get Bounds of Container...
+      - getString:
+          identifier: ${mappingOfContainer}
+          attribute: bounds
+          storeIn: containerBounds
+      - executeNode:
+          file: ca/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: ${containerBounds}
+            - value: Android
+          getValue:
+            - key: x
+              storeIn: containerX
+            - key: y
+              storeIn: containerY
+            - key: y2
+              storeIn: containerY2
+            - key: height
+              storeIn: containerHeight
+            - key: width
+              storeIn: containerWidth
+          getResponse:
+            storeIn: containerBoundsJson
+      - log:
+          message: "Container Bounds Json: ${containerBoundsJson}"
+          color: GREEN
+
+      # Get Bounds of Element...
+      - getString:
+          identifier: ${mappingOfElementToCenter}
+          attribute: bounds
+          storeIn: elementBounds
+      - executeNode:
+          file: ca/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: ${elementBounds}
+            - value: Android
+          getValue:
+            - key: y
+              storeIn: elementY
+            - key: height
+              storeIn: elementHeight
+          getResponse:
+            storeIn: elementBoundsJson
+      - log:
+          message: "Element Bounds Json: ${elementBoundsJson}"
+          color: GREEN
+
+      # Calculate the Mid Y coordinate of the Container...
+      - arithmetic:
+          expression: (${containerHeight} / 2) + ${containerY}
+          asInt: true
+          storeIn: containerMidY
+
+      # Calculate the Mid Y coordinate of the Element...
+      - arithmetic:
+          expression: (${elementHeight} / 2) + ${elementY}
+          asInt: true
+          storeIn: elementMidY
+
+      # Determine the position of the Element with respect to the Container by comparing their MidY coordinates...
+      # Options: above | below | same
+      - storeIn:
+          key: elementPosition # Default position: same
+          value: same
+      - if:
+          condition: ${elementMidY} < ${containerMidY} # Position: above
+          then:
+            - storeIn:
+                key: elementPosition
+                value: above
+      - if:
+          condition: ${elementMidY} > ${containerMidY} # Position: below
+          then:
+            - storeIn:
+                key: elementPosition
+                value: below
+
+      # Scroll the Element into the Container to make their Mid Y positions match, based on the element's position...
+      - arithmetic:
+          expression: (${containerWidth} / 2) + ${containerX}
+          asInt: true
+          storeIn: dragX
+      - if:
+          condition: ${elementPosition} == 'above'
+          then:
+            - arithmetic:
+                expression: ${containerMidY} - ${elementMidY}
+                storeIn: dragDistance
+            - arithmetic:
+                expression: ${containerY} + 1
+                storeIn: dragFromY
+            - arithmetic:
+                expression: ${containerY} + ${dragDistance}
+                storeIn: dragToY
+            - drag:
+                from:
+                  x: ${dragX}
+                  y: ${dragFromY}
+                to:
+                  x: ${dragX}
+                  y: ${dragToY}
+                wait: 3000
+      - if:
+          condition: ${elementPosition} == 'below'
+          then:
+            - arithmetic:
+                expression: ${elementMidY} - ${containerMidY}
+                storeIn: dragDistance
+            - arithmetic:
+                expression: ${containerY2} - 1
+                storeIn: dragFromY
+            - arithmetic:
+                expression: ${containerY2} - ${dragDistance}
+                storeIn: dragToY
+            # In case the bottom menu is present, subtract 200 additional pixels to dragFromY and dragToY to fix the bottom menu overlap...
+            # (the approximate height of the bottom menu is 200px)
+            - if:
+                identifier:
+                  present:
+                    - identifier: ca.test.mappings.tabBar.shop
+                  timeout: 1000
+                then:
+                  - arithmetic:
+                      expression: ${dragFromY} - 200
+                      storeIn: dragFromY
+                  - arithmetic:
+                      expression: ${dragToY} - 200
+                      storeIn: dragToY
+            - drag:
+                from:
+                  x: ${dragX}
+                  y: ${dragFromY}
+                to:
+                  x: ${dragX}
+                  y: ${dragToY}
+                wait: 3000
+      - log:
+          message: "End function: mx.functions.utils.centerElementVerticallyWithinContainer"
+          color: BLUE
+  - name: ca.test.functions.utils.handlingKeyboard
+    platform: ios
+    flow:
+      - log:
+          message: Handling keyboard 
+          color: GREEN_BOLD
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mapping.checkout.keyboard 
+          then:
+            - click:
+                identifier: ca.test.mapping.checkout.keyboard

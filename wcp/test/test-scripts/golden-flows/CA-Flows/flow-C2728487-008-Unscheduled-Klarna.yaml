@@ -1,0 +1,159 @@
+
+general:
+  testCaseId: C2728487
+  tags: wcp-008, p1-ca-en-teflon, p1-ca-en-prod, p1-ca-fr-prod, C2728487
+
+scenarios:
+  - name: Before
+    before: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp008.user.email.android
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp008.user.email.ios
+
+      # Onboard to aplication and sign in
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+      
+      # Search for item and validate if search results are displayed.
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+      # Navigate to PDP
+      - executeFunction:
+          name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+          params:
+            - name: productArray
+              string: data.wcp008.productArray.1PItemsArray
+
+      # - executeFunction:
+      #     name: functions.productDetailsPage.validateBadges
+      #     params:
+      #       - name: badge
+      #         string: PO
+      
+      # TODO: Unblock the below function once ticket is resolved CEPG-254568
+      - executeFunction:
+           name: functions.productDetailsPage.verifyFinancingOptions
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose 
+
+      # Navigate to cart and ensure items are added to cart and correct total is displayed.
+      - executeFunction:
+          name: functions.global.tapCartIcon
+# Validate cart Page experience with sales financing details
+      - executeFunction:
+          name: functions.cartPage.verifyFinancingOptions    
+      
+      # Navigate to ROP and validate
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      
+      - executeFunction:
+          name: functions.checkoutPage.clickOnAddPaymentMethodBtn
+
+      # Select Klarna as payment method
+      - executeFunction:
+          name: functions.walletPage.tabKlarnaBtn
+      
+      - executeFunction:
+          name: functions.walletPage.valdiateAndAcceptKlarnaPopUp
+
+      - executeFunction:
+            name: functions.walletPage.klarnaPage.isPageDisplayed
+
+      # Validate Payment and Coupan details in ROP[Pendinig]
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: function.utils.applyPayments
+                params:
+                  - name: paymentType
+                    string: "Klarna"
+
+      # Click Place Order
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+            # Order Confirmation Page
+            # Validate Thank You page Header
+            - executeFunction:
+                  name: functions.thankYouPage.verifyThankYouPageDisplayed
+            - executeFunction:
+                name: functions.utils.terminateApp
+
+            # Validate if cart has become empty after placing Order.[Pending]
+
+            # Navigate to ODP
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            # Validate the user is able to access ODP
+            - executeFunction:
+                name: functions.orderDetailPage.verifySectionDisplayed
+            # Validate correct items are displayed[Pending]
+            #Validate Delivery and Payment information(Sales Financing) are displayed.
+            - executeFunction:
+                name: functions.orderDetailPage.verifyDeliveryType
+                params:
+                  - name: expectedDeliveryType
+                    string: data.global.deliveryText.delivery
+
+            # Validate Manufacturer Coupon in ODP POS
+            - executeFunction:
+                name: functions.orderDetailPage.scrollToPOS
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

@@ -1,0 +1,82 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Ramirez (vn53vq4)
+#  CREATED: Aug/29/2024
+#  REVISION: ---
+#  MANUAL JIRA TICKET: https://jira.walmart.com/browse/MMC-3683
+#  AUTOMATED JIRA TICKET: https://jira.walmart.com/browse/MMC-4425
+#  FLOW: Navigate to EA Banner, open Account page and perform login.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#  NOTE: JIRA features are not implemented yet for WCP approach.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-android, customer-walmart-ea-smoke-production-android-3683,
+        customer-bodega-ea-smoke-production-android, customer-bodega-ea-smoke-production-android-3683
+  testCaseId: MMC-4425
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      - storeIn:
+          key: userEmail 
+          value: mx.data.customer.userEmail
+
+      # Onboarding 
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Tap global account button and sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: mx.data.customer.password
+
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: "3683: Customer_Smoke_PROD_Android_SignIn_Verify_LoginFromAccount- Completed Succesfully!!"
+          color: YELLOW_BOLD

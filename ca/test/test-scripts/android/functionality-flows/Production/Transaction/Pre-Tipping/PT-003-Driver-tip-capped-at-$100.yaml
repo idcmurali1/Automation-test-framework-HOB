@@ -1,0 +1,209 @@
+
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: Driver Tip
+# User: Registered User
+# Order Type: GO
+# Fulfillment: SCHEDULED_Delivery
+# Payment Type: CC
+# Experience:
+# Validation:
+#
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: Android
+  tags: PT-003, ca-function-run
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Driver tip capped at $100.
+    flow:
+      - log:
+          message: Driver tip capped at $100.
+          color: PURPLE_BOLD_BRIGHT
+
+      - log:
+          message: Onboarding to app using postal code.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.orleansZipCode
+
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToAccountFromTabBar
+
+      # Creating Account from Account
+      - executeFunction:
+          name: ca.test.functions.loginPage.createAccountPage.createNewAccount
+          params:
+            - name: firstName
+              string: ${firstName}
+            - name: lastName
+              string: ${lastName}
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      # Account page navigating to address page
+      - executeFunction:
+          name: ca.test.functions.accountPage.goToAddresses
+      
+      # Clicking on add new address
+      - executeFunction:
+          name: ca.test.functions.accountPage.addNewAddressButton
+      
+      # Entering new address details
+      - executeFunction:
+          name: ca.test.functions.accountPage.addresses.addNewAddress
+          params:
+            - name: fName
+              string: ca.test.data.global.firstName
+            - name: lName
+              string: ca.test.data.global.lastName
+            - name: streetAddress
+              string: ca.test.data.PT.addressFirstLine
+            - name: city
+              string: ca.test.data.PT.addressCity
+            - name: state
+              string: ca.test.data.PT.addressState
+            - name: zipcode
+              string: ca.test.data.PT.deliveryAddresszipCode
+            - name: mobileNumber
+              string: ca.test.data.global.mobileNumber        
+
+      - executeFunction:
+         name: ca.test.functions.global.navigateToShop 
+
+      - log: 
+          message: Selecting store at HomePage.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.home.selectStore
+          params:
+            - name: Zip_Code
+              string: ca.test.data.orleansZipCode
+            - name: storeName
+              string: ca.test.data.orleansStoreName
+
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: pinCode
+              string: ca.test.data.PS-001.selectAddressZipCode
+
+      - log: 
+          message: Searching for a GO product with product name.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.functions.searchPage.searchItemArray
+          params:
+            - name: items
+              string: ca.test.data.PT-001.goItemArray1
+            - name: quantity
+              string: ca.test.data.PS002.product_1_qty 
+            - name: checkNonPromotionBadges
+              string: true
+
+      - executeFunction:
+          name: ca.functions.searchPage.searchItemArray
+          params:
+            - name: items
+              string: ca.test.data.PT-001.goItemArray2
+            - name: quantity
+              string: ca.test.data.product_1_qty
+            - name: checkNonPromotionBadges
+              string: true
+
+      - executeFunction:
+          name: ca.functions.searchPage.searchItemArray
+          params:
+            - name: items
+              string: ca.test.data.PT-001.goItemArray3
+            - name: quantity
+              string: ca.test.data.product_1_qty
+            - name: checkNonPromotionBadges
+              string: true    
+
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ${totalPrice}
+      
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCart
+
+      # navigate to reserve time page
+      - executeFunction:
+          name: ca.test.functions.cart.reserveTimePage
+
+      # Reserve time page navigating to delivery from store
+      - executeFunction:
+          name: ca.test.functions.reserveTime.deliverFromStore
+
+      # Reserving a slot
+      - executeFunction:
+          name: ca.test.functions.bookASlot.reserveTimePage.reserveStandardSlot
+
+      # Clicking book a slot button
+      - executeFunction:
+          name: ca.test.functions.bookASlot.reserveTimePage.bookASlotButton
+
+      # Asserting cart subTotal
+      - executeFunction:
+          name: ca.test.functions.cart.subTotalAssertion
+          params:
+            - name: subTotal
+              string: ${totalPrice}
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOut
+
+      # Update the custom tip box with $101 value and error msg validation
+      - executeFunction:
+          name: ca.test.functions.checkout.driverTip.moneyBoxValidations
+          params:
+            - name: customTipAmount
+              string: ca.test.data.driverTip.moreThanThreshold
+
+      # Update the custom tip box with $100 value and % validation
+      - executeFunction:
+          name: ca.test.functions.checkout.driverTip.moneyBoxValidations
+          params:
+            - name: customTipAmount
+              string: ca.test.data.driverTip.thresholdValue
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps         

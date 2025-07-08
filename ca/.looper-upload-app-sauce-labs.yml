@@ -1,0 +1,104 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Upload iOS Build
+          call: upload_ios_build_to_sauce_labs
+
+      - manual:
+          name: Upload Android Build
+          call: upload_android_build_to_sauce_labs
+
+  - spec: ca/release-latest
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Upload iOS Build
+          call: upload_ios_build_to_sauce_labs
+
+      - manual:
+          name: Upload Android Build
+          call: upload_android_build_to_sauce_labs
+
+envs:
+  global:
+    variables:
+      MARKET: ca
+      SLACK_CHANNEL: automation-pipeline-sauce-build-upload
+      SLACK_TEST_RUN_MESSAGE: "${TEST_RUN_STATUS} *- Upload Sauce Labs Build*\n
+        *Branch*: ${TRIGGER_BRANCH}\n
+        *Build*: ${BUILD_REPO} build\n
+        *App Version*: ${APP_VERSION}\n
+        *Platform*: ${APP_PLATFORM}\n
+        *App Location on Sauce Labs*: storage:filename=${SAUCE_FILE_NAME}\n
+        *Build Link*: ${BUILD_URL}"
+      TEST_PLAN_PASSED: ":white_check_mark: *Build Success*"
+      TEST_PLAN_FAILED: ":x: *Build Failure*"
+      SAUCE_FILE_NAME: ${BUILD_NAME}
+      SAUCE_USERNAME: ${SAUCE_USERNAME}
+      SAUCE_ACCESSKEY: ${SAUCE_ACCESSKEY}
+      BUILD_TYPE: ${BUILD_REPO}
+      APP_VERSION: ${BUILD_VERSION}
+
+
+  # iOS
+  env_ios_build:
+    variables:
+      APP_PLATFORM: ios
+      FILE_TYPE: zip
+
+  # Android
+  env_android_build:
+    variables:
+      APP_PLATFORM: android
+      FILE_TYPE: apk
+
+flows:
+  download_build:
+    - shell (name Download App Build): |
+        sh ca/scripts/download_build_looper.sh
+
+  upload_build:
+    - shell (name Upload Build to Sauce Labs): |
+        sh ca/scripts/upload_build_looper.sh
+
+  upload_build_to_sauce_labs:
+    - node(label = linux, isolation = except_project, ws = exclusive):
+        try:
+          - call: download_build
+          - call: upload_build
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+          - call: post_slack_test_run
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - call: post_slack_test_run
+          - shell: exit 1
+
+  upload_ios_build_to_sauce_labs:
+    call: upload_build_to_sauce_labs(env_ios_build)
+
+  upload_android_build_to_sauce_labs:
+    call: upload_build_to_sauce_labs(env_android_build)
+
+parameters:
+  - BUILD_VERSION: {type: string, defaultValue: "Provide build version to upload", label: ""}
+  - BUILD_NAME: {type: string, defaultValue: "Please provide build name with extension", label: "Please enter the build name with extension as per your looper.yml file."}
+  - SAUCE_USERNAME: {type: string, defaultValue: "Enter saucelabs username", label: ""}
+  - SAUCE_ACCESSKEY: {type: string, defaultValue: "Enter saucelabs accesskey", label: ""}
+  - BUILD_REPO: {type: choice, choices: "development,release", label: ""}
+

@@ -1,0 +1,84 @@
+general:
+  tags: teflon-functional-bookslot, C2738337
+  inherit:
+    filesRunAll:
+    - us-errors-helpers.yaml
+  testCaseId: C2738337
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # Get Environment Values
+      - executeFunction:
+            name: us.function.utils.getEnvironmentValue
+
+      # Set Platform Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      - log: End Before test
+
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+    - log: Start Main
+
+    # Navigate onboarding to home
+    - executeFunction:
+        name: us.functions.global.onboarding.navigateOnboardingToHome
+
+    # Navigate to sign in page
+    - executeFunction:
+        name: us.functions.home.navigateHomeToSignIn
+
+    # Sign in with default account
+    - executeFunction:
+        name: us.functions.global.authentication.signInAccount
+        params:
+        - name: email
+          string: us.data.prod.reserveSlot.inHome.delivery.email
+        - name: password
+          string: us.data.prod.reserveSlot.inHome.delivery.password
+
+     # Navigate back to Home
+    - executeFunction:
+        name: us.functions.global.navigation.accountToHome
+
+    # Open bookslot page from GIC in delivery
+    - executeFunction:
+        name: us.functions.loadBookingSlotScreen
+        params:
+          - name: page
+            string: home
+          - name: tab
+            string: delivery
+  
+    # Select evergreen time slot and reserve
+    - executeFunction:
+        name: us.functions.bookslot.reserveAnInHomeSlot
+
+    # make sure delivery intent is selected
+    - executeFunction:
+        name : us.functions.gic.setFulfillment 
+        params:
+          - name: option
+            string: Delivery
+
+    # Validate the reservation
+    - executeFunction:
+        name: us.functions.bookslot.validateInHomeSlotReservation
+
+    - storeIn:
+        key: testStatus
+        value: passed
+
+  - name: After
+    after: true
+    flow:
+    - executeFunction:
+        name: us.functions.utils.afterSteps

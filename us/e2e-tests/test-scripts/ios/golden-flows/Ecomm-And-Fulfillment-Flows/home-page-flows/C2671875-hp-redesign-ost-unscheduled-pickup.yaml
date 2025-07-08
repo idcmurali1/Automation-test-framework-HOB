@@ -1,0 +1,232 @@
+general:
+  platform: ios
+  tags: us-golden-flows, C2671875, p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  testCaseId: C2671875
+  metadata:
+    - name: scenarioId
+      string: EC096
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+#***************************************************************************************************************
+ # Astro - Create Account
+#***************************************************************************************************************
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp     
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.createAccountPayload
+
+
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: source
+      #         string: astro          
+      #       - name: itemType
+      #         string: STORE_UNSCHEDULED_PICKUP
+      #       - name: store
+      #         string: 32144 
+      #       - name: backupItem
+      #         string: 499312381  
+
+      - executeFunction:
+          name: us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: STORE_UNSCHEDULED_PICKUP
+            - name: storeId
+              string: 32144
+            - name: action
+              string: FetchAndValidateOrderMovment
+            - name: orderStatus
+              string: Customer Picked
+            - name: emailId
+              string: ${customerEmail}
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+#***************************************************************************************************************
+ # Astro - Create order
+#***************************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.unscheudledPickup.createOrderPayload
+
+
+      - log: ${orderNo}
+
+      - storeIn:
+          key: orderNo
+          value: ${orderNo}
+
+  # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+
+      - executeFunction:
+           name: us.functions.global.authentication.signInAccount
+           params:
+              - name: email
+                string: ${customerEmail}
+              - name: password
+                string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome              
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *           
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storepickup
+          params:
+            - name: option
+              string: inprogress
+            - name: ostHeaderLabel
+              string: We're preparing your order
+            - name: ostSubHeaderLabel
+              string: Pick up 
+            - name: orderStatusLink
+              string: View order
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderStatusLabel
+              string: Progress
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+
+#       # Deeplink into order details page
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus 
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_UNSCHEDULED_PICKUP
+            - name: status
+              string: PO Ready For Pickup 
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storepickup
+          params:
+            - name: option
+              string: readyforpickup
+            - name: ostHeaderLabel
+              string: Your curbside order is ready
+            - name: ostSubHeaderLabel
+              string: Pick up by
+            - name: orderStatusLink
+              string: I'm on my way
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storepickup
+          params:
+            - name: option
+              string: checkedin
+            - name: ostHeaderLabel
+              string: You're in parking spot
+            - name: ostSubHeaderLabel
+              string: We'll see you soon!
+            - name: orderStatusLink
+              string: View pickup details
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus 
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_UNSCHEDULED_PICKUP
+            - name: status
+              string: Customer Picked
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storepickup
+          params:
+            - name: option
+              string: customerpicked
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

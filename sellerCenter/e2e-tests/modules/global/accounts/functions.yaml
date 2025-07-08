@@ -1,0 +1,303 @@
+functions:
+
+  #login
+  - name: sc.functions.accounts.login
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.logInButton
+      - click:
+          identifier: sc.mappings.accounts.logInButton
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.accounts.advancedOption
+          then:
+            - click:
+                identifier: sc.mappings.accounts.advancedOption
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.accounts.proceedLink
+            - click:
+                identifier: sc.mappings.accounts.proceedLink
+      - verifyIdentifier:
+          timeout: 180000
+          present:
+            - identifier: sc.mappings.accounts.signInTitle
+      - enterText:
+          identifier: sc.mappings.accounts.email
+          string: ${email}
+      - enterText:
+          identifier: sc.mappings.accounts.password
+          string: ${password}
+      - hideKeyboard: true
+      - click:
+          identifier: sc.mappings.accounts.signInButton
+      - sleep:
+          duration: 20000
+      - verifyIdentifier:
+          timeout: 45000
+          notPresent:
+            - identifier: sc.mappings.accounts.loadingImage
+      - if:
+          identifier:
+            notPresent:
+              - identifier: sc.mappings.accounts.logInButton
+          then: 
+            - log: Logged In sucessfully
+          else:
+            - sleep:
+                duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: sc.mappings.accounts.logInButton
+                then:
+                  - click:
+                      identifier: sc.mappings.accounts.logInButton
+                  - sleep:
+                      duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: sc.mappings.accounts.email
+                then:
+                  - enterText:
+                      identifier: sc.mappings.accounts.email
+                      string: ${email}
+                  - enterText:
+                      identifier: sc.mappings.accounts.password
+                      string: ${password}
+                  - sleep:
+                      duration: 5000
+                  - click:
+                      identifier: sc.mappings.accounts.signInButton
+                  - sleep:
+                      duration: 10000
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: sc.mappings.home.notifications.text
+      #     then:
+      #       - click:
+      #           identifier: sc.mappings.home.notifications.close
+      # close popUp page 
+      - executeFunction:
+          name: sc.functions.navigation.closePushNotifications
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: sc.mappings.accounts.signedInTitle
+
+  - name: sc.functions.reloadPage
+    flow:
+      - storeIn:
+          key: pageLoaded
+          value: false
+      - log: "Starting reloadPage function"
+      - loop:
+          begin: 0
+          end: 4
+          storeIndex: i
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: sc.mappings.navigation.retryButton
+                then:
+                  - click:
+                      identifier: sc.mappings.navigation.retryButton
+                else:
+                  - storeIn:
+                      key: pageLoaded
+                      value: true
+                  - break: true
+      - if:
+          condition: ${pageLoaded}
+          then:
+            - log: Page loaded, no retry button present
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${GLASS_ENV} - Page load failure
+
+  - name: sc.functions.accounts.validate.profileDetailsDisplay
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.details.profileImage
+            - identifier: sc.mappings.accounts.details.profileName
+            - identifier: sc.mappings.accounts.details.profileRole
+            - identifier: sc.mappings.accounts.details.orgName
+            - identifier: sc.mappings.accounts.details.partnerId
+
+  - name: sc.functions.accounts.validate.settingsDetailsDisplay
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.details.settingsText
+            - identifier: sc.mappings.accounts.personalInfo.settingsLink
+            - identifier: sc.mappings.accounts.notifications.settingsLink
+
+  - name: sc.functions.accounts.validate.moreDetailsDisplay
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.details.moreText
+            - identifier: sc.mappings.accounts.shareStorefront.settingsLink
+            - identifier: sc.mappings.accounts.signOut.settingsLink
+
+  - name: sc.functions.accounts.validate.personalInfoDetailsDisplay
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.personalInfo.settingsLink
+      - click:
+          identifier: sc.mappings.accounts.personalInfo.settingsLink
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.personalInfo.settingsPage.title
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.personalInfo.settingsPage.infoSection
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/generateR2Array.js
+          args:
+            - value: ${titlesList}
+          getResponse:
+            storeIn: titlesList
+      - loop:
+          each: ${titlesList}
+          storeElement: titles
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.accounts.personalInfo.settingsPage.titleTexts
+                  - identifier: sc.mappings.accounts.personalInfo.settingsPage.titleValues
+            - if:
+                condition: ${titles} == 'Full name' || ${titles} == 'Password'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: sc.mappings.accounts.personalInfo.settingsPage.titleEdits
+                      notPresent:
+                        - identifier: sc.mappings.accounts.personalInfo.settingsPage.titleEditsLock
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: sc.mappings.accounts.personalInfo.settingsPage.titleEditsLock
+                      notPresent:
+                        - identifier: sc.mappings.accounts.personalInfo.settingsPage.titleEdits
+
+  - name: sc.functions.accounts.validate.helpDetailsDisplay
+    flow:
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/generateR2Array.js
+          args:
+            - value: ${helpTypeList}
+          getResponse:
+            storeIn: helpTypeList
+      - if:
+          condition: ${helpSection} == 'support'
+          then:
+            - if:
+                condition: ${GLASS_ENV} == 'teflon'
+                then:
+                  - storeIn:
+                      key: urlKey
+                      value: seller.qa.walmart.com
+                else:
+                  - storeIn:
+                      key: urlKey
+                      value: seller.walmart.com
+          else:
+            - storeIn:
+                key: urlKey
+                value: marketplacelearn.walmart.com
+
+      - loop:
+          each: ${helpTypeList}
+          storeElement: helpType
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.accounts.help.link
+
+            - click:
+                identifier: sc.mappings.accounts.help.link
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.accounts.help.url
+
+            - try:
+                flow:
+                  - if:
+                      condition: ${APP_PLATFORM} == 'android'
+                      then:
+                      - verifyIdentifier:
+                          text:
+                            - identifier: sc.mappings.accounts.help.url
+                              contains: ${urlKey}
+                      else:
+                      - verifyIdentifier:
+                          value:
+                            - identifier: sc.mappings.accounts.help.url
+                              contains: ${urlKey}
+                catch:
+                  flow:
+                    - failTest:
+                        message: ENV_FAILURE - ${GLASS_ENV} - Help section hyper link not proper
+
+            - sleep:
+                duration: 3000
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - click:
+                      identifier: sc.mappings.accounts.help.closeWebPage
+                else:
+                  - executeFunction:
+                      name: us.functions.global.navigation.goToDeepLink
+                      params:
+                        - name: deepLinkUrl
+                          string: sellercenter://seller/help
+                  - executeFunction:
+                      name: sc.functions.navigation.toTab
+                      params:
+                        - name: tab
+                          string: Help
+            - sleep:
+                duration: 2000
+
+  - name: sc.functions.accounts.selectEnvironment
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.accounts.logInButton
+      - executeFunction:
+          name: sc.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://debugPanel
+      - verifyIdentifier:
+          present:
+            - identifier: //android.widget.TextView[@resource-id="android:id/title" and @text="Environment profile"]
+      - click:
+          identifier: //android.widget.TextView[@resource-id="android:id/title" and @text="Environment profile"]
+      - verifyIdentifier:
+          present:
+            - identifier: (//android.widget.TextView[@resource-id="android:id/title" and @text="Environment profile"])[2]
+      - click:
+          identifier: (//android.widget.TextView[@resource-id="android:id/title" and @text="Environment profile"])[2]
+      - verifyIdentifier:
+          present:
+            - identifier: //android.widget.CheckedTextView[@resource-id="android:id/text1" and @text="Teflon"]
+      - click:
+          identifier: //android.widget.CheckedTextView[@resource-id="android:id/text1" and @text="Teflon"]
+      - sleep:
+          duration: 3000
+      - goBack: true
+      - goBack: true

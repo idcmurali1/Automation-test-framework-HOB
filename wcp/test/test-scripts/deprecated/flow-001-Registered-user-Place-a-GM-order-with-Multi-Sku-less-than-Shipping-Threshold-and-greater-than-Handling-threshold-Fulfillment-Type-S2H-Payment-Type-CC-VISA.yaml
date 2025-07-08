@@ -1,0 +1,158 @@
+#-------------------------------------------------------------------------------------------------------------------
+# TC: 001
+# UserType: Registered user
+# Flow : Onboard -> Search GM -> A2C -> Login -> XO
+# Fulfillment: S2H
+# A2C Experience: Search
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  testCaseId: TC-001
+  tags: flow-001v, wcp-poc
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfor
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+
+      - log:
+          message: "Step 1: Validate Welcome to Walmart Page."
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboarding.isOnboardingDisplayed
+      - if:
+          condition: ${returnedIsDisplayed} == true
+          then:
+            - log:
+                message: "Onboarding displayed, flow will navigate through."
+                color: CYAN
+            - executeFunction:
+                name: functions.onboarding.validateOboardingPage
+            - executeFunction:
+                name: functions.onboarding.tapContinueBtn
+          else:
+            - failTest:
+                message: "Onboarding not displayed."
+
+      - log:
+          message: "Step 2: Check & Validate Notification Page."
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboarding.isNotificationDisplayed
+      - if:
+          condition: ${returnedIsDisplayed} == true
+          then:
+            - log:
+                message: "Notification displayed"
+                color: CYAN
+            - executeFunction:
+                name: functions.onboarding.validateNotificationPage
+            - executeFunction:
+                name: functions.onboarding.allowNotification
+          else:
+            - log:
+                message: "Notification not displayed"
+                color: CYAN
+
+      - log:
+          message: "Step 3: Validating Share Your Location Page"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboarding.validateShareLocation$LearnMoreLink
+      - executeFunction:
+          name: functions.onboarding.shareLocation.tapEnterPostalCodeLink
+
+      - log:
+          message: "Step 4: Validating Share Your Location Page"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: function.onboarding.validateShareYourPostalCodePage
+
+      - log:
+          message: "Step 5: Enter postal code"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboarding.enterPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+      - executeFunction:
+          name: functions.onboarding.sharePostalCode.tapSearchButton
+
+      - log:
+          message: "Step 6: Validate Personalised Experience Page."
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboarding.validatePersonalisedExperienceScreen
+      - executeFunction:
+          name: functions.onboarding.personalisedExperience.tapAllow
+      - executeFunction:
+          name: functions.onboarding.shoppingExperience.tapShoppingOption
+          params:
+            - name: ShoppingExperience
+              string: 'Exclusivos online'
+      - log:
+          message: "End of onboarding validation."
+          color: GREEN_BOLD
+    
+      - log:
+          message: "Step 6: Search for GM product"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.searchField.enterText
+          params:
+            - name: searchText
+              string: data.searchPage.productName
+      - executeFunction:
+          name: functions.searchResultPage.addFirstAvailableProductToCart
+
+      - executeFunction:
+          name: functions.searchResultPage.protectionPlan.isPageDisplayed
+      
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - executeFunction:
+                name: functions.searchResultPage.protectionPlan.tapDecline
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: data.userEmail
+            - name: userPassword
+              string: data.userPassword
+
+      - sleep:
+          duration: 10000
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - storeIn:
+          key: testStatus
+          value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-001
+          color: GREEN_BOLD

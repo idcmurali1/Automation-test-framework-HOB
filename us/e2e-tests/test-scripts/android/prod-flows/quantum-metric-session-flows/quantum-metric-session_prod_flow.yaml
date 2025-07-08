@@ -1,0 +1,161 @@
+general:
+  platform: android
+  tags: qmprod
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644789
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?_xf=7WnQH&wm_preview_date=1717011146163
+
+      - sleep:
+          duration: 5000
+
+#      #create new account
+#      - executeFunction:
+#          name: us.functions.global.authentication.createAccountFlow
+#          params:
+#            - name: skipPhoneNumber
+#              string: true
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+# Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.qmsession.android.email
+            - name: password
+              string: us.data.prod.qmsession.android.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.deleteCreditCard
+
+      - executeFunction:
+          name: us.functions.account.navigation.fromAccountsToTab
+          params:
+            - name: accountTabName
+              string: Addresses
+
+      - executeFunction:
+          name: us.functions.account.removeAddress
+
+      - executeFunction:
+          name: us.functions.account.navigation.fromAccountsToTab
+          params:
+            - name: accountTabName
+              string: Addresses
+
+      #Add address
+      - executeFunction:
+          name: us.functions.deliveryAddress.addAddress
+          params:
+            - name: firstName
+              string: test
+            - name: lastName
+              string: user
+            - name: streetAddress
+              string: us.data.deliveryaddress.streetAddress
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+            - name: addDeliveryInstructions
+              string: true
+            - name: accessCode
+              string: 19
+            - name: deliveryNotes
+              string: TestInstructions
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Wallet
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCreditCardDetails
+          params:
+            - name: type
+              string: creditCard
+#            - name: page
+#              string: Add a payment method to Wallet
+            - name: number
+              string: 4012000077771234
+            - name: expiration
+              string: 1225
+            - name: cvv
+              string: 111
+            - name: phoneNumber
+              string: 2342534123
+            - name: streetAddress
+              string: 1694 Adrian Way
+            - name: city
+              string: San Jose
+            - name: state
+              string: CA
+            - name: zipcode
+              string: 95122
+            - name: qmSessionCardError
+              string: true
+
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.global.navigation.quantumMetric.getSessionDetails
+      - executeFunction:
+          name: us.functions.utils.afterSteps

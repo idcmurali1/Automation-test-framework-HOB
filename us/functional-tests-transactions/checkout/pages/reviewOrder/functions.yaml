@@ -1,0 +1,692 @@
+functions:
+  - name: us.functions.functional.checkout.reviewOrder.validateIsReviewOrderView
+    flow:
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.functional.checkout.reviewOrder.navBarHeading
+
+  - name: us.functions.functional.checkout.reviewOrder.validateSchedulePickupCard
+    flow:
+      - storeIn:
+          key: viewType
+          value: Pickup
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateCardImageAndTitle
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePromiseDate
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validatePickupPerson
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateItemDetails
+  
+  - name: us.functions.functional.checkout.reviewOrder.validateDeliveryFromStoreFulfillmentCard
+    flow:
+      - storeIn:
+          key: viewType
+          value: Delivery
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateCardImageAndTitle
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePromiseDate
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateItemDetails
+
+  - name: us.functions.functional.checkout.reviewOrder.validateFCCard
+    flow:
+      - storeIn:
+          key: viewType
+          value: Delivery
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateCardImageAndTitle
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateItemDetails
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePromiseDate
+
+  - name: us.functions.functional.checkout.reviewOrder.fulfillment.validateCardImageAndTitle
+    flow:
+      - if:
+          condition: ${fulfillmentText} == 'Curbside pickup' ||  ${fulfillmentText} == 'pickup' || ${fulfillmentText} == 'Pickup'
+          then:
+            - storeIn:
+                key: viewType
+                value: Pickup
+            - executeFunction:
+                name: us.functions.functional.checkout.reviewOrder.getFulfillmentModuleHeading
+            - executeNode:
+                  file: us/functional-tests-transactions/helpers/validatePickupModuleHeadingText.js
+                  args:
+                    - value: ${fullfillmentModuleHeading}
+                  getResponse:
+                    storeIn: isValidModuleHeading          
+      - if:
+            condition: ${fulfillmentText} == 'Shipping' || ${fulfillmentText} == 'shipping'
+            then:
+              - storeIn:
+                  key: viewType
+                  value: Delivery
+              - executeFunction:
+                  name: us.functions.functional.checkout.reviewOrder.getFulfillmentModuleHeading
+              - executeNode:
+                    file: us/functional-tests-transactions/helpers/validateShippingMoudleHeadingText.js
+                    args:
+                      - value: ${fullfillmentModuleHeading}
+                    getResponse:
+                      storeIn: isValidModuleHeading
+      - if:
+          condition: ${fulfillmentText} == 'Delivery' || ${fulfillmentText} == 'delivery'
+          then:
+            - storeIn:
+                key: viewType
+                value: Delivery
+            - executeFunction:
+                name: us.functions.functional.checkout.reviewOrder.getFulfillmentModuleHeading
+            - executeNode:
+                  file: us/functional-tests-transactions/helpers/validateDeliveryFromStoreModuleHeadingText.js
+                  args:
+                    - value: ${fullfillmentModuleHeading}
+                  getResponse:
+                    storeIn: isValidModuleHeading
+      - if:
+          condition: ${fulfillmentText} == 'MPDelivery' || ${fulfillmentText} == 'mpDelivery'
+          then:
+            - storeIn:
+                key: viewType
+                value: MPDelivery
+            - executeFunction:
+                name: us.functions.functional.checkout.reviewOrder.getFulfillmentModuleHeading
+            - executeNode:
+                  file: us/functional-tests-transactions/helpers/validateDeliveryFromLocalStoreModuleHeadingText.js
+                  args:
+                    - value: ${fullfillmentModuleHeading}
+                  getResponse:
+                    storeIn: isValidModuleHeading
+
+      - log: Module heading is in right format ${isValidModuleHeading}
+      - if:
+          condition: ${isValidModuleHeading} != true
+          then:
+            - failTest:
+                message: ${viewType} "module heading is not in right format"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardImage
+  
+  - name: us.functions.functional.checkout.reviewOrder.getFulfillmentModuleHeading
+    flow:
+       - if:
+          condition: ${platform} == 'iOS'
+          then:
+             - getString:
+                identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                attribute: label
+                storeIn: fullfillmentModuleHeading
+          else:
+              - getString:
+                  identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                  attribute: text
+                  storeIn: fullfillmentModuleHeading
+       - log: Module heading ${fullfillmentModuleHeading}
+ 
+
+  - name: us.functions.functional.checkout.reviewOrder.validatePromiseDate
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+             - getString:
+                identifier:  us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentTime
+                attribute: label
+                storeIn: promiseDateTimeText
+          else:
+              - getString:
+                  identifier:  us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentTime
+                  attribute: text
+                  storeIn: promiseDateTimeText
+      - log: Promise date ${promiseDateTimeText}
+      - executeNode:
+          file: us/functional-tests-transactions/helpers/validatePromiseDateTimeText.js
+          args:
+            - value: ${fulfillmentType}
+            - value: ${promiseDateTimeText}
+          getResponse:
+            storeIn: isValidPromiseDate
+      - log: Promise date displayed is in right format ${isValidPromiseDate}
+      - if:
+          condition: ${isValidPromiseDate} != true
+          then:
+            - failTest:
+                message: "Promise date displayed is not in right format"
+
+  - name: us.functions.functional.checkout.reviewOrder.fulfillment.validateItemDetails
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.itemDetailsSection
+            - identifier: us.mappings.functional.checkout.reviewOrder.itemDetailsSection.viewButton
+
+      - if:
+          condition: ${fulfillmentItemCount} > 1
+          then:
+            - storeIn:
+                key: fulfillmentItemCount
+                value: ${fulfillmentItemCount} items
+          else:
+            - storeIn:
+                key: fulfillmentItemCount
+                value: ${fulfillmentItemCount} item
+      - executeFunction:
+          name: us.functions.functional.utils.validateElementValue
+          params:
+            - name: identifierToVerify
+              string: us.mappings.functional.checkout.reviewOrder.itemDetailsSection.itemCount
+            - name: identifierValueToVerify
+              string: ${fulfillmentItemCount}
+            - name: toVerifyContent
+              string: "false"
+
+  - name: us.functions.functional.checkout.reviewOrder.itemDetails.validateItemDetailsForDigitalDelivery
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+          then:
+            - click:
+                identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+            - sleep:
+                duration: 1000
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.instructionSubtitleLabel
+                    contains: ${emailAddress}
+                  - identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.instructionInfoLabel
+                    contains: We'll send your digital item instructions to the email above shortly after your order is processed.
+            - click:
+                identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.doneButton
+
+  - name: us.functions.functional.checkout.reviewOrder.selectSignForMyOrder
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.attendedDeliveryType
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.attendedDeliveryTypeSelected
+
+  - name: us.functions.functional.checkout.reviewOrder.validateLeaveAtMyDoorSelected
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.unattendedDeliveryTypeSelected
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.disclaimerLabel
+          notPresent:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.attendedDeliveryTypeSelected
+
+  - name: us.functions.functional.checkout.reviewOrder.validateSignForMyOrderSelected
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.attendedDeliveryTypeSelected
+          notPresent:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.unattendedDeliveryTypeSelected
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructionsView.disclaimerLabel
+
+  - name: us.functions.functional.checkout.reviewOrder.validateDeliveryModuleExpressSlot
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.expressDelivery.slotTime
+          label:
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentCardTitle
+              contains: Express delivery from store
+
+  - name: us.functions.functional.checkout.reviewOrder.validateExpressDeliveryPOS
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.scrollDownToPOS
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.verifyCheckoutPosBagFeeLabel
+            - identifier: us.mappings.functional.checkout.reviewOrder.verifyCheckoutPosBagFeePending
+            - identifier: us.mappings.functional.checkout.reviewOrder.pos.expressDeliveryFeeLabel
+          notPresent:
+            - identifier: us.mappings.reviewOrder.POS.threshold
+
+  - name: us.functions.functional.checkout.reviewOrder.validateUnscheduledPickupModule
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSummaryView.nameLabel
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSummaryView.addressLabel
+          label:
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentCardTitle
+              contains: Free curbside pickup
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentTime
+              contains: Anytime after
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSummaryView.commentLabel.unscheduledPickup
+              contains: We'll hold your order for
+
+  - name: us.functions.functional.checkout.reviewOrder.pos.validateNoBelowThesholdCharge
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.scrollDownToPOS
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.functional.checkout.reviewOrder.pos.belowOrderMinimumLineItemCharge
+
+  - name: us.functions.functional.checkout.reviewOrder.validatePhoneNumberRequiredError
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.lDAlert.alertMessage
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.mobileContactText
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.mobileContact.enterPhoneNumberErrorMessage
+      # Clearing error message
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.mobileContact.phoneNumberTextField
+          string: 1
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.mobileContactText
+          position: center
+
+  - name: us.functions.functional.checkout.reviewOrder.enterPhoneNumber
+    platform: ios
+    flow:
+      - if:
+          condition: ${phoneNumber} == null
+          then:
+            - storeIn:
+                key: phoneNumber
+                value: 9876543211
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.mobileContact.phoneNumberTextField
+          string: ${phoneNumber}
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+
+  - name: us.functions.functional.checkout.reviewOrder.pos.validateItemQuantity
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.scrollDownToPOS
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.functional.checkout.reviewOrder.pos.subTotal.text
+              contains: "Subtotal (${quantity} item"
+
+  - name: us.functions.functional.checkout.reviewOrder.itemDetails.validateItemQuantity
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          value:
+            - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentProductGroupView.countLabel
+              contains: ${quantity}
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+          wait: 3000
+      - if:
+          condition: ${isMaxQuantity} == true
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.functional.quantityStepper.incrementButton.disabled
+                label:
+                  - identifier: us.mappings.functional.quantityStepper.text
+                    contains: "Max ${quantity}"
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.functional.quantityStepper.incrementButton.enabled
+                label:
+                  - identifier: us.mappings.functional.quantityStepper.text
+                    contains: ${quantity}
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.doneButton
+          wait: 3000
+
+  - name: us.functions.functional.checkout.reviewOrder.itemDetails.decrementItemQuantity
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+          wait: 3000
+      - loop:
+          begin: 0
+          end: ${numDecrements}
+          flow:
+            - click:
+                identifier: us.mappings.functional.quantityStepper.decrementButton
+          wait: 3
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.doneButton
+          wait: 3000
+
+  - name: us.functions.functional.checkout.reviewOrder.itemDetails.incrementItemQuantity
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.viewButton
+          wait: 3000
+      - loop:
+          begin: 0
+          end: ${numIncrements}
+          flow:
+            - click:
+                identifier: us.mappings.functional.chekcout.reviewOrder.quantityStepper.incrementButton
+          wait: 3
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.itemDetails.doneButton
+          wait: 3000
+
+  - name: us.functions.functional.checkout.reviewOrder.validateDeliveryModuleEvergreenSlot
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.evergreen.deliveryFromStore.text.on.reviewOrder.page
+            - identifier: us.mappings.evergreen.ArrivesIn3hoursOrLess.text.on.reviewOrder.page
+
+  - name: us.functions.functional.checkout.reviewOrder.validateEvergreenDeliveryPOS
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.scrollDownToPOS
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.verifyCheckoutPosAcceptBagFeeTextLineLeft
+            - identifier: us.mappings.functional.checkout.reviewOrder.verifyCheckoutPosBagFeePending
+            - identifier: us.mappings.functional.checkout.reviewOrder.pos.evergreenDeliveryFeeLabel
+            - identifier: us.mappings.reviewOrder.POS.threshold
+
+  - name: us.functions.functional.checkout.reviewOrder.fulfillment.validateMixedFulfillmentModules
+    flow:
+      - if:
+          condition: ${1p-pickup} == true
+          then:
+            - storeIn:
+                key: viewType
+                value: Pickup
+            - storeIn:
+                key: globalIntent
+                value: Pickup
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                    contains: urbside pickup
+                present:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+      - if:
+          condition: ${delivery} == true
+          then:
+            - storeIn:
+                key: viewType
+                value: Delivery
+            - storeIn:
+                key: globalIntent
+                value: Delivery
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                    contains: Delivery from store
+                present:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+      - if:
+          condition: ${shipping} == true
+          then:
+            - storeIn:
+                key: viewType
+                value: Delivery
+            - storeIn:
+                key: globalIntent
+                value: Shipping
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+            # Delivery and shipping modules use the same xpath, this check is necessary when both modules are present
+            - if:
+                condition: ${delivery} == true
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.functional.checkout.reviewOrder.shippingCardTitle
+                        - identifier: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+                else:
+                  # checking for "hipping, arrives" - deals with both module cases "Shipping, arrives" and "Free shipping, arrives"
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                          contains: hipping, arrives
+                      present:
+                        - identifier: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+      - if:
+          condition: ${digitalDelivery} == true
+          then:
+            - storeIn:
+                key: viewType
+                value: DigitalDelivery
+            - storeIn:
+                key: globalIntent
+                value: Digital
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                    contains: Digital delivery
+                present:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+      - if:
+          condition: ${3p-pickup} == true
+          then:
+            - storeIn:
+                key: viewType
+                value: Pickup
+            - storeIn:
+                key: globalIntent
+                value: MPPickup
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+                    contains: pickup
+                    notContains: urbside
+                present:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.globalIntentIcon
+
+  # Add delivery instructions
+  - name: us.functions.functional.checkout.reviewOrder.addDeliveryInstructions
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructions.title
+            - identifier: us.mappings.functional.checkout.reviewOrder.guidedDeliveryInstructions
+            - identifier: us.mappings.functional.checkout.reviewOrder.editDeliveryInstructionsButton
+          label:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructions.title
+              contains: Delivery instructions (optional)
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editDeliveryInstructionsButton
+          wait: 3000
+
+      # Verify guided delivery instructions
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.title
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.propertyTypeButton
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.gateCodeTextField
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.deliveryNotes
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.dropoffLabel
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.saveButton
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.gdi.propertyTypeButton
+          wait: 3000
+
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.gdi.gateCodeTextField
+          string: ${gateCode}
+          clearField: true
+          clickFirst: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.gdi.deliveryNotes
+          string: ${deliveryNotes}
+          clearField: true
+          clickFirst: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.gdi.dropoffLabel
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.gdi.doorstepButton
+
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.gdi.saveButton
+      
+      - sleep:
+          duration: 3000
+
+  # Verify guided delivery instructions
+  - name: us.functions.functional.checkout.reviewOrder.verifyGuidedDeliveryInstructions
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructions.title
+            - identifier: us.mappings.functional.checkout.reviewOrder.guidedDeliveryInstructions
+            - identifier: us.mappings.functional.checkout.reviewOrder.editDeliveryInstructionsButton
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.functional.checkout.reviewOrder.guidedDeliveryInstructions
+              contains: ${deliveryInstructions}
+      - log: Guided delivery instructions are saved successfully - ${deliveryInstructions}
+
+##################################### Android ############################################
+  - name: us.functions.functional.checkout.reviewOrder.confirmCvv
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - click:
+          identifier: us.mappings.reviewOrder.placeOrderButton
+          wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.confirmCvv.cvvField
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.confirmCvv.cvvPutField
+            - enterText:
+                identifier: us.mappings.reviewOrder.confirmCvv.cvvPutField
+                string: ${cvv}
+                pressEnter: true
+
+  - name: us.functions.functional.checkout.placeOrder
+    flow:
+      - executeFunction:
+          name: us.functions.functional.checkout.enterCVVAndPlaceOrder
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.placeOrder.confirmYourLocationPopupTitle
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.placeOrder.confirmYourLocationPopupConfirmButton
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+
+  - name: us.functions.functional.checkout.enterCVVAndPlaceOrder
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.navBarHeading
+          position: center
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.paymentMethod.cvvInputField
+          position: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.functional.checkout.reviewOrder.paymentMethod.enterCvvMessage
+          then:
+            - log: CVV error Detected
+            - click:
+                identifier: us.mappings.functional.checkout.reviewOrder.paymentMethod.cvvInputField
+                wait: 5000
+            - if:
+                condition: ${cvv}!= null
+                then:
+                  - enterText:
+                      clearField: false
+                      clickFirst: false
+                      identifier: us.mappings.functional.checkout.reviewOrder.paymentMethod.cvvInputField
+                      string: ${cvv}
+                      pressEnter: true
+                else:
+                  - enterText:
+                      clearField: false
+                      clickFirst: false
+                      identifier: us.mappings.functional.checkout.reviewOrder.paymentMethod.cvvInputField
+                      string: 111
+                      pressEnter: true
+            - executeFunction:
+                name: us.functions.functional.util.clickKeyboardDone
+
+          else:
+            - log: No CVV error was Detected
+      - click:
+          identifier: us.mappings.reviewOrder.placeOrderButton
+          wait: 3000

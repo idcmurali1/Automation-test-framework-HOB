@@ -1,0 +1,124 @@
+general:
+  platform: ios
+  tags: qmios
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644789
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?_xf=5rl0F&wm_preview_date=1717023779125
+
+      #create new account
+      - executeFunction:
+          name: us.functions.global.authentication.createAccountFlow
+          params:
+            - name: email
+              string: identity-testuser${timestamp}@walmart.com
+            - name: password
+              string: E2epassword$
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: us.functions.deliveryAddress.addAddress.onGIC
+          params:
+            - name: firstName
+              string: identity
+            - name: lastName
+              string: testuser
+            - name: streetAddress
+              string: us.data.flow004.streetAddress
+            - name: city
+              string: us.data.flow004.city
+            - name: state
+              string: us.data.flow004.state
+            - name: zipcode
+              string: us.data.flow004.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 986976700
+
+      # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.global.navigation.quantumMetric.getSessionDetails
+      - executeFunction:
+          name: us.functions.utils.afterSteps

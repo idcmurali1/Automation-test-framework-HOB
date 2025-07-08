@@ -1,0 +1,146 @@
+#author : Madhuvishnu
+general:
+  tags: C2717587,unified-prod-e2e,MP007 , unified-prod-e2e-mp
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2717587
+  metadata:
+    - name: scenarioId
+      string: MP007
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+       # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: localmarketplace.android@cloudtest.org
+            - name: android.password
+              string: E2epassword$
+            - name: ios.email
+              string: localmarketplace.ios.pickup@cloudtest.org
+            - name: ios.password
+              string: E2epassword$
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 75211
+            - name: storeName
+              string: Dallas
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.mpPickupPopUp
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      # - executeFunction:
+      #     name: unified.us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://ip/8538973491 #8552460222 #6934422937 #8538973929 #8538973491
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: Urban Donut
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Pickup
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.item.localMarketPlace.itemPageValidations
+          params:
+            - name: fulfillment
+              string: Pickup
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.mpPickupPopUp
+
+      - executeFunction:
+          name: unified.us.functions.cart.localMarketPlace.cartPageValidations
+          params:
+            - name: fulfillment
+              string: Pickup
+
+      #Continue to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.localMarketPlace.reviewOrderPageValidations
+          params:
+            - name: fulfillment
+              string: Pickup
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

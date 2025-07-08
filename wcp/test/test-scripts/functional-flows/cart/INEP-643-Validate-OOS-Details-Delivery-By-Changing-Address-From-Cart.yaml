@@ -1,0 +1,214 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-643
+#       Flow : MH: Select GIC delivery intent and address, A2C and change address in cart and validate OOS section and Number of item in OOS details
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179336
+#   INEP TEST ID:
+#     https://jira.walmart.com/browse/INEP-643
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-863
+
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-643
+  tags: INEP-643, OPIF-179336, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-863, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+
+    flow:
+      - log: "BEFORE SCENARIO"
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Select GIC delivery intent and address, A2C and change address in cart and validate OOS section and Number of item in OOS details"
+    flow:
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+      # Click on login and select sign in..
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.mh.inep643.user.email-android
+          else:
+            - storeIn:
+                key: userEmail
+                value: data.mh.inep643.user.email-ios
+
+      # Login with existing user user..
+      - log:
+          message: "Login with existing user using password as authentication method and ensure user is logged in.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      # Select delivery from store and select first address..
+      - log:
+          message: "Select delivery and select store.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.homePage.selectStore
+          params:   
+            - name: Delivery
+              string: true
+            - name: validateAddress
+              string: true
+            - name: specificAddress
+              string: true
+            - name: address
+              string: data.mh.inep643.address # Need to update
+            - name: storeName
+              string: data.global.gic.storeNameCalzada   # Need to update
+
+      # Add item from search page..
+      - log:
+          message: "Add item from search page.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+          params:          
+            - name: productArray
+              string: data.global.itemsArray.unscheduled # Need to update item
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.global.item.1count
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart.. "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails 
+
+      # Validate fulfillment details in cart page.. 
+      - log:
+          message: "Validate fulfillment details in cart page.. "
+          color: PURPLE_BOLD_BRIGHT                    
+      - executeFunction:
+          name: function.cartPage.validateFufillmentType
+          params:
+            - name: expectedFulfillmentType
+              string: data.global.deliveryText
+
+      # Select Delivery slot from cart..
+      - log:
+          message: "Select Delivery slot from cart.."
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      - executeFunction:
+           name: functions.reserveATime.bookSlot
+           params:
+             - name: fufillment
+               string: data.global.deliveryText.delivery
+             - name: slotType
+               string: Standard  
+             - name: slotDay
+               string: tomorrow
+      
+      # Change address from cart..
+      - log:
+          message: "Change address from cart.."
+          color: PURPLE_BOLD_BRIGHT         
+      - executeFunction:
+          name: functions.cartPage.selectSecondDeliveryAddress # Need to add second address in both accounts
+
+      # Validate the item in the cart is OOS..
+      - log:
+          message: "Validate the item in the cart is OOS.."
+          color: PURPLE_BOLD_BRIGHT            
+      - executeFunction:
+          name: functions.cartPage.validateOOSandItemUpdateSheet
+          params:
+            - name: ItemCount
+              string: data.global.item.1count
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - executeFunction:
+          name: functions.utils.after

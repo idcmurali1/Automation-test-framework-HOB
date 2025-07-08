@@ -1,0 +1,147 @@
+general:
+  tags: C2657236, unified-prod-e2e-1, prod-e2e-sim-dct, EC009  #prod-e2e-rdc-dct #prod-e2e-dct
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657236
+  metadata:
+    - name: scenarioId
+      string: EC009 #10
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in Account modified for Optimization
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: ios.email
+              string: us.data.prod.flow008.ios.email
+            - name: ios.password
+              string: us.data.prod.flow008.password
+            - name: android.email
+              string: us.data.prod.flow008.android.email
+            - name: android.password
+              string: us.data.android.flow0120.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: sliced banana
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      #Add 3P item to cart using deeplink
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.flow005.item.wfs #${deeplinkURl}
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: timeSlot
+              string: expressSlot
+
+      # Review Scheduled delivery order details
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: us.data.prod.flow008.fulfillment
+            - name: cart
+              string: true
+
+      # Go to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Review Scheduled delivery order details
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: us.data.prod.flow008.fulfillment
+            - name: reviewOrder
+              string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

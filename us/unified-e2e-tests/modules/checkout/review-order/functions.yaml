@@ -1,0 +1,3930 @@
+functions:
+  - name: unified.us.functions.checkout.reviewOrder.verifyEditPickPersonLink
+    flow:
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.editPickupPersonLink
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPersonLink
+          coordinates: 50% , 50%
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+          string: ${pickupPersonFirstName}
+          clearField: true
+          clickFirst: true
+      - executeFunction:
+          name: unified.us.functions.utils.dismissKeyboard
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+          string: ${pickupPersonLastName}
+          clearField: true
+          clickFirst: true
+      - executeFunction:
+          name: unified.us.functions.utils.dismissKeyboard
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.editPickupPerson.phoneNumberField
+          then:
+            - enterText:
+                identifier: us.mappings.reviewOrder.editPickupPerson.phoneNumberField
+                string: ${pickupPersonPhoneNumber}
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.saveButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.backendErrorMessage
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} Unable to edit pickup person details" # CEPG-245470
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} Unable to edit pickup person details"
+      - sleep:
+         duration: 5000            
+
+  - name: unified.us.functions.checkout.reviewOrder.verifyViewItemDetailsLink
+    flow:
+      - click:
+          identifier: us.mappings.reviewOrder.editItemButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.itemDetails.title
+            - identifier: us.mappings.reviewOrder.itemDetails.dateLabel
+            - identifier: us.mappings.reviewOrder.itemDetails.itemDescription
+      - click:
+          identifier: us.mappings.reviewOrder.itemDetails.closeButton
+  
+  - name: unified.us.functions.wplus.reviewOrder.scDelivery.pos.subtotalLessThanThirtyFive.verifyCard
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.estimatedTaxes
+          position: center
+
+      - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - if: 
+                  condition: ${fulfillmentType} == 'delivery'
+                  then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.scDelivery.fee
+                      label:
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+                          contains: Free delivery from store
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                          contains: $0
+              - if: 
+                  condition: ${ebtItem}
+                  then:
+                    - verifyIdentifier:
+                        notPresent:
+                          - identifier: us.mappings.cart.thresholdText
+                  else:
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.cart.thresholdText
+                          - identifier: us.mappings.cart.thresholdValue
+                          - identifier: us.mappings.reviewOrder.estimatedTaxes
+                        label:
+                          - identifier: us.mappings.cart.thresholdValue
+                            contains: $6.99
+      - if:
+            condition: ${platform} == 'Android'
+            then:
+              - if: 
+                  condition: ${fulfillmentType} == 'delivery'
+                  then:
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                        notPresent:
+                          - identifier: us.mappings.reviewOrder.scDelivery.fee
+                        text:
+                          - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+                            contains: Free delivery from store
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                            contains: $0 
+              - if:   
+                  condition: ${fulfillmentType} == 'pickup'
+                  then:
+                    - scroll:
+                        direction: down
+                        untilIdentifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                        text:
+                          - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                            contains: Pickup
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                            contains: Free 
+              - if: 
+                  condition: ${ebtItem}
+                  then:
+                    - verifyIdentifier:
+                        notPresent:
+                          - identifier: us.mappings.cart.thresholdText
+                  else:
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.checkout.belowMinFee
+                          - identifier: us.mappings.reviewOrder.checkoutTaxesValue
+                        text:
+                          - identifier: us.mappings.checkout.belowMinFee
+                            contains: $6.99
+
+      # Resetting variable
+      - storeIn:
+          key: ebtItem
+          value: 'null'
+  
+  - name: unified.us.functions.cart.wplus.pos.scDelivery.subtotalLessthanThirtyFive.verifyCard
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if: 
+                condition: ${fulfillmentType} == 'delivery'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.scDelivery.fee
+                      label:
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.leftLabel
+                          contains: Free delivery from store
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                          contains: $0 
+            
+            - if: 
+                condition: ${fulfillmentType} == 'pickup'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.rightLabel
+                      label:
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                          contains: Pickup, Free
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.rightLabel
+                          contains: Free 
+
+            - if: 
+                condition: ${ebtItem}
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.wplus.cart.ebtFoodEligible
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.ebtFoodEligible
+                      label:
+                        - identifier: us.mappings.wplus.cart.ebtFoodEligible
+                          contains: EBT food eligible
+                      # notPresent:
+                      #   - identifier: us.mappings.cart.thresholdText
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.cart.thresholdText 
+                        - identifier: us.mappings.cart.thresholdValue
+                        - identifier: us.mappings.cart.taxPriceCart
+                      label:
+                        - identifier: us.mappings.cart.thresholdValue
+                          contains: $6.99
+                        - identifier: us.mappings.cart.taxPriceCart
+                          equals: Calculated at checkout
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if: 
+                condition: ${fulfillmentType} == 'delivery'
+                then:
+                  - sleep: 
+                      duration: 2000
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cart.estimatedTotalAmountInCart
+                      position: center
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.scDelivery.fee
+                      text:
+                        - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+                          contains: Free delivery from store
+                        - identifier: us.mappings.wplus.cart.pos.deliveryFromStoreCharges.rightLabel
+                          contains: $0 
+
+            - if:   
+                condition: ${fulfillmentType} == 'pickup'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.rightLabel
+                      text:
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.leftLabel
+                          contains: Pickup
+                        - identifier: us.mappings.wplus.cart.pos.pickupFromStoreChargesFree.rightLabel
+                          contains: Free 
+
+            - if: 
+                condition: ${ebtItem}
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.cart.ebtFoodEligible
+                      text:
+                        - identifier: us.mappings.wplus.cart.ebtFoodEligible
+                          contains: EBT SNAP eligible
+                      notPresent:
+                        - identifier: us.mappings.cart.thresholdText
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.cart.belowMinFee
+                        - identifier: us.mappings.cart.taxPrice
+                      text:
+                        - identifier: us.mappings.cart.belowMinFee
+                          contains: $6.99
+                        - identifier: us.mappings.cart.taxesValue
+                          equals: Calculated at checkout
+      # Resetting variable
+      - storeIn:
+          key: ebtItem
+          value: 'null'
+
+  - name: unified.us.functions.checkout.reviewOrder.closePaymentMethodBottomTray
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.paymentMethodBottomTrayTitle
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.closeTrayButton
+
+
+  - name: unified.us.functions.checkout.reviewOrder.preorderItem.verifyCardDetails
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mapings.reviewOrder.viewDetails
+          scrollLimit: 2
+      - click:
+          identifier: us.mapings.reviewOrder.viewDetails
+      - sleep:
+          duration: 4000           
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.revieworder.preorderBadge
+            - identifier: us.mappings.revieworder.preorderItem.releaseDateLabel 
+
+  - name: unified.us.functions.checkout.handleCheckoutAlert
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.alert.YouAreAlmostThereHeader
+              - identifier: us.mappings.reviewOrder.alert.YouAreAlmostThereText
+              - identifier: us.mappings.reviewOrder.alert.leaveAnyWayButton
+              - identifier: us.mappings.reviewOrder.alert.keepCheckingOutButton
+          then:
+            - click:
+                wait: 6000
+                identifier: us.mappings.reviewOrder.alert.leaveAnyWayButton
+
+  - name: unified.us.functions.checkout.enterMobileContact
+    flow:
+      - executeFunction:
+          name: unified.us.function.checkout.reviewOrder.mobileNumberValidater
+      - enterText:
+          identifier: us.mappings.reviewOrder.mobileContact.phoneNumberField
+          string: ${phoneNumber}
+          clearField: true
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - goBack: true
+          else:
+            - click:
+                identifier: done 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.sendTextUpdatesToPhone.Checkbox
+      # Workaround for warning during placing order with checkbox selected sometimes
+      - if:
+          identifier:
+            checked:
+               - identifier: us.mappings.reviewOrder.sendTextUpdatesToPhone.Checkbox
+                 value: true
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.sendTextUpdatesToPhone.Checkbox
+
+  - name: unified.us.function.checkout.reviewOrder.mobileNumberValidater
+    flow:
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.mobileContactText
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.sendTextUpdatesToPhone.Checkbox
+
+  - name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+    flow:
+      - log: Scrolling to top of review order page
+      - sleep:
+          duration: 2000
+      # Validate if Review Order title is displayed
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.navBarTitle
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.fulfillmentTopSection.fulfillmentTypeText
+                  - name: direction
+                    string: up
+          else:
+            - loop:
+                begin: 0
+                end: 7
+                storeIndex: scrollIndex
+                mode: increment
+                flow:
+                  - log: Check ${scrollIndex}
+                  # If any fulfillment section is displayed
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.fulfillmentTopSection.fulfillmentTypeText
+                      then:
+                        - if:
+                            condition: ${validateText} == null
+                            then:
+                              # Store currently displayed fulfillment section text to be used in next loop
+                              - getString:
+                                  identifier: us.mappings.reviewOrder.fulfillmentTopSection.fulfillmentTypeText
+                                  attribute: text
+                                  storeIn: validateText
+                            else:
+                              # Store currently displayed fulfillment section text and compate with previous section text
+                              - getString:
+                                  identifier: us.mappings.reviewOrder.fulfillmentTopSection.fulfillmentTypeText
+                                  attribute: text
+                                  storeIn: compareText
+                              - log: Store currently displayed fulfillment type and compare with previously displayed fulfillment type text
+                              # If previous and current fulfillment section texts are same, top of review order page is reached. Hence exit loop
+                              # Else, assign current displayed fulfillment section text to ${validateText} for next run
+                              - if:
+                                  condition: ${validateText} == ${compareText}
+                                  then:
+                                    - log: Breaking the loop as review order page top is reached
+                                    - break: true
+                                  else:
+                                    - storeIn:
+                                        key: validateText
+                                        value: ${compareText}
+                                    - log: Store current fulfillment type text for next run before scrolling up
+                  # Scroll up until loop is not breaked
+                  - log: Scrolling up till cart page top is reached
+                  - scroll:
+                      direction: up
+            # Reset to default
+            - storeIn:
+                key: validateText
+                value: 'null'
+
+  - name: unified.us.functions.reviewOrder.verifyBagsDetailsOurSustainabilityPledge
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.checkoutBagFeeOptOut
+          then:                
+            - verifyIdentifier:
+                  present:
+                  - identifier: us.mappings.reviewOrder.checkoutBagFeeOptOut 
+            - click: 
+                identifier: us.mappings.reviewOrder.checkoutBagFeeOptOutRadioButton
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.checkoutBagFeeOptOutTitle
+                    contains: I’ll bring my own reusable bags
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.checkoutBagFeeOptOutText
+                    contains: We’ll pack items for you at pickup.              
+          else: 
+          - executeFunction:
+              name: us.functions.utils.scrollIfNotVisible
+              params:
+                - name: identifier
+                  string:  us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+                - name: direction
+                  string: up
+                - name: scrollPosition
+                  string: center 
+          - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeText
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeRadioButton
+          - click:
+              identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeRadioButton
+          - sleep:
+              duration: 5000
+          - scroll:
+              direction: down
+              scrollLimit: 2
+          - sleep:
+              duration: 3000              
+          - verifyIdentifier:
+              notPresent: 
+                - identifier: us.mappings.reviewOrder.verifyCheckoutPosAcceptBagFeeTextLine
+
+  - name: unified.us.functions.reviewOrder.verifyBagsDetailsIWantMyItemsInBags
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+            - name: direction
+              string: up
+            - name: scrollPosition
+              string: center 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+            - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeRadioButton
+      - click:
+          identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeRadioButton
+      - sleep:
+          duration: 3000
+      - sleep:
+          duration: 3000  
+      - verifyIdentifier:
+          notPresent: 
+            - identifier: us.mappings.reviewOrder.verifyCheckoutPosAcceptBagFeeTextLine
+
+  # Utility to validate display/non display of waive Off details related to Wplus/other fees in review order page based on checkout total and type of fulfilment items in review order page
+  # [mandatory] ${basketType} - fcOnly/scOnly/both [Indicates what type of items are available during checkout to make appropriate validations]
+  # [optional] ${storeOrderType} - pickup/delivery/none [Default 'none'] [If store item is available in checkout basket, is it store pickup or store delivery]
+  - name: unified.us.functions.reviewOrder.wplus.chargeWaiveOffValidation
+    flow:
+      # Pre-requisite to set the cart display properly
+      # Section to identify what type of items are in the cart
+      - if:
+          condition: ${basketType} == null
+          then:
+            - log: Fetching details about type of items in cart
+            # TODO
+      - if:
+          condition: ${storeOrderType} == null
+          then:
+            - log: Fetching details if store order type is 'Pickup' or 'Delivery from store'
+            # TODO
+            - storeIn:
+                key: storeOrderType
+                value: none
+
+      - if:
+          condition: ${minFeeWaived} == null
+          then:
+            - storeIn:
+                key: minFeeWaived
+                value: notWaived
+
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subTotalEffectiveAmount
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      # End of pre-requisite section
+
+      # Section to get subtotal of the cart using js function
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subTotalEffectiveAmountAfterSavings
+            - name: delimeter
+              string: '$'
+
+      - log: Checkout total - ${amountValue}
+      - log: Checkout basket type - ${basketType}
+
+      - if:
+          condition: ${amountValue} > 35.00
+          then:
+            # If cart subtotal is > 35$
+            - log: (Amount > 35-00) For Wplus user, waiveOff text should not be displayed
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                  - identifier: us.mappings.reviewOrder.POS.threshold
+            - if:
+                condition: ${storeOrderType} != 'delivery'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.wplus.reviewOrder.pos.wplusIcon
+                        - identifier: us.mappings.wplus.reviewOrder.pos.oldThresholdValue
+                        - identifier: us.mappings.wplus.reviewOrder.pos.thresholdValue 
+            
+      - if:
+          condition: ${amountValue} < 35.00
+          then:
+            - if:
+                condition: ${basketType} == 'fcOnly'
+                then:
+                  - log: (Amount < 35-00)(FC item only) For Wplus user, waiveOff text should be displayed
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.reviewOrder.pos.wplusIcon
+                        - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                        - identifier: us.mappings.wplus.reviewOrder.pos.oldThresholdValue
+                        - identifier: us.mappings.wplus.reviewOrder.pos.thresholdValue
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.POS.threshold
+                        - identifier: us.mappings.reviewOrder.POS.thresholdAmount
+                else:
+                  - log: (Amount < 35-00)(With SC pickup/delivery item) For Wplus user, waiveOff text should be/not be displayed
+                  - if:
+                      condition: ${minFeeWaived} == 'waived'
+                      then:
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.wplus.reviewOrder.pos.wplusIcon
+                              - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                            notPresent:
+                              - identifier: us.mappings.reviewOrder.POS.threshold
+                              - identifier: us.mappings.reviewOrder.POS.thresholdAmount
+                      else:
+                        - verifyIdentifier:
+                            notPresent:
+                              - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                            present:
+                              - identifier: us.mappings.reviewOrder.POS.threshold
+                              - identifier: us.mappings.reviewOrder.POS.thresholdAmount
+
+      - if:
+          condition: ${storeOrderType} == 'delivery'
+          then:
+            - log: (Amount > or < 35-00)(With SC delivery item) For Wplus user, delivery waiveOff text should be displayed
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.wplus.reviewOrder.pos.freeDeliveryFromStoreText
+                  - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+          else:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.wplus.reviewOrder.pos.freeDeliveryFromStoreText
+      - storeIn:
+          key: minFeeWaived
+          value: 'null'
+      - storeIn:
+          key: storeOrderType
+          value: 'null'
+
+  - name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.viewSubstitutionPopUpCloseButton
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.viewSubstitutionPopUpCloseButton
+      - executeFunction:
+          name: unified.us.functions.utils.getFulfillmentTextsToCompare
+    
+      - log: -----------${fulfillmentText} section validation start-----------
+      # Main validation
+      - if:
+          condition: ${initialCheckoutDataSetup} == null
+          then:
+            - sleep:
+                duration: 5000
+            # Validate if Review Order page is loaded
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.navBarTitle
+                then:
+                  - log: Review order page loaded successfully
+                else:
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} review order page load ERROR"
+            - storeIn:
+                key: initialCheckoutDataSetup
+                value: complete
+          else:
+            - log: Review order page already loaded and inital setup is done.
+
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            # This section is used to set viewType required for specific fulfillment section detail identifications
+            - if:
+                condition: ${fulfillmentText} == 'Curbside pickup' || ${fulfillmentText} == 'Cary Advance Auto Parts pickup'
+                then:
+                  - storeIn:
+                      key: viewType
+                      value: Pickup
+                else:
+                  - if:
+                      condition: ${fulfillmentText} == 'pickup' || ${fulfillmentText} == 'Pickup' || ${fulfillmentText} == 'Retiro'
+                      then:
+                        - storeIn:
+                            key: viewType
+                            value: Pickup
+                      else:
+                        - if:
+                            condition: ${fulfillmentText} == 'Auto Care'
+                            then:
+                              - storeIn:
+                                  key: viewType
+                                  value: AutoCareCenter
+                            else:
+                              - if:
+                                  condition: ${fulfillmentText} == 'Digital delivery'
+                                  then:
+                                    - storeIn:
+                                        key: viewType
+                                        value: DigitalDelivery
+                                  else:
+                                    - storeIn:
+                                        key: viewType
+                                        value: Delivery
+
+      # Verify required section is displayed
+      - log: Validating fulfillment section ${fulfillmentText}
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentTypeText
+          catch:
+            flow:
+              - failTest:
+                  message: "FAILURE - ${env} - ${fulfillmentText} fulfillment section not displayed in review order page"
+      - log: Validated basic fulfillment details
+
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            # Verify address/name details for all fulfillment type except digital delivery
+            - if:
+                condition: ${fulfillmentText} != 'Digital delivery'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentTime
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentName
+                        # - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentAddress
+                        # - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentViewLink      #Commenting as multiple runs failed due to this identifier. To be added back once verified
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentItemCount
+                  - log: Validated fulfillment time, name, address, item count and view link details
+
+                  # Verify unscheduled/express time details
+                  - if:
+                      condition: ${unscheduled}
+                      then:
+                        - verifyIdentifier:
+                            label:
+                              - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentTime
+                                contains: us.data.text.anytimeAfter
+                        - log: Validated unscheduled fulfillmentTime details
+                      else:
+                        - if:
+                            condition: ${expressSlot}
+                            then:
+                              - verifyIdentifier:
+                                  present:
+                                    - identifier: us.mappings.reviewOrder.expressDelivery.slotTime
+                              - log: Validated express fulfillmentTime details
+
+            - if:
+                condition: ${fulfillmentText} == 'Curbside pickup'
+                then:
+                  #Space to validate pickup specific detals [Delivery/substitutions preferences]
+                  - log: Validated fulfillment amend details
+
+            - if:
+                condition: ${fulfillmentText} == 'Delivery from store'
+                then:
+                  #Space to validate delivery from store specific detals [Delivery/substitutions preferences]
+                  - log: Validated fulfillment amend details
+
+            # Verify Auto care specific details
+            - if:
+                condition: ${fulfillmentText} == 'Auto Care'
+                then:
+                  #Add pickup person details validations
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentComment
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            label:
+                              - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentComment
+                                contains: We'll hold your order for 10 days
+                      catch:
+                        flow:
+                        - verifyIdentifier:
+                            label:
+                              - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentComment
+                                contains: Tires will be ready for you at the store
+                  - log: Validated fulfillment hold comment
+
+            # Verify Digital delivery specific details
+            - if:
+                condition: ${fulfillmentText} == 'Digital delivery'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.digitalFulfillmentItemCount
+                        # - identifier: us.mappings.reviewOrder.fulfillmentSection.digitalFulfillmentViewLink
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.digitalFulfillmentComment
+                      label:
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.digitalFulfillmentComment
+                          contains: Arrives soon after purchase
+                  - log: Validated fulfillment time comment
+
+            - storeIn:
+                key: altFulfillmentText
+                value: 'null'
+            - log: -----------${fulfillmentText} section validation end-------------
+      
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            # Scroll to appropriate section
+            - executeFunction:
+                name: us.functions.checkout.reviewOrder.scrollToSection
+
+            - try:
+                flow:
+                  # Verify required section is displayed
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentTypeText
+                catch:
+                  flow:
+                    - failTest:
+                        message: "FAILURE - ${env} - ${fulfillmentText} fulfillment section not displayed in review order page"
+
+            # Scroll down if section details are not displayed and verify
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.fulfillmentSection.fulfillmentDate
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentDate
+
+            # Verify address/name details for all fulfillment type except digital delivery
+            - if:
+                condition: ${fulfillmentText} != 'Digital delivery'
+                then:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.reviewOrder.fulfillmentSection.fulfillmentAddress
+                        - name: direction
+                          string: down
+                  - verifyIdentifier:
+                      present:      
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentDescription
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentAddress
+                  - log: Name and address validations completed
+
+                  # Verify unscheduled time details
+                  - if:
+                      condition: ${unscheduled}
+                      then:
+                        - verifyIdentifier:
+                            text:
+                              - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentDate
+                                contains: us.data.text.anytimeAfter
+                        - log: Validated unscheduled fulfillmentTime details
+                      else:
+                        - if:
+                            condition: ${expressSlot}
+                            then:
+                              - verifyIdentifier:
+                                  present:
+                                    - identifier: us.mappings.reviewOrder.expressDelivery.slotTime
+                              - log: Validated express fulfillmentTime details
+
+            # Verify Auto care specific details
+            - if:
+                condition: ${fulfillmentText} == 'Auto Care'
+                then:
+                  - verifyIdentifier:
+                      present:      
+                        - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentHoldTime
+                  - log: Hold time validation completed
+
+            # Scroll down if section item details are not displayed and verify
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentItemCount
+                then:
+                  - scroll:
+                      direction: down
+                      position: center
+                      untilIdentifier: us.mappings.reviewOrder.fulfillmentSection.itemCount
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.fulfillmentSection.itemCount
+                  # - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentItemCount
+                  # - identifier: us.mappings.reviewOrder.fulfillmentSection.fulfillmentItemDetails
+            - log: Item details validations completed
+            - storeIn:
+                key: altFulfillmentText
+                value: 'null'
+            - log: -------Validate ${fulfillmentText} review order details function end-------
+
+
+  - name: unified.us.functions.reviewOrder.verifyBagFieldAndBanMessage
+    flow:
+      - try: 
+          flow:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeText
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                        text:
+                          - identifier: us.mappings.reviewOrder.verifyBagsBannedMessage
+                            contains: Please bring your own reusable bag
+                else:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: us.mappings.reviewOrder.verifyBagsBannedMessage
+                          contains: Please bring your own reusable bag
+          catch:
+             flow:
+               - failTest:
+                   message: "FAILURE - ${env} - Bag fee banned message missing for banned store"
+
+  - name: unified.us.functions.checkout.reviewOrder.paymentsCloseTray
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - log: "The Platform is iOS, executing the paymentsCloseTray on reviewOrder page."
+            - executeFunction:
+                name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.closeTrayButton
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.closeTrayButton
+                  - click:
+                      identifier: us.mappings.reviewOrder.closeTrayButton
+          else:
+            - log: "The Platform is Android, Skipping the paymentsCloseTray on reviewOrder page."
+
+
+  - name: unified.us.function.checkout.reviewOrder.verifyItemDetails
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.checkoutButton
+                then:
+                  - log: Still in Cart page 
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.backNavigation
+                  - executeFunction:
+                      name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.toCartFromNavBar
+                  - log: In Cart page, navigating to Review order page                 
+                  - executeFunction:
+                      name: unified.us.functions.cart.continueToCheckout
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: us.mappings.multibox.viewItemDetaisReviewOrder
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.itemNameDetails
+            - log: Item details verified successfully
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.digitalDelivery.ItemDetailsCloseButton
+            - click:
+                identifier: us.mappings.digitalDelivery.ItemDetailsCloseButton
+            - sleep:
+                duration: 2000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.checkoutButton
+                then:
+                  - click:
+                      identifier: us.mappings.cart.checkoutButton
+                  - sleep:
+                      duration: 2000
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - click:
+                identifier: us.mappings.reviewOrder.viewLink
+            - sleep:
+                duration: 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.itemNameDetails
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.checkout.reviewOrder.viewItemDetailDone
+            - click:
+                identifier: us.mappings.checkout.reviewOrder.viewItemDetailDone
+            - sleep:
+                duration: 2000
+
+  - name: unified.us.functions.reviewOrder.acc.verifySelectedPackage
+    flow:
+      - if:
+          condition: ${Package} == 'valuePackage'
+          then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.selectedvaluePackage
+
+      - if:
+          condition: ${Package} == 'basicPackage'
+          then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.selectedBasicPackage
+
+  - name: unified.us.functions.checkout.reviewOrder.verifyAlcoholDisclaimer
+    flow:
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.alcoholDisclosureLabel
+            - identifier: us.mappings.reviewOrder.alcoholDisclosurePolicyButton
+            - identifier: us.mappings.reviewOrder.alcoholDisclosureDescription
+            - identifier: us.mappings.reviewOrder.alcoholDisclosureCheckbox
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+             - verifyIdentifier:
+                  label:
+                    - identifier: us.mappings.reviewOrder.alcoholDisclosureLabel
+                      equals: You'll need to show ID at delivery
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                 text:
+                   - identifier: us.mappings.reviewOrder.alcoholDisclosureLabel
+                     equals: You’ll need to show ID at delivery
+                   - identifier: us.mappings.reviewOrder.alcoholDisclosureDescription
+                     contains: Checking this box confirms you’re at least 21 years old and won’t resell any alcohol you purchase.
+      - click:
+          identifier: us.mappings.reviewOrder.alcoholDisclosureCheckbox
+      - sleep:
+          duration: 3000 
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+             - verifyIdentifier:
+                value:
+                - identifier: us.mappings.reviewOrder.alcoholDisclosureCheckbox
+                  equals: 1  
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+             - verifyIdentifier:
+                enabled:
+                - identifier: us.mappings.reviewOrder.alcoholDisclosureCheckbox
+                  value: true      
+      - log: 'alcohol checkbox is selected'          
+      - click:
+          identifier: us.mappings.reviewOrder.alcoholDisclosurePolicyButton     
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.alcoholDisclaimerPolicyHeader   
+            - identifier: us.mappings.reviewOrder.alcoholDisclaimerPolicyDescription
+            - identifier: us.mappings.reviewOrder.alcoholDisclaimerPolicyCloseCta
+      - click:
+          identifier: us.mappings.reviewOrder.alcoholDisclaimerPolicyCloseCta      
+      - sleep:
+          duration: 3000
+
+  - name: unified.us.functions.reviewOrder.verifyBagFieldAndBagFeeForDelivery
+    flow:
+      - executeFunction:
+          name: unified.us.functions.wplus.handle.SubstitutionPreferencePopup
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.verifyBagSection
+
+  - name: unified.us.functions.reviewOrder.verifyBagSection
+    flow:    
+      - log: "Validating the bag section details and text"
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeText
+                  - identifier: us.mappings.reviewOrder.verifyLearnMore
+          catch:
+            flow:
+              - failTest:
+                  message: "FAILURE - ${env} - Accept/Skip Bag fee Section Module missing"
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+                    contains: I want my items in bags
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeText
+                    contains: I’ll bring my own reusable bags
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagDetailsText
+                    contains: I’ll pay a 10¢ fee per bag.
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagDetailsText
+                    contains: We’ll pack items for you at pickup.
+          else:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagFeeText
+                    contains: I want my items in bags
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutSkipBagFeeText
+                    contains: I’ll bring my own reusable bags
+                  - identifier: us.mappings.reviewOrder.verifyCheckoutAcceptBagDetailsText
+                    contains: We’ll pack items for you at pickup
+      - log: "Validating the bag fee popup on selecting KnoeMore link"
+      - click:
+          identifier: us.mappings.reviewOrder.verifyLearnMore
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.verifyLearnMore.bagfee
+      - click:
+          identifier: us.mappings.reviewOrder.disclaimerViewControllerCloseButton
+      - sleep:
+          duration: 3000    
+      - log: "Validating the bag delivery pending status"      
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryText
+          position: center
+          scrollLimit: 15
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryValue
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryText
+                    contains: Bag fee
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryValue
+                    contains: Pending
+          else:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryText
+                    contains: Bag fee
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryValue
+                    contains: Pending
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryIcon
+          else:
+            - click:
+                identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryText
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryFee
+                    contains: Laws in your region require us to charge you a fee of 10¢ per bag
+          else:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryFee
+                    contains: Your order will be delivered in bags that include a fee of $
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.verifyBagFeePendingDeliveryFee
+                    contains: 0.10 per bag
+      - click:
+          identifier: us.mappings.reviewOrder.disclaimerViewControllerCloseButton
+      - log: "Bag section validation completed"  
+
+  - name: unified.us.functions.reviewOrder.localMarketPlace.reviewOrderPageValidations
+    flow:
+      - if: 
+          condition: ${fulfillment} == 'Delivery'
+          then:
+            - if: 
+                condition: ${Spark} == true
+                then:  
+                - executeFunction:
+                    name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder                         
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.revieworder.localMarketPlace.deliveryFromLocalSeller
+                          - identifier: us.mappings.revieworder.localMarketPlace.deliveryFromLocalSellerSLA
+                          - identifier: us.mappings.revieworder.localMarketPlace.deliveryFromLocalSeller.deliveryInstructions
+                - getString:
+                      identifier: us.mappings.revieworder.localMarketPlace.deliveryFromLocalSellerSLA
+                      attribute: label
+                      storeIn: deliveryDayTimeCheckout
+                - log: ${deliveryDayTimeCheckout}
+                - executeNode:
+                    file: us/e2e-tests/helpers/getDeliverySLACheckout.js
+                    args:
+                      - value: ${deliveryDayTimeCheckout}
+                    getResponse:
+                      storeIn: deliverySLAinCheckout
+                - log: "Delivey day and time is stored in a variable - ${deliverySLAinCheckout}"
+                - if: 
+                    condition: ${deliverySLAinCart} != ${deliverySLAinCheckout}
+                    then:
+                      - log: "Delivery day and time is not same as expected on Checkout"
+                    else:
+                      - log: "Delivery day and time is same as expected on Checkout"   
+                - storeIn:
+                      key: Spark
+                      value: false  
+                - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                          - name: identifier
+                            string: us.mappings.revieworder.localMarketPlace.deliveryFromLocalSeller.deliveryFromStoreCharges
+                          - name: direction
+                            string: down
+                          - name: scrollPosition
+                            string: center                        
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.revieworder.localMarketPlace.deliveryFromLocalSeller.deliveryFromStoreCharges
+            - if:
+                condition: ${MinBasketFee} == true
+                then: 
+                - verifyIdentifier:
+                    present:
+                        - identifier: us.mappings.revieworder.localMarketPlace.minBasketFee
+                - log:
+                    message: "Minimum Basket fee is validated on Review Order page"
+                
+            - if: 
+                condition: ${BYOD} == true
+                then:  
+                - executeFunction:
+                    name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+                - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                          - name: identifier
+                            string: us.mappings.revieworder.localMarketPlace.deliveryFromBYODSeller
+                          - name: direction
+                            string: down
+                          - name: scrollPosition
+                            string: center                              
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.revieworder.localMarketPlace.deliveryFromBYODSeller
+                          - identifier: us.mappings.revieworder.localMarketPlace.deliveryFromBYODSellerSLA
+            - if: 
+                condition: ${1P} == true
+                then:  
+                - executeFunction:
+                    name: us.mappings.reviewOrder.mbc.deliveryFromStore
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.reviewOrder.mbc.deliveryFromStore
+                - scroll:
+                    direction: down
+                    untilIdentifier: us.mappings.reviewOrder.driverTipLabel         
+      - if: 
+          condition: ${fulfillment} == 'Pickup'
+          then:
+            - verifyIdentifier:
+                  present:
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickupFromLocalSeller
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickupFromLocalSellerSLA
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickuFromLocalSeller.address
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickupFromLocalSeller.orderHoldingPeriod
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickuFromLocalSeller.pickupPersonOrAlternativePerson      
+
+  - name: unified.us.functions.reviewOrder.verifyConsolidatedShipping
+    flow:
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.consolidatedShipping.title
+          then:
+            - log: "ConsolidatedShipping is present"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - ConsolidatedShipping is not present"
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.consolidatedShipping.keepSeparateDeliveries
+            - identifier: us.mappings.reviewOrder.consolidatedShipping.combineDeliveries     
+      - click:
+          identifier: us.mappings.reviewOrder.consolidatedShipping.combineDeliveries
+      
+      # Verify combine deliveries radio button selected
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.consolidatedShipping.combineDeliveriesSelected
+
+  - name: unified.us.functions.checkout.verifySODBanner
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            #Verify SOD banner on top
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.checkout.verifySODPresentDeliveryTopTitle
+                    contains : You'll need to be present at delivery
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.checkout.verifySODPresentDeliveryBody
+                    contains : Some of your items require an in-person handoff.                   
+            #Verify SOD banner in shipping details 
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.checkout.verifySODPresentShippingText
+                    contains : You'll need to be present at delivery
+            #Verify SOD banner in item details
+            - click:
+                identifier: us.mapings.reviewOrder.viewDetails
+            - verifyIdentifier:
+                 present:
+                   - identifier: us.mappings.reviewOrder.itemDetails.title
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.checkout.verifySODPresentDeliveryTitle
+                  - name: direction
+                    string: down    
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.checkout.verifySODPresentDeliveryTitle
+                    contains : You'll need to be present at delivery                       
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            #Verify SOD banner on top
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.cart-cxo.verifySODPresentDeliveryTextios
+                    contains : us.data.prod.sod.cxo.deliveryHandoffText
+            #Verify SOD banner in shipping details 
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.cart-cxo.verifySODPresentShippingText
+                    contains : us.data.prod.sod.cxo.deliveryText
+            #Verify SOD banner in item details
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cart-cxo.verifySODPresentItemDetailsText
+                  - name: direction
+                    string: down    
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.cart-cxo.verifySODPresentItemDetailsText
+                    contains : us.data.prod.sod.cxo.deliveryText  
+
+  - name: unified.us.functions.checkout.reviewOrder.registyGiftValidation
+    flow:
+      - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.registryGiftdetailseditCTA
+                  - name: direction
+                    string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.registryGiftdetailseditCTA 
+      - click:
+          identifier: us.mappings.reviewOrder.registryGiftdetailseditCTA 
+    #unselecting 'This order is a gift' checkbox and clicking save    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.registryEditGiftOrderCheckbox
+      - click:
+          identifier: us.mappings.reviewOrder.registryEditGiftOrderCheckbox
+      - click:
+          identifier: us.mappings.reviewOrder.gift.continueButton 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.registryNotAGiftOrderText
+      - log:
+          message: "verified as not a gift" 
+    #editing gift details
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.giftdetails.editTextCTA
+                wait: 1000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.registryGiftdetailseditCTA 
+                wait: 1000
+      - click:
+          identifier: us.mappings.reviewOrder.registryEditGiftOrderCheckbox
+          wait: 2000
+      - click:
+          identifier: us.mappings.reviewOrder.registryGiftdetailsFrom 
+      - enterText:
+          identifier: us.mappings.reviewOrder.registryGiftdetailsFrom
+          string: ${from}
+          clearField: true
+      - click:
+          identifier: us.mappings.reviewOrder.registryGiftdetailsGiftMessageField
+      - enterText:
+          identifier: us.mappings.reviewOrder.registryGiftdetailsGiftMessage
+          string: ${giftMessage}
+          clearField: true
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - click:
+               identifier: us.mappings.default.keyboardDoneButton    
+      - verifyIdentifier:
+          notPresent:           
+            - identifier: us.mappings.reviewOrder.toGiftDetails      
+      - click:
+          identifier: us.mappings.reviewOrder.gift.continueButton
+    
+  - name: unified.us.functions.myItems.checkout.reviewOrder.verifyCard
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if :
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.pickupPersonText
+                then:
+                  - verifyIdentifier:
+                      timeout: 50000
+                      present:         
+                        - identifier: us.mappings.reviewOrder.curbsidepickup.cardTitle
+                        - identifier: us.mappings.reviewOrder.scheduledDelivery.slotDetails
+                        - identifier: us.mappings.reviewOrder.pickupPersonText
+                        - identifier: us.mappings.reviewOrder.pickupPersonName
+                        - identifier: us.mappings.reviewOrder.editPickupPersonLink
+                        - identifier: us.mappings.reviewOrder.mobileContactText
+                        - identifier: us.mappings.reviewOrder.getTextInfo
+                else: 
+                  - verifyIdentifier:
+                      timeout: 50000
+                      present: 
+                        - identifier: us.mappings.reviewOrder.fcDelivery.cardTitle
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if :
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.pickupPersonText
+                then:
+                  - verifyIdentifier:
+                      timeout: 50000
+                      present:         
+                        - identifier: us.mappings.reviewOrder.curbsidepickup.cardTitle
+                        - identifier: us.mappings.reviewOrder.pickupPersonText
+                else: 
+                  - verifyIdentifier:
+                      timeout: 50000
+                      present: 
+                        - identifier: us.mappings.reviewOrder.cardTitle
+                     
+  - name: unified.us.functions.wplus.reviewOrder.selectWplusTenure
+    flow:
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.tryWalmartPlusButton
+      - click:
+          identifier: us.mappings.reviewOrder.tryWalmartPlusButton
+      - sleep:
+           duration: 2000    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.splash.walmartPlusAnnualPlan
+            - identifier: us.mappings.reviewOrder.splash.walmartPlusMonthlyPlan   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.selectWalmartPlusPlan
+
+      - click:
+          identifier: us.mappings.reviewOrder.splash.walmartPlusAnnualPlan
+      
+      - sleep:
+          duration: 1000
+
+      - click:
+          identifier: us.mappings.reviewOrder.splash.confirmBtn
+
+  - name: unified.us.functions.revieworder.verifyGiftDetails
+    flow:
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.gifting.checkout.addressSelection
+          then: 
+            - click:
+                identifier: us.mappings.gifting.checkout.addressSelection.saveButton
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.gifting.reviewOrder.giftDetailModuleTitle   
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.gifting.reviewOrder.giftDetailModuleTitle
+            - identifier: us.mappings.gifting.reviewOrder.giftDetailsTo
+            - identifier: us.mappings.gifting.reviewOrder.giftDetailsFrom
+            - identifier: us.mappings.gifting.reviewOrder.giftDetailsMessage
+
+  - name: unified.us.functions.revieworder.addGiftDetails
+    flow:
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.selectAddress.addressRadioButton
+          then: 
+            - click:
+                identifier: us.mappings.selectAddress.addressRadioButton
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.gifting.reviewOrder.addGiftDetailsButton   
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.gifting.reviewOrder.addGiftDetailsButton
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.gifting.giftDetails.recipientEmail
+      - enterText:
+          identifier: us.mappings.gifting.giftDetails.recipientEmail
+          string: ${recipientEmail}
+      - click:
+          identifier: us.mappings.gifting.giftDetails.fromField
+      - enterText:
+          identifier: us.mappings.gifting.giftDetails.fromField
+          string: ${from}
+          pressEnter: true
+      - click:
+          identifier: us.mappings.reviewOrder.registryGiftdetailsGiftMessageField
+      - enterText:
+          identifier: us.mappings.reviewOrder.registryGiftdetailsGiftMessage
+          string: ${message}
+          pressEnter: true 
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - click:
+                identifier: us.mappings.capOne.keyboardDoneButton
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.gifting.giftDetails.continueButton
+
+  - name: unified.us.functions.checkout.applianceDeliveryValidations
+    flow:
+      - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+                - name: identifier
+                  string: us.mappings.checkout.applianceDelivery.deliveryAndSetupOptionsAddedMessage
+                - name: direction
+                  string: down
+                - name: scrollPosition
+                  string: center                      
+      - verifyIdentifier:
+            present:
+                - identifier: us.mappings.checkout.applianceDelivery.deliveryDate
+                - identifier: us.mappings.checkout.applianceDelivery.youWillNeedBePresentDisclaimer
+                - identifier: us.mappings.checkout.applianceDelivery.deliveryAndSetupOptionsAddedMessage
+      - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+                - name: identifier
+                  string: us.mappings.cart.localMarketPlace.subTotal
+                - name: direction
+                  string: down
+                - name: scrollPosition
+                  string: center     
+      - verifyIdentifier:
+            present:
+                - identifier: us.mappings.checkout.applianceDelivery.deliveryAndInstallation
+                - identifier: us.mappings.checkout.applianceDelivery.haulAway
+
+  - name: unified.us.functions.reviewOrder.verifyItemEligibleForSubs
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+          then:
+            - log: Item is eligible for substitution
+          else:
+            - failTest:
+                message: "DATA_FAILURE - ${env} - Substitution not eligible item - ${itemFetched} "
+  
+  - name: unified.us.functions.reviewOrder.verifySubsToggleButton
+    flow: 
+      - sleep:
+          duration: 7000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+      - click:
+          identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.subsExpandedGroup
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.subsPreference.replaceWithRadioButton      
+                        - identifier: us.mappings.reviewOrder.subsPreferenceOfFirstItem
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.subsPreference.replaceWithTitle       
+                        - identifier: us.mappings.reviewOrder.subsPreferenceOfFirstItem
+          else: 
+            - log : New Changes, Updated Identifiers 
+            - verifyIdentifier:
+                present:
+                  # - identifier: us.mappings.reviewOrder.subsPreference.bestMatchText
+                  - identifier: us.mappings.reviewOrder.subsPreferenceOfSecondItem
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.subsToggleButton
+          else:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsToggleButton
+                  - name: direction
+                    string: up   
+            - verifyIdentifier:
+                enabled:
+                  - identifier: us.mappings.reviewOrder.subsToggleButton
+                    value: true
+      - click:
+          identifier: us.mappings.reviewOrder.subsToggleButton
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.reviewOrder.subsPreference.bestMatchText
+            - identifier: us.mappings.reviewOrder.subsPreferenceOfSecondItem 
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+             - verifyIdentifier:
+                 text:
+                   - identifier: us.mappings.reviewOrder.noSubsMessage   
+                     equals: No substitutions will be provided for this order.
+          else: 
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.noSubsMessage   
+                    contains: No substitutions will be provided for this order.             
+      - click:
+          identifier: us.mappings.reviewOrder.subsToggleButton
+          wait: 3000
+      - click:
+          identifier: us.mappings.reviewOrder.subsPreference.doneButton
+
+
+  - name: unified.us.functions.reviewOrder.chooseSubsPreferences
+    flow: 
+      - sleep:
+          duration: 4000
+      - if:
+          condition: ${fulfillmentType} == 'Shipping'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.notEligibleSubsText
+                  - name: direction
+                    string: down 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.subsPreference.notEligibleSubsText
+            - log: Item is not eligible for substitution
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.doneButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.doneButton
+          else:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - log: Checking platform specific 
+                  - click:
+                      identifier: us.mappings.reviewOrder.scheduledDelivery.cardTitle    
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.subsPreference.editButtonOfItem
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.subsPreference.editButtonOfItem
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.subsPreference.notEligibleSubsTextWithItemIndex
+                      then:
+                        - failTest:
+                            message: "DATA_FAILURE - ${env} - Substitution not eligible item"
+            - if:
+                condition: ${option} == 'bestMatch'
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.subsPreference.bestMatchRadioButton
+                else:
+                  - if:
+                      condition: ${option} == 'dontReplace'
+                      then:
+                        - scroll:
+                            direction: down
+                            scrollLimit: 1
+                        - click:
+                            identifier: us.mappings.reviewOrder.noSubstitutionButton 
+                      else:
+                        - if:
+                            condition: ${option} == 'replaceWith'
+                            then:
+                              - executeFunction:
+                                  name: unified.us.functions.utils.scrollIfNotVisible
+                                  params:
+                                    - name: identifier
+                                      string: us.mappings.reviewOrder.subsPreference.replaceWithRadioButton
+                                    - name: direction
+                                      string: down
+                                    - name: scrollPosition
+                                      string: center
+                              - if:
+                                  identifier:
+                                    present:
+                                      - identifier: us.mappings.reviewOrder.subsPreference.alreadyExistingItem
+                                  then:
+                                    - click:
+                                        identifier: us.mappings.reviewOrder.subsPreference.alreadyExistingItem 
+                                    - if: 
+                                        condition: ${platform} == 'Android'
+                                        then:
+                                          - getString:
+                                              identifier: us.mappings.reviewOrder.subsPreference.alreadyExistingItem
+                                              attribute: text
+                                              storeIn: itemtitle  
+                                          - log:  ${itemtitle} 
+                                        else: 
+                                          - getString:
+                                              identifier: us.mappings.reviewOrder.subsPreference.alreadyExistingItem
+                                              attribute: label
+                                              storeIn: itemtitle  
+                                          - log:  ${itemtitle} 
+                                  else: 
+                                    - scroll:
+                                        direction: left
+                                        untilIdentifier: us.mappings.subsPreference.searchItemButton                                                  
+                                    - click:
+                                        identifier: us.mappings.subsPreference.searchItemButton
+                                    - click:
+                                        identifier: us.mappings.subsPreference.searchBarSelected
+                                    - enterText:
+                                        identifier: us.mappings.subsPreference.searchBarSelected
+                                        string: ${searchTerm}
+                                        pressEnter: true
+                                    - sleep:
+                                        duration: 5000
+                                    - if:
+                                        identifier:
+                                          present:
+                                            - identifier: us.mappings.subsPreference.keyboard.Searchbutton
+                                        then:
+                                          - click:
+                                              identifier: us.mappings.subsPreference.keyboard.Searchbutton
+                                    - click:
+                                        identifier: us.mappings.subsPreference.firstItem  
+                                    - if: 
+                                        condition: ${platform} == 'Android'
+                                        then:
+                                          - getString:
+                                              identifier: us.mappings.subsPreference.firstItem
+                                              attribute: text
+                                              storeIn: itemtitle
+                                          - log:  ${itemtitle}
+                                        else:
+                                          - getString:
+                                              identifier: us.mappings.subsPreference.firstItem
+                                              attribute: label
+                                              storeIn: itemtitle
+                                          - log:  ${itemtitle}  
+                                    - executeFunction:
+                                        name: us.functions.utils.scrollIfNotVisible
+                                        params:
+                                          - name: identifier
+                                            string: us.mappings.reviewOrder.subsPreference.search.selectButton
+                                          - name: direction
+                                            string: down
+                                    - click:
+                                        identifier:  us.mappings.reviewOrder.subsPreference.search.selectButton
+                                    - sleep:
+                                        duration: 2000
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.doneButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.doneButton
+  - name: unified.us.functions.reviewOrder.verifyCORetailDeliveryFeeChargedonreviewOrder
+    flow :
+      - scroll:
+          direction: down
+          position: center
+          untilIdentifier: us.mappings.reviewOrder.CORetailDelivery.pos.feeLabel
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.pos.feeLabel
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.pos.feeButton
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.CORetailDelivery.pos.feeValue
+      - click:
+          identifier: us.mappings.reviewOrder.CORetailDelivery.pos.feeButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.bottomsheet
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.bottomsheet.Title
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.bottomsheet.subTitle
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.bottomsheet.COdeliveryFeeLabel
+            - identifier: us.mappings.reviewOrder.CORetailDelivery.bottomsheet.COdeliveryFeeClarityLabel
+            - identifier: us.mappings.global.closeButton
+      - click:
+          identifier: us.mappings.reviewOrder.CORetailDelivery.bottomsheet.gotItButton
+
+  - name: unified.us.functions.checkout.reviewOrder.verifyRoundupandDonate
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.roundupAndDonateText
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.roundupAndDonateTextCheckbox
+      - sleep:
+          duration: 4000
+
+      
+
+  - name: unified.us.functions.utils.fetchAmountDisplayed
+    flow:
+      - log: Fetching only numeric value of given amount/count identifier
+      - log: Attribute - ${attribute}
+      - if:
+          condition: ${attribute} == null
+          then:
+            - getString:
+                identifier: ${identifier}
+                storeIn: identifierData
+          else:
+            - getString:
+                identifier: ${identifier}
+                attribute: ${attribute}
+                storeIn: identifierData
+
+      - log: Amount displayed value ${identifierData}
+      - executeNode:
+          file: us/e2e-tests/helpers/splitString.js
+          args:
+            - value: ${identifierData}
+            - value: ${delimeter}
+          getResponse:
+            storeIn: amountValue
+      - executeNode:
+          file: us/e2e-tests/helpers/splitString.js
+          args:
+            - value: ${amountValue}
+            - value: ' '
+            - value: split
+            - value: before
+          getResponse:
+            storeIn: amountValue
+      - storeIn:
+          key: attribute
+          value: 'null'
+      - log: Numeric amount value ${amountValue}
+
+  
+  - name: unified.us.functions.checkout.validateDonationRoundOffCheck
+    flow:
+      - verifyValue:
+          identifier: ${amountValue}
+          contains: .00
+
+  - name: unified.us.functions.checkout.donationCheckoutSelection
+    flow:
+      - if:
+          condition: ${donation} == 'select' && ${checkboxSelected} == false
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.roundupAndDonateTextCheckbox
+         
+      - if:
+          condition: ${donation} == 'unselect' && ${checkboxSelected} == true
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.roundupAndDonateTextCheckbox
+      - sleep:
+          duration: 10000
+      
+      
+                 
+  - name: unified.us.functions.checkout.validateEstimatedTotalPreviousValue
+    flow:
+      - if:
+          condition: ${estimatedTotalBefore} == ${amountValue}
+          then:
+            - log: verified
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Estimated total not revereted to old value"
+
+  - name: unified.us.functions.checkout.ApplyPromocode
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:    
+            - executeFunction:
+                name: us.functions.checkout.reviewOrder.applyPromoCode
+      - if:
+          condition: ${platform} == 'iOS'
+          then:  
+            - executeFunction:
+                name: us.functions.checkout.reviewOrder.applyPromoCodeiOS
+
+  - name: unified.us.functions.checkout.placeOrder
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          condition: ${platform} == 'Android'
+          then:    
+            - executeFunction:
+                name: us.functions.utils.cvv.errorHandling
+            - executeFunction:
+                name: us.functions.reviewOrder.alcoholCheckbox.errorHandling
+      - if:
+          condition: ${platform} == 'iOS'
+          then:  
+            - executeFunction:
+                name: us.functions.checkout.confirmCvvBeforePlaceOrder
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: tryCount
+          mode: increment
+          flow:
+            - log: Place order try count - ${tryCount}
+            - executeFunction:
+                name: unified.us.functions.tapOnPlaceOrderButton
+            # Conditionally execute if EBT card is added for payment
+            - if:
+                condition: ${ebtExists}
+                then:
+                  - sleep:
+                      duration: 15000
+                  - if: 
+                      identifier:
+                        present: 
+                          - identifier: us.mappings.paymentMethod.checkout.continueButton
+                      then:
+                        - executeFunction: 
+                            name: unified.us.functions.account.paymentMethod.enterEBTPin
+                  - if: 
+                      identifier:
+                        present: 
+                          - identifier: us.mappings.paymentMethod.checkout.EBTPage.PinEntryLabel
+                      then:
+                        - executeFunction: 
+                            name: unified.us.functions.account.paymentMethod.enterEBTPin
+            - if:
+                condition: ${platform} == 'Android'
+                then:  
+                  - if:
+                      condition: ${ebtNewExists}
+                      then:
+                        - sleep:
+                            duration: 15000
+                        - if: 
+                            identifier:
+                              present: 
+                                - identifier: us.mappings.paymentMethod.checkout.continueButton
+                            then:
+                              - executeFunction: 
+                                  name: us.functions.account.paymentMethod.enterEBTPinNew 
+
+            - if:
+                condition: ${Wic}
+                then:
+                  - sleep:
+                      duration: 15000
+                  - if: 
+                      identifier:
+                        present: 
+                          - identifier: us.mappings.paymentMethod.checkout.continueButton
+                      then:
+                        - executeFunction: 
+                            name: unified.us.functions.account.paymentMethod.enterWICPin
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.checkout.verifySubscriptionTermsBottomSheet
+                then:
+                  - log: "Subscription Terms Pop up displayed"
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:
+                        - executeFunction:
+                            name: us.functions.checkout.placeOrderAndAcceptSubscriptionTerms
+                      else:
+                        - executeFunction:
+                            name: us.functions.subs.validateNewUISubscriptioTermsPageAndAccept
+            
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.rxpd.delivery.map.close.btn
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.rxpd.delivery.map.close.btn
+                      wait: 2000
+            
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.popup.technicalError
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.popup.okButton
+                  - click:
+                      identifier: us.mappings.popup.okButton
+                else:
+                  - if: 
+                      condition: ${platform} == 'Android'
+                      then:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.paymentMethod.checkout.walletTitle
+                            then:
+                              - click:
+                                  identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+                              - sleep:
+                                  duration: 5000
+                            else:
+                              - break: true
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.reservationExpiredSelectNewTime
+                            then:
+                              - verifyIdentifier:
+                                  present:
+                                    - identifier: us.mappings.reviewOrder.reservationExpiredPopUp
+                              - click:
+                                  identifier: us.mappings.reviewOrder.reservationExpiredSelectNewTime
+                              - sleep:
+                                  duration: 5000   
+                              - executeFunction:
+                                  name: us.functions.selectTimeSlot
+                                  params:
+                                    - name: slotIndex
+                                      string: 2
+                              - executeFunction:
+                                  name: unified.us.mappings.confirmSlotSelection
+                              - executeFunction:
+                                  name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+                              - executeFunction:
+                                  name: us.functions.cart.continueMissingAnythingScreen                            
+                              - executeFunction:
+                                  name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+                            else:
+                              - break: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.functional.checkout.reviewOrder.pickSubstitution
+          then:
+            - click:
+                identifier: us.mappings.global.closeButton 
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.typage.yourorderisconfirmed
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.deliveryInstructions.thankyoupage
+            - executeFunction:
+                name: unified.us.functions.orderConfirmation.orderCreationValidation 
+
+  # Delivery instruction on Thankyou page
+  - name: unified.us.functions.deliveryInstructions.thankyoupage
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.scanner.ensurePricingDisclaimerBottomSheet
+            - identifier: us.mappings.typage.yourorderisconfirmed
+      - log: Guided delivery instructions bottomsheet is displayed
+      - enterText:
+          identifier: us.mappings.gdi.typ.gateorcallboxcode
+          clearField: true
+          string: ${accessCode}
+      - enterText:
+          identifier: us.mappings.gdi.typ.deliverynotes
+          clearField: true
+          string:  ${deliveryNotes}
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.default.keyboardDoneButton
+          then:
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton
+      - if: 
+          condition: ${platform} == 'Android'
+          then:  
+            - goBack: true
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.gdi.typ.savebutton 
+
+  #RXPD Review order validations
+  - name: unified.us.functions.reviewOrder.rxpd.item.validations
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.rxpd.item.viewDetails.link
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.rxpd.item.viewDetails.link
+          else:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.rxpd.item.viewDetails.link
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.rxpd.item.viewDetails.link
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.rxpd.item.prescription.txt
+            - identifier: us.mappings.reviewOrder.rxpd.item.prescription.name
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.rxpd.item.done.button
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.rxpd.item.done.button
+
+  - name: unified.us.functions.reviewOrder.validate.SODBanner
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.scrollToTopOfReviewOrder
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.rxpd.sod.banner1
+            - identifier: us.mappings.reviewOrder.rxpd.sod.banner1.title
+            - identifier: us.mappings.reviewOrder.rxpd.sod.banner1.infoIcon
+      - click:
+          identifier: us.mappings.reviewOrder.rxpd.sod.banner1.infoIcon
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.rxpd.sod.bottomSheet.title
+            - identifier: us.mappings.cart.rxpd.sod.bottomSheet.text
+            - identifier: us.mappings.cart.rxpd.sod.bottomSheet.gotItButton
+      - executeFunction:
+          name: unified.us.functions.cart.validate.rxpd.item
+      - click:
+          identifier: us.mappings.cart.rxpd.sod.bottomSheet.closeIcon
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.rxpd.sod.banner2
+            - identifier: us.mappings.reviewOrder.rxpd.sod.banner2.title
+            - identifier: us.mappings.reviewOrder.rxpd.sod.banner2.infoIcon
+      - click:
+          identifier: us.mappings.reviewOrder.rxpd.sod.banner2.infoIcon
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.rxpd.sod.bottomSheet.title
+            - identifier: us.mappings.cart.rxpd.sod.bottomSheet.text
+            - identifier: us.mappings.cart.rxpd.sod.bottomSheet.gotItButton
+      - executeFunction:
+          name: unified.us.functions.cart.validate.rxpd.item
+      - click:
+          identifier: us.mappings.cart.rxpd.sod.bottomSheet.closeIcon
+          wait: 2000
+          
+
+  - name: unified.us.functions.checkout.reviewOrder.verifyPaymentCardsDisplay
+    flow:
+      - sleep:
+          duration: 3000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.totalLabel
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.reviewOrder.cardSummaries
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.reviewOrder.cardSummaries
+                position: center
+      - if:
+          condition: ${verifyEBT} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.cardSummaries.ebt
+
+          else:
+            - if:
+                condition: ${verifyEBT} == 'notExists'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.cardSummaries.ebt
+      - if:
+          condition: ${verifyGC} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.cardSummaries.gc
+          else:
+            - if:
+                condition: ${verifyGC} == 'notExists'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.cardSummaries.gc
+      - if:
+          condition: ${verifyCC} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.cardSummaries.cc
+          else:
+            - if:
+                condition: ${verifyCC} == 'notExists'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.cardSummaries.cc
+
+      - if:
+          condition: ${verifyPayPal} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.cardSummaries.paypal
+          else:
+            - if:
+                condition: ${verifyPayPal} == 'notExists'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: us.mappings.reviewOrder.cardSummaries.paypal
+
+      - try:
+          flow:
+            - if:
+                condition: ${verifyRC} == 'exists'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.cardSummaries.refundCard
+                else:
+                  - if:
+                      condition: ${verifyRefundCard} == 'notExists'
+                      then:
+                        - verifyIdentifier:
+                            notPresent:
+                              - identifier: us.mappings.reviewOrder.cardSummaries.refundCard
+          catch:
+            flow:
+              - failTest:
+                  message: "FAILURE - ${env} - Refund card is not the auto-selected payment method, verification failed in Review Order page"            
+
+      - try:
+          flow:
+            - if:
+                condition: ${verifyDS} == 'exists'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.cardSummaries.ds
+                else:
+                  - if:
+                      condition: ${verifyDS} == 'notExists'
+                      then:
+                        - verifyIdentifier:
+                            notPresent:
+                              - identifier: us.mappings.reviewOrder.cardSummaries.ds
+          catch:
+            flow:
+              - failTest:
+                  message: "FAILURE - ${env} - DS card is not the auto-selected payment method, verification failed in Review Order page"
+      - scroll:
+          direction: up
+
+  - name: unified.us.functions.checkout.confirmCvvAndPlaceOrder
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - click:
+          identifier: us.mappings.reviewOrder.placeOrderButton
+          wait: 3000         
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.confirmCvv.cvvField
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.confirmCvv.cvvField
+            - enterText:
+                identifier: us.mappings.reviewOrder.confirmCvv.cvvField
+                string: ${cvv}
+                pressEnter: true
+            - click:
+                identifier: us.mappings.reviewOrder.confirmCvv.confirmButton
+            - executeFunction:
+                name: unified.us.functions.checkout.placeOrder
+          else:
+            # Conditionally execute if EBT card is added for payment
+            - if:
+                condition: ${ebtExists}
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.account.paymentMethod.enterEBTPin
+            - verifyIdentifier:
+                timeout: 80000
+                notPresent:
+                  - identifier: us.mappings.reviewOrder.placeOrderButton
+
+  # Function to select affirm payment and fill all required details
+  - name: unified.us.functions.checkout.applyAffirmPayment
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.affirmApplyNowButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.reviewOrder.affirmApplyNowButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.affirmConfirmButton
+      - click:
+          identifier: us.mappings.reviewOrder.affirmConfirmButton
+      - verifyIdentifier:
+          timeout: 50000
+          present:
+            - identifier: us.mappings.reviewOrder.affirm.mobileNumber
+      - enterText:
+          identifier: us.mappings.reviewOrder.affirm.mobileNumber
+          string: 8142801436
+          pressEnter: true
+      - hideKeyboard: true 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.affirmConfirmButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.affirmConfirmButton
+                wait: 2000
+            - click:
+                identifier: us.mappings.reviewOrder.affirmApplyNowButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.affirmConfirmButton
+            - click:
+                identifier: us.mappings.reviewOrder.affirmConfirmButton
+            - verifyIdentifier:
+                timeout: 60000
+                present:
+                  - identifier: us.mappings.reviewOrder.affirm.mobileNumber
+            - enterText:
+                identifier: us.mappings.reviewOrder.affirm.mobileNumber
+                string: 8142801436 
+                pressEnter: true 
+            - hideKeyboard: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.affirm.title
+          then:          
+            - click:
+                identifier: us.mappings.reviewOrder.affirm.title 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.affirm.title
+          then:  
+            - click:
+                identifier: us.mappings.reviewOrder.affirm.continueButton
+                wait: 2000 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.affirm.pin
+      - enterText:
+          identifier: us.mappings.reviewOrder.affirm.pin
+          string: 123456
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.affirm.pinConfirmationTitle
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.affirm.pinConfirmationTitle
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.affirm.submitButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.affirm.submitButton  
+      - loop:
+          begin: 0
+          end: 5
+          storeIndex: i
+          mode: increment
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.affirm.selectPlan
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.affirm.selectPlan
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.reviewOrder.affirm.continueSelectedPlan
+                        - name: direction
+                          string: down
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.affirm.continueSelectedPlan
+                  - click:
+                      identifier: us.mappings.reviewOrder.affirm.continueSelectedPlan   
+                      wait: 5000                                          
+                  - break: true
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.affirm.reviewPageText
+                      then:
+                        - log: Plan selected by default, skipping to plan review page validations
+                        - break: true
+            - sleep:
+                duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.affirm.reviewPageText
+      - sleep:
+          duration: 2000
+      - scroll:
+          direction: down 
+      - if:
+          identifier:
+            present: 
+              - identifier: us.mappings.reviewOrder.affirm.autoPayOnToggle            
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.affirm.autoPayOnToggle
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.affirm.autoPayOnToggle
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.affirm.confirmPageText
+      - click:
+          identifier: us.mappings.reviewOrder.affirm.confirmCheckbox
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.maappings.reviewOrder.affirm.confirmPageContinueButton
+            - name: direction
+              string: down
+      - click:
+          identifier: us.maappings.reviewOrder.affirm.confirmPageContinueButton
+      - verifyIdentifier:
+          timeout: 15000
+          present:
+            - identifier: us.mappings.reviewOrder.affirm.thankyouText
+      - click:
+          identifier: us.mappings.reviewOrder.affirm.returnToWalmartButton
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.affirmAppliedDetails
+            - name: direction
+              string: up
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.affirmAppliedDetails
+
+  - name: unified.us.functions.reviewOrder.autoShip.subscription.placeOrder
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.preferredDay.keepItemInCart
+          then:
+            - log: "Keep Item In Cart option is available."
+            - click:
+                identifier: us.mappings.cart.preferredDay.keepItemInCart    
+      - executeFunction:
+          name: unified.us.functions.checkout.AddPetVet
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: unified.us.functions.checkout.SelectPetVet
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.petrx.autoship.addPetVet.successMessage
+      - if:
+          condition: ${signatureRequired} == true
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+            - click:
+                identifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureRequiredTitle
+                  - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureImage
+                  - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signaturecheckbox
+            - click:
+                identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signaturecheckbox
+            - click:
+                identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureRequired.agreeAndSignCta
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureImage
+          else:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+            - click:
+                identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+  
+  - name: unified.us.functions.verifyPetVetApprovalRequired
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.validation.vetApprovalRequired
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.validation.vetApprovalRequired
+                scrollLimit: 1
+                position: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.validation.vetApprovalRequired
+          then:
+            - log: "Vet Approval Validated"
+          else:
+            - scroll:
+                direction: down
+                scrollLimit: 1
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.validation.vetApprovalRequired
+                then:
+                  - log: "Vet Approval Validated"
+                else:
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - Vet Approval is not present"
+
+  - name: unified.us.functions.checkout.AddPetVet
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.addPetVetButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.addPetVetButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.addPetVetButton
+
+  - name: unified.us.functions.petVetDiet.orderDeliveryVerification
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.petRx.deliveryText.onODP
+
+  - name: unified.us.functions.checkout.SelectPetVet
+    flow:
+    #Pet Selection
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.SelectAPetid
+      - click:
+          identifier:  us.mappings.reviewOrder.SelectAPetid
+      - sleep: 
+          duration: 2000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - getString:
+                identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                attribute: value
+                storeIn: petName
+            - log: ${petName} selected
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+                then:
+                  - log: inside done
+                  - click:
+                      identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.SelectAPetOption1
+            - click:
+                identifier:  us.mappings.reviewOrder.SelectAPetOption1
+            - sleep:
+                duration: 5000
+
+        #Vet Selection
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.SelectAVetid
+      - click:
+          identifier: us.mappings.reviewOrder.SelectAVetid
+      - sleep: 
+          duration: 2000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - getString:
+                identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                attribute: value
+                storeIn: vetName
+            - log: ${vetName} selected
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.SelectPetPickerWheelXCUIother1
+                then:
+                  - click:
+                      identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.SelectAVetOption1
+            - click:
+                identifier:  us.mappings.reviewOrder.SelectAVetOption1
+      - if:
+          condition: ${multipleItems} == true
+          then:
+            #Pet Selection
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.SelectAPetid
+            - click:
+                identifier:  us.mappings.reviewOrder.SelectAPetid
+            - sleep: 
+                duration: 2000
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - getString:
+                      identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                      attribute: value
+                      storeIn: petName
+                  - log: ${petName} selected
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+                      then:
+                        - log: inside done
+                        - click:
+                              identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+            - if: 
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.SelectAPetOption1
+                  - click:
+                      identifier:  us.mappings.reviewOrder.SelectAPetOption1
+                  - sleep:
+                      duration: 5000
+            - scroll:
+                direction: down
+            #Vet Selection
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.SelectAVetid
+            - click:
+                identifier:  us.mappings.reviewOrder.SelectAVetid
+            - sleep: 
+                duration: 2000
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - getString:
+                      identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                      attribute: value
+                      storeIn: vetName
+                  - log: ${vetName} selected
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.SelectPetPickerWheelXCUIother1
+                      then:
+                        - click:
+                              identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+            - if: 
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.SelectAVetOption1
+                  - click:
+                      identifier:  us.mappings.reviewOrder.SelectAVetOption1    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.SaveButton
+      - click:
+          identifier:  us.mappings.reviewOrder.SaveButton
+
+  - name: unified.us.functions.checkout.reviewOrder.verify.greymessages
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.editPaymentMethod
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.ebt.subs.addcreditcard.grey.message
+          then: 
+            - click:
+                identifier: us.mappings.reviewOrder.ebt.subs.addcreditcard.grey.message
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.ebt.subs.addcreditcard.grey.message
+            - click:
+                identifier: us.mappings.paymentMethod.checkout.addNewPaymentMethodButton    
+            - executeFunction:
+                name: unified.us.functions.account.paymentMethod.addCardDetails
+                params:
+                  - name: number
+                    string: us.data.flow005.payment.creditCard
+                  - name: firstName
+                    string: us.data.flow005.payment.firstName
+                  - name: lastName
+                    string: us.data.flow005.payment.lastName
+                  - name: expiration
+                    string: us.data.flow028.expiration
+                  - name: cvv
+                    string: us.data.flow004.payment.cvv
+                  - name: phoneNumber
+                    string: us.data.flow004.phoneNumber 
+            - click:
+                identifier: us.mappings.item.continue          
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.ebt.subs.addcreditcard.covertotal
+          then: 
+            - click:
+                identifier: us.mappings.reviewOrder.ebt.subs.addcreditcard.covertotal
+            - executeFunction:
+                name: unified.us.functions.account.paymentMethod.addCardDetails
+                params:
+                  - name: number
+                    string: us.data.flow005.payment.creditCard
+                  - name: firstName
+                    string: us.data.flow005.payment.firstName
+                  - name: lastName
+                    string: us.data.flow005.payment.lastName
+                  - name: expiration
+                    string: us.data.flow028.expiration
+                  - name: cvv
+                    string: us.data.flow004.payment.cvv
+                  - name: phoneNumber
+                    string: us.data.flow004.phoneNumber
+            #Verify grey messages for EBT substitutions
+            - executeFunction:
+                name: us.functions.checkout.wallet.verify.greymessages
+
+  - name:  unified.us.functions.revieworder.wplus.confirmWalmartPlusPlan
+    flow:
+       - if: 
+          condition: ${planType} == 'annual'
+          then:
+            - click: 
+                identifier: us.mappings.wplus.annualTenurePlan
+            - log: 'Annual Plan selected'
+          else:
+            - click: 
+                identifier: us.mappings.wplus.monthlyTenurePlan
+            - log: 'Monthly Plan selected'         
+       - scroll:
+           direction: down
+           untilIdentifier: us.mappings.wplus.splashPage.IagreeTermsAndConditionCheckBox
+           scrollLimit: 2
+       - click: 
+            identifier: us.mappings.wplus.splashPage.IagreeTermsAndConditionCheckBox 
+       - click: 
+          identifier: us.mappings.reviewOrder.splash.confirmBtn
+
+  - name: unified.us.functions.revieworder.wplus.verifyMembership
+    flow:
+       - scroll:
+            direction: down
+            untilIdentifier:  us.mappings.checkout.walmartPlusLogo
+       - if: 
+          condition: ${planType} == 'annual'
+          then:
+            - verifyIdentifier:
+               present:
+                - identifier: us.mappings.checkout.annualPlan
+            - log: 'Annual Plan selected'
+          else:
+            - verifyIdentifier:
+               present: 
+                - identifier: us.mappings.checkout.monthlyPlan
+            - log: 'Monthly Plan selected' 
+
+  - name: unified.us.functions.revieworder.wplus.wplusSignupThankYouPageValidation
+    flow:
+       - sleep:
+           duration: 1000
+       - if:
+          identifier:
+            present: 
+              - identifier: us.mappings.reviewOrder.viewDetails.closeBtn           
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.viewDetails.closeBtn
+
+       - verifyIdentifier:
+            present: 
+              - identifier: us.mappings.reviewOrder.viewDetails.thankYouPageTitle
+              
+  - name: unified.us.functions.reviewOrder.incrementalAuth.verifyTemporaryHold
+    flow:
+      - sleep:
+          duration: 3000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.pos.temporaryHold.header
+      - verifyIdentifier:
+          timeout: 5000
+          present:
+            - identifier: us.mappings.reviewOrder.pos.temporaryHold.description
+            - identifier: us.mappings.reviewOrder.pos.temporaryHold.infoIcon
+      - click:
+          identifier: us.mappings.reviewOrder.pos.temporaryHold.infoIcon
+      - verifyIdentifier:
+          timeout: 5000
+          present:
+            - identifier: us.mappings.reviewOrder.temporaryHold.bottomSheet.title
+            - identifier: us.mappings.reviewOrder.temporaryHold.bottomSheet.description
+            - identifier: us.mappings.reviewOrder.temporaryHold.bottomSheet.gotIt
+      - click:
+          identifier: us.mappings.reviewOrder.temporaryHold.bottomSheet.gotIt
+      - scroll:
+          direction: Up
+          untilIdentifier: us.mappings.reviewOrder.editPayment
+      - click:
+          identifier: us.mappings.reviewOrder.editPayment
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.reviewOrder.wallet.temporaryHold.header
+            - identifier: us.mappings.reviewOrder.wallet.temporaryHold.infoIcon
+      - click:
+          identifier: us.mappings.reviewOrder.wallet.temporaryHold.infoIcon
+      - verifyIdentifier:
+          timeout: 5000
+          present:
+            - identifier: us.mappings.reviewOrder.wallet.temporaryHold.bottomSheet.title
+            - identifier: us.mappings.reviewOrder.wallet.temporaryHold.bottomSheet.description
+            - identifier: us.mappings.reviewOrder.wallet.temporaryHold.bottomSheet.gotIt
+      - click:
+          identifier: us.mappings.reviewOrder.wallet.temporaryHold.bottomSheet.gotIt
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.wallet.closeWallet
+          else:
+            - click:
+                identifier: us.mappings.global.navigateBackArrow
+
+  #PetRx 
+  - name: unified.us.functions.checkout.MultiSelectPetVet
+    flow:
+     #Qty Selection
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.PetSelectAQtyTextfieldid
+      - click:
+          identifier: us.mappings.reviewOrder.PetSelectAQtyTextfieldid
+      - sleep:
+          duration: 5000
+
+      - if:
+          condition: ${platform} == 'iOS'
+          then:  
+             - enterText:
+                  identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                  string: 1
+                  clearField: false
+                  clickFirst: false
+                  pressEnter: false
+             - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+                then:
+                  - log: inside done
+                  - click:
+                        identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+             - sleep:
+                duration: 3000
+
+            #Pet Selection
+             - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.MutliSelectPet1Textfield_id
+             - click:
+                identifier: us.mappings.reviewOrder.MutliSelectPet1Textfield_id
+
+
+             - enterText:
+                identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                string: us.data.flow.petrx.pet1
+                clearField: false
+                clickFirst: false
+                pressEnter: false
+             - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+                then:
+                  - log: inside done
+                  - click:
+                        identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+             - sleep:
+                duration: 3000
+
+            #Vet Selection
+             - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.MutliSelectVet1Textfield_id
+             - click:
+                identifier:  us.mappings.reviewOrder.MutliSelectVet1Textfield_id
+             - enterText:
+                identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                string: us.data.flow.petrx.vet1
+                clearField: false
+                clickFirst: false
+                pressEnter: false
+             - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.SelectPetPickerWheelXCUIother1
+                then:
+                  - click:
+                        identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+             - sleep:
+                duration: 3000
+
+            #2nd Pet and Vet selection
+            #Pet Selection
+             - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.MutliSelectPet2Textfield
+             - click:
+                identifier:  us.mappings.reviewOrder.MutliSelectPet2Textfield
+             - enterText:
+                identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                string: us.data.flow.petrx.pet2
+                clearField: false
+                clickFirst: false
+                pressEnter: false
+             - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+                then:
+                  - log: inside done
+                  - click:
+                        identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+             - sleep:
+                duration: 3000
+
+              #Vet Selection
+             - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.SelectAVet2
+             - click:
+                identifier:  us.mappings.reviewOrder.SelectAVet2
+             - enterText:
+                identifier: us.mappings.reviewOrder.SelectPetPickerWheel1xpath
+                string: us.data.flow.petrx.vet2
+                clearField: false
+                clickFirst: false
+                pressEnter: false
+             - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.SelectPetPickerWheelXCUIother1
+                then:
+                  - click:
+                        identifier:  us.mappings.reviewOrder.PetPickerWheelDone1
+             - sleep:
+                duration: 3000
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.MultiPetQtyChoice1
+              - click:
+                  identifier:  us.mappings.reviewOrder.MultiPetQtyChoice1
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.PetChoice1textField
+              - click:
+                  identifier:  us.mappings.reviewOrder.PetChoice1textField
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.SelectAPetGia
+              - click:
+                  identifier:  us.mappings.reviewOrder.SelectAPetGia
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.FirstVetDropdown
+              - click:
+                  identifier: us.mappings.reviewOrder.FirstVetDropdown
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.SelectAVetOption1 
+              - click:
+                  identifier:  us.mappings.reviewOrder.SelectAVetOption1 
+              - sleep:
+                  duration: 3000
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.PetChoice1textField 
+              - click:
+                  identifier:  us.mappings.reviewOrder.PetChoice1textField
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.Pet2ndnamechris
+              - click:
+                  identifier:  us.mappings.reviewOrder.Pet2ndnamechris
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.SecondVetDropdown
+              - click:
+                  identifier:  us.mappings.reviewOrder.SecondVetDropdown
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.Vet2ndOption
+              - click:
+                  identifier:  us.mappings.reviewOrder.Vet2ndOption
+
+     #Save Button
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.SaveButton
+      - click:
+          identifier:  us.mappings.reviewOrder.SaveButton
+
+ # Verify Virtual Pack items
+  - name: unified.us.functions.checkout.reviewOrderDetails.verifyVPItemDetails
+    flow:
+      - click:
+          identifier: us.mappings.reviewOrder.viewLink
+      - log: 'Clicked on the View link to review the cart items'
+      - verifyIdentifier:
+          timeout: 6000
+          present:
+            - identifier: us.mappings.reviewOrder.largeVPItem
+            - identifier: us.mappings.reviewOrder.countVPItem         
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.findMultiPackCartItem 
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center           
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.findMultiPackCartItem
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.findSinglePackCartItem 
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center           
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.findSinglePackCartItem            
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.MPVPItem        
+      - log: 'Verified the cart, it has virtual pack items'
+
+  #Edit delivery instructions on review order screen, InHome
+  - name: unified.us.functions.reviewOrder.editDeliveryInstructionsInHome
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.editDeliveryInstructionsButtonInhome
+      - click:
+          identifier: us.mappings.reviewOrder.editDeliveryInstructionsButtonInhome
+          wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.editDeliveryInstructions.label
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reiewOrder.deliveryInstructions.clear
+                then:
+                  - click:
+                      identifier: us.mappings.reiewOrder.deliveryInstructions.clear
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.propertyTypeText
+                      then:
+                        - click:
+                            identifier: us.mappings.reviewOrder.editDeliveryInstructions.propertyType.house
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - enterText:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+                string: ${accessCode}
+                pressEnter: true
+            - goBack: true
+            - if:
+                condition: ${deliver} == 'Garage' 
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliverKitchen
+                  - click:
+                      identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliverGarage
+                      wait: 2000
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.keyPadLocatedText  
+            - scroll:
+                direction: down
+                scrollLimit: 1
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.editDeliveryInstructions.keypadsCode
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.editDeliveryInstructions.keypadsCode                
+                  - enterText:
+                      identifier: us.mappings.reviewOrder.editDeliveryInstructions.keypadsCode
+                      string: ${keypadsCode}
+                      pressEnter: true
+                  - goBack: true
+            - scroll:
+                direction: down
+                scrollLimit: 1
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+            - enterText:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                string: ${deliveryNotes}
+                pressEnter: true
+            - goBack: true                                                     
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - enterText:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+                string: ${accessCode}
+                pressEnter: true
+                clearField: true
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.default.keyboardDoneButton
+                then:
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+            - enterText:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                string: ${deliveryNotes}
+                pressEnter: true
+                clearField: true
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.default.keyboardDoneButton
+                then:
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryLabel
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryLocation
+
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryHomeAccess
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryHomeAccess
+
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocation
+            - click:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocationType
+            - enterText:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocationKeypadTextField
+                string: ${keypad}
+                pressEnter: true
+                clearField: true
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.editDeliveryInstructions.save
+      - click:
+          identifier: us.mappings.reviewOrder.editDeliveryInstructions.save
+
+
+  - name: unified.us.functions.ibotta.verifyibottaRewards.on.reviewOrderPage
+    flow: 
+     - if:
+        identifier:
+          present:
+            - identifier: us.mappings.ibottaRewards.subscription.preference.closeButton
+        then:
+           - click:
+              identifier: us.mappings.ibottaRewards.subscription.preference.closeButton
+           - log: "Substitution preferences overlay is closed"
+     - if:
+        identifier:
+         notPresent:
+          - identifier: us.mappings.ibottaRewards.walmartCash.checkoutRewards
+        then:
+        - log: Couldn't find the checkoutRewards, Scrolling down.
+        - scroll:
+            direction: down
+            untilIdentifier: us.mappings.ibottaRewards.walmartCash.checkoutRewards
+            scrollLimit: 10
+            position: center
+        - log: "You'll get an estimated $ in Walmart Cash with this order! is present"
+
+  # This is a reusable function to validate the Violation Policy prompt. Can be used for different Prompt validations.
+  - name: unified.us.functions.reviewOrder.mip.confirmItemPolicy.editItems  
+    flow:   
+      - if:
+          identifier:
+           present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.placeOrderButton
+      - verifyIdentifier:
+          timeout: 5000
+          present:
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.id
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.removeButton.id
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.closeButton.id         
+      - verifyIdentifier:
+          timeout: 5000
+          present:            
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.headerText
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.violationText
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.itemDescription
+            - identifier: us.mappings.reviewOrder.mip.bottomSheet.instructions
+      - log: Error 'Limit  per customer on an item you have previously purchased' is displayed
+      - click:
+          identifier: us.mappings.reviewOrder.mip.bottomSheet.removeButton.id
+          wait: 5000
+      - click:
+          identifier: us.mappings.reviewOrder.mip.bottomSheet.editButton.id
+          wait: 5000       
+      - executeFunction:
+         name: unified.us.functions.global.navigation.goToDeepLink
+         params:
+            - name: deepLinkUrl
+              string: walmart://cart
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - log: The "Remove" CTA Button has been clicked and user is now redirected to Cart.
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.mip.savedForLater.moveToCartButton
+                timeout: 5000
+          then:
+            - log: The mipItem has been moved to Saved for Later section.
+          else:
+            - failTest:
+                message: "The mipItem has not been moved to Saved for Later section."
+
+  - name: unified.us.functions.item.autoShip.subscription.placeOrder
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.item.petrx.autoship.autoDelivery.onReviewOrderPage
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.addPetVetButton
+                  - name: direction
+                    string: down   
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.addPetVetButton
+            - click:
+                identifier: us.mappings.reviewOrder.addPetVetButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.petrx.autoship.subscription.editPetVetInfo.title                          
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.item.petrx.autoship.subscription.selectPetDropdown
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.item.petrx.autoship.subscription.selectPetDropdown
+            - click:
+                identifier: us.mappings.item.petrx.autoship.subscription.selectPetDropdown
+            - click:
+                identifier: us.mappings.item.petrx.autoship.subscription.firstPetName                    
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.item.petrx.autoship.subscription.selectVetDropdown
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.item.petrx.autoship.subscription.selectVetDropdown
+            - click:
+                identifier: us.mappings.item.petrx.autoship.subscription.selectVetDropdown
+            - click:
+                identifier: us.mappings.item.petrx.autoship.subscription.selectVetName
+            - sleep:
+                duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.item.petrx.autoship.subscription.second.selectPetDropdown
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.item.petrx.autoship.subscription.second.selectPetDropdown
+                  - click:
+                      identifier: us.mappings.item.petrx.autoship.subscription.second.selectPetDropdown
+                  - click:
+                      identifier: us.mappings.item.petrx.autoship.subscription.secondPetName
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.item.petrx.autoship.subscription.second.selectVetDropdown
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.item.petrx.autoship.subscription.second.selectVetDropdown
+                  - click:
+                      identifier: us.mappings.item.petrx.autoship.subscription.second.selectVetDropdown
+                  - click:
+                      identifier: us.mappings.item.petrx.autoship.subscription.selectVetName
+            - sleep:
+                duration: 2000
+            - click:
+                identifier: us.mappings.reviewOrder.SaveButton
+            - sleep:
+                duration: 3000
+            - executeFunction:
+                name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.item.petrx.autoship.addPetVet.successMessage
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.item.petrx.autoship.addPetVet.successMessage                             
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.petrx.autoship.addPetVet.successMessage 
+            - if:
+                condition: ${signatureRequired} == true
+                then:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                  - click:
+                      identifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureRequiredTitle
+                        - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureImage
+                        - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signaturecheckbox
+                  - click:
+                      identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signaturecheckbox
+                  - click:
+                      identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureRequired.agreeAndSignCta
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureImage
+                else:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.item.petrx.autoship.subscription.termsText 
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.item.petrx.autoship.subscription.termsText 
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.item.petrx.autoship.subscription.termsText
+                        - identifier: us.mappings.item.petrx.autoship.subscription.termsTitle        
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                  - click:
+                      identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+            - scroll:
+                direction: down
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.confirmCvv.cvvTitle
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.reviewOrder.confirmCvv.cvvPutField
+                  - click:
+                      identifier: us.mappings.reviewOrder.confirmCvv.cvvPutField
+                  - enterText:    
+                      identifier: us.mappings.reviewOrder.confirmCvv.cvvPutField
+                      string: 111
+                      pressEnter: true
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.reviewOrder.clickPlaceOrder
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.reviewOrder.clickPlaceOrder
+                  - click:
+                      identifier: us.mappings.reviewOrder.clickPlaceOrder
+                else:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.reviewOrder.clickPlaceOrder
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.reviewOrder.clickPlaceOrder
+                  - click:
+                      identifier: us.mappings.reviewOrder.clickPlaceOrder           
+            - sleep:
+                duration: 30000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.typage.yourorderisconfirmed
+                then:
+                  - click:
+                      identifier: us.mappings.typage.yourorderisconfirmedCloseButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+              - executeFunction:
+                  name: us.functions.checkout.AddPetVet
+              - sleep:
+                  duration: 2000
+              - executeFunction:
+                  name: us.functions.checkout.SelectPetVet
+              - sleep:
+                  duration: 3000
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.item.petrx.autoship.addPetVet.successMessage
+              - if:
+                  condition: ${signatureRequired} == true
+                  then:
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                        then:
+                          - scroll:
+                              direction: down
+                              untilIdentifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                    - click:
+                        identifier: us.mappings.reviewOrder.petrx.autoship.subscription.agreeAndSignCta
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureRequiredTitle
+                          - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureImage
+                          - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signaturecheckbox
+                    - click:
+                        identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signaturecheckbox
+                    - click:
+                        identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureRequired.agreeAndSignCta
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.petrx.autoship.subscription.signatureImage
+                  else:
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                        then:
+                          - scroll:
+                              direction: down
+                              untilIdentifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                    - click:
+                        identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.item.petrx.autoship.subscription.termsCheckBox
+
+   
+
+  - name: unified.us.functions.hanldeSlotExpiredAndPlaceOrder
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.changeSlot
+          then:
+            - log: "Slot expired, have to select a new one"
+            - executeFunction:
+                name: unified.functions.cart.navigateToBookSlot   
+            - executeFunction:
+                name: unified.functions.reserveSlot.selectRegularSlot
+            - executeFunction:
+                name: unified.functions.reserveATime.tapOnReserveButton
+            - executeFunction:
+                name: unified.us.functions.cart.continueToCheckout     
+            - executeFunction:
+                name: unified.us.functions.checkout.placeOrder
+          else:
+            - log: "Slot is not expired, no need to select a new slot"
+
+
+# Verify Substitutions on Review Order
+  - name: unified.us.functions.reviewOrder.chooseVPItem.substitutions
+    flow: 
+      - sleep:
+          duration: 7000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+      - click:
+          identifier: us.mappings.reviewOrder.viewSubstitutionPreferenceButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.subsPreference.title
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.subsPreference.edit.btn.firstitem
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.edit.btn.firstitem
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.doNotReplaceRadioButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.doNotReplaceRadioButton
+
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.selectButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.selectButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.subsPreference.edit.btn.seconditem
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.edit.btn.seconditem
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.selectButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.replaceWithRadioButton
+
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.selectFirstItem.replaceWith
+
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.selectButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.subsPreference.edit.btn.thirditem
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.edit.btn.thirditem
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.subsPreference.selectButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.bestMatchRadioButton
+
+            - click:
+                identifier: us.mappings.reviewOrder.subsPreference.selectButton
+
+      - click:
+          identifier: us.mappings.reviewOrder.subsPreference.doneButton
+      - sleep:
+          duration: 7000
+ 
+ 
+ ######################################Single Step Function########################################
+  - name: unified.us.functions.tapOnPlaceOrderButton
+    flow:
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.reviewOrder.placeOrderButton
+        - click:
+              identifier: us.mappings.reviewOrder.placeOrderButton
+              wait: 10000
+
+  - name: unified.us.functions.reviewOrder.verifyExistingPaymentandClickChangePayment
+    flow: 
+      - sleep:
+          duration: 7000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.paymentModule
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.paymentModule
+
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.editPayment
+      - click:
+          identifier: us.mappings.reviewOrder.editPayment
+      - log: Existing payment verified successfully
+     

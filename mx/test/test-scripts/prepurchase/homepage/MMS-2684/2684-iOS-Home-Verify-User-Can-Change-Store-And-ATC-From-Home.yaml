@@ -1,0 +1,282 @@
+#======================================================================================================================
+#    AUTHOR: Osmar Juárez (vn56dce)
+#   CREATED: Jul/16/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-od-smoke-production-ios-2684, prepurchase-od-smoke-production-ios
+  testCaseId: MMS-3273
+
+scenarios:
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [GLASS-MX] Verify that a user can change stores from home and add an item to cart
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+iOS 
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-3273
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-2684
+#
+#######################################################################################################################
+ 
+
+  # BEFORE HOOK #######################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - storeIn:
+          key: __SQUAD_REPORTING_TEST_CASE_NAME
+          value: GMX_OD_Smoke_PROD_PrePurchase_iOS_2684
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${BUNDLE_ID} == 'com.walmartmexico.WalmartMG.qa'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+            - storeIn:
+                key: MMS_2684_USER_STORE_SAVED
+                value: mx.data.qaa.smoke.od.prepurchase-2684.userSavedStoreWalmart
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+            - storeIn:
+                key: MMS_2684_USER_STORE_SAVED
+                value: mx.data.qaa.smoke.od.prepurchase-2684.userSavedStoreBodega
+      
+      - storeIn:
+          key: MMS_2684_SUCCESSFUL_EXECUTION
+          value: false
+      - storeIn:
+          key: MMS_2684_IS_CART_EMPTY
+          value: true
+      - storeIn:
+          key: MMS_2684_STORE_CHANGED
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN HOOK #########################################################################################################
+  - name: Main
+    platform: ios
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN WALMART APP AND COMPLETE ONBOARDING. (2) OPEN THE OD BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.smoke.od.prepurchase-2684.zipCode
+            - name: banner
+              string: 'OD'
+      
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: LOG IN BY GOING TO 'Cuenta' > 'Iniciar sesión'"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.smoke.od.prepurchase-2684.userEmail
+            - name: userPassword
+              string: mx.data.qaa.smoke.od.prepurchase-2684.userPassword
+            - name: userName
+              string: mx.data.qaa.smoke.od.prepurchase-2684.userFirstName
+      
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: NAVIGATE TO HOME AND EXPAND STORE SELECTOR."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.expandSelector   
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.assertSelectorDisplayed
+
+      # STEP 5 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: CHANGE STORE TO AN EXPRESS ONE."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.tapPickupButtonIfNotSelected
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.selection-options.tapChangeStoreButton
+      - if:
+         condition: ${GMX_PP_APP_NAME} == '_bodega'
+         then:
+          - executeFunction:
+             name: mx.functions.store-selector-popup.selectFilterByStoreType
+             params:
+              - name: storeTypeName
+                string: "Bodega Aurrera Express"
+      - executeFunction:
+          name: mx.functions.store-selector-popup.selectFirstXPStore
+      - executeFunction:
+          name: mx.functions.store-selector-popup.getSelectedStoreName # RETURN: --${returnedStoreName}--
+      - executeFunction:
+          name: mx.functions.store-selector-popup.tapSave
+      - storeIn:
+          key: MMS_2684_STORE_CHANGED
+          value: true
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.assertStoreSelectedInCollapsedView
+          params:
+            - name: selectedStore
+              string: ${returnedStoreName}
+  
+      # STEP 6 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6: ADD ANY PRODUCT FROM ANY CAROUSEL DISPLAYED IN HOME."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.closeSelector
+      - executeFunction:
+          name: mx.functions.home.scrollDownUntilSomeCarousel
+      - executeFunction:
+          name: mx.functions.home.getCarouselName # RETURN: --${returnedCarouselName}--
+      - executeFunction:
+          name: mx.functions.home.carousel.getFirstProductName # RETURN: --${displayedProductNameInCarousel}--
+          params:
+            - name: carouselName
+              string: ${returnedCarouselName}
+      - executeFunction:
+          name: mx.functions.home.carousel.addProductToCartInCarouselNoScrolls
+          params:
+            - name: carouselName
+              string: ${returnedCarouselName}
+            - name: productName
+              string: ${displayedProductNameInCarousel}
+      - storeIn:
+          key: MMS_2684_IS_CART_EMPTY
+          value: false
+
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: '1'
+      - executeFunction:
+          name: mx.functions.top-menu.getSubtotalFromCartIcon # RETURN: --${returnedSummarySubtotal}-- 
+      - verifyCondition: "${returnedSummarySubtotal} > 0"
+
+    # STEP 7 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: DELETE ALL ITEMS FROM CART."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.flows.od.cart.deleteAllProducts
+      
+  # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_2684_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+  # AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START '${__SQUAD_REPORTING_TEST_CASE_NAME}': After Configs..."
+
+      - if:
+          condition: ${MMS_2684_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. Resseting data for next execution."
+                color: RED
+            - executeFunction:
+               name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+            - executeFunction:
+               name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+               params:
+                - name: userEmail
+                  string: mx.data.qaa.smoke.od.prepurchase-2684.userEmail
+                - name: userPassword
+                  string: mx.data.qaa.smoke.od.prepurchase-2684.userPassword
+            - executeFunction:
+                name: mx.functions.bottom-menu.tapHome
+            - if:
+                condition: ${MMS_2684_STORE_CHANGED} == true
+                then:
+                  - executeFunction:
+                     name: mx.functions.delivery-method-selector.expandSelectorIfCollapsed
+                  - executeFunction:
+                     name: mx.functions.delivery-method-selector.selection-options.tapChangeStoreButton
+                  - executeFunction:
+                      name: mx.functions.store-selector-popup.enterZipCode
+                      params:
+                        - name: zipCode
+                          string: mx.data.qaa.smoke.od.prepurchase-2684.zipCode
+                  - executeFunction:
+                     name: mx.functions.store-selector-popup.selectStore
+                     params:
+                      - name: storeName
+                        string: ${MMS_2684_USER_STORE_SAVED}
+                  - executeFunction:
+                     name: mx.functions.store-selector-popup.tapSave
+                  - executeFunction:
+                     name: mx.functions.delivery-method-selector.closeSelectorIfExpanded
+            - if:
+               condition: ${MMS_2684_IS_CART_EMPTY} == false
+               then:
+                  - executeFunction:
+                     name: mx.flows.od.after-scenario-exclusive.emptyCart
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, Reseting data for next execution..."
+                color: GREEN_BOLD
+            - goBack: true
+            - executeFunction:
+               name: mx.functions.delivery-method-selector.expandSelectorIfCollapsed
+            - executeFunction:
+               name: mx.functions.delivery-method-selector.selection-options.tapChangeStoreButton
+            - executeFunction:
+                      name: mx.functions.store-selector-popup.enterZipCode
+                      params:
+                        - name: zipCode
+                          string: mx.data.qaa.smoke.od.prepurchase-2684.zipCode
+            - executeFunction:
+               name: mx.functions.store-selector-popup.selectStore
+               params:
+                - name: storeName
+                  string: ${MMS_2684_USER_STORE_SAVED}
+            - executeFunction:
+               name: mx.functions.store-selector-popup.tapSave
+            - executeFunction:
+               name: mx.functions.delivery-method-selector.closeSelectorIfExpanded
+            - log:
+                message: "Success reseting data."
+                color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO END '${__SQUAD_REPORTING_TEST_CASE_NAME}'"
+  

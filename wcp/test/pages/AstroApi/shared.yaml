@@ -1,0 +1,890 @@
+functions:
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This api will create user account in staging environment
+  # Param:        ${payload}     [Mandatory] Request Body
+
+  - name: functions.astroApi.createAccount
+    flow:
+      - log: ${tenantId}
+      - log: ${payload}
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/customer
+          requestMethod: POST
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: segment
+              value: oaoh
+            - key: tenant-id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${payload}
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          retriesOnFail: 5
+          retryDelay: 2000
+      - log: 
+          message: "End Function: functions.astroApi.createAccount"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description: generateEmail and used with functions.astroApi.createAccount
+  - name: functions.astroApi.generateTimeStampEmail
+    flow:
+      - getTimestamp:
+          storeIn: timestamp
+          dateFormat: ddHHmmssSS
+      
+      - storeIn:
+          key: userEmail
+          value: walmartwcp${timestamp}@walmart.com
+
+  # ----------------------------------------------------------------------------------------------------------------
+  # Description:  This api will create user account in staging environment
+  # Param:        ${firstName}          [Optional] First name of user
+  #               ${lastName}           [Optional] Last name of user
+  #               ${userEmail}          [Optional] Email Id of user
+  #               ${password}           [Optional] password of user
+  #               ${phoneNumber}        [Optional] Phone Number of user
+  #               ${addressFirstLine}   [Optional] User address first line
+  #               ${addressLineTwo}     [Optional] User address line two
+  #               ${city}               [Optional] User city
+  #               ${country}            [Optional] User country
+  #               ${postalCode}         [Optional] User postal code
+  #               ${locality}           [Optional] User locality 
+  #               ${subLocality}        [Optional] User sub locality
+  #               ${state}              [Optional] User state
+  #               ${paymentMethod}      [Optional] User payment method
+  # Return:       ${userEmail}
+  #               ${userPassword} 
+  - name: functions.astroApi.createNewAccountWithCreatePayload
+    flow:
+      - log: 
+          message: Calling Astro API to Create New User Account...
+          color: CYAN
+      - log: 
+          message: Setting up the Data to be used...
+          color: CYAN
+      - if:
+          condition: ${addressFirstLine} == null && ${addressLineTwo} == null && ${city} == null && ${country} == null && ${postalCode} == null && ${state} == null && ${locality} == null && ${subLocality} == null
+          then:
+            - executeFunction:
+                name: functions.utils.setDefaultCreateAccountData.forAstroAPI
+                      # RETURNS --> ${addressFirstLine}, ${addressLineTwo}, ${city},
+                      #         --> ${country}, ${postalCode}, ${state}, ${paymentMethod}
+                      #         --> ${locality}, ${subLocality}
+      - if:
+          condition: ${paymentMethod} == null
+          then: 
+            - storeIn:
+                key: paymentMethod
+                value: data.default.astroAPI.createAccount.paymentMethod.CCVisa
+      - if:
+          condition: ${firstName} == null
+          then:
+            - storeIn:
+                key: firstName
+                value: data.default.astroAPI.createAccount.firstName
+      - if:
+          condition: ${lastName} == null
+          then:
+            - storeIn:
+                key: lastName
+                value: data.default.astroAPI.createAccount.lastName
+      - if:
+          condition: ${userEmail} == null
+          then:
+            - getTimestamp:
+                asDate: false
+                storeIn: timestamp
+            - storeIn:
+                key: emailPrefix
+                value: data.default.astroAPI.createAccount.emailPrefix
+            - storeIn:
+                key: userEmail
+                value: ${emailPrefix}${timestamp}@walmart.com
+      - if:
+          condition: ${phoneNumber} == null
+          then:
+            - storeIn:
+                key: phoneNumber
+                value: data.default.astroAPI.createAccount.phoneNumber
+      - if:
+          condition: ${password} == null
+          then:
+            # TODO: deprecate ${password} variable since is less usefull for other flows in which variable is defined like ${userPassword}
+            - storeIn:
+                key: password
+                value: data.default.astroAPI.createAccount.password
+            - storeIn:
+                key: userPassword
+                value: data.default.astroAPI.createAccount.password
+      - if:
+          condition: ${isAssociate} == null
+          then:
+            - storeIn:
+                key: isAssociate
+                value: false
+          else:
+            - storeIn:
+                key: isAssociate
+                value: true
+      - log: 
+          message: Creating Astro API Body...
+          color: CYAN
+      - if:
+          condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+          then:
+            - storeIn:
+                key: body
+                value: '{"firstName":"${firstName}","lastName":"${lastName}","emailAddress":"${userEmail}","phoneNumber":"${phoneNumber}","password":"${password}","verification":"phone","paymentMethods":["${paymentMethod}"],"postalAddress":{"address":"${addressFirstLine}","linetwo":"${addressLineTwo}","city":"${city}","state":"${state}","country":"${country}","postalCode":"${postalCode}","locality":"${locality}","subLocality":"${subLocality}"},"isAssociate":${isAssociate},"wcp":true}'
+      - if:
+          condition: ${market} == 'US'
+          then:
+            - storeIn:
+                key: body
+                value: '{"firstName":"${firstName}","lastName":"${lastName}","emailAddress":"${userEmail}","phoneNumber":"${phoneNumber}","password":"${password}","paymentMethods":["${paymentMethod}"],"postalAddress":{"address":"${addressFirstLine}","city":"${city}","country":"${country}","postalCode":"${postalCode}","state":"${state}"}}'
+      - if:
+          condition: ${market} == 'CA'
+          then:
+            - storeIn:
+                key: body
+                value: '{"firstName":"${firstName}","lastName":"${lastName}","emailAddress":"${userEmail}","phoneNumber":"${phoneNumber}","password":"${password}","verification":"phone","paymentMethods":["${paymentMethod}"],"postalAddress":{"address":"${addressFirstLine}","city":"${city}","country":"${country}","postalCode":"${postalCode}","state":"${state}"},"wcp":true}'
+      - log: 
+          message: "Astro API Body to be used:"
+          color: CYAN
+      - log: 
+          message: " ${body}"
+          color: CYAN
+      - log: 
+          message: "Calling Astro API..."
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/customer
+          requestMethod: POST
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: segment
+              value: oaoh
+            - key: tenant-id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${body}
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          retriesOnFail: 5
+          retryDelay: 2000
+      - log:
+          message: "Email of created account:    '${userEmail}' (Use Param 'userEmail')"
+          color: GREEN_BOLD
+      - log:
+          message: "Password of created account: '${userPassword}' (Use Param 'userPassword')"
+          color: GREEN_BOLD
+      - log: 
+          message: "End Function: astroApi.createNewAccountWithCreatePayload"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This api will create order in teflon environment
+  # Param:        ${payload}     [Mandatory] Request Body
+  # Return:       ${returnedOrderNumber}
+  - name: functions.astroApi.createOrder
+    flow:
+      - log: 
+          message: 'Tenant Id passed as header: ${tenantId}'
+          color: CYAN
+      - log:
+          message: 'Payload for create order: ${payload}'
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/order
+          requestMethod: POST
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: payment_version
+              value: smart_allocation
+            - key: response_type
+              value: omni
+            - key: segment
+              value: oaoh
+            - key: tenant_id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${payload}
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          getValue:
+            - key: astroDetails.orderSummary.orderInfo.orderId
+              storeIn: returnedOrderNumber
+          retriesOnFail: 5
+          retryDelay: 2000
+      - log:
+          message: "Order placed successfully with the order id: ${returnedOrderNumber}..."
+          color: CYAN
+      - log: 
+          message: "End Function: astroApi.createOrder"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This api will create user account in staging environment
+  # Param:        ${orderId}     [Mandatory] order id for which the product state to update.
+  #               ${payload}   [Mandatory] Astro body to move orders
+
+  - name: functions.astroApi.moveOrder
+    flow:
+      - log: 
+          message: 'Tenant Id passed as header: ${tenantId}'
+          color: CYAN
+      - log:
+          message: 'Order Id for which product needs to be moved: ${payload}'
+          color: CYAN
+      - log:
+          message: 'Payload for move order: ${payload}'
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/v3/teflon/order/${orderId}
+          requestMethod: PUT
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: segment
+              value: oaoh
+            - key: tenant-id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${payload}
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"status":"SUCCESS"'
+          retriesOnFail: 5
+          retryDelay: 2000
+      - sleep:
+          duration: 20000
+      - log: 
+          message: "End Function: functions.astroApi.moveOrder"
+          color: BLUE
+
+# ----------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function used to Create Gift Cards
+  # No Param
+
+  - name: functions.astroUrl.createGiftCard
+    flow:
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - log: 
+          message: Call API to creating gift card.
+          color: GREEN_BOLD
+      - callAPI:
+          url: https://stg2-ext.paymentservices.walmart.com/paymentservices/kuber/v1/paycards
+          header:
+            - key: WM_TENANT_ID
+              value: "1"
+            - key: WM_VERTICAL_ID
+              value: "0"
+            - key: WM.SRV.LOCALEID
+              value: "eng_CAN"
+            - key: WM_SVC.VERSION
+              value: "1.1.0"
+            - key: WM_SVC.ENV
+              value: "stg"
+            - key: WM_SVC.NAME
+              value: "paymentservices"
+            - key: WM.SRV.DEVICEID
+              value: "walmart.ca"
+            - key: WM_QOS.CORRELATION_ID
+              value: "100110011001"
+            - key: WM_CONSUMER.ID
+              value: "1aa40068-1921-418e-84e3-ed752ddf4cde"
+            - key: Content-Type
+              value: "application/json"
+            - key: WM_PMID
+              value: "FDCGC"
+          readTimeout: 60000
+          requestMethod: PUT
+          requestBody: '{"clientreqid": "9d5534f2-2221-4244-${timestamp}", "pmid": "FDCGC", "startbalance": {"currencyAmount": ${giftCardAmount},"currencyUnit": "CAD"}}'
+          wait: 10000
+          verifyResponseCode: 200
+          retriesOnFail: 10
+          retryDelay: 5000
+          getValue:
+            - key: account
+              storeIn: giftCardNumber
+            - key: pin
+              storeIn: giftCardPin
+      - log: 
+          message: Gift Card Created.
+          color: GREEN_BOLD
+
+  # #Astro Update GiftCard Balance API can be used to update GC Balance for all the Gift Cards mentioned on Astro Glass Teflon Golden Data page
+  # [mandatory] ${PID}    - PID of card as parameter while calling the function
+  - name: us.functions.utils.addAmountToGiftCard
+    flow:
+      - log: Adding Amount to Gift Card
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/updateGcBalance/PIH.pang.FDCGC.GIFTCARD.${PID}
+          requestMethod: POST
+          wait: 5000
+          verifyResponseCode: 200
+          header:
+            - key: Content-Type
+              value: application/json
+          readTimeout: 180000
+          requestBody: '{"addamount":${balance}, "pinCode":"${pinCode}"}'
+          verifyResponseBodyContains:
+            - '"SUCCESS"'
+          getValue:
+            - key: astroStatus
+              storeIn: addBalanceStatus
+            - key: astroDescription
+              storeIn: status
+          retriesOnFail: 3
+          retryDelay: 1000
+      - log: ${addBalanceStatus}
+      - log: ${status}
+      - if:
+          condition: ${addBalanceStatus}!= 'SUCCESS'
+          then:
+            - failTest:
+                message: "API_FAILURE - Astro - Unable to add balance to Gift Card"
+  
+  # Description:  This api will return the order in teflon env.
+  # Param:        ${orderId}     [Mandatory] order id for which the product state to update.
+  #               ${payload}   [Mandatory] Astro body to move orders
+
+  - name: functions.astroApi.returnOrder
+    flow:
+      - log: 
+          message: 'Tenant Id passed as header: ${tenantId}'
+          color: CYAN
+      - log:
+          message: 'Order Id for which product needs to be moved: ${orderId}'
+          color: CYAN
+      - log:
+          message: 'Payload for move order: ${payload}'
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/nextGen/teflon/order/${orderId}/return
+          requestMethod: POST
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            # - key: segment
+            #   value: oaoh
+            - key: tenant_id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${payload}
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          retriesOnFail: 5
+          retryDelay: 2000
+      - log: 
+          message: "End Function: astroApi.returnOrder"
+          color: BLUE
+ 
+  # ----------------------------------------------------------------------------------------------------------------
+ 
+  # Description:  This api will cancel the order in teflon env.
+  # Param:        ${orderId}   [Mandatory] order id for which will be cancelled.
+  #               ${payload}   [Mandatory] Astro body to cancel orders
+  - name: functions.astroApi.cancelOrder
+    flow:
+      - log: 
+          message: 'Tenant Id passed as header: ${tenantId}'
+          color: CYAN
+      - log:
+          message: 'Order Id for which product needs to be moved: ${orderId}'
+          color: CYAN
+      - log:
+          message: 'Payload for move order: ${payload}'
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/order/${orderId}/cancel
+          requestMethod: PUT
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: tenant-id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${payload}
+          # verifyResponseCode: 200 # TODO: Commented for now since endpoint is cancelling order but sending wrong code response
+          # verifyResponseBodyContains:
+          #   - '"astroStatus":"SUCCESS"' # TODO: Commented for now since endpoint is cancelling order but sending wrong message in response body
+          # retriesOnFail: 5
+          # retryDelay: 2000
+      - log: 
+          message: "End Function: astroApi.cancelOrder"
+          color: BLUE
+
+ # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This api will add product to cart in staging environment
+  # Param:        ${userEmail}          [Mandatory] Email id for add to cart
+  #               ${password}           [Mandatory] Account password        <- Default ["Astro123$"]
+  #               ${storeId}            [Optional]  Nearby Store            <- Default ["5540"]     <- Allowed value ["5540", "5538"] 
+  #               ${province}           [Optional] province                 <- Default ["ON"]       <- Allowed value ["ON", "AB"] 
+  #               ${s1}                 [Mandatory] Product sku
+  #               ${q1}                 [Optional]  S1 Quantity             <- Default ["1"]
+  #               ${s2}                 [Optional]  Product sku             <- Default ["Orleans"]
+  #               ${q2}                 [Optional]  S2 Quantity             <- Default ["1"]
+  #               ${s3}                 [Optional]  Product sku             <- Default ["CA"]
+  #               ${q3}                 [Optional]  S3 Quantity             <- Default ["1"]
+  - name: functions.astroApi.addToCart
+    flow:
+      - log: 
+          message: 'Tenant Id passed as header: ${tenantId}'
+          color: CYAN
+      - log:
+          message: 'Payload for add to cart: ${payload}'
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/cart
+          requestMethod: POST
+          wait: 5000
+          header:
+            - key: Content-Type
+              value: application/json
+            - key: segment
+              value: oaoh
+            - key: tenant_id
+              value: ${tenantId}
+          readTimeout: 30000 
+          requestBody: ${payload}
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          retriesOnFail: 5
+          retryDelay: 2000
+      - log: 
+          message: "End Function: astroApi.addToCart"
+          color: BLUE
+
+
+  # ----------------------------------------------------------------------------------------------------------------
+  # Description:  This API will create an order in the Teflon environment.
+  # Param:        ${payload}     [Mandatory] Request Body
+  # Return:       ${returnedOrderNumber}
+  #
+  # Steps:
+  # 1. Check if fulfillmentType is null, if so, set it to orderType.
+  # 2. Log the fulfillmentType and orderType.
+  # 3. Execute the function to get transactable items based on fulfillmentType.
+  # 4. Store the returned itemsArray in itemList.
+  # 5. If itemList is null, log a warning and use the default items array from the data file.
+  # 6. Log the itemsArray.
+  # 7. Loop through each item in itemList:
+  #    - Log the item.
+  #    - Try to create an order for the item by calling the API:
+  #      - Log the tenantId.
+  #      - Call the API to create the order with the specified headers and request body.
+  #      - Store the returned orderId and apiStatus.
+  #      - Retry up to 2 times on failure with a delay of 1000ms.
+  #      - If apiStatus is 'SUCCESS', break the loop.
+  #    - Catch any exceptions and log the failure.
+  # 8. If returnedOrderNumber is null, fail the test with a message.
+  # 9. Otherwise, log the successful order placement with the order id.
+  # 10. Log the end of the function.
+
+  - name: functions.astroApi.createOrderWithTransactableItems
+    flow:
+      - if:
+          condition: ${fulfillmentType} == null
+          then:
+            - storeIn:
+                key: fulfillmentType
+                value: ${orderType}
+      - log: 
+          message: "Fulcrum Fulfillment Type: ${fulfillmentType}"
+          color: CYAN
+      - log: 
+          message: "Order Fulfillment Type: ${orderType}"
+          color: CYAN
+      - executeFunction:
+          name: functions.astroApi.fulcrumItemTransactability # ---> RETURNS : ${itemsArray} (Array of item IDs available for transaction)
+          params:
+            - name: fulfillmentType
+              string: ${fulfillmentType}
+      - storeIn:
+          key: itemList
+          value: ${itemsArray}
+      - if:
+          condition: ${itemList} == null
+          then:
+              - log:
+                  message: "Failed to get transactable items for fulfillment type: ${fulfillmentType} using fulcrumItemTransactability using default items array from data file."
+                  color: YELLOW
+              - storeIn:
+                  key: itemList
+                  value: ${items}
+      - log:
+          message: "Items Array: ${itemList}"
+          color: CYAN
+      - loop:
+          each: ${itemList}
+          storeElement: item
+          storeIndex: index__
+          flow:
+            - log: 
+                message: "Item: ${item}"
+                color: CYAN
+            - try:
+                flow:
+                  - log: 
+                      message: 'Tenant Id passed as header: ${tenantId}'
+                      color: CYAN
+                  - callAPI:
+                      url: http://astro.walmart.com/api/v2/teflon/order
+                      requestMethod: POST
+                      wait: 5000
+                      header:
+                        - key: Content-Type
+                          value: application/json
+                        - key: payment_version
+                          value: smart_allocation
+                        - key: response_type
+                          value: omni
+                        - key: segment
+                          value: oaoh
+                        - key: tenant_id
+                          value: ${tenantId}
+                      readTimeout: 30000 
+                      requestBody: '{"customerEmailAddress":"${userEmail}","storeId":"32144","paymentType":"SMART_ALLOCATION","fulfillmentGroups":[{"orderType":"${orderType}","items":[{"itemId":"${item}","quantity":"1"}]}]}'
+                      getValue:
+                        - key: astroDetails.orderSummary.orderInfo.orderId
+                          storeIn: returnedOrderNumber
+                        - key: astroStatus
+                          storeIn: apiStatus
+                      retriesOnFail: 2
+                      retryDelay: 1000
+                  - if:
+                      condition: ${apiStatus} == 'SUCCESS'
+                      then:
+                        - break: true
+                catch:
+                  flow:
+                    - log:
+                        message: "Failed to create order for item: ${item}"
+                        color: RED
+      - if:
+          condition: ${returnedOrderNumber} == null
+          then:
+            - failTest:
+                message: "Failed to create order for all items"
+          else:
+            - log:
+                message: "Order placed successfully with the order id: ${returnedOrderNumber}..."
+                color: GREEN
+      - log: 
+          message: "End Function: astroApi.createOrder"
+          color: BLUE
+
+ # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This is items health check fulcrum api which returns an array of items which are avialable for transaction in lower environment. Currently the api supports below category items check.
+  # Walmart_MX:
+    # Fulfilment Type:  FC_DELIVERY, FC_DELIVERY_BUY_NOW, FC_S2S, MP_DELIVERY, MP_WFS_DELIVERY
+
+  # Param:        ${fulfillmentType}     [Mandatory] Fulfillment type to get the items
+  - name: functions.astroApi.fulcrumItemTransactability
+    flow:
+      - try:
+          flow:
+            - log:
+                message: "Start Function: astroApi.fulcrumItemTransactability"
+                color: BLUE
+            - log:
+                message: "Fulfillment Type: ${fulfillmentType}"
+                color: CYAN
+            - callAPI:
+                url: http://fulcrum.teflon.walmart.com/api/v1/db/fulcrum/goldenitems${market}/upc/${fulfillmentType}?isTransactable=true
+                requestMethod: GET
+                wait: 5000
+                getResponse:
+                    storeIn: transactablityResponse
+                verifyResponseCode: 200
+                verifyResponseBodyContains:
+                  - '"status":"SUCCESS"'
+                retriesOnFail: 5
+                retryDelay: 1000
+            - executeNode:
+                file: wcp/test/helpers/AstroApiResponseHelper/extractUpcFromTransactibilityApiResponse.js
+                args:
+                  - value: ${transactablityResponse}
+                getResponse:
+                  storeIn: itemsArray
+            - log:
+                message: "Trasactable Items: ${itemsArray}"
+                color: CYAN
+          catch:
+            flow:
+              - log:
+                  message: "Failed to get transactable items for fulfillment type: ${fulfillmentType}"
+                  color: RED
+      - log:
+          message: "End Function: astroApi.fulcrumItemTransactability"
+          color: BLUE
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This api will create user account in staging environment
+  # Param:        ${orderId}     [Mandatory] order id for which the product state to update.
+  #               ${payload}   [Mandatory] Astro body to move orders
+
+  - name: functions.astroApi.moveOrderWithStatusCheck
+    flow:
+      - log: 
+          message: "Create move order api payload"
+          color: CYAN
+      - storeIn:
+          key: payload
+          value: '{"fulfillmentGroups":[{"orderType":"${orderType}","status":"${orderStatus}"}]}'
+      - loop:
+          begin: 0
+          end: 10
+          storeIndex: moveOrderIndex
+          mode: increment
+          flow:
+            - executeFunction:
+                name: functions.astroApi.moveOrder
+                params:
+                  - name: orderId
+                    string: ${orderId}
+                  - name: payload
+                    string: ${payload}
+            - callAPI:
+                url: http://astro.walmart.com/api/v3/teflon/order/${orderId}
+                requestMethod: GET
+                wait: 5000
+                header:
+                  - key: Content-Type
+                    value: application/json
+                  - key: segment
+                    value: oaoh
+                  - key: tenant-id  
+                    value: ${tenantId}
+                readTimeout: 30000
+                verifyResponseCode: 200
+                verifyResponseBodyContains:
+                  - '"astroStatus":"SUCCESS"'
+                getValue:
+                  - key: astroDetails.orderInformation
+                    storeIn: statusDescription
+                retriesOnFail: 5
+            - log: 
+                message: "${statusDescription}"
+                color: CYAN
+            - executeNode:
+                file: wcp/test/helpers/AstroApiResponseHelper/extractOrderStatus.js
+                args:
+                  - value: "${statusDescription}"
+                getResponse:
+                  storeIn: statusDescription
+            - log: 
+                message: "${statusDescription}"
+                color: CYAN
+            - storeIn:
+                key: statusCheck
+                value: true
+            - loop:
+                each: ${statusDescription}
+                storeElement: individualStatus
+                storeIndex: index__
+                flow:
+                  - arithmetic:
+                      expression: ${index__} + 1
+                      storeIn: index__
+                  - log: 
+                      message: 'Line item ${index__} Status: ${individualStatus}'
+                      color: CYAN
+                  - if:
+                      condition: ${individualStatus} != ${orderStatus}
+                      then:
+                        - storeIn:
+                            key: statusCheck
+                            value: false
+            - if:
+                condition: ${statusCheck} == false
+                then:
+                  - arithmetic:
+                      expression: ${moveOrderIndex} + 1
+                      storeIn: moveOrderIndex
+                  - log: 
+                      message: 'Order status is not updated as expected'
+                      color: YELLOW
+                  - log: 
+                      message: 'Attempt: ${moveOrderIndex}/10'
+                      color: CYAN
+                  - sleep:
+                      duration: 20000
+                else:
+                  - log: 
+                      message: 'Order status is updated as expected'
+                      color: GREEN
+                  - break: true
+      - if:
+          condition: ${statusCheck} == false
+          then:
+            - failTest:
+                message: "API_FAILURE - Astro - Unable to update order status"
+      - log: 
+          message: "End Function: functions.astroApi.moveOrderWithStatusCheck"
+          color: BLUE
+
+
+
+ # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This API will add items to the cart in the Teflon environment using transactable items.
+  # Param:        ${orderType}          [Mandatory] Order type for the transaction.
+  #               ${userEmail}          [Mandatory] Email ID of the user.
+  #               ${items}              [Optional] Default items array to use if no transactable items are found.
+
+  - name: functions.astroApi.addToCartWithTransactableItems
+    flow:
+      - if:
+          condition: ${fulfillmentType} == null
+          then:
+            - storeIn:
+                key: fulfillmentType
+                value: ${orderType}
+      # - log: 
+      #     message: "Fulcrum Fulfillment Type: ${fulfillmentType}"
+      #     color: CYAN
+      # - log: 
+      #     message: "Order Fulfillment Type: ${orderType}"
+      #     color: CYAN
+      # - if:
+      #     condition: ${orderType} == 'FC_DELIVERY' || ${orderType} == 'FC_DELIVERY_BUY_NOW' || ${orderType} == 'FC_S2S' || ${orderType} == 'MP_DELIVERY' || ${orderType} == 'MP_WFS_DELIVERY'
+      #     then:
+      #       - executeFunction:
+      #           name: functions.astroApi.fulcrumItemTransactability # ---> RETURNS : ${itemsArray} (Array of item IDs available for transaction)
+      #           params:
+      #             - name: fulfillmentType
+      #               string: ${fulfillmentType}
+      #       - storeIn:
+      #           key: itemList
+      #           value: ${itemsArray}
+      #     else:
+      #       - log:
+      #           message: "${orderType} is not supported by fulcrumItemTransactability"
+      #           color: YELLOW
+      #       - storeIn:
+      #             key: itemList
+      #             value: ${items}
+      # - if:
+      #     condition: ${itemList} == null
+      #     then:
+      #         - log:
+      #             message: "Failed to get transactable items for fulfillment type: ${fulfillmentType} using fulcrumItemTransactability. Using default items array from data file."
+      #             color: YELLOW
+      - storeIn:
+          key: itemList
+          value: ${items}
+      - log:
+          message: "Items Array: ${itemList}"
+          color: CYAN
+      - loop:
+          each: ${itemList}
+          storeElement: item
+          storeIndex: index__
+          flow:
+            - log: 
+                message: "Item: ${item}"
+                color: CYAN
+            - try:
+                flow:
+                  - log: 
+                      message: 'Tenant Id passed as header: ${tenantId}'
+                      color: CYAN
+                  - callAPI:
+                      url: http://astro.walmart.com/api/v2/teflon/order
+                      requestMethod: POST
+                      wait: 5000
+                      header:
+                        - key: Content-Type
+                          value: application/json
+                        - key: payment_version
+                          value: smart_allocation
+                        - key: response_type
+                          value: omni
+                        - key: segment
+                          value: oaoh
+                        - key: tenant_id
+                          value: ${tenantId}
+                      readTimeout: 30000 
+                      requestBody: '{"customerEmailAddress":"${userEmail}","storeId":"32144","paymentType":"SMART_ALLOCATION","fulfillmentGroups":[{"orderType":"${orderType}","items":[{"itemId":"${item}","quantity":"1"}]}],"terminateBefore":"contractCreation"}'
+                      getValue:
+                        - key: astroStatus
+                          storeIn: apiStatus
+                      retriesOnFail: 2
+                      retryDelay: 1000
+                  - if:
+                      condition: ${apiStatus} == 'SUCCESS'
+                      then:
+                        - break: true
+                catch:
+                  flow:
+                    - log:
+                        message: "Failed to add item to cart: ${item}"
+                        color: RED
+      - if:
+          condition: ${apiStatus} == 'SUCCESS'
+          then:
+            - log:
+                message: "Items added to cart successfully."
+                color: GREEN
+          else:
+            - failTest:
+                message: "Failed to add items to cart."
+      - log: 
+          message: "End Function: astroApi.createOrder"
+          color: BLUE
+  
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description:  This API will clear the cart for a Teflon account.
+  # Param:        ${userEmail}          [Mandatory] Email ID of the user whose cart needs to be cleared.
+  #               ${tenantId}           [Mandatory] Tenant ID to be passed as a header.
+  - name: functions.astroApi.clearCartTeflonAccount
+    flow:
+      - log: 
+          message: "Clearing Cart for Teflon Account"
+          color: CYAN
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/customer/${userEmail}/clearcart
+          requestMethod: DELETE
+          wait: 5000
+          header:
+            - key: tenant_id
+              value: ${tenantId}
+          readTimeout: 30000 
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"astroStatus":"SUCCESS"'
+          retriesOnFail: 5
+          retryDelay: 2000
+      - log: 
+          message: "End Function: astroApi.clearCartTeflonAccount"
+          color: BLUE

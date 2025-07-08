@@ -1,0 +1,154 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Nov/1/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION:  This flow performs all the assertions necessary for this page
+  # NOTE:         Be aware that all of these assertions can be performed only when the order does not have multiple delivery
+  #                 sections. When the order has these sections, some assertions cannot be validated correctly and must be
+  #                 turned off or skipped so, in order to skip those assertions (or not), provide a valid value in the variable
+  #                 'isMultipleDelivery'.
+  # PARAMS:
+  #   ${orderNumber}              [Mandatory]   ID of the order.
+  #
+  #   ${expectedDeliveryMethod}   [Mandatory]   Delivery method to assert. Options: [ 'HomeDelivery' | 'PickupDelivery' ].
+  #
+  #   ${expectedTotal}            [Mandatory]   Expected (cleaned) Total amount to assert.
+  #
+  #   ${isMultipleDelivery}       [Mandatory]   This value defines if the Order is divided by multiple delivery sections, and
+  #                                               determines if Delivery Date, Status and Products count assertions should be
+  #                                               performed or not. Options: [ 'true' | 'false' ]
+  #                                               - If 'true' that means that the order has multiple delivery sections and
+  #                                                   needs individual assertions to correctly validate. Assertions will be skipped.
+  #                                               - If 'false' then you are sure the order does not have multiple delivery sections
+  #                                                   and the previously mentioned assertions will be performed.
+  #
+  #   ${expectedOrderStatus}      [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected order status. Values: [ Received | Waiting4Payment | Ready4Pickup | OnTheWay | Delivered ].
+  #
+  #   ${expectedDeliveryDate}     [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected Delivery Date to Assert.
+  #
+  #   ${expectedProductsCount}    [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected total quantity of purchased products, THIS IS NOT the same as the
+  #                                               total products quantity, this is just how many different products were
+  #                                               purchased. i.e: If you bought 3 apples and 4 pears this param would be '2'
+  #                                               and NOT '7'.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.orders-history.assertOrder
+    platform: android
+    flow:
+      - log:
+          message: "Performing Orders History Page Assertions..."
+          color: CYAN
+
+      # Order Displayed Assertion...
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertOrderDisplayed
+          params:
+            - name: orderNumber
+              string: ${orderNumber}
+
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertOrderDeliveryMethod # <--PARAMS--${orderNumber}
+          params:
+            - name: expectedDeliveryMethod
+              string: ${expectedDeliveryMethod}
+
+      # Order Total Assertion...
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertOrderTotal # <--PARAMS--${orderNumber}
+          params:
+            - name: expectedTotal
+              string: ${expectedTotal}
+
+      # Delivery Date, Status and Products Count Assertions...
+      - log:
+          message: "Does the order have multiple delivery sections?: '${isMultipleDelivery}'..."
+          color: CYAN
+      - if:
+          condition: ${isMultipleDelivery} != true && ${isMultipleDelivery} != false
+          then:
+            - failTest:
+                message: "Invalid 'isMultipleDelivery' Option provided: '${isMultipleDelivery}'"
+      - if:
+          condition: ${isMultipleDelivery} == true
+          then:
+            - log:
+                message: "Delivery Date, Status and Products Count assertions cannot be performed for orders with multiple delivery sections, these steps will be skipped."
+                color: CYAN
+      - if:
+          condition: ${isMultipleDelivery} == false
+          then:
+            - log:
+                message: "The Order does not have multiple delivery sections, Delivery Date, Status and Products Count assertions will be performed."
+                color: CYAN
+            # Order Status Assertion...
+            - executeFunction:
+                name: mx.functions.ea.orders-history.assertOrderStatus # <--PARAMS--${orderNumber}
+                params:
+                  - name: expectedOrderStatus
+                    string: ${expectedOrderStatus}
+
+            # Order Delivery Date Assertion...
+            - executeFunction:
+                name: mx.functions.ea.orders-history.assertOrderSingleDeliveryDate # <--PARAMS--${orderNumber}
+                params:
+                  - name: expectedDeliveryDate
+                    string: ${expectedDeliveryDate}
+
+            # Products Count Assertion...
+            - executeFunction:
+                name: mx.functions.ea.orders-history.assertOrderProductsCount # <--PARAMS--${orderNumber}
+                params:
+                  - name: expectedProductsCount
+                    string: ${expectedProductsCount}
+      - log:
+          message: "End flow: orders-history.assertOrder"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This flow performs all the assertions necessary for product in order
+  # PARAMS:
+  #   ${orderNumber}              [Mandatory]   ID of the order.
+  #   ${expectedDeliveryMethod}   [Mandatory]   Delivery method to assert. Options: [ 'HomeDelivery' | 'PickupDelivery' ].
+  #   ${expectedTotal}            [Mandatory]   Expected (cleaned) Total amount to assert.
+  #   ${expectedOrderStatus}      [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected order status. Values: [ Received | Waiting4Payment | Ready4Pickup | OnTheWay | Delivered ].
+  #   ${expectedDeliveryDate}     [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected Delivery Date to Assert.
+  #   ${expectedProductsCount}     [Optional]    Expected total quantity of purchased product, THIS IS NOT the same as the
+  #                                               total products quantity
+  # AUTHOR: Gustavo Antonio López Cambambia (vn53g21)
+  - name: mx.flows.ea.orders-history.assertOrderByProductAndOrderNumber
+    platform: android
+    flow:
+      - log:
+          message: "Performing product assertions in order"
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertProductInOrder
+
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertStatusByProductAndOrderNumber
+
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertDeliveryMethodByProductAndOrderNumber
+
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertDeliveryDateByProductAndOrderNumber
+
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertProductsCountByProductAndOrderNumber
+
+      - log:
+          message: "End flow: mx.flows.ea.orders-history.assertOrderByProductAndOrderNumber"
+          color: BLUE

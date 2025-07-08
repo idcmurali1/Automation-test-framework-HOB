@@ -1,0 +1,161 @@
+#======================================================================================================================
+#  AUTHOR: Osmar Juárez (vn56dce)
+#  CREATED: Dec/18/2024
+#  REVISION: ---
+#
+#  TEST CASE TITLE: [Home] - Verify that a guest can add and remove an item from "Sponsored products" carousel
+#  JIRA MANUAL TEST CASE: https://jira.walmart.com/browse/MMS-5119
+#  JIRA AUTOMATED TEST CASE: https://jira.walmart.com/browse/MMS-4934
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-walmart-ea-smoke-production-ios-5119, prepurchase-walmart-ea-smoke-production-ios,
+        prepurchase-bodega-ea-smoke-production-ios-5119, prepurchase-bodega-ea-smoke-production-ios
+  testCaseId: MMS-4934
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: MMS_5119_SUCCESSFUL_EXECUTION
+          value: false
+
+      - log: BEFORE SCENARIO END
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: ios
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+      
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN APP AND COMPLETE ONBOARDING. (2) SELECT BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: SCROLL TO THE 'SPONSORED PRODUCTS' CAROUSEL"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.home.sponsored-carousel.scrollDownUntilFindCarousel
+      
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: ADD AN ITEM BY USING THE STEPPER."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.home.sponsored-carousel.clickAddToCartProductByIndex # RETURN: --${productAddedToCart}--
+          params:
+            - name: productIndex
+              string: '0'
+      - executeFunction:
+          name: mx.functions.home.sponsored-carousel.assertTextInAddToCartButtonByIndex
+          params:
+            - name: productIndex
+              string: '0'
+            - name: isQuantityAssertion
+              string: 'true'
+            - name: expectedTextInATCButton
+              string: 'Agregar, 1 en el carrito, ${productAddedToCart}'
+      
+      # STEP 5-6 -------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 5-6: (5) KILL THE APP & (6) RE-OPEN THE APP."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+          params:
+            - name: bundleId
+              string: ${BUNDLE_ID}
+      
+      # STEP 7 -------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: SELECT EA BANNER."
+         color: ORANGE
+         
+      - executeFunction:
+          name: functions.onboarding.shoppingExperience.tapShoppingOption # <-- MX/BO EA Only
+          params:
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+ 
+      # STEP 8 -------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 8: REMOVE ITEM FROM CART BY REDUCING ITEMS TO 0 FROM 'SPONSORED PRODUCTS' CAROUSEL."
+
+      - executeFunction:
+          name: mx.functions.home.sponsored-carousel.scrollDownUntilFindCarousel
+      - executeFunction:
+          name: mx.functions.home.carousel.decreaseProductQuantityBy
+          params:
+            - name: productName
+              string: ${productAddedToCart}
+            - name: quantity
+              string: '1'
+      - executeFunction:
+          name: mx.functions.home.sponsored-carousel.assertTextInAddToCartButtonByIndex
+          params:
+            - name: productIndex
+              string: '0'
+            - name: isQuantityAssertion
+              string: 'false'
+            - name: expectedTextInATCButton
+              string: 'Agregar ${productAddedToCart}'
+
+      - storeIn:
+          key: MMS_5119_SUCCESSFUL_EXECUTION
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_5119_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. No need to reset data in flow as Guest User."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully."
+                color: GREEN_BOLD
+
+      - log: AFTER SCENARIO END

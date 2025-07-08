@@ -1,0 +1,154 @@
+general:
+  platform: android
+  tags: p1-ecomm-teflon-e2e, C2720635, p1-fulcrum-teflon-e2e
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  testCaseId: C2720635
+  metadata:
+    - name: scenarioId
+      string: EC148
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp     
+
+      - storeIn:
+          key: customerEmail
+          value: wm${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+      
+      # Create Account using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.ugc.createAccountPayload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome              
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: MP_DELIVERY
+            - name: store
+              string: 32144                               
+            - name: itemFilter
+              string: mpproseller
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+       # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144                               
+            - name: backupItem
+              string: 419295100
+
+      - storeIn:
+          key: item2
+          value: $itemFetched  
+
+#***************************************************************************************************************
+ # Astro - Create order
+#***************************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.flowugc.createOrderPayload
+      
+      - log: ${orderNo}
+      
+      - storeIn:
+          key: orderNo
+          value: ${orderNo}
+
+# #***************************************************************************************************************
+#  # Astro - Move Order to Delivered status
+# #***************************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.setMultilineOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType1
+              string: MP_DELIVERY
+            - name: status1
+              string: Delivered
+            - name: orderType2                   
+              string: FC_DELIVERY
+            - name: status2
+              string: Delivered
+                      
+      # Deeplink into order history page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders
+
+      - executeFunction:
+         name: us.functions.orderHistory.carousel.addProductReview
+
+      - storeIn:
+              key: testStatus
+              value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

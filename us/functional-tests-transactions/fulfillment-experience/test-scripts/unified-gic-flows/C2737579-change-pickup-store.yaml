@@ -1,0 +1,100 @@
+general:
+  tags: prod-functional-global-intent-center, C2737579
+  testCaseId: C2737579
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platform Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      - log: End Before test
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Verifying change pickup store
+    flow:
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Restart App
+      - executeFunction:
+          name: us.functions.utils.restartapp
+
+      # Onboarding Steps
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to Sign-in
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign-in to the account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.globalIntentCenter.userG1.email
+            - name: password
+              string: us.data.globalIntentCenter.userG1.password
+
+      # Navigate to Home tab
+      - executeFunction:
+          name: us.functions.global.navigation.goToHomeFromTabBar
+
+      # Expand Global Intent Center view
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+
+      # Change pickup store to somewhere
+      - executeFunction:
+          name: us.functions.gic.module.noIntent.selectStore.byZipcode
+          params:
+            - name: ZIP_CODE
+              string: us.data.globalIntentCenter.pickupStore.zipCode.2
+            - name: SelectedStoreByZip
+              string: us.data.globalIntentCenter.pickupStore.streetAddress.2
+
+      # Verify the store street address on the card
+      - executeFunction:
+          name: unified.us.functions.functional.gic.module.noIntent.largeCard.verifyStoreStreetAddress
+          params:
+            - name: storeStreetAddress
+              string: us.data.globalIntentCenter.pickupStore.streetAddress.2.onCard
+
+      # Change pickup store typical store
+      - executeFunction:
+          name: us.functions.gic.module.noIntent.selectStore.byZipcode
+          params:
+            - name: ZIP_CODE
+              string: us.data.globalIntentCenter.pickupStore.zipCode
+            - name: SelectedStoreByZip
+              string: us.data.globalIntentCenter.pickupStore.streetAddress
+
+      # Verify the updated store street address on the card
+      - executeFunction:
+          name: unified.us.functions.functional.gic.module.noIntent.largeCard.verifyStoreStreetAddress
+          params:
+            - name: storeStreetAddress
+              string: us.data.globalIntentCenter.pickupStore.streetAddress.onCard
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,113 @@
+general:
+  tags: unified-prod-e2e, C2713648, p2-ecomm-prod-e2e  #prod-e2e-dct
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2713648
+  metadata:
+    - name: scenarioId
+      string: EC001
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Accoount info
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.walmartLive.browse.android.email
+            - name: android.password
+              string: us.data.prod.walmartLive.browse.android.password
+            - name: ios.email
+              string: us.data.prod.walmartLive.browse.ios.email
+            - name: ios.password
+              string: us.data.prod.walmartLive.browse.ios.password
+
+      # clear cart  
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      # Navigate to 'Walmart Live!'
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToServicesFromTabBar
+      
+      - executeFunction:
+          name: unified.us.functions.services.goWalmartLive
+      
+      # Checking the 'View all' of the first category at 'Browse all'
+      - executeFunction:
+          name: unified.us.functions.walmartlive.browseAllFromRixbbonBar 
+
+      - executeFunction:
+          name: unified.us.functions.walmartlive.selectViewAllForBeautyCategory
+
+      - executeFunction:
+          name: unified.us.function.walmartlive.findFirstItemUnderLiveVideoAndATC 
+      
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.prod.walmartlive.discovery.deeplink 
+      
+      # Checking the 'View all' of the second category at 'Browse all'
+      - executeFunction:
+          name: unified.us.functions.walmartlive.browseAllFromRixbbonBar
+      - executeFunction:
+          name: unified.us.functions.walmartlive.selectViewAllForHomeImprovementCategory
+      
+      - executeFunction:
+          name: unified.us.function.walmartlive.findFirstItemUnderLiveVideoAndATC 
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

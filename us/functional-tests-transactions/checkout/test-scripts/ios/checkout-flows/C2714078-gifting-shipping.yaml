@@ -1,0 +1,272 @@
+# Validate gifting module and details for checkout flow
+
+general:
+  platform: ios
+  tags: C2714078, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714078
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate gifting module and details for checkout flow
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate gifting module and details for checkout flow"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.gifting.ios.email
+            - name: password
+              string: us.data.prod.checkout.gifting.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search item and add to cart
+      - executeFunction:
+          name: us.functions.search.addItemtoCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.gifting.item
+            - name: expectedItemCount
+              string: 1
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      # Set fulfillment to shipping
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+
+      # Toggle for gifting
+      - executeFunction:
+          name: us.functions.cart.sendOrderAsAGift
+
+      # Continue to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      - sleep:
+          duration: 5000
+
+      # Enter/choose recipient address
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.functional.cart.gifting.addRecipientAddressHeader
+          then:
+            - executeFunction:
+                name: us.functions.cart.gifting.completeRecipientAddressForm
+                params:
+                  - name: recipientFirstName
+                    string: recipientFirstName
+                  - name: recipientLastName
+                    string: recipientLastName
+                  - name: streetAddress
+                    string: 1694 Adrian Way
+                  - name: city
+                    string: San Jose
+                  - name: state
+                    string: CA
+                  - name: phoneNumber
+                    string: 9876543211
+                  - name: zipcode
+                    string: 95122
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.gifting.checkout.addressSelection
+          then:
+            - executeFunction:
+                name: us.functions.cart.gifting.chooseRecipientAddress
+
+      # Deal with checkout popups
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed   
+      - executeFunction:
+          name: us.functions.wplus.handle.SubstitutionPreferencePopup
+
+      # Validate gifting module
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.gifting.reviewOrder.giftDetailModuleTitle
+          position: center
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.validateGiftingModule
+          params:
+            - name: isOrderGift
+              string: true
+            - name: hasDetailsSaved
+              string: false
+
+      # Save gifting details
+      - storeIn:
+          key: recipientEmail
+          value: us.data.prod.checkout.gifting.ios.email
+      - storeIn:
+          key: senderName
+          value: John Doe
+      - storeIn:
+          key: giftMessage
+          value: Happy Birthday! Hope you enjoy the gift!
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.saveGiftingDetails
+          params:
+            - name: recipientEmail
+              string: ${recipientEmail}
+            - name: senderName
+              string: ${senderName}
+            - name: giftMessage
+              string: ${giftMessage}
+
+      # Validate gifting module
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.validateGiftingModule
+          params:
+            - name: isOrderGift
+              string: true
+            - name: hasDetailsSaved
+              string: true
+            - name: recipientEmail
+              string: ${recipientEmail}
+            - name: giftMessage
+              string: ${giftMessage}
+
+      # Set order as not a gift and validate
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.toggleGift
+          params:
+            - name: isGift
+            - string: false
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.validateGiftingModule
+          params:
+            - name: isOrderGift
+              string: false
+
+      # Set order as gift and validate details
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.toggleGift
+          params:
+            - name: isGift
+            - string: true
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.validateGiftingModule
+          params:
+            - name: isOrderGift
+              string: true
+            - name: hasDetailsSaved
+              string: true
+            - name: recipientEmail
+              string: ${recipientEmail}
+            - name: giftMessage
+              string: ${giftMessage}
+
+      # Opt out of text message updates
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.mobileContactText
+          position: center
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.OptinCheckboxTextboxChecked
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.getTextCheckBox
+
+      # Place order
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      # Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: Order number ${orderNo}
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+      # Validate gifting details in order confirmation page
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.gifting.reviewOrder.giftDetailModuleTitle
+          position: center
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.validateThankYouGiftingModule
+          params:
+            - name: recipientEmail
+              string: ${recipientEmail}
+            - name: giftMessage
+              string: ${giftMessage}
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+

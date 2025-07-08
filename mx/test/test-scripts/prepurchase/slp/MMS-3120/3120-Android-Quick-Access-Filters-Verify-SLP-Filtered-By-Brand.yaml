@@ -1,0 +1,308 @@
+#======================================================================================================================
+#    AUTHOR: Osmar Juárez (vn56dce)
+#   CREATED: Oct/24/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [Quick-Access Filters] - Verify that a user can filter a list of items by brand and add multiple items to cart from SLP
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-4941
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-3120
+#
+#######################################################################################################################
+ 
+general:
+  tags: prepurchase-walmart-ea-smoke-production-android-3120, prepurchase-walmart-ea-smoke-production-android, 
+        prepurchase-bodega-ea-smoke-production-android-3120, prepurchase-bodega-ea-smoke-production-android
+  testCaseId: MMS-4941
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    flow:
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+            
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+      
+      - storeIn:
+          key: MMS_3120_IS_CART_EMPTY
+          value: true
+      - storeIn:
+          key: MMS_3120_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    platform: android
+    flow:
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN WALMART APP AND COMPLETE ONBOARDING. (2) OPEN THE OD BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+      
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: LOG IN BY GOING TO 'Cuenta' > 'Iniciar sesión'"
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: mx.data.prepurchase-3120.userEmail
+            - name: userPassword
+              string: mx.prepurchase.login.userPassword
+
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: SEARCH FOR AN ITEM BY ENTERING THE PRODUCT KEYWORD/NAME INTO SEARCH FIELD ON TOP OF SCREEN."
+         color: ORANGE
+      
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.searchField.enterText # <-- ${searchText}
+          params:
+            - name: searchText
+              string: mx.data.prepurchase-3120.productSearch
+      
+      - executeFunction:
+          name: mx.functions.slp.assertResultsDisplayed
+          
+      - storeIn:
+          key: MMS_3120_TOTAL_SEARCH_RESULTS_BEFORE_FILTER
+          value: ${returnedElementsResults}
+      
+      # STEP 5 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: TAP 'Marca'."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.slp.tapBrandFilterButton
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.assertPopupDisplayed
+      
+      # STEP 6 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6: LOOK AT THE NAME OF FIRST BRAND AND USE SEARCH BAR (INSIDE THE FILTER) TO SEARCH BRAND."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.getFirstBrandName # RETURN: --${firstBrandName}--
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.searchBrand
+          params:
+            - name: brand
+              string: ${firstBrandName}
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.assertSearchedBrand
+          params:
+            - name: brand
+              string: ${firstBrandName}
+      
+      # STEP 7 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: Select the brand by tapping the checkbox."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.selectBrand
+          params:
+            - name: brand
+              string: ${firstBrandName}
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.getBrandProductsCount # RETURN: --${brandProductsCount}--
+          params:
+            - name: brand
+              string: ${firstBrandName}
+      
+      # STEP 8 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 8: TAP 'Ver resultados'."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.brand-filter-pop-up.tapSeeResults
+      - executeFunction:
+          name: mx.functions.slp.assertResultsDisplayed # RETURN: --${returnedElementsResults}--
+      
+      - verifyCondition: "${brandProductsCount} == ${returnedElementsResults}"
+
+      - executeFunction:
+          name: mx.functions.slp.assertBrandFilterIsAppliedOrNot
+          params:
+            - name: isFilterApplied
+              string: 'true'
+            - name: numberOfBrandsSelected
+              string: '1'
+      - executeFunction:
+          name: mx.functions.slp.assertBrandNameForProducts
+          params:
+            - name: numProductsToValidate
+              string: '3'
+            - name: expectedBrand
+              string: ${firstBrandName}
+      
+      # STEP 9 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 9: ADD THE FIRST 3 ITEMS TO CART BY TAPPING 'Agregar' BUTTON FROM SLP."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.department-l3.addProductToCartByIndex
+          params:
+            - name: indexProduct
+              string: '0'
+      - storeIn:
+          key: MMS_3120_IS_CART_EMPTY
+          value: false
+      - executeFunction:
+          name: mx.functions.department-l3.addProductToCartByIndex
+          params:
+            - name: indexProduct
+              string: '1'
+      - scroll:
+          direction: down
+          scrollLimit: 3
+      - executeFunction:
+          name: mx.functions.department-l3.addProductToCartByIndex
+          params:
+            - name: indexProduct
+              string: '1'
+
+      # STEP 10 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 10: FROM THE FILTER BAR, SELECT 'Eliminar todo'."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.slp.tapDeleteAllFiltersApplied 
+      - executeFunction:
+          name: mx.functions.slp.assertResultsDisplayed # RETURN: --${returnedElementsResults}--   
+      - executeFunction:
+          name: mx.functions.slp.assertBrandFilterIsAppliedOrNot
+          params:
+            - name: isFilterApplied
+              string: 'false'
+      - try:
+          flow:
+            - verifyCondition: "${returnedElementsResults} == ${MMS_3120_TOTAL_SEARCH_RESULTS_BEFORE_FILTER}"
+          catch:
+            flow:
+              - log: "[WARNING] Results are not the same as expected before filter applied: ${returnedElementsResults} != ${MMS_3120_TOTAL_SEARCH_RESULTS_BEFORE_FILTER}"
+
+    
+      # STEP 11 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 11: DELETE ALL ITEMS FROM CART."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      - executeFunction:
+          name: mx.functions.cart.assertCartIsEmpty
+  
+  # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_3120_SUCCESSFUL_EXECUTION
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_3120_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. Resseting data for next execution."
+                color: RED
+            - if:
+                condition: ${MMS_3120_IS_CART_EMPTY} == false
+                then: 
+                  - executeFunction:
+                      name: mx.functions.utils.relaunchApp
+                      params:
+                        - name: packageName
+                          string: ${APP_PACKAGE}
+                  - executeFunction:
+                      name: functions.onboarding.shoppingExperience.tapShoppingOption
+                      params:
+                        - name: ShoppingExperience
+                          string: mx.prepurchase.onboarding.onlineExclusiveStore
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+                  - executeFunction:
+                      name: functions.global.tapShopBtn
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.emptyCart
+                      params:
+                        - name: userEmail
+                          string: mx.data.prepurchase-3120.userEmail
+                        - name: userPassword
+                          string: mx.prepurchase.login.userPassword
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"
+  

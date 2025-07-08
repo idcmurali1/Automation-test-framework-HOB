@@ -1,0 +1,79 @@
+general:
+  tags: C2657504, unified-teflon-e2e, unified-p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657504
+  metadata:
+    - name: scenarioId
+      string: EC103
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo  
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.pharmacy.email
+            - name: password
+              string: us.data.pharmacy.password
+
+      - executeFunction:
+          name: unified.us.functions.services.naviagteToServices
+          params:
+            - name: servicesName
+              string: Pharmacy
+            - name: scrollNotRequired
+              string: true
+
+      - executeFunction:
+          name: unified.us.function.services.pharmacy.verifyPin
+
+      - executeFunction:
+          name: unified.us.function.services.pharmacy.myPrescriptions
+
+      - executeFunction:
+          name: unified.us.function.services.pharmacy.myPrescriptions.refill
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.function.services.pharmacy.refillPrescriptions
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

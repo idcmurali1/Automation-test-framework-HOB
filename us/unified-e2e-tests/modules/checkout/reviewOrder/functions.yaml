@@ -1,0 +1,326 @@
+functions:
+  - name: unified.us.functions.reviewOrder.verifyVisionItemTile
+    flow:
+        - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.reviewOrder.prescriptionItems
+              - name: direction
+                string: down
+              - name: scrollPosition
+                string: center             
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.reviewOrder.weMayContactYouMsg
+              - identifier: us.mappings.reviewOrder.prescriptionItems
+
+        - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.reviewOrder.viewLink
+              - name: direction
+                string: up
+              - name: scrollPosition
+                string: center              
+        - click:
+            identifier: us.mappings.reviewOrder.viewLink
+        - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.reviewOrder.verifyPrescriptionAdded
+              - name: direction
+                string: down  
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.reviewOrder.verifyPrescriptionAdded   
+        - log: Verified Vision item title and if prescription is added on review screen    
+        - if:
+              condition: ${platform} == 'Android'
+              then:
+              - click:
+                  identifier: us.mappings.item.walmart+BottomTrayCloseButton        
+
+
+  - name: unified.us.functions.checkout.reviewOrder.verifyAddress
+    flow:
+      - scroll:
+          direction: up
+      - if:
+            condition: ${platform} == 'Android'
+            then:
+              - verifyIdentifier:
+                  text:
+                    - identifier: us.mappings.reviewOrder.deliveryDescription
+                      equals: ${firstName} ${lastName}
+                  text:
+                    - identifier: us.mappings.reviewOrder.deliveryAddress
+                      contains: ${streetAddress}
+            else:
+              - verifyIdentifier:
+                  label:
+                    - identifier: us.mappings.reviewOrder.slotDetails.nameLabel
+                      equals: ${firstName} ${lastName}
+                  label:
+                    - identifier: us.mappings.reviewOrder.deliveryAddress
+                      contains: ${streetAddress}
+
+  #Edit delivery instructions on review order screen ios
+  - name: unified.us.functions.reviewOrder.editDeliveryInstructions
+    flow:
+      - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.editDeliveryInstructionsButton
+              - click:
+                  identifier: us.mappings.reviewOrder.editDeliveryInstructionsButton
+                  wait: 3000
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.reviewOrder.editDeliveryInstructions.label
+                  then:
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.reiewOrder.deliveryInstructions.clear
+                        then:
+                          - click:
+                              identifier: us.mappings.reiewOrder.deliveryInstructions.clear
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.propertyTypeText
+                    - click:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.propertyType.house
+                    - sleep:
+                        duration: 1000
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+                    - enterText:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+                        string: ${accessCode}
+                        pressEnter: true
+                        clickFirst: true
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.default.keyboardDoneButton
+                        then:
+                          - click:
+                              identifier: us.mappings.default.keyboardDoneButton
+                    - sleep:
+                        duration: 1000
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                    - enterText:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                        string: ${deliveryNotes}
+                        pressEnter: true
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.default.keyboardDoneButton
+                        then:
+                          - click:
+                              identifier: us.mappings.default.keyboardDoneButton
+                    - sleep:
+                        duration: 2000
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocation
+                    - click:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocationType
+                    - if: # Moved under if condition as this is still under A/B Test . Only if Adjust pin feature available below code will execute
+                        condition: ${verifyAdjustPin}
+                        then:
+                          - scroll:  
+                              direction: down
+                              untilIdentifier: us.mappings.reviewOrder.verifyAdjustPin
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.verifyAdjustPin               
+                                - identifier: us.mappings.reviewOrder.verifyMapUI
+                                - identifier: us.mappings.reviewOrder.verifyIsThisRightPlaceTitle
+                          - click:
+                              identifier: us.mappings.reviewOrder.verifyAdjustPin
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.verifyheaderText             
+                                - identifier: us.mappings.reviewOrder.verifyAddressText
+                                - identifier: us.mappings.reviewOrder.verifyAccessibilitySetting     
+                                - identifier: us.mappings.reviewOrder.verifyCurrentLocation
+                          - click:
+                              identifier: us.mappings.reviewOrder.verifyAccessibilitySetting
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.moveMapUpButton         
+                                - identifier: us.mappings.reviewOrder.moveMapDownButton
+                                - identifier: us.mappings.reviewOrder.moveMapRightButton
+                                - identifier: us.mappings.reviewOrder.moveMapLeftButton                  
+                                - identifier: us.mappings.reviewOrder.zoomMapInButton         
+                                - identifier: us.mappings.reviewOrder.zommMapOutButton
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.reviewOrder.editDeliveryInstructions.save
+                        then:
+                          - click:
+                              identifier: us.mappings.reviewOrder.editDeliveryInstructions.save
+
+      - if:
+            condition: ${platform} == 'Android'
+            then:
+              - executeFunction:
+                  name: unified.us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.reviewOrder.editDeliveryInstructionsButton
+                    - name: direction
+                      string: down
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.editDeliveryInstructionsButton
+              - click:
+                  identifier: us.mappings.reviewOrder.editDeliveryInstructionsButton
+                  wait: 3000
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.reviewOrder.editDeliveryInstructions.label
+                  then:
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.reiewOrder.deliveryInstructions.clear
+                        then:
+                          - click:
+                              identifier: us.mappings.reiewOrder.deliveryInstructions.clear
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.propertyTypeText
+                    - click:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.propertyType.house
+                    - sleep:
+                        duration: 2000
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocation
+                    - click:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocationType
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+                    - enterText:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.accessCode
+                        string: ${accessCode}
+                        pressEnter: true
+                    - sleep:
+                        duration: 2000
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                    - enterText:
+                        identifier: us.mappings.reviewOrder.editDeliveryInstructions.deliveryNotes
+                        string: ${deliveryNotes}
+                        pressEnter: true
+                    - goBack: true  
+                    - sleep:
+                        duration: 2000
+                    # - verifyIdentifier:
+                    #     present:
+                    #       - identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocation
+                    # - click:
+                    #     identifier: us.mappings.reviewOrder.editDeliveryInstructions.dropoffLocationType
+                    - if: # Moved under if condition as this is still under A/B Test . Only if Adjust pin feature available below code will execute
+                        condition: ${verifyAdjustPin}
+                        then:
+                          - sleep:
+                              duration: 2000
+                          - scroll:  
+                              direction: down
+                              untilIdentifier: us.mappings.reviewOrder.verifyAdjustPin
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.verifyAdjustPin               
+                                - identifier: us.mappings.reviewOrder.verifyMapUI
+                                - identifier: us.mappings.reviewOrder.verifyIsThisRightPlaceTitle
+                          - click:
+                              identifier: us.mappings.reviewOrder.verifyAdjustPin
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.verifyheaderText             
+                                - identifier: us.mappings.reviewOrder.topExplanationText
+                                - identifier: us.mappings.reviewOrder.verifyAddressText
+                                - identifier: us.mappings.reviewOrder.verifyAccessibilitySetting     
+                          - click:
+                              identifier: us.mappings.reviewOrder.verifyAccessibilitySetting
+                              wait: 6000                
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reviewOrder.verifyCurrentLocation
+                                - identifier: us.mappings.reviewOrder.moveMapUpButton         
+                                - identifier: us.mappings.reviewOrder.moveMapDownButton
+                                - identifier: us.mappings.reviewOrder.moveMapRightButton
+                                - identifier: us.mappings.reviewOrder.moveMapLeftButton                  
+                                - identifier: us.mappings.reviewOrder.zoomMapInButton         
+                                - identifier: us.mappings.reviewOrder.zommMapOutButton
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.reviewOrder.verifySavebutton
+                        then: 
+                          - click:
+                              identifier: us.mappings.reviewOrder.verifySavebutton
+                              wait: 5000
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} unable to edit delivery instructions"
+
+
+  # Function to validate EBT min banner and Price on Checkout Page
+  - name: unified.us.functions.cart.validateEBTMinBannerandPriceOnreviewOrderPage
+    flow:
+      - sleep:
+          duration: 5000
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.reviewOrder.EBTMin.banner
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.reviewOrder.EBTMin.banner 
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.cart.EBTMin.banner       
+      - scroll:
+          direction: down
+          position: center
+          untilIdentifier: us.mappings.reviewOrder.EBTMin.paymentbanner 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.EBTMin.paymentbanner   
+      - scroll:
+          direction: down
+          position: center
+          untilIdentifier: us.mappings.reviewOrder.POS.thresholdAmount  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.POS.thresholdAmount                    
+

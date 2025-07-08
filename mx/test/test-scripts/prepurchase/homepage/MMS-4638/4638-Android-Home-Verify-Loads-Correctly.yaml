@@ -1,0 +1,119 @@
+#======================================================================================================================
+#  AUTHOR: Osmar Juárez (vn56dce)
+#  CREATED: Sep/30/2024
+#  REVISION: ---
+#
+#  TEST CASE TITLE: [Home] - Verify that the page loads correctly
+#  JIRA MANUAL TEST CASE: MMS-4638
+#  JIRA AUTOMATED TEST CASE: MMS-4790
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-walmart-ea-smoke-production-android-4638, prepurchase-walmart-ea-smoke-production-android,
+        prepurchase-bodega-ea-smoke-production-android-4638, prepurchase-bodega-ea-smoke-production-android,
+        prepurchase-schema-validation-production-android-4638, prepurchase-schema-validation-production-android
+  testCaseId: MMS-4790
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: MMS_4638_SUCCESSFUL_EXECUTION
+          value: false
+
+      - log: BEFORE SCENARIO END
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+      
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN APP AND COMPLETE ONBOARDING. (2) SELECT BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: VERIFY HOME PAGE IS LOADED CORRECTLY"
+         color: ORANGE
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      
+      # STEP 3.1 -------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3.1: VERIFY HOME ELEMENTS: SEARCH BAR AND DEPARTMENT TAB"
+         color: ORANGE
+      - verifyIdentifier:
+            present:
+              - identifier: mx.mappings.top-menu.searchField
+      - verifyIdentifier:
+            present:
+              - identifier: mx.mappings.bottom-menu.departmentsButton
+        
+      # STEP 3.2 -------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3.2: VERIFY ANY ADJUSTABLE BANNER AND ANY CAROUSEL"
+         color: ORANGE
+      - executeFunction:
+          name: mx.functions.home.scrollDownUntilSomeAdjustableBanner
+      - scroll:
+          direction: up
+          withinIdentifier: mx.mappings.home.pageContainer
+          scrollLimit: 7
+      - executeFunction:
+          name: mx.functions.home.scrollDownUntilSomeCarousel
+
+      - storeIn:
+          key: MMS_4638_SUCCESSFUL_EXECUTION
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_4638_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully."
+                color: GREEN_BOLD
+
+      - log: AFTER SCENARIO END

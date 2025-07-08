@@ -1,0 +1,217 @@
+tools:
+  jdk:
+    version: 11
+    flavor: azul
+    
+  nodejs:
+    - 15.0.0
+  npm:
+    - 6.13.4
+
+branches:
+  - spec: development
+    triggers:
+      - push: disabled
+      - pr: disabled
+      - manual:
+          name: '[[ Build Base Job ]]'
+          call: base_job_flow
+
+  - spec: mx/(MXMOB|MMC|MMS|MMP|MMPP).*
+    triggers:
+      - push: disabled
+      - pr: disabled
+      - manual:
+          name: '[!] [[ Build Base Job ]]'
+          call: base_job_flow
+
+envs:
+  global:
+    variables:
+      SAUCE_USERNAME: mx-mobile-automation
+      SAUCE_ACCESS_KEY: ENC[87ef8dSMSMbStUppH0TpdhrBO+s+UsgV4UHtuJ/nqekzzIOA0OqYT4awoODt3sGt]
+      JIRA_USERNAME: SVC_MX_MOBILE_QAA
+      JIRA_PASSWORD: ENC[1CwdM1GIVoUr+fXxRi7WTk1n1yZrEFtCJqO66V412kE=]
+      JIRA_PROJECT_ID: MXMOB
+      JIRA_TEST_EXECUTION_URL: ""
+      JIRA_SUMMARY_PREFIX: ""
+      SLACK_TEST_RESULTS_CHANNEL_ID: C04VBH9QVV2
+      EXECUTION_BUILD_ID: ""
+      FAILURES_FOUND: ""
+      ALLOW_ARTIFACTORY: true
+      R2_REPORT_FILE_PATH: mx/looper_r2_reports
+      LOCAL_REPORT_URL: ""
+      LOCAL_REPORT_CONTEXT: ""
+
+rules:
+  before:
+    group (name JIRA_SUMMARY_PREFIX based on JOB_NAME):
+      - shell (name JOB_NAME): echo $JOB_NAME
+      - var(JIRA_SUMMARY_PREFIX):
+          if: |
+            %{JOB_NAME =~ '.*mx\\/qaa\\/AUT-DEV\\/.*'}
+          then:
+            shell (name JIRA_SUMMARY_PREFIX): echo 'aut-dev-'
+          else:
+            if: |
+              %{JOB_NAME =~ '.*mx\\/qaa\\/nightly-jobs\\/.*'}
+            then:
+              shell (name JIRA_SUMMARY_PREFIX): echo 'nightly-'
+            else:
+              shell (name JIRA_SUMMARY_PREFIX): echo ''
+
+flows:
+  default:
+    - shell (name Default Flow): echo 'Default Flow Executed !!!' && exit 1
+
+  base_job_flow:
+    - shell (name Base Flow): echo 'Base Job Build Successful !!!' && exit 0
+
+  build:
+    try:
+      - call: setup
+      - call: run_tests
+    finally:
+      - call: publish_report
+      - call: get_jira_test_execution_url
+      - call: post_results_to_slack
+      - call: post_individual_squad_results_to_slack
+      #- call: set_job_status
+
+  setup:
+    group (name Setup...):
+      try:
+        - shell (name Remove node_modules): rm -frv node_modules
+        - shell (name npm cache clear): npm cache clear --force
+        - shell (name Sleep 10): sleep 10
+        - shell (name npm install): npm install
+        - shell (name npm run download-r2): npm run download-r2
+        - shell (name linter): npm run mx-lint
+      catch:
+        - var(EXECUTION_BUILD_ID): n/a
+        - var(FAILURES_FOUND): true
+  
+  run_tests:
+    group (name Run Tests...):
+      try:
+        - switch($APP_PLATFORM):
+            case('android'):
+              - if: ${IS_WCP_TEST_EXECUTION}
+                then:
+                  - shell (name Android Test Runner EA/WCP): sh mx/scripts/looper-android-test-runner.sh --wcp
+                else: 
+                  - shell (name Android Test Runner): sh mx/scripts/looper-android-test-runner.sh
+            case('ios'):
+              - if: ${IS_WCP_TEST_EXECUTION}
+                then:
+                  - shell (name iOS Test Runner EA/WCP): sh mx/scripts/looper-ios-test-runner.sh --wcp
+                else: 
+                  - shell (name iOS Test Runner): sh mx/scripts/looper-ios-test-runner.sh
+            otherwise:
+              - shell (name Test Runner): echo "No APP_PLATFORM provided - Cannot execute R2 Tests" && exit 1
+      finally:
+        group (name Load Execution Data...):
+          - var(EXECUTION_BUILD_ID):
+              (name EXECUTION_BUILD_ID) if [[ -f "EXECUTION_BUILD_ID.VAR" ]]; then cat EXECUTION_BUILD_ID.VAR; else echo r2-glass-mx-${APP_PLATFORM}-run; fi
+          - var(FAILURES_FOUND):
+              (name FAILURES_FOUND) if [[ -f "FAILURES_FOUND.VAR" ]]; then cat FAILURES_FOUND.VAR; else echo true; fi
+
+  publish_report:
+    try:
+      - var(LOCAL_REPORT_CONTEXT):
+        - shell (name Get Local Report Context): |
+            TIMESTAMP=$(date "+%Y%m%d%H%M%S")
+            echo $TIMESTAMP
+      - publishReport:
+          context: ${LOCAL_REPORT_CONTEXT}
+          dir: report
+          index: index.html
+          verbose: true
+      - var(LOCAL_REPORT_URL):
+        - shell (name Local Report URL): |
+            REPORT_VALUE=PUBLISH_REPORT_${LOCAL_REPORT_CONTEXT}
+            echo ${!REPORT_VALUE}
+    catch:
+      - echo "Publish Local Report step failed"
+
+  get_jira_test_execution_url:
+    group (name Get JIRA_TEST_EXECUTION_URL):
+      var(JIRA_TEST_EXECUTION_URL):
+        shell (name JIRA_TEST_EXECUTION_URL): |
+          property="jiraUrls"
+          r2_data_file="./report/data/data.js"
+          if grep -q "$property" "$r2_data_file"; then
+            echo $(grep -o "$property\"\:\[.*\]" "$r2_data_file" | awk -F'[][]' '{print $2}' | sed 's/\"//g' | cut -d',' -f1)
+          else
+            echo "ERROR"
+          fi
+
+  post_results_to_slack:
+    - try:
+        group (name Post Results to Slack):
+          - shell (name Construct Slack Message): sh mx/scripts/construct-slack-test-results-msg.sh
+          - exposeVars(slackMessage.properties)
+          - try:
+              - slack.postMessage (name Post Results to Slack):
+                  message: "${slackMessageToPost}"
+                  channelId: ${SLACK_TEST_RESULTS_CHANNEL_ID}
+                  username: "looperbot"
+            catch:
+              - slack.postMessage (name Try 2):
+                  message: "${slackMessageToPost}"
+                  channelId: ${SLACK_TEST_RESULTS_CHANNEL_ID}
+                  username: "looperbot"
+      catch:
+        - echo "Post Results to Slack step failed"
+
+  post_individual_squad_results_to_slack:
+    - group (name Post Individual Squad Results to Slack):
+        - if: ${TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT}
+          then:
+            - shell (name Reporting Process OFF): |
+                echo "Var TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT = ${TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT}" &&
+                echo "Individual Squads Results Posts in Slack will not be triggered for this Test Execution"
+          else:
+            - shell (name Reporting Process ON): |
+                echo "Var TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT = ${TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT}" &&
+                echo "Individual Squads Results Posts in Slack will be triggered for this Test Execution"
+            - group (name Create JSON Squads Report):
+                - try:
+                    - shell (name Create Report): node ./mx/squad-reporting-util/scripts/create-squads-report.js
+                    - shell (name Show Report): cat ./squad-report/squads-report-DATA.json
+                    - exposeVars(slackMessage.properties)
+                    - exposeVars(source = json, file = ./squad-report/squads-report-DATA.json):
+                        vars:
+                          squads: '.squads[*]'
+                    - foreach($squads):
+                        - var(squadName): ${value.squadName}
+                        - group (name Post for ${squadName}):
+                            - if: ${value.notify}
+                              then:
+                                - shell (name Construct Message): node ./mx/squad-reporting-util/scripts/construct-individual-slack-post.js "${slackMessageToPost}" ${squadName}
+                                - shell (name Display Message): cat individual-slack-message.txt
+                                - var(individual_slack_message):
+                                    - shell (name var individual_slack_message): cat individual-slack-message.txt
+                                - foreach(${value.slackChannels}):
+                                    - try:
+                                        - slack.postMessage (name Post Message to Slack):
+                                            message: ${individual_slack_message}
+                                            channelId: ${value}
+                                            username: "looperbot"
+                                      catch:
+                                        - try:
+                                            - slack.postMessage (name Try 2):
+                                                message: ${individual_slack_message}
+                                                channelId: ${value}
+                                                username: "looperbot"
+                                          catch:
+                                            - shell (name Post Message to Slack): echo "Post for Squad '${squadName}' in channel '${value}' failed."
+                              else:
+                                - shell (name Notification Post OFF): echo "Squad '${squadName}' has turned OFF Slack Notifications in './mx/squad-reporting-util/squads-config.json' (notify=false)."
+                  catch:
+                    - shell (name cat Show Report): echo "Report './squad-report/squads-report-DATA.json' may have not been created."
+
+  set_job_status:
+    group (name Job Status):
+      - sh mx/scripts/set-looper-job-status.sh
+    

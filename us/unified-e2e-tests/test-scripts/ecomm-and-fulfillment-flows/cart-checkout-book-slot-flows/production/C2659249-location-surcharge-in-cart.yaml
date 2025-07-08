@@ -1,0 +1,167 @@
+general:
+  tags: unified-prod-e2e , C2659249, EC073
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2659249
+  metadata:
+    - name: scenarioId
+      string: EC024 # 59
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+          
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+        #Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Accoount info
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.prod.flow0270.android.email
+            - name: android.password
+              string: us.data.prod.flow0270.android.password
+            - name: ios.email
+              string: us.data.prod.flow0270.ios.email
+            - name: ios.password
+              string: us.data.prod.flow0270.ios.password
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      #Navigate to Home Page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Remove all Cart Items
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      #Remov unavailable Items
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      #Navigate back to Home Page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      #Change Fulfillment
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      #Seacrh a Location SurchargeItem
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.prod.locationSurchargeItem1
+
+      # Click First Item
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: excludeSponsored
+              string: true
+
+      #Add Item to Cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      #Search 2nd Item
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.prod.locationSurchargeItem2
+
+      #Change Fulfillment 
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      #Click Fissrt Item
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      #Add Item to Cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      #Navigate to Cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      #Selct Book Slot
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true
+
+      #Verify Location Surcharge
+      - executeFunction:
+          name: unified.us.functions.cart.verifyLocationSurcharge
+
+      #Continue to Checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      #Test Result
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

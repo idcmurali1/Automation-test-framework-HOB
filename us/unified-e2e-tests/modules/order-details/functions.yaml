@@ -1,0 +1,1984 @@
+
+functions:
+  
+  - name: unified.us.functions.orderDetails.validate.SODBanner
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.rxpd.sodBanner
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.rxpd.sod.txt
+
+  # Verify Order details screen upon customer choice when driver returned back the order to store. 
+  - name: unified.us.functions.orderDetails.verifycustomerchoiceondriverreturns
+    flow:
+      - if:
+          identifier:
+            present:     
+              - identifier: us.mappings.orderDetails.viewMyOptionsButton 
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.viewMyOptionsButton 
+    #Validating all the headers here displayed in Cancel Membership Screen.
+      - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.customeroptionpickup # Convert to pick up 
+            - identifier: us.mappings.orderDetails.customeroptioncancel  # cancel order 
+            - identifier: us.mappings.orderDetails.customeroptionreschedule # Reschedule order  
+      - if:
+          condition: ${oderType} == 'expressOrder'     
+          then:         
+            - verifyIdentifier: 
+                present: 
+                  - identifier: us.mappings.orderDetails.newDelayMessage 
+            - getString:
+                identifier: us.mappings.orderDetails.newDelayMessage
+                attribute: ${attribute}
+                storeIn: newDelayMessage        
+            - log: New delay message '${newDelayMessage}' is displayed 
+
+  #Validate Order with Curbside pick up with Cancelled Order
+  - name: unified.us.functions.orderDetails.ost.curbsidePickup.verifyOrderStatus
+    flow:
+      - if:
+          identifier:
+            present:     
+              - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.deliveryFromStore
+          then:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.deliveryFromStore
+                          equals: ${fulfillmentTypeDelivery}
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.cancelledToday
+                          equals: ${fulfillmentTypeCancelled}
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.deliveryFromStore
+                          equals: ${fulfillmentTypeDelivery}
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.cancelledToday
+                          equals: ${fulfillmentTypeCancelled}
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.fulfillmentTypeLabel.curbsidePickup
+                  - name: direction
+                    string: down
+            - log: Scroll to the curbside pickup section      
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.curbsidePickup
+                    equals: ${fulfillmentTypeCurbside}
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.progressBar
+                    equals: ${orderStatus}
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.fulfillmentTypeLabel.curbsidePickup
+                    equals: ${fulfillmentTypeCurbside}
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.progressBarMixedFulfiillment
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.progressBarMixedFulfiillment
+
+  - name: unified.us.functions.orderDetails.clickChargeHistoryPage
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.ledger.creditCard.infoString
+            - name: direction
+              string: down
+      - getString:
+          identifier: us.mappings.ledger.creditCard.infoString
+          attribute: ${attribute}
+          storeIn: creditCardInfo
+      - log: Credt card used is ${creditCardInfo}
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.chargeHistoryButton.name
+            - name: direction
+              string: down
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.orderDetails.chargeHistoryButton.name
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.chargeHistorytile.textMessage
+                    contains: Your transaction activity for this order
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.orderDetails.chargeHistorytile.textMessage
+                    contains: Your transaction activity for this order
+      - click:
+            identifier: us.mappings.orderDetails.chargeHistoryButton.name
+
+  - name: unified.us.functions.orderDetails.rxpd.item.validations
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.item.details.chevron
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.item.details.chevron
+                wait: 2000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.rxpd.item.prescription.text
+          scrollLimit: 1
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.rxpd.item.prescription.text
+            - identifier: us.mappings.orderDetails.rxpd.item.prescription.name
+            - identifier: us.mappings.orderDetails.rxpd.item.patient.name
+            - identifier: us.mappings.orderDetails.rxpd.item.price
+
+  - name: unified.us.functions.orderConfirmation.verifyCardDetails
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.getFulfillmentTextsToCompare
+
+      - log: -----------${fulfillmentText} section validation start-----------
+      # Order no. and title validations 
+      - if:
+          condition: ${OCMainValidated} == null
+          then:
+            - sleep:
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderConfirmation.orderNumber
+            - storeIn:
+                key: OCMainValidated
+                value: complete
+          else:
+            - log: Order confirmation headers already validated. Validating fulfillment section now
+      - if:
+          condition: ${fulfillmentText} == null
+          then:
+            - log: Skipping fulfillment section validation as none mentioned
+          else:
+            - storeIn:
+                key: type
+                value: ${fulfillmentText}
+            - log: Validating fulfillment section ${type}
+      # This section is used to set viewType required for specific fulfillment section detail identifications
+      - if:
+          condition: ${fulfillmentText} == 'Curbside pickup'
+          then:
+            - storeIn:
+                key: viewType
+                value: Pickup
+          else:
+            - if:
+                condition: ${fulfillmentText} == 'pickup' || ${fulfillmentText} == 'Pickup' || ${fulfillmentText} == 'Retiro'
+                then:
+                  - storeIn:
+                      key: viewType
+                      value: Pickup
+                else:
+                  - if:
+                      condition: ${fulfillmentText} == 'Auto Care'
+                      then:
+                        - storeIn:
+                            key: viewType
+                            value: AutoCareCenter
+                      else:
+                        - if:
+                            condition: ${fulfillmentText} == 'Digital delivery'
+                            then:
+                              - storeIn:
+                                  key: viewType
+                                  value: DigitalDelivery
+                            else:
+                              - storeIn:
+                                  key: viewType
+                                  value: Delivery
+
+      - log: Validating fulfillment section ${fulfillmentText}
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentTypeText
+            - name: direction
+              string: down         
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentTypeText
+      - log: Validated basic fulfillment details 
+      - if:
+          condition: ${fulfillmentText} != 'Digital delivery'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderConfirmation.fulfillmentItemCount
+                  - name: direction
+                    string: down          
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderConfirmation.fulfillmentTime
+                  - identifier: us.mappings.orderConfirmation.fulfillmentName 
+                  - identifier: us.mappings.orderConfirmation.fulfillmentAddress
+                  - identifier: us.mappings.orderConfirmation.fulfillmentItemCount
+            - log: Validated fulfillment time, name, adrress and item count details
+
+      - if:
+          condition: ${fulfillmentText} == 'Curbside pickup'
+          then:        
+            - if:
+                condition: ${unscheduled}
+                then:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentTime
+                          contains: Anytime after
+                  - log: Validated unscheduled fulfillmentTime text
+                else:
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:  
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendIcon
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendMessage
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:  
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendTimerIcon
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendTimerText
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendAddItemsLink
+                  - log: Validated fulfillment amend details
+
+      - if:
+          condition: ${fulfillmentText} == 'Delivery from store'
+          then:
+            - log: Delivery from store
+            - if:
+                condition: ${expressSlot} == true
+                then:    
+                  - executeFunction:
+                     name: unified.us.functions.utils.scrollIfNotVisible
+                     params:
+                       - name: identifier
+                         string: us.mappings.orderDetails.expressDeliveryLabel
+                       - name: direction
+                         string: down   
+                       - name: scrollPosition
+                         string: center  
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderDetails.expressDeliveryLabel
+                  - log: Validated express delivery text
+                else:
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:  
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendIcon
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendMessage
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:                      
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendTimerIcon
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendTimerText
+                              - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentAmendAddItemsLink
+                  - log: Validated fulfillment amend details
+
+      - if:
+          condition: ${fulfillmentText} == 'Auto Care'
+          then:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentComment
+                      label:
+                        - identifier: us.mappings.orderConfirmation.fulfillmentSection.fulfillmentComment
+                          contains: We'll hold your order for 10 days
+                  - log: Validated fulfillment hold comment
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderConfimration.fulfillmentSection.fulfillmentHoldTillDate
+                  - log: Validated fulfillment hold till date for ${type}         
+
+      - if:
+          condition: ${fulfillmentText} == 'Digital delivery'
+          then:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderConfirmation.fulfillmentSection.digitalFulfillmentComment
+                      label:
+                        - identifier: us.mappings.orderConfirmation.fulfillmentSection.digitalFulfillmentComment
+                          contains: Arrives soon after purchase
+                  - log: Validated fulfillment time comment
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderConfimration.fulfillmentSection.fulfillmentTime
+                          contains: Arrives soon after purchase
+                  - log: Validated fulfillment time text for ${type}  
+      - storeIn:
+          key: fulfillmentText
+          value: 'null'
+      - storeIn:
+          key: altFulfillmentText
+          value: 'null'
+      - log: -----------${fulfillmentText} section validation end-------------
+            
+  - name: unified.us.functions.orderDetails.verifyTrackShipmentDetails
+    flow: 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.trackShipment.trackShipmentButton
+      - click:
+          identifier: us.mappings.orderDetails.trackShipment.trackShipmentButton
+      - loop:
+          begin: 0
+          end: 3
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderDetails.trackShipment.trackingErrorButton
+                then:
+                  - click:
+                      identifier: us.mappings.popup.okButton
+                      wait: 3000
+                  - click:
+                      identifier: us.mappings.orderDetails.trackShipment.trackShipmentButton
+                else:
+                  - break: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.trackShipment.trackingErrorButton
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} -  Tracking error!"                        
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.trackShipment.title   
+            - identifier: us.mappings.orderDetails.trackShipment.progressBar
+            - identifier: us.mappings.orderDetails.trackShipment.deliveryAddress
+      - click:
+          identifier: us.mappings.subs.orderPickedUpSubsOrderDetailPage.viewButton
+          wait: 3000
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.helpCenterOrGetHelpButton
+      - if:
+          condition: ${fulfillmentStatus} == 'Shipped'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.arrivesByText
+                  - identifier: us.mappings.orderDetails.trackShipment.shippedStatusDetails
+      - if:
+          condition: ${fulfillmentStatus} == 'Delivered'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.fulfilmentStatus.delivered
+            - if:
+                condition: ${platform} == 'Android'
+                then: 
+                  - click: 
+                      identifier: us.mappings.global.navigation.backNavigation
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.shipmentDeliveredText
+                  - identifier: us.mappings.orderDetails.trackShipment.deliveredStatusDetails
+                  
+  - name: unified.us.functions.orderDetails.ost.fcDelivery.verifyOrderStatus
+    flow:
+      - if:
+          condition: ${fulfillmentType} == 'Shipping' || ${fulfillmentType} == 'Envío'
+          then:
+            - storeIn:
+                key: fulfillmentType
+                value: us.data.fulfillment.delivery
+      - if:
+          condition: ${flag} != 'skip'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackOrderButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.progressBar
+      - if:
+          condition: ${altFulfillmentType} != null
+          then:
+            - try:
+                flow:
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then: 
+                        - verifyIdentifier:
+                            text:
+                              - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                                contains: ${fulfillmentType}
+                      else: 
+                        - verifyIdentifier:
+                            value:
+                              - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                                contains: ${fulfillmentType}
+                catch:
+                  flow:
+                    - if:
+                        condition: ${platform} == 'Android'
+                        then: 
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                                  contains: ${altFulfillmentType}
+                        else:  
+                          - verifyIdentifier:
+                              value:
+                                - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                                  contains: ${altFulfillmentType}
+          else:
+            - if:
+                condition: ${platform} == 'Android'
+                then: 
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                          contains: ${fulfillmentType}
+                else:
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                          contains: ${fulfillmentType}
+      - storeIn:
+          key: altFulfillmentType
+          value: 'null'
+
+
+  - name: unified.us.functions.orderDetails.verifyPaymentCards
+    flow:
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.paymentMethodTitle
+          position: center
+      - if:
+          condition: ${RefundCredit} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.cardSummaries.refundCard
+      - if:
+          condition: ${verifyDS} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.DSCard.thumbnail
+      - if:
+          condition: ${verifyGC} == 'exists'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.GCard.thumbnail
+
+  - name: unified.us.functions.orderDetails.verifyAmendsBanner
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.orderConfirmation.amendsBanner
+          scrollLimit: 2
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderConfirmation.amendsBanner
+            - identifier: us.mappings.orderconfirmation.addItems    
+
+  - name: unified.us.functions.orderDetails.verifyPickupInstructionsOnODP
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:    
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.pickupInstructionsButton
+            - click:
+                identifier: us.mappings.orderDetails.pickupInstructionsButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.pickUpInstructions.contentText                          
+      - if:
+          condition: ${platform} == 'Android'
+          then:                   
+            - if:
+                identifier:                 
+                  present: 
+                      - identifier: us.mappings.orderDetails.pickupInstructionsText
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.pickupInstructionsText
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.pickUpInstructions.contentContainer
+                    contains: Please bring your government-issued ID          
+
+  - name: unified.us.functions.orderHistory.verifyStoreNameandAddress
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderHistory.storeAddressText
+      - if:
+          condition: ${platform} == 'Android'
+          then:    
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.orderHistory.storeAddressText
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderHistory.storeName
+                    contains: ${storeName}
+            - log: Store verified                          
+      - if:
+          condition: ${platform} == 'iOS'
+          then:                   
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.orderHistory.storeAddressText
+            #       - identifier: us.mappings.orderHistory.storeName
+            #       - identifier: us.mappings.orderHistory.storeNameText
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.orderHistory.storeName
+                    contains: ${storeName}            
+            - log: Store verified 
+
+    # Edit pickup store from ODP
+  - name: unified.us.functions.orderDetails.editPickupStore 
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.navBarTitle
+            - name: direction
+              string: up       
+      - verifyIdentifier:
+          timeout: 15000
+          present:
+            - identifier: us.mappings.orderDetails.editStoreLocation
+      - click:
+          identifier: us.mappings.orderDetails.editStoreLocation
+      - sleep:
+          duration: 4000
+      - if:
+          condition: ${platform} == 'Android'
+          then:    
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.editStoreLocation.alertMessage
+                    equals: ${editStoreAlertMessage} 
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.editStoreLocation.alertMessage
+                    equals: ${editStoreAlertMessage}                 
+      - executeFunction:
+          name: unified.us.functions.reserveSlot.changeStore
+          params:
+            - name: store
+              string: 32137
+            - name: errorHandle
+              string: true
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: unified.us.functions.amend.selectNewSlotandSave
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.pickup.reviewChanges
+          then:
+            - verifyIdentifier: 
+                present: 
+                  - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.alertMessage
+            - click:
+                identifier:  us.mappings.amend.pickup.confirmChanges
+      - sleep:
+          duration: 10000              
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup    
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+      - if: 
+          condition: ${itemNotAvailable} == false
+          then:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.orderDetails.editStoreLocation
+      - verifyIdentifier:
+          notPresent:  
+            - identifier: us.mappings.orderDetails.changeStoreLocationOption            
+
+  - name: unified.us.functions.orderDetails.verifyScDeliveryOrderODP
+    flow:
+      - sleep:
+          duration: 5000  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.amend.orderConfirmation.banner
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.deliveryInstructionsTitle
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.deliveryInstructionsTitle
+            - identifier: us.mappings.orderDetails.deliveryAddress.label
+
+  # Amends change store /Delivery address
+  - name: unified.us.functions.orderDetails.unscheduledDelivery.amendAddress
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.navBarTitle
+            - name: direction
+              string: up      
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.editDeliveryAddress
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center  
+      - verifyIdentifier:
+          timeout: 5000
+          present:
+            - identifier: us.mappings.orderDetails.editDeliveryAddress
+      - click:
+          identifier: us.mappings.orderDetails.editDeliveryAddress
+
+     # Verify edit address alert message
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.alertMessage              
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.alertMessage
+                    equals: You can only update your order address once. Changes apply to your entire order and may affect item availability, fees or arrival dates.
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.alertMessage
+                    equals: You can only update your order address once. Changes apply to your entire order and may affect item availability, fees or delivery times.           
+      #Add address with delivery instructions from the account page    
+      - executeFunction:
+          name: unified.us.functions.account.addAddress
+          params:
+            - name: firstName
+              string: test
+            - name: lastName
+              string: user
+            - name: streetAddress
+              string: us.data.deliveryaddress.streetAddress
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.amend.reserveaTime
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.reschedulesave
+                      wait: 2000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.selectAnAddress.header
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.differentAddress 
+                  - click:
+                      identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.confirmChanges                                           
+                      wait: 2000            
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.amend.editSlot.confirmButton
+                then:
+                  - click:
+                      identifier: us.mappings.amend.editSlot.confirmButton
+                      wait: 2000       
+            - if:
+                identifier:
+                   present:
+                     - identifier: us.mappings.amend.confirmPayment
+                then:
+                  - executeFunction:
+                     name: unified.us.functions.amend.creditCard.InCart
+                     params:
+                       - name: cvv
+                         string: "111"    
+            - sleep:
+               duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderDetails.editDeliveryAddress
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.editDeliveryAddress
+                      wait: 2000   
+                  - click:
+                      identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.differentAddress
+                  - click:
+                      identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.confirmChanges
+                  - sleep:
+                      duration: 3000     
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.deliveryAddress.selectAddress.addressSavedBanner
+            - click:
+                identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.confirmChanges
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.reserveaTime
+          then:
+            - executeFunction:
+                name: unified.us.functions.amend.selectNewSlotandSave
+      - sleep:
+          duration: 10000
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.reviewChanges
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.confirmChanges
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.confirmPayment
+          then:    
+            - executeFunction:
+                name: unified.us.functions.amend.creditCard.InCart
+                params:
+                  - name: cvv
+                    string: "111"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.cc.amendMessage
+          then:
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.editDeliveryAddress
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Amended address not reflected in ODP"
+
+  - name: unified.us.functions.orderDetails.ost.pickup.verifyOrderStatus
+    flow:
+      - storeIn:
+          key: fulfillmentStatus
+          value: true
+      - executeFunction:
+          name: us.function.resetOrderStatus
+          params:
+            - name: orderStatus   
+              string: ${orderStatus}    
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.progressBar
+                    equals: ${orderStatus}
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.progressBar
+                    equals: ${orderStatus}
+      - if:
+          condition: ${fulfillmentType} != 'MP_PICKUP'
+          then:  
+            - try:
+                flow: 
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:    
+                        - verifyIdentifier:
+                            value:
+                              - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                                contains: ${fulfillmentType}
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:
+                        - verifyIdentifier:
+                            text:
+                              - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                                contains: ${fulfillmentType}
+                catch:
+                  flow:
+                    - storeIn:
+                        key: fulfillmentStatus
+                        value: false
+            - if:
+                condition: ${fulfillmentStatus} == false
+                then:
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:
+                        - getString:
+                            identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                            attribute: value
+                            storeIn: actualFulfillmentType
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:
+                        - getString:
+                            identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                            attribute: text
+                            storeIn: actualFulfillmentType
+                  - failTest:
+                      message: "DATA_FAILURE - ${env} - Expected fulfillment type was ${fulfillmentType} but order created for ${actualFulfillmentType}"
+      - if:
+          condition: ${fulfillmentType} == 'MP_PICKUP'
+          then:
+             - verifyIdentifier:
+                 present:
+                   - identifier: us.mappings.orderDetails.mppickupStore
+
+  - name: unified.us.function.orderDetails.verifyButtonNameChangeToSeeMore
+    flow:   
+      - scroll:
+          direction: up    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.VerifySeemore
+
+  - name: unified.us.functions.orderDetails.verifySODBanner
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.sodBanner
+            - identifier: us.mappings.orderDetails.sodBanner.title
+            - identifier: us.mappings.orderDetails.sodBanner.subText
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.sodBanner.deliveryDescriptionHeader
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:             
+            - identifier: us.mappings.orderDetails.sodBanner.deliveryDescriptionHeader
+            - identifier: us.mappings.orderDetails.sodBanner.deliveryDescriptionMessage
+
+  - name: unified.us.functions.purchaseOrderPage.VerifyCustomDriverTip
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.purchaseOrder.VerifyCustomDriverTip
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.purchaseOrder.VerifyCustomDriverTip
+          then:
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.purchaseOrder.VerifyCustomDriverTip
+                          contains: ${custTipAmount}
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.purchaseOrder.VerifyCustomDriverTip
+                          contains: ${custTipAmount}
+            - log: "Driver tip amount $${custTipAmount} is displayed correctly"
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Driver tip amount is NOT displayed correctly"
+         
+
+  - name: unified.us.functions.orderDetails.scheduleInstallation
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapping.odp.scheduleInstallation 
+      - click:
+          identifier: us.mapping.odp.scheduleInstallation
+      - executeFunction:
+          name: unified.us.functions.cart.scheduleInstallation
+          params:
+            - name: slotIndex
+              string: 1        
+      - sleep:
+          duration: 5000
+
+  - name: unified.us.functions.orderDetails.rescheduleInstallation
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.acctext
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.accRescheduleCTA
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.odp.accRescheduleCTA
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: unified.us.functions.cart.scheduleInstallation
+          params:
+            - name: slotIndex
+              string: 1
+      - sleep:
+          duration: 5000  
+      - log : Installation rescheduled
+
+  - name: unified.us.functions.oderDetails.verifyInstallationInstructionAndDetail
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.odp.verifyInstallationInstruction
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center                
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.verifyInstallationInstruction
+      - click:
+          identifier: us.mappings.odp.verifyInstallationInstruction
+      - scroll:
+          untilIdentifier: us.mappings.odp.verifyPickupInstruction 
+          direction: down 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.verifyPickupInstruction      
+      - click:
+          identifier: us.mappings.odp.closePickupInsruction
+      - sleep:
+          duration: 5000
+      - scroll:
+          untilIdentifier: us.mappings.odp.verifyInstallationDetail
+          direction: down 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.verifyInstallationDetail
+      - click:
+          identifier: us.mappings.odp.verifyInstallationDetail
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.verifyInstallationDetailTitle
+      - click:
+          identifier: us.mappings.odp.closeInstallationDetail
+
+  - name: unified.us.functions.cancel.cancelInstallation
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.acctext
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.accCancelAppointmentCTA
+      - click:
+          identifier: us.mappings.odp.accCancelAppointmentCTA
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                   text:
+                    - identifier: us.mappings.cancellation.cancellationReasonQuestionPrompt
+                      contains: Cancellation error
+                then:
+                    - failTest:
+                       message: "ENV_FAILURE - ${env} - Cancellation Error - we're having technical issues"
+                else:
+                    - click:
+                        identifier: us.mappings.cancellation.reasonSelection 
+                    - getString:
+                        attribute: text
+                        identifier: us.mappings.cancellation.reasonSelection 
+                        storeIn: reason
+                    - log: $reason
+                    - if:
+                        condition: ${reason} == 'Other'
+                        then:
+                          - click:
+                              identifier: us.mappings.cancellation.enterReason
+                          - enterText:
+                              identifier: us.mappings.cancellation.enterReason
+                              string: Defective product    
+                          - goBack: true  
+                    - click:
+                        identifier: us.mappings.cancellation.confirmCancellationButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cancellation.considerReschedulingInsteadPopUpHeader 
+                then:
+                  - click:
+                      identifier: us.mappings.cancellation.considerReschedulingInsteadCancelButton 
+            - sleep:
+                duration: 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cancellation.cancellationReasonQuestionPrompt
+            - click:
+                identifier: us.mappings.cancellation.fourthReason
+            - click:
+                identifier: us.mappings.cancellation.confirmCancellationButton 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.feedbackCommentsTextButton
+                then:
+                  - click:
+                      identifier: us.mappings.feedbackCommentsTextButton   
+                  - enterText:
+                      identifier: us.mappings.feedbackCommentsTextButton 
+                      string: Defective product   
+                  - click:
+                      identifier: us.mappings.cancellation.confirmCancellationButton 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cancellation.CancellationErrorButton  
+                then:        
+                  - click:
+                      identifier: us.mappings.cancellation.CancellationGotitButton
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - Cancellation Error - we're having technical issues"
+                else:
+                  - sleep:
+                      duration: 10000    
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.goToDeepLink
+                      params:
+                        - name: deepLinkUrl
+                          string: walmart://orders/$orderNo
+                  - scroll:
+                      direction: up
+                      scrollLimit: 1
+                      wait: 2000
+
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.autoCareCenterPickupOrInstallationText 
+                      then:        
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.cancellation.ItemDropDownButton
+                        - click:
+                            identifier: us.mappings.cancellation.ItemDropDownButton 
+                        - log : Tire Installation cancelled
+
+  - name: unified.us.functions.cancel.verifyAccInstantCancellationTireOrder
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cancellation.requestCancellationButton   
+            - name: direction
+              string: down 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.requestCancellationButton
+          then:
+            - click:
+                identifier: us.mappings.cancellation.requestCancellationButton 
+          else:
+            - click:
+                identifier: us.mappings.orderDetails.orderCancelButton 
+      - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - click:
+                 wait: 5000
+                 identifier: us.mappings.requestCancellation.fifthtReason
+              - click:
+                 wait: 5000
+                 identifier: us.mappings.requestCancellation.confirmButton 
+              - sleep:
+                 duration: 20000 
+      - if:
+            condition: ${platform} == 'Android'
+            then:
+              - click:
+                 identifier: us.mappings.cancellation.reasonSelection 
+              - getString:
+                  attribute: text
+                  identifier: us.mappings.cancellation.reasonSelection 
+                  storeIn: reason
+              - log: $reason
+              - if:
+                    condition: ${reason} == 'Other'
+                    then:
+                      - click:
+                         identifier: us.mappings.cancellation.enterReason
+                      - enterText:
+                          identifier: us.mappings.cancellation.enterReason
+                          string: Defective product    
+              - goBack: true            
+              - click:
+                 wait: 5000
+                 identifier: us.mappings.requestCancellation.confirmButton 
+              - sleep:
+                 duration: 20000
+              - if:
+                  identifier:
+                   present:
+                      - identifier: us.mappings.cancellation.goBackToOrderDetailsButton
+                  then:
+                  - click:
+                     identifier: us.mappings.cancellation.goBackToOrderDetailsButton
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo 
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.orderNumber
+            - name: direction
+              string: up
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.statusMsgLabel   
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.statusMsgLabel                         
+          else:      
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.autoCareCenterPickupOrInstallationText 
+                then:  
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cancellation.ItemDropDownButton
+                  - click:
+                      identifier: us.mappings.cancellation.ItemDropDownButton 
+                  - log : Tire Installation also cancelled           
+                else:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cancellation.TwoItemCancellationText
+                  - log : Both Tire and Tire Installation cancelled  
+
+
+  - name: unified.us.functions.oderDetailPage.ACCExpressCheckin.getStarted
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.expressCheckin.titleLabel
+            - identifier: us.mappings.orderdetails.expressCheckin.getStartedButton  
+      - log: Express check-in option is displayed on ODP                 
+      - click:
+          identifier: us.mappings.orderdetails.expressCheckin.getStartedButton  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.backButton
+            - identifier: us.mappings.ACCExpressCheckin.title 
+            - identifier: us.mappings.ACCExpressCheckin.closeButton 
+            - identifier: us.mappings.ACCExpressCheckin.getStartedFooterButton           
+      - log: Express check-in welcome page is displayed            
+      - click:
+          identifier: us.mappings.odp.ACCExpressCheckin.getStartedFooterButton
+
+  - name: unified.us.functions.oderDetailPage.ACCExpressCheckin.selectVehicle
+    flow:
+      - log: Select vehicle for tire installation   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.title
+            - identifier: us.mappings.ACCExpressCheckin.selectVehicleText
+            - identifier: us.mappings.ACCExpressCheckin.myVehicles
+            - identifier: us.mappings.ACCExpressCheckin.firstVehicle
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.ACCExpressCheckin.continueButton           
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.firstVehicle
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.continueButton
+
+  - name: unified.us.functions.oderDetailPage.ACCExpressCheckin.lockingLugNuts
+    flow:
+      - log: Select "No, I don't have locking lug nuts"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.title
+            - identifier: us.mappings.ACCExpressCheckin.serviceOptionsText
+            - identifier: us.mappings.ACCExpressCheckin.tiresHaveLockingLugNutsText
+            - identifier: us.mappings.ACCExpressCheckin.lockingLugNuts.noButton
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.lockingLugNuts.noButton
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.continueButton
+
+  - name: unified.us.functions.oderDetailPage.ACCExpressCheckin.serviceAgreement
+    flow:
+      - log: Signing service agreement
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.title
+            - identifier: us.mappings.ACCExpressCheckin.serviceagreementHeader
+
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.ACCExpressCheckin.agreeAndSignButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center            
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.agreeAndSignButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.signatureRequiredtitle
+            - identifier: us.mappings.ACCExpressCheckin.serviceagreementFullname
+            - identifier: us.mappings.ACCExpressCheckin.serviceagreementSignAsCheckbox
+            - identifier: us.mappings.ACC.agreeAndSignButton        
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.serviceagreementSignAsCheckbox
+      - click: 
+          identifier: us.mappings.ACC.agreeAndSignButton
+      - sleep:
+         duration: 4000
+
+  - name: unified.us.functions.oderDetailPage.ACCExpressCheckin.reviewAndConfirm
+    flow:
+      - log: Verify - Date & time of appointment, Location, Items purchased, "Auto service with express check-in”, Vehicle information, Service package selected
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.reviewtitle
+            - identifier: us.mappings.ACCExpressCheckin.reviewAndConfirmHeader
+            - identifier: us.mappings.ACCExpressCheckin.autoCareCenterAppointmentHeader
+            - identifier: us.mappings.ACCExpressCheckin.dateAndTimeHeader
+            - identifier: us.mappings.ACCExpressCheckin.locationHeader
+            - identifier: us.mappings.ACCExpressCheckin.autoServiceWithExpressCheckin
+            - identifier: us.mappings.ACCExpressCheckin.reviewDateNTime
+            - identifier: us.mappings.ACCExpressCheckin.reviewSelectedVehicle
+            - identifier: us.mappings.ACCExpressCheckin.contactInfo
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.ACCExpressCheckin.reviewConfirmButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center    
+      - verifyIdentifier:
+          present:                      
+            - identifier: us.mappings.ACCExpressCheckin.reviewService   
+            - identifier: us.mappings.ACCExpressCheckin.reviewServiveOptions
+            - identifier: us.mappings.ACCExpressCheckin.reviewCustomerServiceAgreement
+            - identifier: us.mappings.ACC.contactName
+            - identifier: us.mappings.ACCExpressCheckin.reviewConfirmButton
+                        
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.reviewConfirmButton
+      - sleep:
+         duration: 4000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.appointmentConfirmationHeader
+            - identifier: us.mappings.ACCExpressCheckin.nextSteps
+            - identifier: us.mappings.ACCExpressCheckin.gotItButton 
+            - identifier: us.mappings.ACCExpressCheckin.close         
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.gotItButton 
+      - sleep:
+         duration: 4000
+
+  - name: unified.us.functions.orderDetails.verifySubsOptionNotShowed
+    flow:
+      - sleep:
+          duration: 10000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.editOrderButton
+      - verifyIdentifier:
+          present:  
+             - identifier: us.mappings.amend.editItem.ItemReplacementText
+      - click:
+          identifier: us.mappings.orderDetails.editOrderButton
+      - verifyIdentifier:
+          present: 
+            - identifier:  us.mappings.cancellation.editItemScreenTitle
+
+  - name: unified.us.functions.orderDetails.amend.EditItem.verifySubsToggleSwichAndUpdateOrder
+    flow:
+      - verifyIdentifier:
+          present: 
+             - identifier: us.mappings.subs.allowSubs.toggleSwitch
+      - click:
+          identifier: us.mappings.subs.allowSubs.toggleSwitch
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.reviewOrder.noSubsMessage   
+                    equals: No substitutions will be provided for this order.
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.noSubsMessage   
+                    equals: No substitutions will be provided for this order.
+      - click:
+          identifier: us.mappings.subs.allowSubs.toggleSwitch
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.subspreference.expandFirstIfUnavailable
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.subspreference.expandFirstIfUnavailable
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.subsPreference.replaceWithRadioButton
+      - click:
+          identifier: us.mappings.reviewOrder.subsPreference.replaceWithRadioButton
+      - scroll:
+          direction: left
+          untilIdentifier: us.mappings.subs.searchItems.button
+          scrollLimit: 2                            
+      - click:
+          identifier: us.mappings.subs.searchItems.button
+      - log: "The Substitution Search button is now visible and clicked!!!"
+      - enterText:
+          identifier: us.mappings.subs.searchBar
+          string: ${subSearchTerm}
+          pressEnter: true
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.subs.keypadSearchBtn
+                then:
+                  - click:
+                      identifier: us.mappings.subs.keypadSearchBtn
+      - click:
+          identifier: us.mappings.subs.searchResultItem.1stIndex
+      - log: "Searched the subs items and selected the first item in the results"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.subs.saveButton
+      - click:
+          identifier: us.mappings.subs.subs.saveButton
+      - sleep:
+          duration: 4000
+      - log: "Clicked on the Save Button to update the substitution item."
+      - scroll:
+          direction: up
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.daysLeftToEditOrder.text
+            - identifier: us.mappings.subs.replaceIfUnavailable.text.onUpdateOrderPage
+            - identifier: us.mappings.subs.allowSubs.text.onUpdateOrderPage
+            # - identifier: us.mappings.subs.editButton.onUpdateOrder
+            - identifier: us.mappings.subs.replaceItem.onUpdateOrderPage
+            - identifier: us.mappings.subs.updateOrderButton
+      - log: "Verified all the asserts on Update Order Page."
+      - click:
+          identifier: us.mappings.subs.updateOrderButton
+          wait: 2000
+      - log: "Clicked Update Order button."
+      - sleep:
+          duration: 20000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.totalText
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.totalText
+      - log: "The Temporary Hold mount field is Visible on the Order Detail Page!!!"
+
+  - name: unified.us.functions.oderDetailPage.ACCExpressCheckin.confirmation
+    flow: 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.ODP.confirmation
+            - identifier: us.mappings.orderDetails.ACCExpressCheckin.viewDetailsButton
+      - log: ACC Express checkin confirmation is displayed on ODP 
+      - click: 
+          identifier: us.mappings.orderDetails.ACCExpressCheckin.viewDetailsButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ACCExpressCheckin.viewDetails.bottomSheetTitle
+            - identifier: us.mappings.ACCExpressCheckin.viewDetails.bottomSheet.onTheDayOfAppointment
+            - identifier: us.mappings.ACCExpressCheckin.viewDetails.bottomSheet.closeButton
+      - log: ACC Express checkin instructions bottom sheet is displayed                        
+      - click: 
+          identifier: us.mappings.ACCExpressCheckin.viewDetails.bottomSheet.closeButton
+
+
+  - name: unified.us.functions.orderDetails.editDeliveryInstructionInHomeODP
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.verifyInHomeDeliveryInstructions
+            - identifier: us.mappings.orderDetails.verifyInHomeDeliveryDiscription
+            - identifier: us.mappings.orderDetails.verifyInHomeDeliveryInstructionsEdit
+      - click:
+          identifier: us.mappings.orderDetails.verifyInHomeDeliveryInstructionsEdit
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.editInHomeDeliveryInstructionTitle
+                  - identifier: us.mappings.orderDetails.verifyDoorstepTitle
+                  - identifier: us.mappings.orderDetails.verifyInHomeDeliveryKitchen     
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryKitchen
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryContinue
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.inHomeKeypadsCodeField
+                  - identifier: us.mappings.orderDetails.whereIsYourKeypadLocated
+            - click: 
+                identifier: us.mappings.orderDetails.inHomeKeypadsCodeField        
+            - enterText:
+                identifier: us.mappings.orderDetails.inHomeKeypadsCodeField
+                string: ${keypadcode}
+            - click: 
+                identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryContinue          
+            - sleep:
+                duration: 2000         
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.doYouHaveAnyPetsInYourHome
+            - click:
+                identifier: us.mappings.orderDetails.verifyYesButton
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryContinue
+            - sleep:
+                duration: 2000          
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryClear
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryHouse          
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.verifyPropertyTypes
+                  - identifier: us.mappings.orderDetails.verifyGateOrCallboxCode
+            - click:
+                identifier: us.mappings.orderDetails.verifyGateOrCallboxCode           
+            - enterText:
+                identifier: us.mappings.orderDetails.verifyGateOrCallboxCode
+                string: ${gatecodes}
+            - click: 
+                identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.orderDetails.inhomeInstruction
+            - enterText:
+                identifier: us.mappings.orderDetails.inhomeInstruction
+                string: ${Instructioninhome}
+            - click: 
+                identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryContinue
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.editInHomeDeliveryInstructionTitle
+                  - identifier: us.mappings.orderDetails.verifyInHomeDeliveryGarage
+                  - identifier: us.mappings.orderDetails.verifyInHomeDeliveryKitchen     
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryKitchen
+            - click:
+                identifier: us.mappings.capOne.paymentsOptionsContinueButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.editDeliveryInstructions.keypadsCode
+                  - identifier: us.mappings.orderDetails.whereIsYourKeypadLocated
+            - click: 
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.keypadsCode 
+            - enterText:
+                identifier: us.mappings.reviewOrder.editDeliveryInstructions.keypadsCode
+                string: ${keypadcode}
+                pressEnter: true
+            - goBack: true
+            - click:
+                identifier: us.mappings.capOne.paymentsOptionsContinueButton
+            - sleep:
+                duration: 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.doYouHaveAnyPetsInYourHome
+            - click:
+                identifier: us.mappings.orderDetails.verifyYesButton
+            - click:
+                identifier: us.mappings.capOne.paymentsOptionsContinueButton
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: us.mappings.orderDetails.verifyInHomeDeliveryHouse       
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.verifyPropertyTypes
+                  - identifier: us.mappings.orderDetails.verifyGateOrCallboxCodeText
+            - click:
+                identifier: us.mappings.orderDetails.verifyGateOrCallboxCode           
+            - enterText:
+                identifier: us.mappings.orderDetails.verifyGateOrCallboxCode
+                string: ${gatecodes}
+                pressEnter: true
+            - goBack: true
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.inhomeInstruction
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.inhomeInstruction  
+            - click:
+                identifier: us.mappings.orderDetails.inhomeInstruction
+            - enterText:
+                identifier: us.mappings.orderDetails.inhomeInstruction
+                string: ${Instructioninhome}
+                pressEnter: true
+            - goBack: true
+            - click:
+                identifier: us.mappings.capOne.paymentsOptionsContinueButton
+      - sleep:
+          duration: 3000
+      - scroll:
+          direction: up
+          scrollLimit: 2
+      - log:
+          message: inHome Instruction Updated From ODP
+
+  - name: unified.us.functions.orderDetails.noEditInHomeInstruction
+    flow:
+      - verifyIdentifier:
+          visible:
+            - identifier: us.mappings.orderDetails.verifyInHomeDeliveryInstructionsEdit
+              value: false
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.verifyInHomeDeliveryInstructions
+            - identifier: us.mappings.orderDetails.verifyInHomeDeliveryDiscription
+      - log:
+          message: Edit InHome Instruction not present  
+
+
+  - name: unified.us.functions.thankyou.localMarketPlace.OrderConfirmationPageValidations
+    flow:
+      - if: 
+          condition: ${fulfillment} == 'Delivery'
+          then:
+            - if: 
+                condition: ${Spark} == true          
+                then:          
+                - executeFunction:
+                    name: unified.us.functions.utils.scrollIfNotVisible
+                    params:
+                      - name: identifier
+                        string: us.mappings.thankYouPage.localMarketPlace.deliveryFromLocalSeller
+                      - name: direction
+                        string: down
+                      - name: scrollPosition
+                        string: center   
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.thankYouPage.localMarketPlace.deliveryFromLocalSeller
+            - if: 
+                condition: ${BYOD} == true          
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.thankYouPage.localMarketPlace.deliveryFromBYODSeller
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center                  
+                  - verifyIdentifier:
+                        present:
+                            - identifier: us.mappings.thankYouPage.localMarketPlace.deliveryFromBYODSeller
+
+  - name: unified.us.functions.orderDetails.localMarketPlace.OrderConfirmationPageValidations
+    flow:
+      - if: 
+          condition: ${fulfillment} == 'Delivery'
+          then:
+            - if: 
+                condition: ${Spark} == true          
+                then:          
+                - executeFunction:
+                    name: unified.us.functions.utils.scrollIfNotVisible
+                    params:
+                      - name: identifier
+                        string: us.mappings.orderConfirmation.localMarketPlace.deliveryFromLocalSeller
+                      - name: direction
+                        string: down
+                      - name: scrollPosition
+                        string: center   
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFromLocalSeller
+                          - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFromLocalSellerSLA
+                          - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFromLocalSeller.customerAddress
+            - if: 
+                condition: ${BYOD} == true          
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.orderConfirmation.localMarketPlace.deliveryFromBYODSeller
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center                  
+                  - verifyIdentifier:
+                        present:
+                            - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFromBYODSeller
+                            - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFromLocalSellerSLA
+                            - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFromLocalSeller.customerAddress                  
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.orderConfirmation.localMarketPlace.deliveryFeeBYODSeller    
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center   
+                  - verifyIdentifier:
+                        present:
+                            - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFeeBYODSeller
+                            - identifier: us.mappings.orderDetails.localMarketPlace.tipInPOS
+                                      
+      - if: 
+          condition: ${fulfillment} == 'Pickup'
+          then:
+            - verifyIdentifier:
+                  present:
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickupFromLocalSeller
+                      - identifier: us.mappings.revieworder.localMarketPlace.pickupFromLocalSellerSLA
+
+  - name: unified.us.functions.orderDetails.localMarketPlace.OrderHistoryValidations
+    flow:
+      - if: 
+          condition: ${fulfillment} == 'Delivery'
+          then:
+            - if: 
+                condition: ${Spark} == true          
+                then:          
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.orderDetails.localMarketPlace.deliveryFromLocalSeller
+                          - identifier: us.mappings.orderDetails.localMarketPlace.deliveryFromLocalSellerSLA
+                          - identifier: us.mappings.orderDetails.localMarketPlace.deliveryFromLocalSeller.customerAddress
+                - executeFunction:
+                    name: unified.us.functions.utils.scrollIfNotVisible
+                    params:
+                      - name: identifier
+                        string: us.mappings.orderConfirmation.localMarketPlace.deliveryFeeSparkSeller
+                      - name: direction
+                        string: down
+                      - name: scrollPosition
+                        string: center   
+                - verifyIdentifier:
+                      present:
+                          - identifier: us.mappings.orderConfirmation.localMarketPlace.deliveryFeeSparkSeller  
+                          - identifier: us.mappings.orderDetails.localMarketPlace.tipInPOS
+            - if:
+                condition: ${MinBasketFee} == true 
+                then: 
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.orderDetails.localMarketPlace.belowOrderMinBasketFeeText
+                        - identifier: us.mappings.orderDetails.localMarketPlace.belowOrderMinBasketFee
+                  - log: 
+                      message: Minimum Basket fee is validated on Order History page
+                        
+  - name: unified.us.functions.orderDetails.validateSubscriptionEnabled
+    flow:
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.subscriptionEnabledIcon
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.subscriptionEnabledIcon
+          then:
+            - log: "subscription is applied successfully"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The subscription icon should be shown but is not"
+
+  #Edit Items and verify VP Substitutions on Order Details Screen
+  - name: unified.us.functions.orderDetails.VerifyVPSubsitutions
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.order.substitution.editItemsButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.order.substitution.editItemsButton
+      - verifyIdentifier:
+          present: 
+            - identifier:  us.mappings.orderDetails.EditItems.title
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.substitutionPreference.firstItem
+          then:
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.substitutionPreference.firstItem
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.substitutionPreference.secondItem
+          then:
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.substitutionPreference.secondItem
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.substitutionPreference.thirdItem
+          then:
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.substitutionPreference.thirdItem
+
+  - name: unified.us.functions.orderDetails.verifySODBanner.onthewaystatus
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.sodBanner
+            - identifier: us.mappings.orderDetails.sodBanner.title
+            - identifier: us.mappings.orderHistory.sodBanner.subTxt
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.sodBanner.deliverytitle
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:                          
+            - identifier: us.mappings.orderDetails.sodBanner.deliverytitle
+            - identifier: us.mappings.orderDetails.sodBanner.deliverysubMessage
+
+  - name: unified.us.functions.orderDetails.screen.controlcenter
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.AddItems.btn
+            - identifier: us.mappings.orderDetails.editItems.btn
+            - identifier: us.mappings.orderDetails.editdeliveryinstructions.btn
+            - identifier: us.mappings.orderDetails.editPaymentMethod.btn
+            - identifier: us.mappings.orderDetails.ChangeDeliveryaddess.btn
+            - identifier: us.mappings.orderDetails.Rescheduledelivery.btn
+            - identifier: us.mappings.orderDetails.needmorehelp.btn
+      - click:
+          identifier: us.mappings.orderDetails.editdeliveryinstructions.btn
+      - verifyIdentifier:
+          present: 
+            - identifier:  us.mappings.reviewOrder.editDeliveryInstructions.label
+      - click:
+          identifier: us.mappings.cart.missingAnything.closeButton    
+      - click:
+          identifier: us.mappings.orderDetails.editPaymentMethod.btn
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.selectAddress.selectAddressTitle
+      - click:
+          identifier: us.mappings.cart.missingAnything.closeButton    
+      - click:
+          identifier: us.mappings.orderDetails.Rescheduledelivery.btn
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.editSlot.bookSlotTitle
+      - click:
+          identifier: us.mappings.cart.missingAnything.closeButton                                                                                      

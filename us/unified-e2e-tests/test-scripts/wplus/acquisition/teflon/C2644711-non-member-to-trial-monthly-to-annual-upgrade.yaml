@@ -1,0 +1,141 @@
+general:
+  tags:  unified-teflon-e2e, C2644711 # covered in C2737180
+  testCaseId: C2644711
+  inherit:
+    filesRunAll:
+      - errors-helpers.yaml
+  testCaseId: C2644711
+  metadata:
+    - name: scenarioId
+      string: 144, WP007
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flow030.createAccountPayload
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      #Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+       #Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: ${customerEmail}
+            - name: android.password
+              string: $password
+            - name: ios.email
+              string: ${customerEmail}
+            - name: ios.password
+              string: $password
+
+
+      #Navigate to Accounts Tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+      #navigate to Walmart Plus
+      - executeFunction:
+          name: unified.us.functions.account.navigateToWalmartPlusBenefits
+
+
+      #Start Trial Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.startFree30daysTrailMembership
+          params:
+            - name: tenure
+              string: monthly
+
+      #Navigate to Accounts Tab     
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar   
+
+      #Verify Enrollment
+      - executeFunction:
+          name: unified.us.functions.wplus.accountTab.yourTrialEndsMsg
+
+      #verify Benefits Banner
+      - executeFunction:
+          name: unified.us.functions.wplus.benefitScreen.benefitScreenDetails   
+
+      #Navigate to Manage Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      # Verify the membership upgrade to monthly
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+              - name: tenure
+                string: monthly
+              - name: membershipType
+                string: trial
+
+      #Upgrade membership to annual
+      - executeFunction:
+          name: unified.us.functions.wplus.manageMembership.upgradeToAnnual
+
+      # Verify the membership upgrade to annual
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: trial
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

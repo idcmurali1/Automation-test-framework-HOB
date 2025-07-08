@@ -1,0 +1,301 @@
+# place order with CC + EBT with multiple fulfillmet FC+Store pickup FIS flow.
+general:
+  platform: ios
+  tags: C2698641, us-golden-flows, p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2698641
+  metadata:
+    - name: scenarioId
+      string: FS012
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: ebt+cc${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.ebt+cc.ios.createAccountPayload
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+
+
+      # Add EBT item to the cart via deeplink
+      - executeFunction:
+          name: us.functions.item.deepLink.checkItemAvailable
+          params:
+            - name: itemArray
+              string: ebtItemArrayPickUp
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 1168705544
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: pickup
+
+      # Verify cart page
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      - executeFunction:
+          name: us.functions.cart.seeDetails
+
+      - executeFunction:
+          name: us.functions.cart.scheduledDelivery.verifyEBTDetails
+
+      # Verify cart page
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.cart.checkoutWithSlotBooking
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart
+            - name: slotDay
+              string: dayAfter
+            - name: slotIndex
+              string: 2
+
+      #Review unScheduledPickup order details
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      #Review FC order details
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      #Verify grey messages for EBT substitutions
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verify.greymessages
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyPaymentCardsDisplay
+          params:
+            - name: verifyEBT
+              string: exists
+            - name: verifyCC
+              string: exists
+
+      # Enter EBT PIN to submit order
+      - executeFunction:
+          name: us.functions.checkout.enterEBTPinAndPlaceOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - log: ${orderNo}
+
+      - executeFunction:
+          name: us.functions.oderDetailPage.paymentClarity
+          params: 
+            - name: paymentMethod
+              string: EBT and CC
+
+      # Navigate to change history page
+      - executeFunction:
+          name: us.functions.orderDetails.clickChargeHistoryPage
+
+
+      # Verify change history page 
+      - executeFunction:
+          name: us.functions.orderDetails.verifyChargeHistoryPage 
+          params:
+            - name: orderStatus
+              string: order placed
+
+
+ #***************************************************************************************************************
+
+  # Astro Update Change the status of the order as Shipped
+
+ #***************************************************************************************************************
+
+      - executeFunction:
+           name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+           name: us.functions.utils.astro.setOrderStatus
+           params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Shipped
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: $orderNo
+            - name: orderType
+              string: STORE_SCHEDULED_PICKUP
+            - name: status
+              string: PO Ready For Pickup
+
+#*******************************************************************************************************
+
+ #     Astro - Move order status to Delivered
+
+#*******************************************************************************************************
+      - executeFunction:
+             name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+             name: us.functions.utils.astro.setOrderStatus
+             params:
+              - name: orderNo
+                string: ${orderNo}
+              - name: orderType
+                string: FC_DELIVERY
+              - name: status
+                string: Delivered
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_PICKUP
+            - name: status
+              string: Customer Picked
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Checking Payment clarity subtext and amount price 
+      - executeFunction:
+          name: us.functions.oderDetailPage.paymentClarity
+          params: 
+            - name: paymentMethod
+              string: EBT and CC  
+            - name: orderStatus
+              string: Delivered                
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

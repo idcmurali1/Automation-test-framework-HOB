@@ -1,0 +1,259 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-124
+#       Flow - MH: Unscheduled Pickup Fulfill With WFS item + WFS Big Item + WFSDigital
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179474
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-124 
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-119
+#
+#
+#
+#   TODO: 
+#     * Missing data in Teflon for WFS Big Item and WFS Digital Items
+#     * Validate Payloads to move order once WFS data is available in Teflon
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-124
+  tags: INEP-124, OPIF-179474, p1-mh-opif-teflon-d-feb, INEP-119, p1-mh-opif-teflon, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Unscheduled Pickup Fulfill With WFS item + WFS Big Item + WFSDigital"
+    flow:
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+      # Create  WFS order using astro api.
+      - log:
+          message: PREREQUISITE — Creating  WFS order using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createOrder
+          params:
+            - name: payload
+              string: data.mh.inep124.createOrderPayload.unscheduledPickup.wfsItems # Param -> ${userEmail}
+      - storeIn:
+          key: orderId
+          value: ${returnedOrderNumber}
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+    
+      # Go to Order History Page and validate order is created and opened
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+      - executeFunction:
+          name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn # Param -> ${orderId}
+      
+      # Validate LOT with "Preparando" status in Order Details page
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.preparing
+
+      # Validate Total items in order and quantity items for first product (line item 1)
+      - executeFunction:
+          name: functions.orderDetailPage.verifyTotalItemsInOrder
+          params:
+            - name: totalItemCount
+              string: data.mh.inep124.totalCountItemsInOrder
+      - executeFunction:
+          name: functions.orderDetailPage.verifyQuantityPerLine 
+          params:
+            - name: lineItem
+              string: "1"
+            - name: quantity
+              string: data.mh.inep124.lineItem1.quantity
+
+     # Move WFS order using astro api until - move all items
+      - log:
+          message: Move WFS order using Astro API -> PO Acknowledged
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.unscheduledPickup.acknowledge
+
+      # Validate Cancel items button is displayed after order status updated
+      - executeFunction:
+          name: functions.orderDetailPage.reloadOrderDetailPage
+      - executeFunction:
+          name: functions.orderDetailPage.assertCancelItemsButton
+
+      # Validate Cancel Order button is displayed
+      - executeFunction:
+          name: functions.orderDetailPage.assertCancelButton
+
+      # Move WFS order to the next status
+      - log:
+          message: Move WFS order using Astro API -> PO Pick Complete
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.unscheduledPickup.pickComplete
+      - log:
+          message: Move WFS order using Astro API -> PO Ready for Pickup
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.unscheduledPickup.readyForPickup
+
+      # Validate LOT with "Listo para entrega" status in Order Details page
+      - executeFunction:
+          name: functions.orderDetailPage.reloadOrderDetailPage
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.readyForPickup
+
+      # Validate Cancel items button is still displayed after order status updated
+      - executeFunction:
+          name: functions.orderDetailPage.assertCancelItemsButton
+      - scroll:
+          direction: up
+          untilIdentifier: orderDetailPage.orderNumber
+
+      # Validate Tracker button is displayed after order is updated
+      - executeFunction:
+          name: functions.orderDetailPage.assertTrackOrderButtonDisplayed
+          params:
+            - name: expectedPrimaryButtonText
+              string: data.orderTracker.primaryMainButton.trackOrder
+      
+      # Move order to final status
+      - log:
+          message: Move WFS order using Astro API -> Customer Picked
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.unscheduledPickup.customerPicked
+      
+      # Validate Estimated Delivery Date updated after order picked 
+      - executeFunction:
+          name: functions.orderDetailPage.reloadOrderDetailPage
+      - executeFunction:
+          name: functions.orderDetailPage.verifyEstimatedDeliveryDateText
+          params:
+            - name: expectedEDDText
+              string: data.orderTracker.EDD.deliveredToday
+      
+      # Validate Write an Opinion button is displayed per some line item in order
+      - executeFunction:
+          name: functions.orderDetailPage.verifyWriteOpinionButtonPerLine
+          params:
+            - name: lineItem
+              string: '2'
+      
+      # Validate Quantity is consistence per some line item in order
+      - executeFunction:
+          name: functions.orderDetailPage.verifyQuantityPerLine 
+          params:
+            - name: lineItem
+              string: "1"
+            - name: quantity
+              string: data.mh.inep124.lineItem1.quantity
+      
+      # Validate Cancel Order button is NOT displayed
+      - executeFunction:
+          name: functions.orderDetailPage.assertCancelButton
+          params:
+            - name: isCancelButtonDisplayed
+              string: 'false'
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

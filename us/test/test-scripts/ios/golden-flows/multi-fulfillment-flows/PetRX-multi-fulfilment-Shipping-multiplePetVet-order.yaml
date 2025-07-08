@@ -1,0 +1,217 @@
+general:
+  platform: ios
+  tags: PetRXmulti, sanity, us-golden-flows-ecom-p1, us-golden-flows
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.ios.flowPetRX.email
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.email
+            - name: password
+              string: us.data.ios.flowPetRX.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+  
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup
+  
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 75006
+              - name: storeName
+                string: Carrollton Pharmacy
+
+    
+
+##**From here code to test only pharmacy & FC items
+      # Fetch stock available items using fetch API
+
+
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: source
+      #         string: astro
+      #       - name: itemType
+      #         string: FC_DELIVERY
+      #       - name: backupItem
+      #         string: 945213102
+      #       - name: store
+      #         string: 32140
+
+      # # # Add items to cart using deeplink
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: ${deeplinkURl}
+
+      # - executeFunction:
+      #     name: us.functions.item.addItemToCart
+
+      # # Fetch stock available items using fetch API
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: source
+      #         string: astro
+      #       - name: itemType
+      #         string: MP_WFS_DELIVERY
+      #       - name: backupItem
+      #         string: 848010073
+      #       - name: store
+      #         string: 32140
+
+      # # # Add items to cart using deeplink
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: ${deeplinkURl}
+
+      # - executeFunction:
+      #     name: us.functions.item.addItemToCart
+
+          ##**From here code to test only pharmacy 
+
+          ## Add petrx items to cart 
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/894010516 # walmart://ip/22471997
+
+
+#Verify Petrx product details and add to cart
+
+      - executeFunction:
+          name: us.functions.item.petrxItem.verifyPresent 
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.increaseToMaxQty
+          params:
+            - name: maxQty
+              string: 2
+
+
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # # Go to cart
+      # - executeFunction:
+      #      name: us.functions.global.navigation.toCartFromNavBar
+
+      # Verify cart
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+    # Continue to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+# Add Pet and Vet details
+      - executeFunction:
+          name: us.functions.checkout.AddPetVet
+      # - executeFunction:
+      #     name: us.functions.checkout.SelectPetVet
+
+    
+          
+      - executeFunction:
+          name: us.functions.checkout.MultiSelectPetVet_entertext
+          params:
+            - name: fName
+              string: Gia
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping    
+
+      
+
+      # - executeFunction:
+      #     name: us.functions.checkout.reviewOrder.verifyingTip
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+  
+      - executeFunction:
+          name: us.functions.utils.createFile
+          params:
+            - name: FILE_OUTPUT
+              string: '{"ORDER_ID":"${orderNo}"}'
+
+
+              
+      - storeIn:
+          key: testStatus
+          value: passed  
+      
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

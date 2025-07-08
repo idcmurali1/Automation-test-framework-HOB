@@ -1,0 +1,70 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function is for Payment method validation in ODP
+  # param: Payment method name 
+  - name: functions.orderDetailPage.verifyPaymentType
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: orderDetailPage.paymentMethod.logo
+      - verifyIdentifier:
+          present:
+            - identifier: orderDetailPage.paymentMethod.logo
+            - identifier: orderDetailPage.paymentMethod.label
+      - verifyIdentifier:
+          label:
+            - identifier: orderDetailPage.paymentMethod.label
+              contains: ${paymentType}
+      - log:
+          message: "End functions: orderDetailPage.verifyPaymentType"
+          color: BLUE
+  
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validate shipping charge in order detail page
+  # No params
+  - name: functions.orderDetailPage.validateShippingCharge
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: orderDetailsPage.shipingText
+      - verifyIdentifier:
+          present:
+            - identifier: orderDetailsPage.shipingText
+            - identifier: orderDetailsPage.shipingCharge
+      - getString:
+          identifier: orderDetailsPage.shipingCharge
+          attribute: label
+          storeIn: productPrice
+      - executeNode:
+          file: wcp/test/helpers/Price/cleanPrice.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: cleanProductPrice
+      - storeIn:
+          key: shippingChargeAmountOrderDetailPage
+          value: ${cleanProductPrice} 
+      - log:
+          message: Shipping charge is ${shippingChargeAmountOrderDetailPage}
+      - if:
+          condition: ${shippingChargeAmountOrderDetailPage} > 0 && ${shippingChargeAmountOrderDetailPage} != 'Free'
+          then:
+            - log:
+                message: Shipping charge is present
+      - if:
+          condition: ${shippingChargeAmountOrderDetailPage} == ${shippingChargeAmountCartPage} && ${shippingChargeAmountOrderDetailPage} == ${shippingChargeAmountcheckoutPage}
+          then:
+            - log:
+                message: Shipping charge is same in cart, review order page and order detail page
+      - log:
+          message: "End function: orderDetailPage.validateShippingCharge"
+          color: BLUE
+
+
+
+#--------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,766 @@
+#======================================================================================================================
+#    AUTHOR: Isis Rojas Tolentino (vn53dge)
+#   CREATED: Feb/2/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-e2e-regression-staging-003
+
+scenarios:
+
+ #--------------------------------------------------------------------------------------------------------------------
+  - name: Main
+    flow:
+      - log: 
+          message: "TEST START - E2E REGRESSION - OD-003"
+          color: CYAN
+      
+    # STEP 1-2: Navigate through Onboarding and select OD Banner...
+      - log: "STEP 1-2: Navigate through Onboarding and select OD Banner..."
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.e2e-regression.od-003.zipCode
+            - name: banner
+              string: "OD"
+
+    # STEP 3: Login from Profile...
+      - log: "STEP 3: Login from Profile..."
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.e2e-regression.od-003.userEmail
+            - name: userPassword
+              string: mx.data.e2e-regression.od-003.userPassword
+            - name: userName
+              string: mx.data.e2e-regression.od-003.userName
+
+    # STEP 4: Perform a search...
+      - log: "STEP 4: Perform a search..."
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.e2e-regression.od-003.productSearch
+
+    # STEP 5-6: Add products to cart and increase products quantities...
+      - log: "STEP 5: Add products to cart and increase products quantities..."
+
+      # PRODUCT 1
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName1
+            - name: direction
+              string: 'down'
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName1
+      - storeIn:
+          key: var_product1_price  # Price of Product 1  
+          value: ${returnedPrice}
+      - executeFunction:
+          name: mx.functions.slp.increaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName1
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.product1.quantityToIncrease
+
+      # PRODUCT 2
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName2
+            - name: direction
+              string: 'down'
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName2
+      - storeIn:
+          key: var_product2_price  # Price of Product 2
+          value: ${returnedPrice}
+      - executeFunction:
+          name: mx.functions.slp.increaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName2
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.product2.quantityToIncrease
+              
+      # Cart Badge Quantity Validation...
+      - storeIn:
+          key: var_product1_quantity
+          value: mx.data.e2e-regression.od-003.quantityProduct1
+      - storeIn:
+          key: var_product2_quantity
+          value: mx.data.e2e-regression.od-003.quantityProduct2
+      - arithmetic:
+          expression: ${var_product1_quantity} + ${var_product2_quantity}
+          storeIn: var_cartBadge_expectedQuantity
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${var_cartBadge_expectedQuantity}
+
+    # STEP 7: Open cart and assert products Added...
+      - log: "STEP 7: Open cart and assert products Added..."
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+          
+      # PRODUCT1
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${var_product1_price}
+            - value: ${var_product1_quantity}
+            - value: "false"
+          getResponse:
+            storeIn: var_product1_subtotal # Subtotal for Product 1
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName1
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${var_product1_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${var_product1_price}
+            - name: expectedSubtotal
+              string: ${var_product1_subtotal}
+
+      # PRODUCT2
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${var_product2_price}
+            - value: ${var_product2_quantity}
+            - value: "false"
+          getResponse:
+            storeIn: var_product2_subtotal # Subtotal for Product 2
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName2
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${var_product2_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${var_product2_price}
+            - name: expectedSubtotal
+              string: ${var_product2_subtotal}
+
+    # STEP 8-10: Reserve time slot and delivery method...
+      - log: "STEP 8-10: Reserve time slot and delivery method..."
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      # assertions reserve slot page from "reservar un horario" button...
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+      #iOS platform does not contain `backButton`, in this case `closeButton` replace the step
+      - if:
+          condition: ${APP_PLATFORM} == 'android' || ${APP_PLATFORM} == 'ANDROID' || ${APP_PLATFORM} == 'Android'
+          then:
+            - executeFunction:
+                name: mx.functions.reserve-slot.tapBack
+          else:
+            - executeFunction: 
+                name: mx.functions.reserve-slot.tapClose
+      # assertions reserve slot page from "continuar" button...
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+      # reserve home delivery, and time slot...
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+      - executeFunction:
+          name: mx.flows.od.reserve-slot.changeDeliveryAddress
+          params:
+            - name: addressName
+              string: mx.data.e2e-regression.od-003.userAddressName
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedAddress
+      - storeIn:
+          key: tc_003_returnedStreet
+          value: ${returnedStreetName}
+      - storeIn:
+          key: tc_003_returnedExteriorNumber
+          value: ${returnedExteriorNumber}
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectTomorrowSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedDaySlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlotDeliveryFee
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapReserve
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot 
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+
+    # STEP 11-13: Go back to search products and add product to cart...
+      - log: "STEP 11-13: Go back to search products and add product to cart..."
+      - executeFunction:
+          name: mx.functions.review-order.tapBack
+      - executeFunction:
+          name: mx.functions.review-order.almostDonePopup.tapExitPayment
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      - executeFunction:
+          name: mx.functions.slp.assertPageDisplayed
+
+      # PRODUCT 3
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+            - name: direction
+              string: 'down'
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+      - storeIn:
+          key: var_product3_price  # Price of Product 3
+          value: ${returnedPrice}
+      - executeFunction:
+          name: mx.functions.slp.increaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.product3.quantityToIncrease
+      
+      # Cart Badge Quantity Validation...
+      - storeIn:
+          key: var_product1_quantity
+          value: mx.data.e2e-regression.od-003.quantityProduct1
+      - storeIn:
+          key: var_product2_quantity
+          value: mx.data.e2e-regression.od-003.quantityProduct2
+      - storeIn:
+          key: var_product3_quantity
+          value: mx.data.e2e-regression.od-003.quantityProduct3
+      - arithmetic:
+          expression: ${var_product1_quantity} + ${var_product2_quantity} + ${var_product3_quantity}
+          storeIn: var_cartBadge_expectedQuantity
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${var_cartBadge_expectedQuantity}
+
+    # STEP 14: Open cart and assert products added and quantities are correct...
+      - log: "STEP 14: Open cart and assert products added and quantities are correct"
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+          
+      # PRODUCT 1
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${var_product1_quantity}
+            - value: ${var_product1_price}
+            - value: "false"
+          getResponse:
+            storeIn: var_product1_subtotal # Subtotal for Product 1
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName1
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${var_product1_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${var_product1_price}
+            - name: expectedSubtotal
+              string: ${var_product1_subtotal}
+
+      # PRODUCT 2
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${var_product2_price}
+            - value: ${var_product2_quantity}
+            - value: "false"
+          getResponse:
+            storeIn: var_product2_subtotal # Subtotal for Product 2
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName2
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${var_product2_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${var_product2_price}
+            - name: expectedSubtotal
+              string: ${var_product2_subtotal}
+
+      - if:
+          condition: ${APP_PLATFORM} == 'android' || ${APP_PLATFORM} == 'ANDROID' || ${APP_PLATFORM} == 'Android'
+          then:
+            - storeIn:
+                key: productName
+                value: mx.data.e2e-regression.od-003.productName3
+            - scroll:
+                direction: up
+                scrollLimit: 1
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.cart.productWithStock
+                wait: 3000
+                position: center
+          else:
+            - log: Verify if scroll to find product in cart is needed in iOS platform.
+
+      # PRODUCT 3
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${var_product3_price}
+            - value: ${var_product3_quantity}
+            - value: "false"
+          getResponse:
+            storeIn: var_product3_subtotal # Subtotal for Product 3
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${var_product3_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${var_product3_price}
+            - name: expectedSubtotal
+              string: ${var_product3_subtotal}
+
+      - arithmetic:
+          expression: ${var_product1_subtotal} + ${var_product2_subtotal} + ${var_product3_subtotal}
+          storeIn: varTC_cart_estimatedTotal
+          numberOfDecimalPlaces: 2
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'Cart'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.cart.homeSlot
+      - executeFunction:
+          name: mx.flows.od.cart.assertHomeSlotSelected
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+            - name: expectedUserStreet
+              string: ${tc_003_returnedStreet}
+            - name: expectedUserExteriorNumber
+              string: ${tc_003_returnedExteriorNumber}
+            - name: expectedDeliveryFee
+              string: ${returnedDeliveryFee}
+  
+    # STEP 15-17: Change shipping details for pickup and continue to checkout...
+      - log: "STEP 15-17: Change shipping details for pickup and continue to checkout..."
+      - executeFunction:
+          name: mx.functions.cart.tapChangeSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectDayAfterTomorrowSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedDaySlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapReserve
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'Cart'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+      - executeFunction:
+          name: mx.functions.cart.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${varTC_cart_estimatedTotal}
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: PickupDelivery
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+
+    # STEP 18: Add new payment method and assert pay at delivery not available...
+      - log: "STEP 18: Add new payment method and assert pay at delivery not available..."
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Pago"
+      
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+      - executeFunction:
+          name: mx.functions.payment.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.payment.scrollDownToPayAtDelivery
+      - executeFunction:
+          name: mx.functions.payment.assertPayAtDeliveryNotAvailable
+      - executeFunction:
+          name: mx.functions.payment.tapClose
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.review-order.deliveryHeaderContainer
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+
+    # STEP 19-20: Go back and search product exceeded pay at delivery...
+      - log: "STEP 19-20: Go back and search product exceeded pay at delivery..."
+      - executeFunction:
+          name: mx.functions.review-order.tapBack
+      - executeFunction:
+          name: mx.functions.review-order.almostDonePopup.tapExitPayment
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      - executeFunction:
+          name: mx.functions.slp.scrollDownToProductByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+      - executeFunction:
+          name: mx.functions.slp.assertProductDisplayed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+
+    # STEP 21: Open PDP and decrease product quantity...
+      - log: "STEP 21: Open PDP and decrease product quantity..."
+      - executeFunction:
+          name: mx.functions.slp.openProductDetailsByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+      - executeFunction:
+          name: mx.functions.pdp.assertCorrectProductDisplayed
+          params:
+            - name: expectedProductName
+              string: mx.data.e2e-regression.od-003.productName3
+      - executeFunction:
+          name: mx.functions.pdp.decreaseQuantityBy
+          params:
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.product3.quantityToDecrease
+      - executeFunction:
+          name: mx.functions.pdp.assertQuantityAsPieces
+          params:
+            - name: expectedQuantityAsPieces
+              string: mx.data.e2e-regression.od-003.finalQuantityProduct3
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+
+    # STEP 22-23: Open cart, assert product quantities and continue to checkout...
+      - log: "STEP 22-23: Open cart, assert product quantities and continue to checkout..."
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      #Assert quantity product 1
+      - executeFunction:
+          name: mx.functions.cart.assertProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName1
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.quantityProduct1
+      #Assert quantity product 2
+      - executeFunction:
+          name: mx.functions.cart.assertProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName2
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.quantityProduct2
+      - if:
+          condition: ${APP_PLATFORM} == 'android' || ${APP_PLATFORM} == 'ANDROID' || ${APP_PLATFORM} == 'Android'
+          then:
+            - storeIn:
+                key: productName
+                value: mx.data.e2e-regression.od-003.productName3
+            - scroll:
+                direction: up
+                scrollLimit: 1
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.cart.productWithStock
+                wait: 3000
+                position: center
+          else:
+            - log: Verify if scroll to find product in cart is needed in iOS platform.
+
+      #Assert quantity product 3
+      - executeFunction:
+          name: mx.functions.cart.assertProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-003.productName3
+            - name: quantity
+              string: mx.data.e2e-regression.od-003.finalQuantityProduct3
+      - storeIn:
+          key: var_product3_finalQuantity
+          value: mx.data.e2e-regression.od-003.finalQuantityProduct3
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${var_product3_price}
+            - value: ${var_product3_finalQuantity}
+            - value: "false"
+          getResponse:
+            storeIn: var_product3_subtotal # New subtotal for Product 3
+      - arithmetic:
+          expression: ${var_product1_subtotal} + ${var_product2_subtotal} + ${var_product3_subtotal}
+          storeIn: varTC_cart_estimatedTotal
+          numberOfDecimalPlaces: 2
+      - executeNode:
+          file: mx/test/helpers/utils/numberToNumberWithComa.js
+          args:
+            - value: ${varTC_cart_estimatedTotal}
+          getResponse:
+            storeIn: varTC_cart_estimatedTotalwithComa
+      - log:
+          message: ${varTC_cart_estimatedTotalwithComa}
+          color: YELLOW
+      #Continue to checkout
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.review-order.deliveryHeaderContainer
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: "PickupDelivery"
+
+    # STEP 24-25: Go to payment methods,assert pay at delivery is available and select cash option ...
+      - if:
+            condition: ${APP_PLATFORM} == 'android' || ${APP_PLATFORM} == 'ANDROID' || ${APP_PLATFORM} == 'Android'
+            then:
+              - executeFunction:
+                  name: mx.functions.review-order.scrollDownToSection
+                  params:          
+                    - name: sectionName
+                      string: "Pago"
+            else:
+              - executeFunction:
+                  name: mx.functions.review-order.scrollDownToSection
+                  params:          
+                    - name: sectionName
+                      string: "Método de pago"
+      - executeFunction:
+          name: mx.flows.od.review-order.selectPayAtDeliveryMethod
+          params:
+            - name: payAtDeliveryFormat
+              string: cash
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Número telefónico"
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.od-003.userPhoneNumber
+
+    # STEP 26: Place order and execute assertions for order-confirmation ...
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotalFromButton
+              string: ${varTC_cart_estimatedTotalwithComa}
+
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+      # Order Confirmation Assertions
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: "PickupDelivery"
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertStoreAddressName
+          params:
+            - name: expectedStoreAddressName
+              string: mx.data.e2e-regression.od-003.storeName
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'OrderConfirmation'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliverySlot
+          params:
+            - name: expectedDeliverySlot
+              string: ${returnedDeliverySlot}
+
+    # STEP 27: Hit find more products and assert home page is displayed ...
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+      - executeFunction:
+          name: mx.functions.slp.assertPageDisplayed
+      - executeFunction:
+          name:  mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.home.assertPageLoaded
+
+      - log: "TEST END - E2E REGRESSION - OD-003"
+
+#--------------------------------------------------------------------------------------------------------------------
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO: Test Data Reset..."
+
+      - log: "(1) Empty Cart in case it is not empty..."
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+          
+      - log: "AFTER SCENARIO FINISHED"

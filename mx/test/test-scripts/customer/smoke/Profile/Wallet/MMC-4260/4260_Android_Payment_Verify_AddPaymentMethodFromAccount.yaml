@@ -1,0 +1,225 @@
+#======================================================================================================================
+#  AUTHOR: Olga González (vn55r4a)
+#  CREATED: Oct/05/2024
+#  REVISION: ---
+#  JIRA MANUAL TICKET: https://jira.walmart.com/browse/MMC-4260
+#  JIRA AUTOMATED TICKET: https://jira.walmart.com/browse/MMC-4488
+#  FLOW: Navigate to EA Banner, open Account page,perform login verify account is logged in correctly and
+#        add new payment method.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-android, customer-walmart-ea-smoke-production-android-4260,
+        customer-bodega-ea-smoke-production-android, customer-bodega-ea-smoke-production-android-4260
+  testCaseId: MMC-4488
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: testCompleted 
+          value: false
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      # Step 1-2: Onboarding.
+      - log:
+          message: "Step 1-2: Onboarding"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Step 3-4-5: Tap global account button and sign in.
+      - log:
+          message: "Step 3-4-5: Succesfully login"
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # <-- ${userEmail}, ${userPassword}
+          params:
+            - name: userEmail
+              string: mx.customer.4260.userAccount_android.email
+            - name: userPassword
+              string: mx.customer.userAccount.password
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+      
+      # Step 6: Tap add payment method.
+      - log:
+          message: "Step 6: Wallet page displayed"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.accountPage.openWallet
+      
+      # This condition is needed as pre-requisite to delete existing cards
+      - log: 
+          message: "[!] EXTRA STEP: ASSERT PAYMENT IS NOT ADDED BEFORE ADDING A NEW ONE (PRE-REQUISITE)"
+          color: ORANGE
+      - executeFunction:
+          name: mx.functions.wallet.isCardDisplayedWallet # --> RETURNS: ${isCardInWallet}
+      - if:
+          condition: ${paymentAlreadyAdded} == true # If card already displayed, then execute this.
+          then:
+            - executeFunction:
+                name: mx.functions.wallet.removeExistingCard/loop # --> USES: ${isCardInWallet}
+
+      # Step 7: Tap add credit or debit card option.
+      - log:
+          message: "Step 7: Credit/debit card option displayed"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.walletPage.addPaymentMethod.creditDebitCardButton
+      - executeFunction:
+          name: functions.walletPage.addCreditOrDebitCard.isPageDisplayed
+
+      # Step 8: Validate requiered fields to credit/debit card.
+      - log:
+          message: "Step : Credit card fields displayed"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.assertPageDisplayed
+      
+      # Step 9: Enter credit/debit card information.
+      - log:
+          message: "Enter credit card information"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterCardNumber # <-- ${cardNumber}
+          params:
+              - name: cardNumber
+                string: mx.data.customer.shared.cardNumber
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterFirstName # <-- ${cardHolderFirstName}
+          params:
+            - name: cardHolderFirstName
+              string: mx.data.customer.shared.cardHolderFirstName 
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterLastName # <-- ${cardHolderLastName}
+          params:
+            - name: cardHolderLastName
+              string: mx.data.customer.shared.cardHolderLastName 
+      - executeFunction:
+          name: functions.utils.hideKeyboard
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterExpirationDate # <-- ${expirationDate}
+          params:
+            - name: expirationDate
+              string: mx.data.customer.shared.expirationDate
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterCVV # <-- ${cvv}
+          params:
+            - name: cvv
+              string: mx.data.customer.shared.cvv
+
+      # Step 10: Validate requiered fields.
+      - log:
+          message: "Step 10: Invoice address fields displayed"
+          color: GREEN_BOLD
+      #  TODO: Add functions.walletPage.verifyAddAddressFields (payment_methods_add_colony_select wcp maping is not working)
+
+      # Step 11: Enter invoice address information.
+      - log:
+          message: "Step 11: Enter invoice address information"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterAddressField # <-- ${addressField}
+          params:
+            - name: addressField
+              string: mx.data.customer.shared.streetAddress
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterExteriorNumber # <-- ${exteriorNumber}
+          params:
+            - name: exteriorNumber
+              string: mx.data.customer.shared.exteriorNumber
+      
+      #  The function enterPostal$Zipcode is called twice to refresh postal code field with diferent data, there is an issue, it is being reviewed with Manual QA.
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterPostal$Zipcode # <-- ${zipcode}
+          params:
+            - name: zipcode
+              string:  mx.data.customer.shared.expectedZipCode
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterPostal$Zipcode # <-- ${zipcode} 
+          params:
+            - name: zipcode
+              string:  mx.data.customer.shared.zipCode
+      - executeFunction:
+          name:  mx.functions.add-and-edit-card-form.enterNeighborhood # <-- ${cardNeighborhood}
+          params:
+            - name: cardNeighborhood
+              string: mx.data.customer.shared.coloniaName
+      - executeFunction:
+          name: mx.functions.add-card-form.tapInteriorNumber
+
+      # Step 12-13: Tap the save button and validate the new added card.
+      - log:
+          message: "Step 12-13: Tap the save button and validate the new added card"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.tapSaveCardBtn
+      - executeFunction:
+          name: functions.walletPage.assertCardListed # <-- ${cardLast4Digits}
+          params:
+            - name: cardLast4Digits
+              string: mx.data.customer.shared.cardLast4Digits
+      - executeFunction:
+          name: functions.walletPage.tapBackNavigationButton
+      
+      # Go back home page.
+      - log:
+          message: "EXTRA STEP: NAVIGATE BACK TO HOME PAGE..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      
+      #Test Execution Status.   
+      - storeIn:
+          key: testCompleted 
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testCompleted}
+          then:
+            - log:
+                  message: "4260: Customer_Smoke_PROD_Android_Payment_Verify_AddPaymentMethodFromAccount - Completed Succesfully!!"
+                  color: YELLOW_BOLD
+          else:
+            - failTest:
+                message: "4260: Customer_Smoke_PROD_Android_Payment_Verify_AddPaymentMethodFromAccount - TEST FAILED!"

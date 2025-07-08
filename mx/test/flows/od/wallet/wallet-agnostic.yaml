@@ -1,0 +1,65 @@
+#======================================================================================================================
+#    AUTHOR: Francisco Javier Ramirez Hernandez
+#   CREATED: Mar/06/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow deletes all cards from wallet
+  - name: mx.flows.od.wallet.deleteAllCards
+    doWhile: true
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.wallet.editCardButton
+      - click:
+          identifier: mx.mappings.wallet.editCardButton
+      - executeFunction:
+          name: mx.functions.edit-card-form.tapRemoveCard
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.wallet.editCardButton
+          then:
+            - log:
+                message: "End flow: od.wallet.deleteAllCards"
+                color: BLUE
+
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow adds a new CC/DC from wallet in account or checkout page.
+  # Param: ${cardHolderName} [Optional] User's full name.
+  # Param: ${cardNumber} [Mandatory] User's card number.
+  # Param: ${expirationDate} [Mandatory for Android] User's card expiration date (Eg. 12/25).
+  # Param: ${expectedExpirationMonth} [Mandatory for iOS] expiration month.
+  # Param: ${expectedExpirationYear} [Mandatory for iOS] expiration year.
+  # Param: ${cardCVV} [Mandatory] User's card cvv.
+  # Param: ${last4Digits} [Mandatory] Last 4 digits of user's card.
+  # EDITOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.wallet.addNewDebitOrCreditCardShort
+    flow:
+      - executeFunction:
+          name: mx.functions.wallet.tapAddDebitCreditCard
+      - executeFunction:
+          name: mx.functions.add-card-form.enterCardNumber
+      - executeFunction:
+          name: mx.functions.add-card-form.selectExpirationDate
+      - executeFunction:
+          name: mx.functions.add-card-form.enterCVV
+      - if:
+          condition: ${cardName} != null
+          then:
+            - executeFunction:
+                name: mx.functions.add-card-form.enterCardHolderName
+      - executeFunction:
+          name: mx.functions.add-card-form.tapSave
+      - executeFunction:
+          name: mx.functions.wallet.assertCardAdded
+      - log:
+          message: "End flow: od.wallet.addNewDebitOrCreditCardShort"
+          color: BLUE

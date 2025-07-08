@@ -1,0 +1,1585 @@
+functions:
+  # ################################## Navigation functions ###################################
+  - name: unified.us.functions.home.navigateHomeToSignIn
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - click:
+          identifier: us.mappings.tabBar.account
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.account.signInButton
+      - click:
+          identifier: us.mappings.account.signInButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  timeout: 5000
+                  present:
+                    - identifier: us.mappings.home.signInAnotherWay
+                then:
+                  - executeFunction:
+                      name: us.functions.home.signInAnotherWay
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.emailField
+          then:
+            - storeIn:
+                key: signInValidated
+                value: true
+      - if:
+          condition: ${signInValidated}
+          then:
+            - log: SignIn page loaded
+            - storeIn:
+                key: signInValidated
+                value: false
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - SIGN-IN PAGE ERROR"
+
+  - name: unified.us.functions.home.setStore
+    flow:
+      - if:
+          condition: ${store} == 32144
+          then:
+            - storeIn:
+                key: zipcode
+                value: 95122
+          else:
+            - storeIn:
+                key: zipcode
+                value: ${store}
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.gicBannerVerifyPostalCode
+          then:
+            - executeFunction:
+                name: unified.us.functions.home.changeStore
+          else:
+            - log: Skipping as its already set to the required store
+            - executeFunction:
+                name: unified.us.functions.gic.collapseIfExpanded
+
+  - name: unified.us.functions.home.changeStore
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+    # Skips intent selection (Pickup) if $storeOnly true (For non-signIn case)
+      - if:
+          condition: ${storeOnly} == false
+          then:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  # Skip pickup intent selection if already selected
+                  - try:
+                      flow:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.home.gic.newModule.container
+                            then:
+                              - verifyIdentifier:
+                                  label:
+                                    - identifier: us.mappings.home.gic.module.pickupIntent
+                                      contains: selected
+                            else:
+                              - verifyIdentifier:
+                                  label:
+                                    - identifier: us.mappings.home.gic.module.pickupIntent
+                                      contains: clear selection
+                        - log: Pickup intent already selected
+                      catch:
+                        flow:
+                          - click:
+                              identifier: us.mappings.home.gic.module.pickupIntent
+                              wait: 3000
+                          - log: Pickup intent selected
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - try:
+                      flow:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.home.gic.newModule.container
+                            then:
+                              - verifyIdentifier:
+                                  checked:
+                                    - identifier: us.mappings.wplus.globalIntentPickup
+                                      value: true
+                            else:
+                              - verifyIdentifier:
+                                  contentDescription:
+                                    - identifier: us.mappings.wplus.globalIntentPickup
+                                      contains: Clear
+                        - log: Pickup intent already selected
+                      catch:
+                        flow:
+                          - click:
+                              identifier: us.mappings.wplus.globalIntentPickup
+          else:
+            - log: Selecting only store without intent
+      - if:
+          condition: ${driverpopup}
+          then:
+            - executeFunction:
+                name: us.functions.home.rateDriverPopup
+      - click:
+          identifier: us.mappings.home.gic.module.unselectedIntent.storeAddress
+          wait: 3000
+      - log: --- Selecting the store ---
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.noPickupLocationaAvailableText
+          then:
+            - click:
+                identifier: us.mappings.global.closeButton
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.zipcodeClearButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.zipcodeClearButton
+            - enterText:
+                identifier: us.mappings.home.selectStoreTextField
+                string: ${zipcode}
+                pressEnter: true
+                clickFirst: true
+            - if:
+                condition: ${zipcode} == 95122
+                then:
+                  - click:
+                      identifier: us.mappings.home.sanJosesStoreRadioButton
+                  - log: Selecting San Jose store
+                else:
+                  - click:
+                      identifier: us.mappings.home.storeRadioButton
+            - click:
+                identifier: us.mappings.gic.selectStore.save.button
+            - executeFunction:
+                name: unified.us.functions.utils.handleTechnicalErrorPopup
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.continueWithNewStoreButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.continueWithNewStoreButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.InstallationUnavailablePopUp
+          then:
+            - click:
+                identifier: us.mappings.home.changeStoreRemoveInstallation
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.locationBannerButton
+          then:
+            - executeFunction:
+                name: unified.us.functions.gic.collapseIfExpanded
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.gic.collapsedIcon
+      - storeIn:
+          key: storeOnly
+          value: false
+
+  - name: unified.us.functions.home.location.updateStore
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Pickup
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.storeaddress
+      - try:
+          flow:
+            - if:
+                condition: ${platform} == "Android"
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.home.gic.storeaddress
+                          contains: $ZIP_CODE
+                else:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: us.mappings.home.gic.storeaddress
+                          contains: $ZIP_CODE
+            - log: "Already in $ZIP_CODE Store."
+          catch:
+            flow:
+              - click:
+                  identifier: us.mappings.home.gic.storeaddress
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.home.zipcodeClearButton
+                  then:
+                    - click:
+                        identifier: us.mappings.home.zipcodeClearButton
+              - click:
+                  identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield
+              - enterText:
+                  identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield
+                  string: ${ZIP_CODE}
+                  pressEnter: true
+              - if:
+                  condition: ${secondStore}
+                  then:
+                    - if:
+                        condition: ${platform} == "android"
+                        then:
+                          - log: Selecting Second store
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.reserveSlot.selectStore.secondAddress
+                          - click:
+                              identifier: us.mappings.reserveSlot.selectStore.secondAddress
+                        else:
+                          - failTest:
+                              message: "Selecting second store is not configured for this platform"
+                  else:
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.reserveSlot.selectStore.storeAddress
+                        then:
+                          - click:
+                              identifier: us.mappings.reserveSlot.selectStore.storeAddress
+                        else:
+                          - scroll:
+                              direction: down
+                              untilIdentifier: us.mappings.reserveSlot.selectStore.storeAddress
+                          - click:
+                              identifier: us.mappings.reserveSlot.selectStore.storeAddress
+              - click:
+                  identifier: us.mappings.reserveSlot.selectStore.saveButton
+      - executeFunction:
+          name: unified.us.functions.gic.collapseIfExpanded
+
+  - name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.promotion.PopUpTrialButtonClose
+                then:
+                  - click:
+                      identifier: us.mappings.wplus.promotion.PopUpTrialButtonClose
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - sleep:
+                duration: 6000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.startUsingwplusBenefitsButton
+                then:
+                  - click:
+                      identifier: us.mappings.wlus.membershipBottomsheetClose
+
+  - name: unified.us.functions.utils.handleTechnicalErrorPopup
+    flow:
+      - storeIn:
+          key: errorRemoved
+          value: false
+      - sleep:
+          duration: 7000
+      - loop:
+          begin: 0
+          end: 3
+          storeIndex: i
+          flow:
+            - log: $i
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.popup.technicalError
+                then:
+                  - if:
+                      condition: ${platform} == 'iOS'
+                      then:
+                        - getString:
+                            identifier: us.mappings.error.dismissButton
+                            attribute: name
+                            storeIn: buttonType
+                        - click:
+                            identifier: us.mappings.error.dismissButton
+                        - storeIn:
+                            key: errorDismissed
+                            value: true
+                  - if:
+                      condition: ${platform} == 'Android'
+                      then:
+                        - getString:
+                            identifier: us.mappings.error.dismissButton
+                            attribute: text
+                            storeIn: buttonType
+                        - click:
+                            identifier: us.mappings.error.dismissButton
+                else:
+                  - storeIn:
+                      key: errorRemoved
+                      value: true
+                  - log: No Technical Error Pop up observed
+                  - break: true
+      - if:
+          condition: ${errorRemoved} == false
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.popup.technicalError
+                then:
+                  - storeIn:
+                      key: errorRemoved
+                      value: true
+
+  # Function to Verify that the Churned user has Rejoin link on Wplus banner and is able to click it
+  - name: unified.us.functions.home.wplus.clickReJoinwplusLink
+    flow:
+
+          - scroll:
+              direction: down
+              untilIdentifier: us.mappings.home.wplus.RejoinWalmartPluslink
+              scrollLimit: 1
+              position: center
+                
+          - verifyIdentifier:
+                  present: 
+                      - identifier: us.mappings.home.wplus.RejoinWalmartPluslink
+          - click:
+                 identifier: us.mappings.home.wplus.RejoinWalmartPluslink
+
+  - name: unified.us.functions.home.wplus.verifyBottomSheetPageDisplayed
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present: 
+                      - identifier: us.mapppings.wplus.reactivateMembership.restartWalmartPlus
+            - click:
+                  identifier: us.mapppings.wplus.reactivateMembership.restartWalmartPlus
+            
+            # Please note we will have to add reactivate Wplus splash page validation below when there is no on going promotion 
+            # currently there is an active promotion so it is not possible to get loactors for validation
+
+          catch:
+           flow:
+              - log: MLP with regular W+ signup text not found, checking for any existing offers.
+              - storeIn:
+                    key: onGoingOffer
+                    value: true
+              - executeFunction:
+                    name: unified.us.functions.home.wplus.validateReactivateOfferSignup
+
+  - name: unified.us.functions.home.wplus.validateReactivateOfferSignup
+    flow:
+        # onGoingOffer with splash screen 
+        # - verifyIdentifier:
+        #       present: 
+        #           - identifier: us.mapppings.wplus.home.start30DaysFreeTrail.button
+        # - click:
+        #       identifier: us.mapppings.wplus.home.start30DaysFreeTrail.button
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wplus.welcomePage.joinWalmartPlusOffer
+            then:
+              - log: W+ week offer is found
+              - click:
+                  identifier: us.mappings.wplus.welcomePage.joinWalmartPlusOffer
+              - storeIn:
+                  key: wPlusWeekOffer
+                  value: true
+
+        - verifyIdentifier:
+            present:             
+            - identifier: us.mappings.wplus.annualTenurePlan
+            - identifier: us.mappings.wplus.monthlyTenurePlan            
+            - identifier: us.mappings.wplus.change
+            - identifier: us.mappings.search.returns.reactivateWalmartPlus
+
+  - name: unified.us.functions.home.wplus.closeChoosePlanPage
+    flow:
+        - if: 
+           condition: ${onGoingOffer} || ${wPlusWeekOffer}
+           then:
+            - click:
+                  identifier: us.mappings.wplus.close
+           else:
+             - click:
+                  identifier: us.mappings.wplus.chooseplansCloseBtn
+
+        - goBack: true
+        - scroll:
+              direction: up
+              scrollLimit: 1
+
+  - name: unified.us.functions.home.wplus.clickJoinW+
+    flow:
+     - try:
+          flow:
+            # - executeFunction:
+            #     name: us.functions.utils.scrollIfNotVisible
+            #     params:
+            #       - name: identifier
+            #         string: us.mappings.wplus.homepage.JoinWplusBanner
+            #       - name: direction
+            #         string: down
+            #       - name: scrollPosition
+            #         string: center
+
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.wplus.homepage.JoinWplusCTA # Validating pickup badge 
+                scrollLimit: 1
+                position: center
+
+            - verifyIdentifier:
+                  present: 
+                      - identifier: us.mappings.wplus.homepage.JoinWplusCTA
+            - click:
+                 identifier: us.mappings.wplus.homepage.JoinWplusCTA
+
+  - name: unified.us.functions.account.wplus.home.wplusWeekOffer
+    flow:
+      - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wplus.home.wplusWeekOffer
+            then:
+              - log: W+ week offer is found
+              - storeIn:
+                  key: wPlusWeekOffer
+                  value: true
+
+  - name: unified.us.functions.account.wplus.clickStart30dayfreetrialwplus
+    flow:
+      - executeFunction:
+          name: unified.us.functions.account.wplus.home.wplusWeekOffer
+      - if:
+          condition: ${wPlusWeekOffer}
+          then:
+            - verifyIdentifier:
+                present:             
+                  - identifier: us.mapppings.wplus.home.wplusWeek30DaysFreeTrail.button 
+            - click:
+                  identifier: us.mapppings.wplus.home.wplusWeek30DaysFreeTrail.button
+          else:
+            - verifyIdentifier:
+                present:             
+                  - identifier: us.mapppings.wplus.home.claim30DaysFreeTrail.button  
+            - click:
+                identifier: us.mapppings.wplus.home.claim30DaysFreeTrail.button
+      - sleep: 
+          duration : 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.page.technicalIssue
+          then:
+            - failTest:
+                message: "ENV_FAILURE - {env} - Error while joining free trial membership"
+
+  - name: unified.us.functions.wplus.validateStart30dayfreetrialplans
+    flow:
+      - if: 
+          condition: ${onGoingOffer}
+          then:
+            - log: "We are in offer period and current subscription is $49/year"
+            - executeFunction: 
+                 name: unified.us.functions.wplus.cashback.validateOfferSignup  
+
+          else:
+            - verifyIdentifier:
+                present:             
+                  - identifier: us.mappings.wplus.annualTenurePlan
+                  - identifier: us.mappings.wplus.monthlyTenurePlan
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                   - verifyIdentifier:
+                       value:
+                          - identifier: us.mappings.wplus.annualTenurePlan
+                            contains: $98 per year
+                   - verifyIdentifier:
+                       value:
+                          - identifier: us.mappings.wplus.monthlyTenurePlan
+                            contains: $12.95 per month                           
+            - verifyIdentifier:
+                present:             
+                  - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+                  - identifier: us.mappings.wplus.signup.trywalmartplusforFreeButton
+
+  - name: unified.us.functions.wplus.cashback.validateOfferSignup
+    flow:
+      - verifyIdentifier:
+          present:             
+            - identifier: us.mappings.wplus.annualTenurePlan
+            - identifier: us.mappings.wplus.monthlyTenurePlan
+      - verifyIdentifier:
+          value:
+            - identifier: us.mappings.wplus.annualTenurePlan
+              contains: $49 per 1st year
+      - verifyIdentifier:
+          value:
+            - identifier: us.mappings.wplus.monthlyTenurePlan
+              contains: $12.95 per month
+      - verifyIdentifier:
+          present:             
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+
+  - name: us.functions.account.wplus.closechooseplanPage
+    flow:
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.chooseplansCloseBtn
+          then:
+            - click:
+                identifier: us.mappings.wplus.chooseplansCloseBtn
+      - if: 
+         condition: ${onGoingOffer}
+         then:
+           - click:
+                identifier: us.mappings.wplus.close
+    
+  - name: unified.us.functions.home.browse.departments
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.scanAndGo.findAnItem.allDepartments
+          then:
+            - openLink: walmart://home
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - click:
+                identifier: us.mappings.home.departmentsTab
+                wait: 2000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.browseDepartmentName
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - sleep:
+          duration: 4000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.browseDepartmentName
+          then:
+            - click :
+                identifier: us.mappings.search.browseDepartmentName
+          else:
+            - click:
+                identifier: us.mappings.tabBar.search
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.search.browseDepartmentName
+            - click:
+                identifier: us.mappings.search.browseDepartmentName
+      - verifyIdentifier:
+          present: 
+            - identifier:  us.mappings.home.searchBar
+      - if: 
+          condition: ${subDepartmentName} != null
+          then: 
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.browseSubDepartmentName
+                  - name: direction
+                    string: down 
+            - click :
+                identifier: us.mappings.search.browseSubDepartmentName  
+          else:
+            - click :
+                identifier: us.mappings.search.SubDepartments
+
+  - name: unified.us.functions.home.verifyBadgesforNonWplus
+    flow:
+      - if:
+          condition: ${platform} == 'ios'
+          then:    
+            - verifyIdentifier:
+                text:
+                    - identifier: us.functions.home.verifyPickupDeliveryWplus
+                      contains: Pickup today   
+            - verifyIdentifier:
+                text:
+                    - identifier: us.functions.home.verifyPickupDeliveryWplus
+                      contains: Delivery today            
+      - log: badge validation completed
+      - if:
+          condition: ${platform} == 'android'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup badge 
+                position: center
+            - verifyIdentifier:
+                present:
+                 - identifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup  badge      
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.home.p13nCarouseldeliveryTitle # Validating Delivery Badge   
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.home.p13nCarouselsavewithw+Title # Validating save with w+badge   
+
+
+  - name: unified.us.functions.home.verifyBadgesForWplus
+    flow:
+      - if:
+          condition: ${platform} == 'ios'
+          then:    
+            - verifyIdentifier:
+                text:
+                    - identifier: us.functions.home.verifyPickupDeliveryWplus
+                      contains: Pickup today, walmartPlus Free delivery today    
+      - log: badge validation completed
+      - if:
+          condition: ${platform} == 'android'
+          then:
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.home.p13nCarouselPickupTitle
+                  position: center
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.p13nCarouselPickupTitle
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.p13nCarouselw+deliveryTitle
+
+
+  # Function to Scroll to P13N ads module and click on the item to go to Item page
+  - name: unified.us.functions.home.verifyP13NSponsoredProductAdsAndSelectItem
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselTitle
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselTitle
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.home.p13N.firstItem                      
+          then:
+            - log: 'Selecting First item from Sponsored listing Carousel'
+            - click: 
+                identifier: us.mappings.home.p13N.firstItem
+
+  - name: unified.us.functions.home.searchStore.cityState.combinations
+    flow:
+      - log: Store search for City, state combinations
+      - executeFunction:
+          name: us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Shipping
+      - loop:
+          each: ${combination}
+          storeElement: location
+          storeIndex: itemIndex
+          flow:
+              - executeFunction:
+                  name: us.functions.home.searchStore.cityState
+                  params:
+                    - name: cityState
+                      string: $location
+      - click: 
+          identifier: us.mappings.home.storeRadioButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:      
+            - executeFunction:
+                name: unified.us.functions.utils.dismissKeyboard
+      - click: 
+          identifier: us.mappings.gic.selectStore.save.button 
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${platform} == 'Android'
+          then:    
+            - verifyIdentifier:
+                text:
+                    - identifier: us.mappings.home.gic.module.storeAddressSection.storeName
+                      contains: us.data.storeSelector.city 
+          else:
+            - verifyIdentifier:
+                label:
+                    - identifier: us.mappings.home.gic.module.unselectedIntent.storeAddress
+                      contains: us.data.storeSelector.city
+      - log: Validate store selection completed 
+
+  - name: unified.us.functions.home.localmarketplace.entrypoints
+    flow: 
+      - click:
+          identifier: us.mappings.tabBar.searchOnTabBar
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.searchBar
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.localMarketPlace.localFinds
+          then:
+            - openLink: walmart://home
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+            - click:
+                identifier: us.mappings.home.departmentsTab
+                wait: 2000
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.localFinds
+      - click:
+          identifier: us.mappings.home.localMarketPlace.localFinds      
+
+  - name: unified.us.functions.home.localMarketPlaceLandingPageValidations
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.localMarketPlace.addressSelector
+            - identifier: us.mappings.home.localMarketPlace.homePageBanner
+      - log: "Landed back to Local Market Place Home Page"
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerCarousel
+              - identifier: us.mappings.home.localMarketPlace.sellerSLA
+              - identifier: us.mappings.home.localMarketPlace.sellerDistance
+              - identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAll      
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.soldLocallyBadging
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel1
+      - executeFunction: 
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.sellerPage.3UPPOVcarousel
+            - name: direction
+              string: down
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.3UPPOVcarousel
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.FAQ
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center              
+      - log: Verifying FAQ section
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.FAQ            
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel2            
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel3
+
+  - name: unified.us.functions.home.localmarketplace.sellerPageValidations   
+    flow: 
+      - verifyIdentifier:
+            timeout: 20000
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerName
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerAddress
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerContactInfoCTA
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerPhoneNumber
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerStoreReviews
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.featuredOption
+      # Shop All Pill        
+      - click:
+          identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllOption
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllItemList
+      # DeepLink to Seller page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://global/seller/101609283
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel1
+            - name: direction
+              string: down
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel1
+      - if:
+          condition: ${BYOD} == true
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://global/seller/ #BYOD Seller Data Needed         
+            - log: "Verying BYOD Seller Page"
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.featuredOption
+            # FEATURED  Pill        
+            - click:
+                identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.featuredOption
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.featuredOption
+            # Shop All Pill        
+            - click:
+                identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllOption
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllItemList
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.home.localMarketPlace.BYODsellerInSellerItemCarousel     
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center                      
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.localMarketPlace.BYODSellerInSellerItemCarousel
+                    - identifier: us.mappings.home.localMarketPlace.BYODSellerSLAInSellerItemCarousel
+                    - identifier: us.mappings.home.localMarketPlace.BYODSellerNoW+BadgeInSellerItemCarousel       
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel2
+                  - name: direction
+                    string: down
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel2
+                    - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel3
+
+
+  - name: unified.us.functions.homePage.verifySigninNudge
+    flow:
+      - log: verify personalized experience
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.personalisedExperienceText
+          position: center
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.home.personalisedExperienceText
+                    contains: Get a personalized experience
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.personalisedExperienceText 
+      - log: Personalized Experience text is present
+      - sleep:
+              duration: 5000
+      - click:
+          identifier: us.mappings.home.signinNudge   
+      - log: Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.GreetingLabel
+      - sleep:
+              duration: 3000      
+      - log: User is signed in with welcome message
+
+  - name: unified.us.functions.home.handleOrderSavingsupdatesAndhandleReorderToolTip
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:  
+            - terminateApp: true
+            - startActivity:
+                packageName: com.walmart.android.debug
+                activityName: com.walmart.glass.integration.splash.SplashActivity
+            - executeFunction:
+                name: us.functions.home.handleOrderSavingsupdates        
+            - executeFunction:
+                name: us.functions.home.handleReorderToolTip
+            - sleep:
+                duration: 10000  
+
+  # Navigate to scanner from home 
+  - name: unified.us.functions.home.goToScannerFromHome
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.Scannerbutton
+      - click:
+          identifier: us.mappings.home.Scannerbutton
+          wait: 1000
+
+  - name: unified.us.functions.home.goBackToPreviousPage
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - sleep:
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.global.navigateBackArrow
+            - click:
+                identifier: us.mappings.global.navigateBackArrow
+                wait: 1000
+            - if:
+                condition: ${wPlusWeekOffer} == true
+                then:
+                  - goBack: true
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            # Go back to Restart W+ page
+            - goBack: true
+            - if:
+                condition: ${wPlusWeekOffer} == true
+                then:
+                  - goBack: true
+          
+  - name: unified.us.functions.home.close.bottomSheet.inHomestartTrial.cta
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.inhome.promotionalpopup
+          then:
+            - click:
+                identifier: us.mappings.wplus.close
+            - log: "The WPlus inhome bottom sheet appeared and closed it !!"
+          else:
+            - log: "The WPlus inhome bottom sheet does not appear !!"
+
+
+  - name: unified.us.funtions.home.splashscreen.wplus.freetrial.signup
+    flow:   
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.orderSavingsupdatesCancel
+                then:
+                  - click:
+                      identifier: us.mappings.home.orderSavingsupdatesCancel
+            - if:    
+                identifier:
+                  present:
+                    - identifier: us.mappings.skinnyBanner.bottomSheet.container
+                then: 
+                  - log: inHome Splash Screen is displayed on homepage.
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.inHome.bookSlot.activateInHomeIagree
+                      scrollLimit: 2
+                  - click:
+                      identifier: us.mappings.inHome.bookSlot.activateInHomeIagree
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+                  - click:
+                      identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+                      wait: 4000
+                  - log: Start 30-day inhome free trial CTA is clicked.
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.inHome.bookSlot.clickInHomeTrialSignUpButton
+                  - log: "InHome Confirmation screen loaded"          
+                  - verifyIdentifier: 
+                      present:
+                        - identifier: us.mappings.wplus.inHome.membership.closeAlert
+                  - click:
+                      identifier: us.mappings.wplus.inHome.membership.closeAlert
+                      wait: 1500 
+          else: 
+            - log: inHome Splash Screen is NOT displayed on homepage.
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:    
+                identifier:
+                  present:
+                    - identifier: us.mappings.skinnyBanner.bottomSheet.container
+                then: 
+                  - log: inHome Splash Screen is displayed on homepage.
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.inHome.bookslot.checkBox
+                      scrollLimit: 2
+                  - click:
+                      identifier: us.mappings.inHome.bookslot.checkBox
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.wplus.inhome.homepage.splashscreen.bottomSheet.cta
+                  - click:
+                      identifier: us.mappings.wplus.inhome.homepage.splashscreen.bottomSheet.cta
+                      wait: 4000
+                  - log: Start 30-day inhome free trial CTA is clicked.
+                  - verifyIdentifier: 
+                        present:
+                          - identifier: us.mappings.wplus.inhome.splashscreen.signupConfirmationScreen
+                  - log: "InHome Confirmation screen loaded"          
+                  - verifyIdentifier: 
+                      timeout: 10000
+                      present:
+                        - identifier: us.mappings.wplus.inhome.spashcreen.signupConfirmationScreen.closeXMark
+                  - click:
+                      identifier: us.mappings.wplus.inhome.spashcreen.signupConfirmationScreen.closeXMark
+                      wait: 1500 
+                else: 
+                  - log: inHome Splash Screen is NOT displayed on homepage.
+
+  - name: unified.us.functions.home.close.bottomSheet.startTrial.cta
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus bottom sheet appeared and closed it !!"
+          else:
+            - log: "The WPlus bottom sheet does not appear !!"
+
+  - name: unified.us.functions.home.addItem.toCartUnder.reOrderYourEssentialsCarousel
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus bottom sheet appeared and closed it !!"
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.reOrder.your.essentials.title
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.reOrder.your.essentials.title
+      - log: "The Reorder Your Essentials Carousel is now SEEN!!!"
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+          then:
+            - log: "The Add to cart button is not appearing, Scrolling DOWN!!!"
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+            - log: "Now the Add button on Reorder Your Essentials Carousel is visible !!!"
+      - click:
+          identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+          wait: 4000
+      - log: "Clicked on the Add button, to add item to the cart"
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+
+  - name: unified.us.functions.home.verify.itemAddedToCart.from.reOrderYourEssentialsCarousel
+    flow:
+      #Click on the Cart Icon
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+          wait: 4000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.cartPage.item.confirmation
+          then:
+            - log: "Cart page top is not visible, so scrolling up"
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.home.cartPage.item.confirmation
+                scrollLimit: 5
+      - log: "Reached the Cart page top!!!"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.ineligibleItemIcon
+          then:
+            - log: "verified item added to cart from Reorder Your Essentials Carousel Successfully but it is currently out of stock"
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.itemPresent.itemNameLabel
+                  - identifier: us.mappings.home.reOrder.your.essentials.noOfItems.inCart
+            - log: "Verified the Item added to the cart from Reorder Your Essentials Carousel Successfully !!"
+
+  - name: unified.us.functions.home.close.bottomSheet.autoLaunch
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The Auto Launch WPlus bottom sheet appeared and closed it !!"
+          catch:
+            flow:
+              - log: "The Auto Launch WPlus bottom sheet does not appear !!"
+
+
+  - name: unified.us.functions.home.verifybottomSheetautoLaunchOrRelauch
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+                then: 
+                  - log: "The Auto Launch WPlus bottom sheet appeared in Home Page !!"
+                else:
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.goToDeepLink
+                      params:
+                        - name: deepLinkUrl
+                          string: walmart://plus/signupoffers?programName=multiBenefitmonthly
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+                then: 
+                  - log: "The Auto Launch WPlus bottom sheet appeared in Home Page !!"
+                else:
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.goToDeepLink
+                      params:
+                        - name: deepLinkUrl
+                          string: walmart://plus/signupoffers?programName=multiBenefitmonthly
+
+
+  - name: unified.us.functions.home.newEDCBannerAndA2HSlot
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+
+      #Adding Condition to check If Add Address present - Click and Select the address from GIC
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.home.gic.addAddress.button
+          then:
+            - click:
+                identifier: us.mappings.home.gic.addAddress.button
+                wait: 2000
+            - click:
+                identifier: us.mappings.gic.select.edcCatchmentAddress.btn
+            - click:
+                identifier: us.mappings.gic.select.address.save.button  
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.newEDCDeliveryIcon
+            - identifier: us.mappings.home.newEDCDeliveryBanner
+
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+          then:
+            - click:
+                identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+                wait: 2000
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.newA2HSlots
+      
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.home.gic.newEDCChip
+
+      - executeFunction:
+          name: unified.us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.gic.collapseIfExpanded
+
+  - name: unified.us.functions.home.rateDriverPopup
+    flow:
+      - loop:
+         begin: 1
+         end: 6
+         storeIndex: index    
+         flow:
+            - log: $index          
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.tipping.notNowButton
+                then:
+                  - click:
+                      identifier: us.mappings.tipping.notNowButton
+                else:        
+                  - break: true
+
+  - name: unified.us.functions.wplus.account.navigateToCashCenter
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://cp/8301756    
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.account.navigateToCashCenterLink
+      #       - name: direction
+      #         string: down
+      #       - name: scrollPosition
+      #         string: center
+      # - click:
+      #     wait: 2000
+      #     identifier: us.mappings.account.navigateToCashCenterLink
+      - sleep:
+          duration: 7000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.walamrtCashPagePopupTitle
+          then:
+            - click:
+                identifier: us.mappings.account.walamrtCashPagePopupLetsGoBUtton
+            - sleep:
+                duration: 2000
+
+  - name: unified.us.functions.home.rateDriverPopup
+    flow:
+      - sleep:
+          duration: 7000  
+      - loop:
+          begin: 1
+          end: 6
+          storeIndex: index    
+          flow:
+            - log: $index          
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.tipping.notNowButton
+                then:
+                  - click:
+                      identifier: us.mappings.tipping.notNowButton
+                else:
+                  - break: true
+
+  - name: unified.us.functions.homepage.redesign.verify.ost.storepickup
+    flow:
+      - if: 
+          condition: ${option} == 'placed'
+          then:
+            - verifyIdentifier:
+                timeout: 8000  
+            - executeFunction:
+                name: unified.us.functions.homepage.assertOrderStatusTracker
+            - click:
+                identifier: us.mappings.home.orderStatusLink 
+            - executeFunction:
+                name: unified.us.functions.purchaseHistory.orderDetails.assertOrderId
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+            - executeFunction:
+                name: unified.us.functions.purchaseHistory.orderDetails.assertOrderStatusTrack
+
+          else: 
+            - if: 
+                condition: ${option} == 'inprogress'
+                then: 
+        
+                  - verifyIdentifier:
+                      timeout: 8000
+                  - executeFunction:
+                      name: unified.us.functions.homepage.assertOrderStatusTracker 
+                  - click:
+                      identifier: us.mappings.home.orderStatusLink 
+                  - executeFunction:
+                      name: unified.us.functions.purchaseHistory.orderDetails.assertOrderId
+                      params:
+                        - name: orderNo
+                          string: ${orderNo}
+                else: 
+                  - if: 
+                      condition: ${option} == 'readyforpickup'
+                      then: 
+                        - verifyIdentifier:
+                            timeout: 8000 
+                        - executeFunction:
+                            name: unified.us.functions.homepage.assertOrderStatusTracker 
+                        # - click:
+                        #     identifier: us.mappings.home.orderStatusLink 
+                        # - executeFunction:
+                        #     name: unified.us.functions.checkin.checkinUnscheduledPickup
+
+                      else: 
+                        - if: 
+                            condition: ${option} == 'checkedin'
+                            then: 
+                              - verifyIdentifier:
+                                  timeout: 8000 
+                              - executeFunction:
+                                  name: unified.us.functions.homepage.assertOrderStatusTracker
+                            else: 
+                              - if: 
+                                  condition: ${option} == 'customerpicked'
+                                  then: 
+                                    - verifyIdentifier:
+                                       timeout: 8000 
+                                    - verifyIdentifier:
+                                        notPresent:
+                                          - identifier: us.mappings.home.orderStatusTrackerHeaderLabel
+
+  - name: unified.us.functions.homepage.assertOrderStatusTracker
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+          - verifyIdentifier:
+              label:
+                - identifier: us.mappings.home.orderStatusTrackerHeaderLabel
+                  contains: ${ostHeaderLabel}
+          - verifyIdentifier:
+              label:
+                - identifier: us.mappings.home.orderStatusTrackerSubHeaderLabel
+                  contains: ${ostSubHeaderLabel}
+          - verifyIdentifier:
+              label:
+                - identifier: us.mappings.home.orderStatusLink
+                  contains: ${orderStatusLink}
+          else:
+          - verifyIdentifier:
+              text:
+                - identifier: us.mappings.home.orderStatusTrackerHeaderLabel
+                  contains: ${ostHeaderLabel}
+          - verifyIdentifier:
+              text:
+                - identifier: us.mappings.home.orderStatusTrackerSubHeaderLabel
+                  contains: ${ostSubHeaderLabel}
+          - verifyIdentifier:
+              text:
+                - identifier: us.mappings.home.orderStatusLink
+                  contains: ${orderStatusLink}
+
+  - name: unified.us.functions.home.closeLimitedTimeWalmartCashPopUpIfDisplayed
+    flow:
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+
+      #Adding Condition to check If Limited time walmart cash bottomsheet is Displayed and closing it
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.home.limitedTimeWalmartCashPopUp.header
+          then:
+            - click:
+                identifier: us.mappings.home.limitedTimeWalmartCashPopUp.closeButton
+                wait: 2000
+         
+  - name: unified.us.functions.home.verifyNudgeAndAddToCart
+    flow:
+      - if:
+          condition: ${page} == 'home'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.ost.rxpdNudge.title
+                  - identifier: us.mappings.home.ost.rxpdNudge.cta
+            - click:
+                identifier: us.mappings.home.ost.rxpdNudge.cta
+            - sleep:
+                duration: 2000
+            - click:
+                identifier: us.mappings.home.ost.rxpdNudge.checkBox
+      - if:
+          condition: ${page} == 'cart'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.rxpdNudge.image
+                  - identifier: us.mappings.cart.rxpdNudge.text
+                  - identifier: us.mappings.cart.rxpdNudge.closeIcon
+            - click:
+                identifier: us.mappings.cart.rxpdNudge.text
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.rxpd.item.prescription.title
+            - identifier: us.mappings.cart.rxpd.item.prescription.name
+            - identifier: us.mappings.cart.rxpd.item.patient.name
+            - identifier: us.mappings.cart.rxpd.item.coverage.applied
+      - click:
+          identifier: us.mappings.home.ost.rxpdNudge.addToCartCTA
+      - sleep:
+          duration: 10000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.cart.rxpd.item.prescription.title
+
+  - name: unified.us.functions.home.localmarketplace.navigateToBYODSeller
+    flow: 
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.sellerCarsoul   
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: bottom
+      - scroll:
+          direction: left
+          untilIdentifier: us.mappings.home.localMarketPlace.BYODsellerSelectionInCarousel
+          withinIdentifier: us.mappings.home.localMarketPlace.sellerCarsoul
+
+      # - executeFunction:
+      #     name: unified.us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.home.localMarketPlace.BYODsellerSelectionInCarousel  
+      #       - name: direction
+      #         string: left
+      #       - name: scrollPosition
+      #         string: center                                    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.localMarketPlace.BYODsellerSelectionInCarousel
+      - click:
+          identifier: us.mappings.home.localMarketPlace.BYODsellerSelectionInCarousel
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.BYODChangeLocation
+          then:
+            - click:
+                identifier: us.mappings.home.localMarketPlace.BYODChangeLocation
+            - sleep:
+                duration: 4000
+            - click:
+                identifier: us.mappings.deliveryAddress.add.saveButton 
+
+
+  - name: unified.us.functions.home.localmarketplace.BYODSellerPageValidations
+    flow:
+      - log: "Verying BYOD Flower Country / BYOD Seller item Carousel"                    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.localMarketPlace.BYODSellerTitle
+            - identifier: us.mappings.home.localMarketPlace.BYODSellerSLAOnTopOfTheScreen
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.BYODItemCarsoul  
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+          present:              
+            - identifier: us.mappings.home.localMarketPlace.BYODSellerTopPicks
+            - identifier: us.mappings.home.localMarketPlace.BYODItemCarsoul
+            - identifier: us.mappings.home.localMarketPlace.BYODItemSLA

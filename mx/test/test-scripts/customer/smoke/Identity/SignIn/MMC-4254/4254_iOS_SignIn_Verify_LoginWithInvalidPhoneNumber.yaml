@@ -1,0 +1,169 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Ramirez (vn53vq4)
+#  CREATED: Jan/30/2025
+#  REVISION: ---
+#  MANUAL JIRA TICKET: https://jira.walmart.com/browse/MMC-4254
+#  AUTOMATED JIRA TICKET: https://jira.walmart.com/browse/MMC-4495
+#  FLOW: Navigate to EA Banner, open Account page and try to perform login with invalid phone number.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-ios, customer-walmart-ea-smoke-production-ios-4254,
+        customer-bodega-ea-smoke-production-ios, customer-bodega-ea-smoke-production-ios-4254
+  testCaseId: MMC-4495
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: testStatus 
+          value: false
+      
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+      - storeIn:
+          key: invalidPhoneNumber
+          value: mx.customer.userAccount.invalidPhoneNumber
+
+      - storeIn:
+          key: newUserPhoneNumber
+          value: mx.customer.userAccount.newUserPhoneNumber
+      
+      - storeIn:
+          key: userPhoneNumber
+          value: mx.customer.userAccount.userPhoneNumber
+
+      # Onboarding
+      - log:
+          message: "Step 1: Complete onboarding and open EA banner."
+          color: GREEN_BOLD
+
+      # Onboarding 
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Tap global account button and sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Perform Login #1: Enter invalid phone number
+      - log:
+          message: "Login try #1: Enter invalid phone number."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.login.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.login.enterEmail
+          params:
+            - name: userEmail
+              string: ${invalidPhoneNumber}
+      - executeFunction:
+          name: mx.functions.login.tapLogin
+      
+      # Perform Login #2: Enter a new fresh phone number.
+      - log:
+          message: "Login try #2: Enter a new fresh phone number."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.login.enterEmail
+          params:
+            - name: userEmail
+              string: ${newUserPhoneNumber} # A valid new fresh phone number.
+      - executeFunction:
+          name: mx.functions.login.tapLogin
+      - executeFunction:
+          name: mx.functions.login.create-account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.login.create-account.tapBack
+      - sleep:
+          duration: 5000
+
+      # Perform Login #3: Enter a valid and existing phone number and perform login.
+      - executeFunction:
+          name: functions.loginPage.enterEmail.forSSOFlow
+          params:
+            - name: userEmail
+              string: ${userPhoneNumber}
+      - executeFunction:
+          name: functions.loginPage.tapContinue
+      - executeFunction:
+          name: functions.loginPage.enterPassword.forSSOFlow # <-- ${userPassword}
+          params:
+            - name: userPassword
+              string: mx.data.customer.password
+      - executeFunction:
+          name: functions.loginPage.tapSignInBtn
+      
+      # Login validations.
+      - executeFunction:
+          name: functions.loginPage.isSecurityCheckDisplayed
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - executeFunction:
+                name: functions.loginPage.securityCheck.tapSendCode
+            - executeFunction:
+                name: utils.astro.fetch.emailOtp
+                params:
+                  - name: email
+                    string: ${userEmail}
+            - executeFunction:
+                name: functions.loginPage.enterVerificationCodes
+            - executeFunction:
+                name: functions.loginPage.enterVerificationCode.submitBtn
+      - executeFunction:
+          name: functions.accountPage.handleVerifyPhoneNumberPopups
+      - executeFunction:
+          name: functions.homePage.newUpdateAvailablePopUp.dismissIfDisplayed
+      - executeFunction:
+          name: functions.accountPage.PostLogInhandlePopUpandAlerts
+
+      # Main hook completed
+      - storeIn:
+          key: testStatus 
+          value: true
+       
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testStatus}
+          then:
+            - log:
+                message: "4254: iOS_SignIn_Verify_LoginWithInvalidEmailAndPassword - Completed Succesfully!!"
+                color: YELLOW_BOLD
+          else:
+            - failTest:
+                message: "4254: iOS_SignIn_Verify_LoginWithInvalidEmailAndPassword  - TEST FAILED!"

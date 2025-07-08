@@ -1,0 +1,415 @@
+#======================================================================================================================
+#  AUTHOR: Gustavo Antonio López Cambambia (vn53g21)
+#  CREATED: Mar/29/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-e2e-regression-staging-008
+
+scenarios:
+
+  #--------------------------------------------------------------------------------------------------------------------
+  - name: Main
+    flow:
+      - log:
+          message: TEST START - E2E REGRESSION - OD-008
+          color: CYAN
+ 
+     ## STEP 1: PRE-HOME SHOULD BE SHOWN AND STEP 2: HOME SCREEN IS DISPLAYED.
+      - log:
+          message: "STEP 1: PRE-HOME SHOULD BE SHOWN AND STEP 2: HOME SCREEN IS DISPLAYED."
+          color: CYAN
+ 
+      # Navigate through onboarding to home as guest user.
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.e2e-regression.od-008.zipCode
+            - name: banner
+              string: mx.data.e2e-regression.od-008.banner
+ 
+    ## STEP 3: LOGIN AS REGISTERED USER VIA ACCOUNT PAGE.
+      - log:
+          message: "STEP 3: LOGIN AS REGISTERED USER VIA ACCOUNT PAGE."
+          color: CYAN
+      
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.e2e-regression.od-008.userEmail
+            - name: userPassword
+              string: mx.data.e2e-regression.od-008.userPassword
+            - name: userName
+              string: mx.data.e2e-regression.od-008.userName
+
+    # STEP 4: SEARCH AN ITEM
+      - log:
+          message: "STEP 4: SEARCH AN ITEM."
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.e2e-regression.od-008.search.productName1
+
+    ## STEP 5: ADD PRODUCT TO CART FROM PDP
+      - log:
+          message: "STEP 5: ADD PRODUCT TO CART FROM PDP."
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.slp.scrollDownToProductByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-008.search.productName1
+
+      - executeFunction:
+          name: mx.functions.slp.openProductDetailsByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-008.search.productName1
+
+      - sleep:
+          duration: 2000
+
+      - executeFunction:
+          name: mx.functions.pdp.getPrice
+
+      - storeIn:
+          key: productPrice1
+          value: ${returnedProductPrice}
+
+      - executeFunction:
+          name: mx.functions.pdp.addToCart
+
+      ## STEP 6: ADD PRODUCT TO CART FROM PDP CAROUSEL
+      - log:
+          message: "STEP 6: ADD PRODUCT TO CART FROM PDP CAROUSEL."
+          color: CYAN
+
+      - executeFunction: 
+          name: mx.functions.pdp.scrollDownToCarousel
+          params: 
+            - name: carouselName
+              string: mx.data.e2e-regression.od-008.pdp.carouselName
+
+      - executeFunction:
+          name: mx.functions.pdp.you-may-like-carousel.addToCartFromCarousel
+          params:
+            - name: carouselName
+              string: mx.data.e2e-regression.od-008.pdp.carouselName
+            - name: productName
+              string: mx.mx.data.e2e-regression.od-008.pdp.productOnCarousel
+
+      - executeFunction:
+          name: mx.functions.pdp.you-may-like-carousel.getProductPrice
+          params:
+            - name: carouselName
+              string: mx.data.e2e-regression.od-008.pdp.carouselName
+            - name: productName
+              string: mx.mx.data.e2e-regression.od-008.pdp.productOnCarousel
+
+      - storeIn:
+          key: productPrice2
+          value: ${returnedPrice}
+
+      ## STEP 7: OPEN CART 
+      - log:
+          message: "STEP 7: OPEN CART."
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: 2
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-008.search.productName1
+
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string:  mx.mx.data.e2e-regression.od-008.pdp.productOnCarousel
+
+      - arithmetic:
+          expression: ${productPrice1} + ${productPrice2}
+          storeIn: subTotal
+          numberOfDecimalPlaces: 2
+
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${subTotal}
+
+      ## STEP 8: HIT "RESERVAR UN HORARIO"
+      - log:
+         message: "STEP 8: HIT 'RESERVAR UN HORARIO'."
+         color: CYAN
+
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.cart.reserveSlotButton
+          position: top
+
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+
+      ## STEP 9: SELECT "PICKUP" AND SELECT TIME SLOT FROM THE LATEST DAY DISPLAYED
+      - log:
+         message: "9: SELECT 'PICKUP' AND SELECT TIME SLOT FROM THE LATEST DAY DISPLAYED"
+         color: CYAN
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapChange
+
+      - executeFunction:
+          name: mx.functions.store-selector-popup.selectFirstODStore
+
+      - executeFunction:
+          name: mx.functions.store-selector-popup.getSelectedStoreAddress
+
+      - executeFunction:
+          name: mx.functions.store-selector-popup.tapSave
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectLastAvailableDateSlot
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot  
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedDaySlot
+        
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlot
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapReserve
+
+      - getString:
+          identifier: mx.mappings.cart.userShortAddress
+          storeIn: storeNameSelected
+
+      ## STEP 10: CONTINUE CHECKOUT
+      - log:
+         message: "STEP 10: CONTINUE CHECKOUT."
+         color: CYAN
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.od-008.review-order.deliveryMethod
+
+      ## STEP 11: GO TO PAYMENT METHODS AND SELECT PAYPAL
+      - log:
+         message: "STEP 11: GO TO PAYMENT METHODS AND SELECT PAYPAL"
+         color: CYAN
+      
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: Pago
+
+      - executeNode:
+          file: mx/test/helpers/utils/numberToNumberWithComa.js
+          args:
+            - value: ${subTotal}
+          getResponse:
+            storeIn: subTotalWithComas
+
+      - executeFunction:
+          name: mx.flows.od.review-order.selectPaypalMethod
+          params:
+            - name: userPaypalEmail
+              string: mx.data.e2e-regression.od-008.payment.paypalEmail
+            - name: userPaypalPassword
+              string: mx.data.e2e-regression.od-008.payment.paypalPassword
+            - name: expectedTotal
+              string: ${subTotalWithComas}
+            - name: paypalCardFourDigits
+              string: mx.data.e2e-regression.od-008.payment.paypalCardFourDigits
+            - name: paypalMethodAction
+              string: mx.data.e2e-regression.od-008.payment.paypalMethodAction
+            - name: savePaypalDataCheckboxState
+              string: mx.data.e2e-regression.od-008.payment.savePaypalDataCheckboxState
+            - name: expectedPaypalUserName
+              string: mx.data.e2e-regression.od-008.payment.paypalUserName
+
+      ## STEP 12: ADD PROMOTIONAL COUPON
+      - log:
+         message: "STEP 12: ADD PROMOTIONAL COUPON"
+         color: CYAN
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: mx.data.e2e-regression.od-008.review-order.telephoneNumberSection
+
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.od-008.review-order.phoneNumber
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: mx.data.e2e-regression.od-008.review-order.promoCodeSection
+
+      - executeFunction:
+          name: mx.flows.od.review-order.applyCoupon
+          params:
+            - name: promoCode
+              string: mx.data.e2e-regression.od-008.review-order.promoCodeName
+
+      - storeIn:
+          key: promoCodeAmount
+          value: mx.data.e2e-regression.od-008.review-order.promoCodeAmount
+
+      - arithmetic:
+          expression: ${subTotal} - ${promoCodeAmount}
+          storeIn: expectedTotalWithCoupon
+          numberOfDecimalPlaces: 2
+
+      - executeNode:
+          file: mx/test/helpers/utils/numberToNumberWithComa.js
+          args:
+            - value: ${expectedTotalWithCoupon}
+          getResponse:
+             storeIn: expectedTotalWithCoupon
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${expectedTotalWithCoupon}
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollUpToSection
+          params:
+            - name: sectionName
+              string: "Pickup"
+      
+      - executeFunction:
+          name: mx.functions.review-order.getDeliverySlot
+
+      - storeIn:
+          key: tc_returnedDeliverySlot
+          value: ${returnedDeliverySlot}
+
+      ## STEP 13: PLACE ORDER
+      - log:
+         message: "STEP 13: PLACE ORDER"
+         color: CYAN
+
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertPageDisplayed
+        
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: "PickupDelivery"
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertStoreAddressName
+          params:
+            - name: expectedStoreAddressName
+              string: ${storeNameSelected}
+
+      - executeFunction:
+          name: mx.functions.utils.compareAdresses
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+
+      ## STEP 14: HIT "DESCUBRIR MAS PRODUCTOS" BUTTON
+      - log:
+         message: "STEP 14: HIT 'DESCUBRIR MAS PRODUCTOS' BUTTON"
+         color: CYAN
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+
+      - executeFunction:
+          name: mx.functions.home.scrollUpToLocationBanner
+
+      - executeFunction:
+          name: mx.functions.home.assertPageLoaded
+
+      ## STEP 15: GO TO PROFILE SCREEN AND SELECT "PEDIDOS"
+      - log:
+         message: "STEP 15: GO TO PROFILE SCREEN AND SELECT 'PEDIDOS'"
+         color: CYAN
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+
+      - executeFunction:
+          name: mx.functions.account.tapTrackOrder
+
+      ## STEP 16: SELECT THE NEWEST PLACED ORDER
+      - log:
+         message: "STEP 16: SELECT THE NEWEST PLACED ORDER"
+         color: CYAN
+
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: position
+              string: mx.data.e2e-regression.od-004.order-history.lastOrder
+
+      - executeFunction:
+          name: mx.functions.order-details.assertCorrectOrderDisplayed
+          params:
+            - name: expectedOrderNumber
+              string: ${returnedOrderNumber}

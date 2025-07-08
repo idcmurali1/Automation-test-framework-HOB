@@ -1,0 +1,213 @@
+general:
+  testCaseId: C2736944
+  tags: C2736944, p1-ca-en-prod, p1-ca-fr-prod, p1-ca-en-exp-teflon, p1-ca-fr-teflon
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+  - name: Main
+    flow:
+
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Onboarding
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+
+      # - if:
+      #     condition: ${platform} == 'Android'
+      #     then:
+      #       - executeFunction:
+      #           name: functions.utils.relaunchApp
+      #       - executeFunction:
+      #           name: functions.homePage.gic.tapGotItBtnIfDisplayed
+      #       - executeFunction:
+      #           name: functions.homePage.gic.collapseIfExpanded
+      #       - executeFunction:
+      #           name: functions.onboarding.getNotification.tapMaybeLater
+
+      # Sign in
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.astroApi.createNewAccountWithCreatePayload
+          else:
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp.manufacturer.android.email
+                else:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp.manufacturer.ios.email
+            - storeIn:
+                key: password
+                value: data.global.password.Password
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: data.searchPage.manufacturerCouponItems
+            - name: badge
+              string: 'Manufacturer'
+
+      - executeFunction:
+          name: functions.productDetailsPage.applyManufacturerCoupon
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapAddToCart
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+
+      - executeFunction:
+          name: functions.utils.scrollUpToDisplayBottomBar
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: data.searchPage.multisaveItems
+            - name: badge
+              string: 'Multisave'
+
+      - if: # Condition added because view all button is not displayed in Android Teflon
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.validateViewAllBtnIsDisplayed
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapAddToCart
+          params:
+            - name: quantity
+              string: '2'
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+    
+      - executeFunction:
+          name: functions.reserveATime.bookSlot
+          params:
+            - name: fufillment
+              string: Delivery
+            - name: slotType
+              string: Standard
+            - name: slotDay
+              string: tomorrow
+      - executeFunction:
+          name: functions.cartPage.validateMultisaveItemSavingsAreApplied
+
+      - executeFunction:
+          name: functions.cartPage.moneyBox.feeValidation
+          params:
+            - name: feeLabel
+              string: data.cartPage.moneyBox.savingsText
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            # Going to substitutions page to dismiss a Popup
+            - executeFunction:
+                name: functions.checkoutPage.tapChooseSubstitutionPreferencesBtn
+
+            - executeFunction:
+                name: functions.global.tapDoneBtn
+          else:
+            - executeFunction:
+                name: functions.checkoutPage.scrollDownToEditPaymentButton
+            - executeFunction:
+                name: functions.checkoutPage.addCVVIfCVVisDisplayed
+                params:
+                  - name: CVV
+                    string: data.global.card.cvv.123
+
+      # Validates the Manufacturer Coupon is Applied by checking "Applied Coupons"
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.assertCorrectPromoCodeDisplayed
+                params:
+                  - name: promoCodeText
+                    string: data.checkout.appliedCouponsText
+          else:
+            - executeFunction:
+                name: functions.checkoutPage.validateMFCouponDiscountisApplied
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+            - executeFunction:
+                name: functions.utils.terminateApp
+
+            # Navigate to ODP
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            # Validate the user is able to access ODP
+            - executeFunction:
+                name: functions.orderDetailPage.verifySectionDisplayed
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

@@ -1,0 +1,148 @@
+general:
+  platform: ios
+  tags: C2644787, us-golden-flows, us-golden-flows-ecom-p1 EC003
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644787
+  metadata:
+    - name: scenarioId
+      string: EC003 #2
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.flow509i.email
+            - name: password
+              string: us.data.flow509i.password
+
+      # Navigate to home page
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # # Day 0 Automation For Location Accurcay - Uncomment once the feature is available
+      # # Verify Location Accuracy banner on Shop screen
+      # - executeFunction:
+      #      name: us.functions.gic.locationAccuracy.verifyBanner.searchScreen
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.flow509i.email
+            - name: password
+              string: us.data.flow509i.password
+
+      # Add any item for pickup
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: source
+      #         string: astro
+      #       - name: itemType
+      #         string: STORE_SCHEDULED_PICKUP
+      #       - name: store
+      #         string: 32144                         
+      #       - name: backupItem
+      #         string: 980623310 
+
+      - executeFunction:
+          name: us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: storeId
+              string: 32144
+            - name: action
+              string: FetchItem
+            - name: emailId
+              string: us.data.flow509i.email
+
+      # Open item using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      # # Day 0 Automation For Location Accurcay - Uncomment once the feature is available
+      # # Verify Location Accuracy banner on item detailse screen
+      # - executeFunction:
+      #     name: us.functions.gic.locationAccuracy.verifyBanner.itemScreen
+
+      # Add item to cart
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # Go to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      # # Day 0 Automation For Location Accurcay - Uncomment once the feature is available
+      # # Verify Location Accuracy banner on cart screen
+      # - executeFunction:
+      #      name: us.functions.gic.locationAccuracy.verifyBanner.cartScreen
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      # If reserve slot page appears, verify or select slot. Otherwise, skip step.
+      - executeFunction:
+          name: us.functions.reserveSlot.verifySlotAndContinue
+
+      # Day 0 Automation For Location Accurcay - Uncomment once the feature is available
+      # # Verify Location Accuracy banner on Reserve a time screen  
+      # - executeFunction:
+      #      name: us.functions.gic.locationAccuracy.verifyBanner.resrveTimeScreen 
+
+      # Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      #  Get order number 
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+      - log: ${orderNo}
+
+      # Verify order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

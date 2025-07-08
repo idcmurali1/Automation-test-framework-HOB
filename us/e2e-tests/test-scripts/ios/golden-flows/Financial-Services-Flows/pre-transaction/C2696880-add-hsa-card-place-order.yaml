@@ -1,0 +1,196 @@
+general:
+  platform: ios
+  tags: C2696880, us-golden-flows, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2696880
+  metadata:
+    - name: scenarioId
+      string: FS011
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+            # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@cloudtest.org
+
+      - storeIn:
+           key: password
+           value: E2epassword$
+
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+        # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flow030.createAccountPayload
+            - name: withoutPayment
+              string: true
+
+      # signing in to the account
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn  
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+          - name: email
+            string: ${customerEmail}
+          - name: password
+            string: $password
+    
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+      
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCreditCardDetails
+          params: 
+            - name: page
+              string: Add a payment method to Wallet
+            - name: number
+              string: us.data.paymentmethod.hsaCard
+            - name: expirationMonth
+              string: us.data.flow005.payment.expirationMonth
+            - name: expirationYear
+              string: us.data.flow005.payment.expirationYear
+            - name: cvv
+              string: us.data.fsaCard.cvv
+            - name: phoneNumber
+              string: us.data.ios.flow043.phoneNumber
+            - name: streetAddress
+              string: us.data.ios.flow043.streetAddress
+            - name: city
+              string: us.data.ios.flow043.city
+            - name: state
+              string: us.data.ios.flow043.state
+            - name: zipcode
+              string: us.data.ios.flow043.zipcode
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+
+      # Fetch 'FC Delivery' item from items list
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.flow.cfs.android.email 
+            - name: itemType
+              string: FC_DELIVERY
+            - name: itemList
+              string: us.data.fcDelivery.itemIds
+            - name: storeId
+              string: 32144
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/$item1
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem 
+          params:
+            - name: source
+              string: astro          
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 2466884336
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: pickup
+
+      - executeFunction:
+          name: us.functions.cart.checkoutWithSlotBooking
+          params:
+            - name: tab
+              string: pickup
+            - name: slotDay
+              string: dayAfter
+            - name: slotIndex
+              string: 3
+
+      # - executeFunction:
+      #     name: us.functions.checkout.alcoholDisclosureHandle
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

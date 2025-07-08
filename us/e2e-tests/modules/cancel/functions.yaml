@@ -1,0 +1,1066 @@
+functions:
+
+  # Function to cancel entire order at once
+  - name: us.functions.cancel.cancelCompleteOrder
+    platform: ios
+    flow:
+      # If cancel order link is not displayed then error is thrown
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.cancelOrderButton
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.cancellation.cancelOrderButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.cancellation.cancelOrderButton
+            - executeFunction:
+                name: us.functions.cancel.submitCancellation    
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Cancel order button missing in ODP"
+
+  # Function to initiate item cancellation
+  # [mandatory] ${r2Array} - data in R2 array format. e.g. "[\"sc\",\"fc\",\"mp\"]" or "[\"sc\",\"fc\"]"
+  - name: us.functions.cancel.initiateCancellation
+    platform: ios
+    flow:
+      - loop:
+          each: ${r2Array}
+          storeElement: item
+          storeIndex: itemIndex
+          flow:
+            # Fetch fulfillment type of item to be cancelled in the iteration
+            - executeFunction:
+                name: us.functions.cancel.getCancellationFulfillmentType
+            # Process the cancellation
+            - executeFunction:
+                name: us.functions.cancel.processCancellation
+            # Store cancellation type(Canceled/Request cancellation) of the item processed
+            - executeFunction:
+                name: us.functions.cancel.storeItemCancellationType
+            - sleep:
+                duration: 5000
+      # Cancellation type data stored in proper JSON format required for validation
+      - executeFunction:
+          name: us.functions.cancel.storeItemCancellationType
+          params:
+            - name: restructureJSON
+              string: true
+
+  # Function to process actual cancellation of item
+  - name: us.functions.cancel.processCancellation
+    platform: ios
+    flow:
+      - if:
+          condition: ${item} == 'sc'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cancellation.fulfillmentItemEditOrderButton
+                then:
+                  # to handle tap and talk button overlapping edit order button scrolling down once before clicking
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.global.tapAndTalkButton
+                      then:
+                        - scroll:
+                            direction: down
+                            scrollLimit: 1 
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cancellation.fulfillmentItemEditOrderButton
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center
+                  - click:
+                      identifier: us.mappings.cancellation.fulfillmentItemEditOrderButton
+                  - storeIn:
+                      key: cancellationType
+                      value: canceled
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.cancellation.removeButton
+                      then:
+                        - click:
+                            identifier: us.mappings.cancellation.removeButton                      
+                else:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cancellation.fulfillmentItemRequestCancellationButton
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center
+                  - click:
+                      identifier: us.mappings.cancellation.fulfillmentItemRequestCancellationButton
+                        # Store cancellation type as request cancellation                       
+                  - storeIn:
+                      key: cancellationType
+                      value: request
+          else:
+            - getString:
+                identifier: us.mappings.cancellation.fulfillmentItemTracker
+                attribute: value
+                storeIn: currentOrderStatus
+            - if:
+                condition: ${currentOrderStatus} != 'Placed'
+                then:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cancellation.fulfillmentItemRequestCancellationButton
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center
+                  - click:
+                      identifier: us.mappings.cancellation.fulfillmentItemRequestCancellationButton
+                        # Store cancellation type as request cancellation                      
+                  - storeIn:
+                      key: cancellationType
+                      value: request
+                else:
+                  # If cancellation item is not yet PO acknowledged for FC/MP item
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cancellation.fulfillmentItemRemoveItemButton
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center
+                  - click:
+                      identifier: us.mappings.cancellation.fulfillmentItemRemoveItemButton
+                  # Store cancellation type as cancellation confirned
+                  - storeIn:
+                      key: cancellationType
+                      value: canceled
+      # Submit cancellation request
+      - executeFunction:
+          name: us.functions.cancel.submitCancellation
+
+  # Function to process item cancellation request
+  # [mandatory] ${reasonIndex} - 1/2/3/4/5... [Cancellation reason selection index]
+  - name: us.functions.cancel.submitCancellation
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cancellation.requestCancellationSingleItemPoUpHeader
+      - click:
+          identifier: us.mappings.cancellation.reasonSelection
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.reasonSelection.otherResonTextView 
+          then:
+            - enterText:
+                identifier: us.mappings.cancellation.reasonSelection.otherResonTextView
+                string: Testing
+
+      - scroll:
+          untilIdentifier: us.mappings.requestCancellation.confirmButton
+          direction: left
+          position: center 
+                          
+      - click:
+          identifier: us.mappings.requestCancellation.confirmButton
+      - sleep:
+          duration: 60000  # Added as most of the time cancellations in teflon takes more time for RXPD ,tried wait it was not helping for this use case
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.requestCancellation.confirmButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.errorPopup
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Error while cancellation of ${item} item"
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.cancellationRequested
+          then:
+            - sleep:
+                duration: 15000
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+                      
+
+  # Function to validate cancelled item's status
+  # [mandatory] ${itemTypes} - comma separated items [e.g. sc,fc or sc,fc,mp]
+  # [mandatory] ${cancelFlags} - JSON format data indicating each item's cancellation type. [e.g. - {"sc":"true","fc":"false"} / true - canceled and false - Request cancellation]
+  # [optional]  ${cancelOrder} - true/false [default 'false'] [flag to indicate if entire order cancelled or item wise cancellation done]
+  - name: us.functions.cancel.validateCancellation
+    platform: ios
+    flow:
+      # Get R2 format array for loop based on items covered
+      # - executeFunction:
+      #     name: us.functions.utils.getR2Array
+      #     params:
+      #       - name: data
+      #         string: ${itemTypes}
+      - if:
+          condition: ${cancelOrder} == false
+          then:
+            # Loop each item for cancellation validation which were processed
+            - loop:
+                each: ${r2Array}
+                storeElement: item
+                storeIndex: itemIndex
+                flow:
+                  # Fetch fulfillment type of item to be validated in the iteration
+                  - executeFunction:
+                      name: us.functions.cancel.getCancellationFulfillmentType
+                  # Fetch cancellation type (Cancelled/Request cancellation) for the appropriate item type
+                  - executeFunction:
+                      name: us.functions.utils.jsonDataParse
+                      params:
+                        - name: data
+                          string: ${cancelFlags}
+                        - name: key
+                          string: ${item}
+                  # based on keyValue (Cancellation confirmed or requested), validations can be covered (for later)
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            value:
+                              - identifier: us.mappings.cancellation.fulfillmentItemStatus
+                                contains: Cancel
+                      catch:
+                        flow:
+                          - failTest:
+                              message: "FAILURE - ${env} - Cancellation validation failed. Item cancellation request not processed or status not proper"
+          else:
+            # Validation for complete order cancellation
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderDetails.cancellationRequested
+                then:
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - Order cancellation request not processed"
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.cancellation.fulfillmentItemStatus
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.cancellation.fulfillmentItemStatus
+                          contains: Cancel
+
+
+  # Function to cancel order/items in the order
+  # [mandatory] ${itemTypes} - comma separated items [e.g. sc,fc or sc,fc,mp]
+  # [optional]  ${reasonIndex} - 1/2/3/4/5... [default '1'][Cancellation reason selection index]
+  # [optional]  ${cancelOrder} - true/false [default 'false'] [flag to indicate if entire order cancelled or item wise cancellation done]
+  - name: us.functions.cancel.orderItems
+    platform: ios
+    flow:
+      # Set cancellation reason required during cancellation confirmation
+      - executeFunction:
+          name: us.functions.cancel.setCancellationReason
+      - if:
+          condition: ${cancelOrder}
+          then:
+            # Cancel complete order
+            - executeFunction:
+                name: us.functions.cancel.cancelCompleteOrder
+          else:
+            # Get R2 format array for loop over items
+            - executeFunction:
+                name: us.functions.utils.getR2Array
+                params:
+                  - name: data
+                    string: ${itemTypes}
+            # Cancel or request cancellation of fulfillment items
+            - executeFunction:
+                name: us.functions.cancel.initiateCancellation
+      # Validate canceled / cancellation requested fulfillment item status
+      - executeFunction:
+          name: us.functions.cancel.validateCancellation
+
+################################################# Android ###############################################################
+
+  - name: us.functions.cancel.verifyAccInstantCancellationTireOrder
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cancellation.requestCancellationButton   
+            - name: direction
+              string: down 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.requestCancellationButton
+          then:
+            - click:
+                identifier: us.mappings.cancellation.requestCancellationButton 
+          else:
+            - click:
+                identifier: us.mappings.orderDetails.orderCancelButton     
+      - click:
+          wait: 5000
+          identifier: us.mappings.requestCancellation.fifthtReason
+      - click:
+          wait: 5000
+          identifier: us.mappings.requestCancellation.confirmButton 
+      - sleep:
+          duration: 20000       
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.orderNumber
+            - name: direction
+              string: up
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.statusMsgLabel   
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.statusMsgLabel
+                                
+          else:      
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.autoCareCenterPickupOrInstallationText 
+                then:  
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cancellation.ItemDropDownButton
+                  - click:
+                      identifier: us.mappings.cancellation.ItemDropDownButton 
+                  - log : Tire Installation also cancelled           
+                else:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cancellation.TwoItemCancellationText
+                  - log : Both Tire and Tire Installation cancelled  
+
+  - name: us.functions.cancel.cancelInstallation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.acctext
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.accCancelAppointmentCTA
+      - click:
+          identifier: us.mappings.odp.accCancelAppointmentCTA
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cancellation.cancellationReasonQuestionPrompt
+      - click:
+          identifier: us.mappings.cancellation.reasonSelection 
+      - getString:
+          attribute: text
+          identifier: us.mappings.cancellation.reasonSelection 
+          storeIn: reason
+      - log: $reason
+      - if:
+          condition: ${reason} == 'Other'
+          then:
+            - click:
+                identifier: us.mappings.cancellation.enterReason
+            - enterText:
+                identifier: us.mappings.cancellation.enterReason
+                string: Defective product    
+            - goBack: true  
+      - click:
+          identifier: us.mappings.cancellation.confirmCancellationButton
+
+  - name: us.functions.cancel.verifyAccInstantCancellationTireOrder
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.cancellation.requestCancellationButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.requestCancellationButton
+          then:
+            - click:
+                identifier: us.mappings.cancellation.requestCancellationButton
+          else:
+            - click:
+                identifier: us.mappings.orderDetails.orderCancelButton  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.requestCancellationForAllItemsButton
+          then:
+            - click:
+                identifier: us.mappings.cancellation.requestCancellationForAllItemsButton
+
+      - click:
+          identifier: us.mappings.cancellation.reasonSelection 
+      - getString:
+          attribute: text
+          identifier: us.mappings.cancellation.reasonSelection 
+          storeIn: reason
+      - log: $reason
+      - if:
+          condition: ${reason} == 'Other'
+          then:
+            - click:
+                identifier: us.mappings.cancellation.enterReason
+            - enterText:
+                identifier: us.mappings.cancellation.enterReason
+                string: Defective product    
+            - goBack: true            
+      - click:
+          wait: 5000
+          identifier: us.mappings.requestCancellation.confirmButton 
+      - sleep:
+          duration: 20000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.goBackToOrderDetailsButton
+          then:
+            - click:
+                identifier: us.mappings.cancellation.goBackToOrderDetailsButton
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.autoCareCenterPickupOrInstallationText 
+          then:        
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.cancellation.ItemDropDownButton
+            - click:
+                identifier: us.mappings.cancellation.ItemDropDownButton 
+            - log : Tire Installation also cancelled           
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.cancellation.TwoItemCancellationText
+            - log : Both Tire and Tire Installation cancelled
+
+  - name: us.functions.cancel.cancelInstallation
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.acctext
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.odp.accCancelAppointmentCTA
+      - click:
+          identifier: us.mappings.odp.accCancelAppointmentCTA
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.considerReschedulingInsteadPopUpHeader 
+          then:
+            - click:
+                identifier: us.mappings.cancellation.considerReschedulingInsteadCancelButton 
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cancellation.cancellationReasonQuestionPrompt
+      - click:
+          identifier: us.mappings.cancellation.fourthReason
+      - click:
+          identifier: us.mappings.cancellation.confirmCancellationButton 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.feedbackCommentsTextButton
+          then:
+            - click:
+                identifier: us.mappings.feedbackCommentsTextButton   
+            - enterText:
+                identifier: us.mappings.feedbackCommentsTextButton 
+                string: Defective product   
+            - click:
+                identifier: us.mappings.cancellation.confirmCancellationButton 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.CancellationErrorButton  
+          then:        
+            - click:
+                identifier: us.mappings.cancellation.CancellationGotitButton
+
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Cancellation Error"
+          else:
+            - sleep:
+                duration: 10000    
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+            - scroll:
+                direction: up
+                scrollLimit: 1
+                wait: 2000
+
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.autoCareCenterPickupOrInstallationText 
+                then:        
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cancellation.ItemDropDownButton
+                  - click:
+                      identifier: us.mappings.cancellation.ItemDropDownButton 
+                  - log : Tire Installation cancelled
+
+  # Function to default set cancellation reason index to 1(cancellation reason) if not set
+  - name: us.functions.cancel.setCancellationReason
+    flow:
+      - if:
+          condition: ${reasonIndex} > 0
+          then:
+            - log: Cancellation reasonIndex set to ${reasonIndex}
+          else:
+            - storeIn:
+                key: reasonIndex
+                value: 1
+
+  # Function to get fulfillment type based on item type sent
+  # [mandatory] ${item} - sc/fc/mp [based on item type appropriate fulfillment type is set for cancellation processing]
+  - name: us.functions.cancel.getCancellationFulfillmentType
+    flow:
+      - if:
+          condition: ${item} == 'sc'
+          then:
+            - storeIn:
+                key: fulfillmentType
+                value: us.data.orderStatus.fulfillmentPickup
+            - storeIn:
+                key: altFulfillmentType
+                value: us.data.fulfillment.delivery
+          else:
+            - if:
+                condition: ${item} == 'fc' || ${item} == 'mp'
+                then:
+                  - storeIn:
+                      key: fulfillmentType
+                      value: us.data.fulfillment.delivery
+                  - storeIn:
+                      key: altFulfillmentType
+                      value: shipping
+
+  # Function to store type of cancellation processed (Cancellation/Request cancellation) for each item (sc/fc/mp)
+  - name: us.functions.cancel.storeItemCancellationType
+    flow:
+      - if:
+          condition: ${cancelFlags} == null
+          then:
+            - storeIn:
+                key: cancelFlags
+                value: '{'
+      # JSON object value set to false for Request cancellation else set to true for cancellation confirmation (used during cancellation validation)
+      - if:
+          condition: ${cancellationType} == 'request'
+          then:
+            - storeIn:
+                key: cancelFlags
+                value: ${cancelFlags}"${item}":"false",
+          else:
+            - storeIn:
+                key: cancelFlags
+                value: ${cancelFlags}"${item}":"true",
+      - if:
+          condition: ${restructureJSON}
+          then:
+            - storeIn:
+                key: cancelFlags
+                value: ${cancelFlags}"na":"na"}
+
+  # Function to cancel entire order at once
+  - name: us.functions.cancel.cancelCompleteOrder
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cancellation.cancelOrderButton
+            - name: direction
+              string: down
+      # If cancel order link is not displayed then error is thrown
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.cancelOrderButton
+          then:
+            - click:
+                identifier: us.mappings.cancellation.cancelOrderButton
+            - executeFunction:
+                name: us.functions.cancel.submitCancellation    
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Cancel order button missing in ODP"
+
+  # Function to initiate item cancellation
+  # [mandatory] ${r2Array} - data in R2 array format. e.g. "[\"sc\",\"fc\",\"mp\"]" or "[\"sc\",\"fc\"]"
+  - name: us.functions.cancel.initiateCancellation
+    platform: android
+    flow:
+      - loop:
+          each: ${r2Array}
+          storeElement: item
+          storeIndex: itemIndex
+          flow:
+            # Fetch fulfillment type of item to be cancelled in the iteration
+            - executeFunction:
+                name: us.functions.cancel.getCancellationFulfillmentType
+            # Scroll to the appropriate fulfillment section for item cancellation
+            - executeFunction:
+                name: us.functions.orderDetails.scrollToSection
+            # Process the cancellation
+            - executeFunction:
+                name: us.functions.cancel.processCancellation
+            # Store cancellation type(Canceled/Request cancellation) of the item processed
+            - executeFunction:
+                name: us.functions.cancel.storeItemCancellationType
+            - sleep:
+                duration: 5000
+      # Cancellation type data stored in proper JSON format required for validation
+      - executeFunction:
+          name: us.functions.cancel.storeItemCancellationType
+          params:
+            - name: restructureJSON
+              string: true
+
+  # Function to process actual cancellation of item
+  - name: us.functions.cancel.processCancellation
+    platform: android
+    flow:
+      - if:
+          condition: ${item} == 'sc'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cancellation.fulfillmentItemEditButton
+                then:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.cancellation.editButton
+                        - name: direction
+                          string: down
+                  - click:
+                      identifier: us.mappings.cancellation.editButton
+                  - click:
+                      identifier: us.mappings.cancellation.removeButton
+                  - storeIn:
+                      key: cancellationType
+                      value: canceled
+                else:
+                  # If cancellation item is not yet PO acknowledged for FC/MP item
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: us.mappings.cancellation.fulfillmentItemRemoveItemButton
+                        then:
+                          - scroll:
+                              direction: down
+                              untilIdentifier: us.mappings.cancellation.fulfillmentItemRemoveItemButton
+                    - click:
+                        identifier: us.mappings.cancellation.fulfillmentItemRemoveItemButton #Remove Item
+              # Store cancellation type as cancellation confirned
+                    - storeIn:
+                        key: cancellationType
+                        value: request
+          else:
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      contentDescription:
+                        - identifier: us.mappings.cancellation.fulfillmentItemTracker
+                          notContains: us.data.placedOrderStatusText
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.cancellation.fulfillmentItemRequestCancellationButton
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.cancellation.fulfillmentItemRequestCancellationButton
+                  - click:
+                      identifier: us.mappings.cancellation.fulfillmentItemRequestCancellationButton #Request cancellation
+          # Store cancellation type as request cancellation
+                  - storeIn:
+                      key: cancellationType
+                      value: request
+
+                catch:
+                  flow:
+                    # If cancellation item is not yet PO acknowledged for FC/MP item
+                    - executeFunction:
+                        name: us.functions.utils.scrollIfNotVisible
+                        params:
+                          - name: identifier
+                            string: us.mappings.cancellation.fulfillmentItemRemoveItemButton
+                          - name: direction
+                            string: down
+                          - name: scrollPosition
+                            string: center
+                    - click:
+                        identifier: us.mappings.cancellation.fulfillmentItemRemoveItemButton
+                    # Store cancellation type as cancellation confirned
+                    - storeIn:
+                        key: cancellationType
+                        value: canceled                
+    # Submit cancellation request
+      - executeFunction:
+          name: us.functions.cancel.submitCancellation
+
+  # Function to process item cancellation request
+  # [mandatory] ${reasonIndex} - 1/2/3/4/5... [Cancellation reason selection index]
+  - name: us.functions.cancel.submitCancellation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cancellation.cancellationReasonQuestionPrompt
+      - click:
+          identifier: us.mappings.cancellation.reasonSelection
+      - getString:
+          identifier: us.mappings.cancellation.reasonSelection
+          attribute: text
+          storeIn: reason
+      - log: ${reason}
+      - if:
+          condition: ${reason} == 'Other'
+          then:
+            - click:
+                identifier: us.mappings.cancellation.enterReason
+            - enterText:
+                identifier: us.mappings.cancellation.enterReason
+                string: Defective product    
+            - goBack: true  
+      - click:
+          identifier: us.mappings.requestCancellation.confirmButton
+      - sleep:
+          duration: 60000 # Added as most of the time cancellations in teflon takes more time for RXPD ,tried wait it was not helping for this use case
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.requestCancellation.confirmButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.errorPopup
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Error while cancellation of ${item} item"
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.cancellationRequested
+          then:
+            - sleep:
+                duration: 15000
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+
+  # Function to validate cancelled item's status
+  # [mandatory] ${itemTypes} - comma separated items [e.g. sc,fc or sc,fc,mp]
+  # [mandatory] ${cancelFlags} - JSON format data indicating each item's cancellation type. [e.g. - {"sc":"true","fc":"false"} / true - canceled and false - Request cancellation]
+  # [optional]  ${cancelOrder} - true/false [default 'false'] [flag to indicate if entire order cancelled or item wise cancellation done]
+  - name: us.functions.cancel.validateCancellation
+    platform: android
+    flow:
+      # Get R2 format array for loop based on items covered
+      - executeFunction:
+          name: us.functions.utils.getR2Array
+          params:
+            - name: data
+              string: ${itemTypes}
+      - if:
+          condition: ${cancelOrder} == false
+          then:
+            # Loop each item for cancellation validation which were processed
+            - loop:
+                each: ${r2Array}
+                storeElement: item
+                storeIndex: itemIndex
+                flow:
+                  # Fetch fulfillment type of item to be validated in the iteration
+                  - executeFunction:
+                      name: us.functions.cancel.getCancellationFulfillmentType
+                  # Scroll to the appropriate fulfillment section for validation of item cancelled/requested
+                  - executeFunction:
+                      name: us.functions.orderDetails.scrollToSection
+                      params:
+                        - name: nonTrackerBased
+                          string: true
+                  # Fetch cancellation type (Cancelled/Request cancellation) for the appropriate item type
+                  - executeFunction:
+                      name: us.functions.utils.jsonDataParse
+                      params:
+                        - name: data
+                          string: ${cancelFlags}
+                        - name: key
+                          string: ${item}
+                  # based on keyValue (Cancellation confirmed or requested), validations can be covered (for later)
+                  - try:
+                      flow:
+                        - verifyIdentifier:
+                            text:
+                              - identifier: us.mappings.cancellation.status
+                                contains: Cancel
+                      catch:
+                        flow:
+                          - failTest:
+                              message: "FAILURE - ${env} - Cancellation validation failed. Item cancellation request not processed or status not proper"
+          else:
+            # Validation for complete order cancellation
+            - sleep:
+                duration: 6000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderDetails.cancellationRequested
+                then:
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - Order cancellation request not processed"
+                else:
+                    - if:
+                        condition: ${rxpd} == false || ${rxpd} == null
+                        then:
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.cancellation.status
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.cancellation.status
+                                  contains: Canceled
+                                - identifier: us.mappings.cancellation.status.description
+                                  contains: You canceled your items today. It may take up to 10 business days for the bank to remove payment authorization.
+                    - if:
+                        condition: ${rxpd} == true
+                        then:
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.cancellation.status
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.cancellation.status
+                                  contains: Canceled
+                                - identifier: us.mappings.cancellation.status.description
+                                  contains: You canceled your items.
+
+  # Function to cancel order/items in the order
+  # [mandatory] ${itemTypes} - comma separated items [e.g. sc,fc / sc,fc,mp / sc / fc]
+  # [optional]  ${reasonIndex} - 1/2/3/4/5... [default '1'][Cancellation reason selection index]
+  # [optional]  ${cancelOrder} - true/false [default 'false'] [flag to indicate if entire order cancelled or item wise cancellation done]
+  - name: us.functions.cancel.orderItems
+    platform: android
+    flow:
+      # Set cancellation reason required during cancellation confirmation
+      - executeFunction:
+          name: us.functions.cancel.setCancellationReason
+      - if:
+          condition: ${cancelOrder}
+          then:
+            # Cancel complete order
+            - executeFunction:
+                name: us.functions.cancel.cancelCompleteOrder
+          else:
+            # Get R2 format array for loop over items
+            - executeFunction:
+                name: us.functions.utils.getR2Array
+                params:
+                  - name: data
+                    string: ${itemTypes}
+            # Cancel or request cancellation of fulfillment items
+            - executeFunction:
+                name: us.functions.cancel.initiateCancellation
+      # Validate canceled / cancellation requested fulfillment item status
+      - executeFunction:
+          name: us.functions.cancel.validateCancellation
+
+  - name: us.functions.cancel.verifyCancelOrderStatus
+    platform: android
+    flow:
+      # Scroll down to shipping label section
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderConfirmation.fcDelivery.cardTitle
+            - name: direction
+              string: down
+      # Verify "cancelOrder" flag
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.requestCancellationButton
+          then:
+            - log: Cancel items using request cancellation/remove item
+            - storeIn:
+                key: cancelOrder
+                value: false
+          else:
+            - log: Cancel items using cancel order
+            - storeIn:
+                key: cancelOrder
+                value: true
+
+   # Function to cancel order/items in the order
+  - name: us.functions.cancel.order
+    platform: android
+    flow:
+       - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.customeroptioncancel  # cancel order 
+       - click:
+          identifier: us.mappings.orderDetails.customeroptioncancel    
+       - sleep:
+          duration : 5000             
+       - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.cancelhit        
+       - click:
+          identifier: us.mappings.orderDetails.cancelhit                
+
+# Function to cancel order/items in the order
+  - name: us.functions.cancel.order
+    platform: ios
+    flow:
+       - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.customeroptioncancel  
+       - click:
+          identifier: us.mappings.orderDetails.customeroptioncancel
+       - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.cancelorder            
+       - click:
+          identifier: us.mappings.orderDetails.cancelorder    
+       - sleep:
+          duration : 20000          
+       - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo    
+      # Verify order status in order details page   
+       - verifyIdentifier:
+          value:
+            - identifier: us.mappings.orderDetails.statusMsgLabel
+              contains: Cancel
+
+  - name: us.functions.cancel.orderItemsInstantCancel
+    platform: android
+    flow:
+      # Set cancellation reason required during cancellation confirmation
+      - executeFunction:
+          name: us.functions.cancel.setCancellationReason
+      - if:
+          condition: ${cancelOrder}
+          then:
+            - sleep:
+                duration: 4000
+            # Cancel complete order
+            - executeFunction:
+                name: us.functions.cancel.cancelCompleteOrder
+          else:
+            # Get R2 format array for loop over items
+            - executeFunction:
+                name: us.functions.utils.getR2Array
+                params:
+                  - name: data
+                    string: ${itemTypes}
+            # Cancel or request cancellation of fulfillment items
+            - executeFunction:
+                name: us.functions.cancel.initiateCancellation
+      # Validate canceled / cancellation requested fulfillment item status
+      - executeFunction:
+          name: us.functions.cancel.validateInstantCancellation
+
+  - name: us.functions.cancel.validateInstantCancellation
+    platform: android
+    flow:
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cancellation.OrdersFullStatus
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cancellation.firstItemStatus
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cancellation.firstItemStatus
+                    contains: Cancel
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.cancellation.SecondItemStatus
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.cancellation.SecondItemStatus
+                    contains: Cancel
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Order cancellation request not processed"

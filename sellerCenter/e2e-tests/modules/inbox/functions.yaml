@@ -1,0 +1,910 @@
+functions:
+
+  - name: sc.functions.inbox.verifyMessageListDisplay
+    flow:
+      # - fetchPageSource: false
+      - verifyIdentifier:
+          timeout: 15000
+          present:
+            - identifier: sc.mappings.inbox.title
+            - identifier: sc.mappings.inbox.messageList
+            # - identifier: sc.mappings.inbox.messageTitle
+            # - identifier: sc.mappings.inbox.messageSubTitle
+            - identifier: sc.mappings.inbox.messageBody
+            - identifier: sc.mappings.inbox.search
+            # - identifier: sc.mappings.inbox.filter
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+             - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.messageTitle
+                  - identifier: sc.mappings.inbox.messageSubTitle
+                  - identifier: sc.mappings.inbox.filter
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.moreOptions
+          then:
+            - click:
+                identifier: sc.mappings.inbox.moreOptions
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.composeMessage
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - goBack: true
+
+  - name: sc.functions.inbox.verifySearchResult
+    flow:
+      - if:
+          condition: ${searchTitle}
+          then:
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: sc.mappings.inbox.messageTitle
+                          contains: ${searchValue}
+                else:
+                  - verifyIdentifier:
+                      value:
+                        - identifier: sc.mappings.inbox.messageTitle
+                          contains: ${searchValue}
+          else:
+            - if:
+                condition: ${searchSubtitle}
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: sc.mappings.inbox.messageSubTitle
+                          contains: ${searchValue}
+                else:
+                  - if:
+                      condition: ${searchOrder}
+                      then:
+                        - executeFunction:
+                            name: sc.functions.inbox.selectFirstMessage
+                        - if:
+                            condition: ${APP_PLATFORM} == 'android'
+                            then:
+                              - verifyIdentifier:
+                                  text:
+                                    - identifier: sc.mappings.inbox.messageDetails.orderValue
+                                      contains: ${searchValue}
+                            else:
+                              - verifyIdentifier:
+                                  label:
+                                    - identifier: sc.mappings.inbox.messageDetails.orderValue
+                                      contains: ${searchValue}
+                        - executeFunction:
+                            name: sc.functions.navigation.navigateBackToListPage
+      - storeIn:
+          key: searchTitle
+          value: false
+      - storeIn:
+          key: searchSubtitle
+          value: false
+      - storeIn:
+          key: searchOrder
+          value: false
+
+  - name: sc.functions.inbox.selectFirstMessage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.firstCard
+      - click:
+          identifier: sc.mappings.inbox.firstCard
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.title
+      - sleep:
+          duration: 3000
+
+
+  - name: sc.functions.inbox.selectFirstUnSpammedMessage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.firstUnSpamCard
+      - click:
+          identifier: sc.mappings.inbox.firstUnSpamCard
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.title
+      - if:
+          identifier:
+            present: 
+              - identifier: sc.mappings.inbox.messageDetails.orderValue
+          then:
+            - if:
+                condition: ${identifierTextAttribute} != null
+                then:
+                  - getString:
+                      identifier: sc.mappings.inbox.messageDetails.orderValue
+                      attribute: ${identifierTextAttribute}
+                      storeIn: orderNumber
+      - sleep:
+          duration: 3000
+
+  - name: sc.functions.inbox.selectnthMessage
+    flow:
+      - if:
+          condition: ${index} == null
+          then:
+            - storeIn:
+                key: index
+                value: 1
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.nthCard
+      - click:
+          identifier: sc.mappings.inbox.nthCard
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.title
+      - sleep:
+          duration: 3000
+
+  - name: sc.functions.inbox.selectComposeMessage
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.moreOptions
+          then:
+            - click:
+                identifier: sc.mappings.inbox.moreOptions
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.composeMessage
+      - click:
+          identifier: sc.mappings.inbox.composeMessage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.compose.messageTitle
+            - identifier: sc.mappings.inbox.compose.messagePONumber
+
+  - name: sc.functions.inbox.composeMessage
+    flow:
+      - if:
+          condition: ${poNumber} != null
+          then: 
+          - executeFunction:
+              name: sc.functions.inbox.selectComposeMessage
+          - enterText:
+              identifier: sc.mappings.inbox.compose.messagePONumber
+              string: ${poNumber}
+              pressEnter: true
+          - sleep:
+              duration: 5000
+          - click:
+              identifier: sc.mappings.inbox.compose.messageItem
+          - sleep:
+              duration: 3000
+          - click:
+              identifier: sc.mappings.inbox.compose.itemSelection
+      - if:
+          condition: ${templateName} != null
+          then:
+            - click:
+                identifier: sc.mappings.inbox.compose.templateItem            
+            - click:
+                identifier: sc.mappings.inbox.compose.templateSelectionWithName
+      - if:
+          condition: ${tagName} != null
+          then:
+            - click:
+                identifier: sc.mappings.inbox.compose.insertTagItem
+            - click:
+                identifier: sc.mappings.inbox.compose.tagSelectionWithName
+      - enterText:
+          identifier: sc.mappings.inbox.compose.messageBody
+          string: ${messageBody}
+      - if:
+          condition: ${sendMessage} != null && ${sendMessage} == true
+          then:
+            - if:
+                condition: ${GLASS_ENV} == 'teflon'
+                then:
+                  - if:
+                      condition: ${APP_PLATFORM} == 'ios'
+                      then:
+                        - click:
+                            identifier: Done
+                        - sleep:
+                            duration: 1000
+                  - click:
+                      identifier: sc.mappings.inbox.compose.messageSend
+                  - sleep:
+                      duration: 5000
+                  - if: 
+                      identifier:
+                        notPresent:
+                          - identifier: sc.mappings.inbox.messageDetails.title
+                      then:
+                        - verifyIdentifier:
+                            present:
+                              - identifier: sc.mappings.inbox.title
+
+  - name: sc.functions.inbox.composeMessageWithInvalidPO
+    flow:
+      - storeIn:
+          key: poNumberInvalid
+          value: '1234'
+      - executeFunction:
+          name: sc.functions.inbox.selectComposeMessage
+      - enterText:
+          identifier: sc.mappings.inbox.compose.messagePONumber
+          string: '${poNumberInvalid}'
+          pressEnter: true
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: sc.functions.utils.textOrLabelEquals
+          params:
+            - name: identifier
+              string: sc.mappings.inbox.compose.messageAlert
+            - name: value
+              string: 'No results found for PO# ${poNumberInvalid}'
+      - click:
+          identifier: sc.mappings.inbox.compose.messageClose
+
+
+  - name: sc.functions.inbox.validateNewMessageCreated
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.title
+          then:
+            - executeFunction:
+                name: sc.functions.inbox.selectFirstMessage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.replyButton
+      - executeFunction:
+          name: sc.functions.resetFailedString
+      - executeFunction:
+          name: sc.functions.validateText.equals
+          params:
+            - name: identifier
+              string: sc.mappings.inbox.messageDetails.subject
+            - name: expectedValue
+              string: Customer message
+            - name: identifierName
+              string: Subject
+      - executeFunction:
+          name: sc.functions.validateText.equals
+          params:
+            - name: identifier
+              string: sc.mappings.inbox.messageDetails.poLink
+            - name: expectedValue
+              string: ${poNumber}
+            - name: identifierName
+              string: PO
+      - executeFunction:
+          name: sc.functions.validateText.equals
+          params:
+            - name: identifier
+              string: sc.mappings.inbox.messageDetails.SentMessage
+            - name: expectedValue
+              string: ${messageBody}
+            - name: identifierName
+              string: Message   
+      - executeFunction:
+          name: sc.functions.validatedFailedString           
+      
+
+  - name: sc.functions.inbox.sendReply
+    flow:
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.replyButton
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/math.js
+          args:
+            - value: 4
+            - value: random
+          getResponse:
+            storeIn: randomValue
+      - storeIn:
+          key: messageBody
+          value: 'Message for testing ${randomValue}'
+      - executeFunction:
+          name: sc.functions.inbox.composeMessage
+          params:
+            - name: messageBody
+              string: ${messageBody}
+            - name: templateName
+              string: 'AllFields'
+            - name: tagName
+              string: 'Item name'
+            - name: sendMessage
+              string: true
+
+  - name: sc.functions.inbox.validateReplyIsSent
+    flow:
+      - sleep:
+         duration: 2000
+      - scroll:
+          direction: down
+          withinIdentifier: sc.mappings.inbox.messageDetails.replySection
+          scrollLimit: 2
+
+      - executeFunction:
+          name: sc.functions.validateText.equalsJS
+          params:
+            - name: identifier
+              string: sc.mappings.inbox.messageDetails.lastMessage
+            - name: expectedValue
+              string: ${messageBody}
+            - name: identifierName
+              string: Latest Reply
+            - name: failTest
+              string: true
+            
+     
+  - name: sc.functions.inbox.flagUnglagMessage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.title
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.unflaggedMessage
+          then:
+            - storeIn:
+                key: flagType
+                value: flag
+          else:
+            - storeIn:
+                key: flagType
+                value: unflag
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.flagUnflagMessage
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${flagType} == 'flag'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.messageDetails.flaggedMessage
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.messageDetails.unflaggedMessage
+
+
+  - name: sc.functions.inbox.spamMessage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.spamMessageEnabled
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.spamMessageEnabled
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.spamDialog
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.spamDialogReason
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.spamDialogReasonSubmit
+      - verifyIdentifier:
+          notPresent:
+            - identifier: sc.mappings.inbox.messageDetails.spamDialogReason
+            - identifier: sc.mappings.inbox.messageDetails.spamDialogReasonSubmit
+                
+
+  - name: sc.functions.inbox.validateMessageisSpammed
+    flow:
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.messageDetails.spammedMessageStatus
+                text: 
+                  - identifier: sc.mappings.inbox.messageDetails.spammedMessageStatus
+                    equals: Spam
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.messageDetails.spammedMessageStatus
+                label: 
+                  - identifier: sc.mappings.inbox.messageDetails.spammedMessageStatus
+                    equals: Spam
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.spamMessageDisabled
+
+
+  - name: sc.functions.inbox.validate.messageDetails.flagOrUnFlagMessage
+    flow:
+      - if:
+          condition: ${flagType} == 'flag'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.firstCardFlagImage
+          else:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: sc.mappings.inbox.firstCardFlagImage
+
+
+
+  - name: sc.functions.inbox.filterSelection
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.filter
+      - click:
+          identifier: sc.mappings.inbox.filter
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.filter.title
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.filters.clearAll
+          then:
+            - click:
+                identifier: sc.mappings.inbox.filters.clearAll
+            - sleep:
+                duration: 3000
+      - if:
+          condition: ${messageStatus} != null
+          then:
+            - click:
+                identifier: sc.mappings.inbox.filters.messageStatus
+      - if:
+          condition: ${messageType} != null
+          then:
+            - click:
+                identifier: sc.mappings.inbox.filters.messageType
+      - click:
+          identifier: sc.mappings.inbox.filters.viewResults
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.firstCard
+      - if:
+          condition: ${verifyFilterData}
+          then:
+            - executeFunction:
+                name: sc.mappings.inbox.verifyFilterSelectionList
+      - storeIn:
+          key: messageStatus
+          value: 'null'
+      - storeIn:
+          key: messageType
+          value: 'null'
+
+  - name: sc.mappings.inbox.verifyFilterSelectionList
+    flow:   
+      - if:
+          condition: ${messageStatus} == 'Unread'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.firstCardUnreadImage
+          else:
+            - if:
+                condition: ${messageStatus} == 'Read'
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: sc.mappings.inbox.firstCardUnreadImage
+      - if:
+          condition: ${messageType} == 'Flagged'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.inbox.firstCardFlagImage
+          else:
+            - if:
+                condition: ${messageType} == 'Spam'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: sc.mappings.inbox.firstCardSpamImage
+                else:
+                  - if:
+                      condition: ${messageType} == 'Response needed'
+                      then:
+                        - executeFunction:
+                            name: sc.functions.inbox.selectFirstMessage
+                        - verifyIdentifier:
+                            present:
+                              - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton
+                        - executeFunction:
+                            name: sc.functions.navigation.navigateBackToListPage
+      - storeIn:
+          key: messageStatus
+          value: 'null'
+      - storeIn:
+          key: messageType
+          value: 'null'
+
+  # verify paginate multiple times without any issue
+  - name: sc.functions.inbox.paginate
+    flow:
+      - log: Verify paginate multiple times
+      # - if:
+      #     condition: ${APP_PLATFORM} == 'ios'
+      #     then:
+      #     - log: This is ${APP_PLATFORM} platform
+      #     - log: ${APP_PLATFORM} be blocked at this step. It will be add once done. Disabled for R2 limitation 
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+          - log: This is ${APP_PLATFORM} platform
+          - scroll:
+              direction: down
+              wait: 3500
+          - scroll:
+              direction: up 
+  
+  # Select any new message in the Inbox
+  - name: sc.functions.inbox.tapAnyMessage
+    flow:
+      - log: Select any new message in the Inbox
+      - sleep:
+          duration: 6000
+      - click:
+          identifier: sc.mappings.inbox.selectAnyMessage
+          wait: 3500
+
+  # verify message details
+  - name: sc.functions.inbox.verifyMessageDetails
+    flow:
+      - log: Verify message details
+      - log: Verify header and details title
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.title
+            - identifier: sc.mappings.inbox.messageDetails.detailsTitle
+      
+      - log: Verify flag or unflag message
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.unflaggedMessage
+          then:
+            - log: Unflag Action
+          else:
+            - log: Flag Action
+      
+      - log: Verify spam message 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.spamMessageDisabled
+          then:
+            - log: Disabled spam message 
+          else:
+            - log: Abled spam message 
+
+      - log: Verify whether subject exist at message details or not 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.subject
+          then:
+            - log: Subject exist at message details
+          else:
+            - log: Subject does not exist at message details
+
+      - log: Verify whether PO# exist at message details or not 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.poLink
+          then:
+            - log: PO# exist at message details
+          else:
+            - log: PO# does not exist at message details
+
+      - log: Verify whether SKU# exist at message details or not 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.skuLink
+          then:
+            - log: SKU# exist at message details
+          else:
+            - log: SKU# does not exist at message details
+
+      - log: Verify whether Order# exist at message details or not 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.orderValue
+          then:
+            - log: Order# exist at message details
+          else:
+            - log: Order# does not exist at message details      
+
+      - log: Verify whether Tracking exist at message details or not 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.tracking
+          then:
+            - log: Tracking exist at message details
+          else:
+            - log: Tracking does not exist at message details  
+
+      - log: Verify whether status exist at message details or not 
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.messageDetails.status
+          then:
+            - log: Status exist at message details
+          else:
+            - log: Status does not exist at message details
+
+  # Message details screen matches the same Message tile that is presented in the Message Inbox.
+  - name: sc.functions.inbox.matchMessageDetails
+    flow:
+      - log: Verify Subject Field on the Message details screen matches the same Message tile that is presented in the Message Inbox.
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - getString:
+                identifier: sc.mappings.inbox.subjectMessage
+                attribute: label
+                storeIn: subjectMessage
+            - executeFunction:
+                name: sc.functions.inbox.tapAnyMessage
+            - getString:
+                identifier: sc.mappings.inbox.subjectMessageDetails
+                attribute: label
+                storeIn: subjectMessageDetails
+          else:
+            - getString:
+                identifier: sc.mappings.inbox.subjectMessage
+                attribute: text
+                storeIn: subjectMessage
+            - executeFunction:
+                name: sc.functions.inbox.tapAnyMessage
+            - getString:
+                identifier: sc.mappings.inbox.subjectMessageDetails
+                attribute: text
+                storeIn: subjectMessageDetails
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${subjectMessage} == ${subjectMessageDetails} 
+          then:
+            - log:
+                message: "The Subject Field on the Message details screen matches the same Message tile in the Message Inbox."
+                color: BLUE
+          else:
+            - failTest:
+                message: "The Subject Field on the Message details screen does not match the same Message tile in the Message Inbox." 
+
+  # Tap the Sort filter icon and verify that the Filter screen displays
+  - name: sc.functions.inbox.verifySortAndFilter
+    flow:
+      - sleep:
+          duration: 3000
+      - log: Verify Sort and filter
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.filter
+      - click:
+          identifier: sc.mappings.inbox.filter
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.filter.title
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.inbox.filters.clearAll
+          then:
+            - click:
+                identifier: sc.mappings.inbox.filters.clearAll
+            - sleep:
+                duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.filter.statusInFilter
+            - identifier: sc.mappings.inbox.filter.typeInFilter
+            - identifier: sc.mappings.inbox.filter.unreadInFilter
+            - identifier: sc.mappings.inbox.filter.readInFilter
+            - identifier: sc.mappings.inbox.filter.failedInFilter
+            - identifier: sc.mappings.inbox.filter.responseNeededInFilter
+            - identifier: sc.mappings.inbox.filter.flaggedInFilter
+            - identifier: sc.mappings.inbox.filter.customerCareInFilter
+            - identifier: sc.mappings.inbox.filter.spamInFilter
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: sc.mappings.navigation.backButton
+
+  # Tap the Search icon and verify that the search screen displays
+  - name: sc.functions.inbox.verifySearch
+    flow:
+      - log: Verify search inbox
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.global.searchButton
+      - click:
+          identifier: sc.mappings.global.searchButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.global.searchField
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.search.title
+            - identifier: sc.mappings.inbox.search.searchBar
+            - identifier: sc.mappings.inbox.search.searchIcon
+            - identifier: sc.mappings.inbox.search.searchHintText
+            - identifier: sc.mappings.inbox.search.searchMessage
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: sc.mappings.navigation.backButton
+
+  # swipe to mark message as flag or unflag
+  - name: sc.functions.inbox.swipeFlagUnflag
+    flow:
+      - log: Swiping a message to flag or unflag
+      - verifyIdentifier:
+          timeout: 4000
+          present:
+            - identifier: sc.mappings.inbox.firstCard
+      - if:
+          identifier:
+              notPresent: 
+                - identifier: sc.mappings.inbox.noResult
+          then:
+            - scroll:
+                direction: left
+                untilIdentifier: sc.mappings.inbox.firstCard
+                withinIdentifier: sc.mappings.inbox.firstCard
+                scrollLimit: 1
+                timeout: 3500
+            - verifyIdentifier:
+                present:
+                    - identifier: sc.mappings.inbox.swpieFlagUnflag
+            - log: Verify whether this message is a Flag message or a Unflag message
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                 - if:
+                    identifier:
+                      text:
+                      - identifier: sc.mappings.inbox.verifySwpieFlagUnflag
+                        contains: Unflag
+                    then: 
+                      - log: This is a Unflag message 
+                    else:
+                      - log: This is a Flag message
+                else:
+                 - if:
+                    identifier:
+                      label:
+                      - identifier: sc.mappings.inbox.verifySwpieFlagUnflag
+                        contains: Unflag
+                    then: 
+                      - log: This is a Unflag message 
+                    else:
+                      - log: This is a Flag message
+            - click:
+                identifier: sc.mappings.inbox.swpieFlagUnflag
+                wait: 3000
+          else:
+            - log: There is no result displays
+    
+# verify status in the inbox screen as seem as the message details
+  - name: sc.functions.inbox.verifyStatus
+    flow:
+      - log: Verify status badge in the inbox screen as seem as message details
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - getString:
+                identifier: sc.mappings.inbox.statusMessage
+                attribute: label
+                storeIn: statusMessage
+            - executeFunction:
+                name: sc.functions.inbox.tapAnyMessage
+            - getString:
+                identifier: sc.mappings.inbox.messageDetails.statusBadge
+                attribute: label
+                storeIn: statusMessageDetails
+          else:
+            - getString:
+                identifier: sc.mappings.inbox.statusMessage
+                attribute: text
+                storeIn: statusMessage
+            - executeFunction:
+                name: sc.functions.inbox.tapAnyMessage
+            - getString:
+                identifier: sc.mappings.inbox.messageDetails.statusBadge
+                attribute: text
+                storeIn: statusMessageDetails
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${statusMessage} == ${statusMessageDetails}
+          then:
+            - log:
+                message: "Status badge on the Message details screen matches the same Message tile in the Message Inbox."
+                color: BLUE
+          else:
+            - failTest:
+                message: "Status badge on the Message details screen does not match the same Message tile in the Message Inbox."
+ 
+  # send no response needed
+  - name: sc.functions.inbox.sendNoResponseNeeded
+    flow:
+      - log: Sending No response needed message
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton
+          wait: 3000
+      - executeFunction:
+          name: sc.functions.inbox.verifySendNoResponseNeeded
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.body
+          wait: 3000
+      - click:
+          identifier: sc.mappings.inbox.messageDetails.spamDialogReasonSubmit
+          wait: 3000
+  
+  # Verify No respose needed
+  - name: sc.functions.inbox.verifySendNoResponseNeeded
+    flow:
+      - log: Verify No response needed
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+          - verifyIdentifier:
+              label:
+                - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.title
+                  contains: No response needed
+                - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.subtitle
+                  contains: Reason
+              present:
+                - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.body
+                - identifier: sc.mappings.inbox.messageDetails.spamDialogReasonSubmit
+          else:
+          - verifyIdentifier:
+              text:
+                - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.title
+                  contains: No response needed
+                - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.subtitle
+                  contains: Reason
+              present:
+                - identifier: sc.mappings.inbox.messageDetails.noResponseNeededButton.body
+                - identifier: sc.mappings.inbox.messageDetails.spamDialogReasonSubmit

@@ -1,0 +1,132 @@
+general:
+  tags: sc-e2e, sc-staging-feature-build, C2715344
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Setting required attribute for identifier based on platform
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - storeIn:
+                key: identifierTextAttribute
+                value: "text"
+          else:
+            - storeIn:
+                key: identifierTextAttribute
+                value: "value"
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Create successful order from a list of items saved based on recent successful orders
+      - executeFunction:
+          name: sc.functions.utils.astro.createOrder
+
+      - executeFunction:
+          name: sc.functions.utils.astro.retryOrderMovementUntilDelivered
+
+      - executeFunction:
+          name: sc.functions.utils.astro.returnOrder
+
+      # Login
+      - executeFunction:
+          name: sc.functions.accounts.login
+          params:
+            - name: email
+              string: sc.partner1.email
+            - name: password
+              string: sc.partner1.password
+
+      #Navigate to return details page of the order that is returned
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+
+            # navigation to catalog view from the home menu
+            - executeFunction:
+                name: sc.functions.navigation.toTab
+                params:
+                  - name: tab
+                    string: sc.tab.returns.name
+
+            - executeFunction:
+                      name: sc.functions.global.search
+                      params:
+                        - name: searchValue
+                          string: ${orderNo}
+
+            - executeFunction:
+                name: sc.functions.returns.selectFirstReturnRecord
+          else:
+            - executeFunction:
+                name: sc.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: sc.data.returns.returnDetails.deepLinkUrl
+
+      - sleep:
+          duration: 5000
+
+      # Issue full refund for the return
+      - executeFunction:
+          name: sc.functions.returns.item.issueRefund
+          params:
+            - name: qtyValue
+              string: 2
+            - name: refundType
+              string: "full"
+            - name: issueRefund
+              string: true
+
+      - executeFunction:
+          name: sc.functions.navigate.back
+      
+      #Navigate to the same order that was refunded
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+
+            # navigation to catalog view from the home menu
+            - executeFunction:
+                name: sc.functions.navigation.toTab
+                params:
+                  - name: tab
+                    string: sc.tab.returns.name
+
+            - executeFunction:
+                      name: sc.functions.global.search
+                      params:
+                        - name: searchValue
+                          string: ${orderNo}
+                    
+            - executeFunction:
+                name: sc.functions.returns.selectFirstReturnRecord
+          else:
+            - executeFunction:
+                name: sc.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: sc.data.returns.returnDetails.deepLinkUrl
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: sc.functions.returns.returnDetails.verifyRedundedStatus
+
+      - executeFunction:
+          name: sc.functions.return.item.validateRefundOption.isNotPresent
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: sc.functions.utils.afterSteps

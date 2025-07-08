@@ -1,0 +1,126 @@
+general:
+  tags: C2699981, unified-p1-ecomm-teflon-e2e, unified-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2699981
+  metadata:
+    - name: scenarioId
+      string: PV010
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo  
+          
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+        # Get timestamp
+      - getTimestamp:
+           asDate: false
+           storeIn: timestamp
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.petrx.autoship.email
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Will take the user to the account menu from where the user can sign in to the app
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.petrx.autoship.email
+            - name: password
+              string: us.data.petrx.autoship.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+
+      # Function1  Select the Delivery Address
+      - executeFunction:
+          name: unified.us.functions.gic.module.selectAdress.fromSelector
+          params:
+            - name: deliveryAddress
+              string: ${STREET_ADDR:2476 Barlow Ave, San Jose, CA 95122}
+            - name: deliveryAddressCard
+              string: ${STREET_ADDR:2476 Barlow Ave, San Jose, CA 95122}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.petrx.autoShip.1.item
+
+      - executeFunction:
+          name: unified.us.functions.item.autoShip.itemSubscription.ATC
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.sub.validateTheSubscriptionFrequencyInCartPage
+
+      # proceeding to checkout/Review order page
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: unified.us.functions.item.autoShip.subscription.placeOrder
+          params:
+            - name: multipleItems
+              string: false
+            - name: signatureRequired
+              string: true
+
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.validateSubscriptionEnabled
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps
+

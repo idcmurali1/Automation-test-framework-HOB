@@ -1,0 +1,284 @@
+#======================================================================================================================
+#    AUTHOR: Osmar Juárez (vn56dce)
+#   CREATED: May/29/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-od-smoke-production-android-1539, prepurchase-od-smoke-production-android
+  testCaseId: MMS-3156
+
+scenarios:
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    Verify that a user can open PDP from Sub Categories and add item to list
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+Android 
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-3156
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-1539
+#
+#######################################################################################################################
+ 
+
+  # BEFORE HOOK #######################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - storeIn:
+          key: __SQUAD_REPORTING_TEST_CASE_NAME
+          value: GMX_OD_Smoke_PROD_PrePurchase_Android_1539
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+      
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+          params:
+            - name: packageName
+              string: ${APP_PACKAGE}
+      - storeIn:
+          key: MMS_1539_SUCCESSFUL_EXECUTION
+          value: false
+      - storeIn:
+          key: MMS_1539_PRODUCT_ADDED_TO_LIST
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN HOOK #########################################################################################################
+  - name: Main
+    platform: android
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN WALMART APP AND COMPLETE ONBOARDING. (2) OPEN THE OD BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.smoke.od.prepurchase-1539.zipCode
+            - name: banner
+              string: 'OD'
+      
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: LOG IN BY GOING TO 'Cuenta' > 'Iniciar sesión'"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.smoke.od.prepurchase-1539.userEmail
+            - name: userPassword
+              string: mx.data.qaa.smoke.od.prepurchase-1539.userPassword
+            - name: userName
+              string: mx.data.qaa.smoke.od.prepurchase-1539.userFirstName
+
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: SEARCH FOR AN ITEM BY ENTERING THE PRODUCT KEYWORD/NAME INTO SEARCH FIELD ON TOP OF SCREEN."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch # RETURN: --${returnedElementsResults}--
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.smoke.od.prepurchase-1539.productSearch
+      
+      # STEP 5 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: TAP ON FIRST PRODUCT IN THE SEARCH LIST."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.slp.openFirstPDPListed
+      - executeFunction:
+          name: mx.functions.pdp.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.pdp.getProductNameHelper # RETURN: --${returnedProductName}--
+      - executeFunction:
+          name: mx.functions.pdp.getPrice # RETURN: --${returnedProductPrice}--
+      - storeIn:
+          key: MMS_1539_PRODUCT_NAME
+          value: ${returnedProductName}
+      - storeIn:
+          key: MMS_1539_PRODUCT_PRICE
+          value: ${returnedProductPrice}
+      
+      # STEP 6 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6: TAP 'Agregar a lista' FROM PDP."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.pdp.tapAddToList
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.assertPageDisplayed
+     
+      
+      # STEP 7 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: SELECT RADIO BUTTON FROM LIST ALREADY CREATED (NOT 'Tus Favoritos') AND TAP SAVE."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.selectListByName
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1539.listName
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.tapSave
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.assertProductAddedToList
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1539.listName
+      - storeIn:
+          key: MMS_1539_PRODUCT_ADDED_TO_LIST
+          value: true
+
+      
+      # STEP 8 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 8: CLOSE PDP AND GO TO 'Tus productos'."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      - executeFunction:
+          name: mx.functions.products-and-lists.assertPageDisplayed
+
+      # STEP 9 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 9: SELECT 'Listas' SECTION."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.products-and-lists.tapLists
+      - executeFunction:
+          name: mx.functions.products-and-lists.lists-tab.assertPageIsDisplayed
+      - executeFunction:
+          name: mx.functions.products-and-lists.lists-tab.assertItemsInListCardViewByName
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1539.listName
+            - name: numberOfItems
+              string: '1'
+
+      # STEP 10 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 10: OPEN LIST CREATED FOR USER."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.products-and-lists.lists-tab.tapListByName
+          params:
+            - name: listName
+              string: mx.data.qaa.smoke.od.prepurchase-1539.listName
+      - executeFunction:
+          name: mx.functions.list.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params:
+            - name: expectedListName
+              string: mx.data.qaa.smoke.od.prepurchase-1539.listName
+      - executeFunction:
+          name: mx.functions.list.assertTotalProductsCount
+          params:
+            - name: expectedTotalProductsCount
+              string: '1'
+      - executeFunction:
+          name: mx.functions.list.assertEstimatedTotal
+          params:
+            - name: expectedEstimatedTotal
+              string: ${MMS_1539_PRODUCT_PRICE}
+      - executeFunction:
+          name: mx.functions.list.assertProductListed
+          params:
+            - name: productName
+              string: ${MMS_1539_PRODUCT_NAME}
+
+      # STEP 11 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 11: DELETE ITEM FROM LIST."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.list.deleteProductFromList
+          params:
+            - name: productName
+              string: ${MMS_1539_PRODUCT_NAME}
+
+  
+  # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_1539_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+  # AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..."
+
+      - if:
+          condition: ${MMS_1539_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. Resseting data for next execution."
+                color: RED
+            - if:
+               condition: ${MMS_1539_PRODUCT_ADDED_TO_LIST} == true
+               then:
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+                  - executeFunction:
+                      name: mx.functions.bottom-menu.tapProductsAndLists
+                  - executeFunction:
+                      name: mx.functions.products-and-lists.tapLists
+                  - executeFunction:
+                      name: mx.functions.products-and-lists.lists-tab.tapListByName
+                      params:
+                        - name: listName
+                          string: mx.data.qaa.smoke.od.prepurchase-1539.listName
+                  - executeFunction:
+                     name: mx.functions.lists.deleteAllProductsFromList
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"
+  

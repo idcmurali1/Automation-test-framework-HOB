@@ -1,0 +1,407 @@
+tools:
+  jdk:
+    flavor: azul
+    version: 11
+  nodejs:
+    - 16.20.2
+  npm:
+    - 8.19.4
+triggers:
+  - push: disabled
+  - pr: disabled
+  - manual:
+      name: sanity
+      call: default
+
+parameters:
+  - EMAIL_TO: { type: string, defaultValue: "adityavikram.rajawat@walmart.com, anthony.doan@walmart.com, chandra.movva@walmart.com, duke.nguyen@walmart.com, 
+  sandhya.vissapragada0@walmart.com, Praneeth.Pagidi@walmart.com", label: "use the DL or specific users who need to receive the status report on email" }
+  - GLASS_ENV: { type: string, defaultValue: "teflon", label: "env variable to run the app against, possible values: teflon, production, staging" }
+  - SLACK_CHANNEL: { type: string, defaultValue: "marketplace-r2-automation-results", label: "use this channel to post test results" }
+  - EMAIL_SUBJECT: { type: string, defaultValue: "Marketplace - Android Automation status report", label: "Marketplace <Platform> status report" }
+  - APP_PLATFORM: { type: string, defaultValue: "android", label: "" }
+  - TEST_TAGS: { type: string, defaultValue: "mp-functional-android", label: "The tag value can be unique to a test case or a group of tests that can be concurrently run" }
+  - SAUCE_TEST_REPORTING_NAME: { type: string, defaultValue: "mp-android-p1", label: "" }
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      SAUCE_USERNAME: sso-walmart-Adityavikram.Rajawat
+      SAUCE_ACCESS_KEY: fcf0a172-66f1-4b08-b17b-72f89783667d
+      https_proxy: http://sysproxy.wal-mart.com:8080
+      no_proxy: walmart.com
+      R2_THREADS: 1
+      NPM_CONFIG_REGISTRY: https://npme.walmart.com/
+      REPORT_URL: ''
+      TESTRAIL_USERNAME: r2-test@walmart.com
+      TESTRAIL_API_KEY: ENC[9k83Vq1YSY3Y8exw1oi/flNDbzbb8CnuVwTvrOcBCpC6drAGgF0vIWQS0CYAyoNK]
+      TESTRAIL_PLAN_NAME: '${DATE} - r2 - ${APP_PLATFORM} - ${APP_BRANCH} - ${APP_VERSION} - ${SAUCE_APP}'
+      SAUCE_APP: 'storage:filename=glass.apk'
+      TEST_RUN_STATUS: ''
+      TEST_RUN_PASSED: ':white_check_mark: *Test Run Passed*'
+      TEST_RUN_FAILED: ':x: *Test Run Failed*'
+      SLACK_TEST_RUN_MESSAGE:
+        "${TEST_RUN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n 
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+      SKIP_SLACK_TEST_RUN: ''
+      TEST_PLAN_STATUS: ''
+      TEST_PLAN_PASSED: ':white_check_mark: *Test Plan Passed*'
+      TEST_PLAN_FAILED: ':x: *Test Plan Failed*'
+      SLACK_TEST_PLAN_MESSAGE:
+        "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *TestRail Link*: https://walmartmobile.testrail.com/index.php?/plans/view/${TESTRAIL_PLAN_ID}"
+      SLACK_TEST_REPORT_MESSAGE: ''
+      EMAIL_TEST_REPORT_MESSAGE: ''
+      RELEASE_LATEST: false
+      RDC: false
+      XRAY_KEY: ENC[9rI9J88bYd4F0xqdw/5JNA==]
+      XRAY_USER_NAME: ENC[ioSv6wduzvORwECPwGWUUw==]
+      POST_TO_SPLUNK: true
+      POST_TO_XRAY: true
+      BUILD_APP_VERSION: ''
+      STORAGE_NAME: ''
+      VERSION_NAME: ''
+      USE_CUSTOM_R2_JAR: false
+      EMAIL_SUBJECT: ''
+
+flows:
+  default:
+    - echo "Build Looper Carta Base"
+
+  setup:
+    - echo "Carta Base"
+    - hygieia.publishBuild()
+    - shell (name Remove node_modules): |
+        rm -frv node_modules
+    - shell (name npm cache clear): |
+        npm cache clear --force
+    - shell (name sleep 10): |
+        sleep 10
+    - shell (name npm install): |
+        npm install
+    - if: |
+        %{USE_CUSTOM_R2_JAR == 'false'}
+      then:
+        - shell (name download r2 binary): |
+            npm run download-r2
+      else:
+        - shell: echo Using custom R2 jar
+    - shell (name npm run r2-verifier): |
+        npm run r2-verifier
+
+  get_app_version:
+    - echo "Get App Platform"
+    - if: |
+        %{APP_PLATFORM == 'android'}
+      then:
+        - var(APP_VERSION):
+            - shell  (name Get App Version): head ${MARKET}/app-versions/android.txt
+      else:
+        - var(APP_VERSION):
+            - shell  (name Get App Version): head ${MARKET}/app-versions/ios.txt
+
+  return_sauce_app_location:
+    - var(SAUCE_APP):
+        - shell(name Check If SAUCE_APP exists): |
+            echo ${SAUCE_APP}
+    - if: |
+        %{SAUCE_APP =~ 'storage:filename=.*'}
+      then:
+        - shell (name Use Existing SAUCE_APP): |
+            echo $SAUCE_APP
+      else:
+        - if: |
+            %{APP_PLATFORM == 'android'}
+          then:
+            - var(SAUCE_APP_ANDROID):
+                - shell (name Get SAUCE_APP_ANDROID, silent): |
+                    echo ${GITHUB_PR_BODY} | grep SAUCE_APP_ANDROID | cut -d '=' -f 2 | cut -d '\' -f 1
+            - if: |
+                %{SAUCE_APP_ANDROID =~ 'storage:filename=.*'}
+              then:
+                - var(SAUCE_APP):
+                    - shell (name Use PR Body SAUCE_APP_ANDROID): |
+                        echo ${SAUCE_APP_ANDROID}
+              else:
+                - var(SAUCE_APP):
+                    - shell (name Use Current Branch SAUCE_APP): |
+                        echo storage:filename=glass-${APP_BRANCH}-${APP_VERSION}.apk
+          else:
+            - var(SAUCE_APP_IOS):
+                - shell (name Get SAUCE_APP_IOS, silent): |
+                    echo ${GITHUB_PR_BODY} | grep SAUCE_APP_IOS | cut -d '=' -f 2 | cut -d '\' -f 1
+            - if: |
+                %{SAUCE_APP_IOS =~ 'storage:filename=.*'}
+              then:
+                - var(SAUCE_APP):
+                    - shell (name Use PR Body SAUCE_APP_IOS): |
+                        echo ${SAUCE_APP_IOS}
+              else:
+                - var(SAUCE_APP):
+                    - shell (name Use Current Branch SAUCE_APP): |
+                        echo storage:filename=glass-${APP_BRANCH}-${APP_VERSION}.zip
+
+  execute_test:
+    - shell (name Print All ENV): |
+        printenv|sort
+    - shell (name Start R2 Test): |
+        java -jar r2-binary/r2.jar -d us/e2e-tests/dependencies/android/android-default.yaml -a ${MARKET}/ -t "${TEST_TAGS}" -p carta-looper-teflon
+
+  get_test_failures:
+    try:
+      - shell (name Verify Test Results Exists): cat report/data/data.js | grep "verbose"
+      - shell (name Find Test Failures): cat report/data/data.js | grep -v "\"status\":\"failed\""
+    catch:
+      - echo "Test has a failure. Please check 'Start R2 Test' report - ${REPORT_URL}"
+      - exit 1
+
+  # generate test report in slack format
+  get_test_report_slack_format:
+    try:
+      - shell (name Generate test report in slack format): |
+          node ./${MARKET}/scripts/generate-slack-output.js
+      - var(SLACK_TEST_REPORT_MESSAGE):
+          - shell (name Generate test report in slack format): |
+              cat slackOutPut.txt
+    catch:
+      - echo "Unable to generate report - $flowErrorMessage"
+      - exit 1
+
+  # generate json report and post the results to splunk
+  post_test_results_json_to_splunk:
+    try:
+      - if: $POST_TO_SPLUNK
+        then:
+          - shell (name Generate splunk report): |
+              node ./${MARKET}/scripts/generate-test-report-json.js
+    catch:
+      - echo "Unable to post results to splunk - $flowErrorMessage"
+
+  # Post slack message for test runs
+  post_slack_test_run:
+    try:
+      - if: $USE_TEST_REPORT
+        then:
+          - call: get_test_report_slack_format
+      - slack.postMessage:
+          message: $SLACK_TEST_RUN_MESSAGE
+          channelId: $SLACK_CHANNEL
+    catch:
+      - echo "Unable to post results to slack - $flowErrorMessage"
+
+  # generate xray report and update test execution
+  update_test_results_to_xray:
+    try:
+      - if: $POST_TO_XRAY
+        then:
+          - shell (name Upload test resport to xray): |
+              node ./${MARKET}/scripts/generate-xray-report.js
+    catch:
+      - echo "Unable to post results to xray - $flowErrorMessage"
+
+  # Helper adds logic to skip posting slack test run message based on conditions (all or passed)
+  # Example usage: SKIP_SLACK_TEST_RUN: all
+  slack_test_run_helper:
+    - if: |
+        %{SKIP_SLACK_TEST_RUN.contains('all')}
+      then:
+        - shell (name All Test Run Slack Messages Skipped): |
+            echo "All Test Run Slack Messages Skipped"
+      else:
+        - if: |
+            %{TEST_RUN_STATUS.contains('Failed')}
+          then:
+            - call: post_slack_test_run
+          else:
+            - if: |
+                %{SKIP_SLACK_TEST_RUN.contains('passed')}
+              then:
+                - shell (name Test Run Passed Slack Messages Skipped): |
+                    echo "Test Run Passed Slack Messages Skipped"
+              else:
+                - call: post_slack_test_run
+
+  # Post slack message for test plans
+  post_slack_test_plan:
+    try:
+      - slack.postMessage:
+          message: $SLACK_TEST_PLAN_MESSAGE
+          channelId: $SLACK_CHANNEL
+    catch:
+      - shell (name Slack Test Plan Step Failed): |
+          echo "Slack Test Plan Step Failed - $flowErrorMessage"
+
+  # Post email for test plans
+  post_email:
+    try:
+      - mail:
+          from: noreply-da@walmart.com
+          to: ${EMAIL_TO}
+          subject: ${EMAIL_SUBJECT}
+          contentType: text/html
+          messageFromFile: ./emailReport.html
+    catch:
+      - shell (name Post Email Step Failed): |
+          echo "Post Email Step Failed - $flowErrorMessage"
+
+  publish_report:
+    try:
+      - publishReport:
+          context: $TEST_SESSION_ID
+          dir: report
+          index: index.html
+          verbose: true
+      - var(REPORT_URL):
+          - shell (name Report URL): |
+              REPORT_VALUE=PUBLISH_REPORT_$[TEST_SESSION_ID]
+              echo ${!REPORT_VALUE}
+    catch:
+      - echo "Publish Report step failed. Please check Start R2 Test step. $flowErrorMessage"
+
+  generate_testrail_plan:
+    - if: $TESTRAIL_PROJECT_ID
+      then:
+        # - declare(APP_BRANCH)
+        - declare(APP_VERSION)
+        - var(DATE):
+            - shell (name get date): |
+                TZ=":US/Pacific" date '+%Y-%m-%d %H:%M:%S'
+        # - call: get_app_branch
+        - call: get_app_version
+        - var(TESTRAIL_PLAN_ID):
+            - shell (name Generate Testrail Plan): |
+                curl -s -X POST \
+                -H "Content-Type: application/json" \
+                -u "${TESTRAIL_USERNAME}:${TESTRAIL_API_KEY}" \
+                -d "{ \"name\": \"${TESTRAIL_PLAN_NAME}\" }" \
+                "https://walmartmobile.testrail.com/index.php?/api/v2/add_plan/${TESTRAIL_PROJECT_ID}" \
+                | cut -sd':' -f 2 | cut -sd',' -f 1
+
+  input_r2_params:
+    try:
+      - shell: |
+          echo ${R2_FLOW_PARAMETERS} > input.json
+      - exposeVars(input.json)
+      - echo ${input}
+      - var(TEST_TAGS): ${input.testTags}
+    catch:
+      - shell (name R2_FLOW_PARAMETERS Missing): |
+          echo "R2_FLOW_PARAMETERS missing"
+
+  generate_output:
+    - shell: |
+        node ./${MARKET}/scripts/generate-output.js
+
+  generate_email_template:
+    try:
+      - shell (name sleep 5): |
+          sleep 5
+      - shell (name Execute generate-carta-email-report.js): |
+          node ./${MARKET}/scripts/generate-carta-email-report.js
+      - var(EMAIL_TEST_REPORT_MESSAGE):
+          - shell (name Generate test report in email format): |
+              cat emailReport.html
+      - shell (name sleep 5): |
+          sleep 5
+    catch:
+      - echo "Unable to generate email template"
+
+  post_test_results_json_to_es:
+    try:
+      - if: $POST_TO_ES
+        then:
+          - shell (name Execute generate-es-report-looper.js): |
+              node ./${MARKET}/scripts/generate-es-report-looper.js
+    catch:
+      - echo "Unable to post results to Elastic Search - $flowErrorMessage"
+
+  output_r2_params:
+    - exposeVars(r2-report.json)
+    - var(output): toJson(r2-report)
+    - echo ${output}
+
+  generate_sauce_labs_build_url:
+    - shell (name Sauce Labs Build URL): |
+        echo "https://app.saucelabs.com/archives/vdc?q=build:(r2-${TEST_SESSION_ID})"
+
+  # Get appversion number from Sauce Labs build
+  get_build_app_version:
+    try:
+      - if: |
+          %{MARKET == 'us'}
+        then:
+          - if: |
+              %{APP_PLATFORM == 'android'}
+            then:
+              - var(VERSION_NAME = 'version')
+            else:
+              - var(VERSION_NAME = 'short_version')
+          - var(STORAGE_NAME):
+              - shell (name STORAGE_NAME): echo ${SAUCE_APP} | cut -f2 -d'='
+          - var(BUILD_APP_VERSION):
+              - shell (name BUILD_APP_VERSION): |
+                  curl -s -u "$SAUCE_USERNAME:$SAUCE_ACCESS_KEY" "https://api.us-west-1.saucelabs.com/v1/storage/files?per_page=1&name=${STORAGE_NAME}" | grep -o "\"${VERSION_NAME}\": \"[^\"]*\"" | cut -f4 -d'"' | cut -f1 -d"-"
+    catch:
+      - echo "Unable to get build appVersion - $flowErrorMessage"
+
+  # Check if Nexus repository build is available for current appversion number
+  get_repository_build:
+    try:
+      - if: |
+          %{TRIGGER_TARGET_BRANCH == 'development' && MARKET == 'us'}
+        then:
+          - if: |
+              %{APP_PLATFORM == 'android'}
+            then:
+              - shell (name Check build availability): |
+                  curl -f https://mvn.ci.artifacts.walmart.com/artifactory/walmart-android-mvn/com/walmart/android/glass/us-development/glass-us-apk-debug/${APP_VERSION}-debug--SNAPSHOT/maven-metadata.xml
+            else:
+              - shell (name Check build availability): |
+                  curl -f https://mvn.ci.artifacts.walmart.com/artifactory/walmart-ios-mvn/com/walmart/ios/glass/usa/glass-qa-intel-nightly-sim/${APP_VERSION}-debug/maven-metadata.xml
+      - if: |
+          %{TRIGGER_TARGET_BRANCH == 'us/release-latest' && MARKET == 'us'}
+        then:
+          - if: |
+              %{APP_PLATFORM == 'android'}
+            then:
+              - shell (name Check build availability): |
+                  curl -f https://mvn.ci.artifacts.walmart.com/artifactory/walmart-android-mvn/com/walmart/android/glass/us-RC/glass-us-apk-debug/${APP_VERSION}-debug--SNAPSHOT/maven-metadata.xml
+            else:
+              - shell (name Check build availability): |
+                  curl -f https://mvn.ci.artifacts.walmart.com/artifactory/walmart-ios-mvn/com/walmart/ios/glass/usa/glass-release-candidate-sim/${APP_VERSION}-debug/maven-metadata.xml
+    catch:
+      - fail("${APP_VERSION} - App build for this appVersion not available - $flowErrorMessage")
+
+  build:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+            - declare(APP_VERSION)
+            - call: setup
+            - call: get_app_version
+            - call: get_repository_build
+            - call: return_sauce_app_location
+            - call: get_build_app_version
+            - call: execute_test
+            - call: generate_sauce_labs_build_url
+            - call: publish_report
+            - call: get_test_failures
+            - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+              - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+              - shell: exit 1
+        finally:
+              - call: post_email
+
+  post_to_anivia:
+    try:
+      - shell: node us/scripts/generate-sm-report.js
+    catch:
+      - echo "Unable to post results to Anivia - $flowErrorMessage"

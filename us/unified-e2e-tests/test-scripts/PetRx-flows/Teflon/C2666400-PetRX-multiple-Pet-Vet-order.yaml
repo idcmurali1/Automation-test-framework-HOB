@@ -1,0 +1,169 @@
+general:
+  tags: C2666400, unified-teflon-e2e, unified-p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2666400
+  metadata:
+    - name: scenarioId
+      string: PV002
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      # Get Environment and set platform values
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.email
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.email
+            - name: password
+              string: us.data.ios.flowPetRX.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+  
+      - executeFunction:
+          name: unified.us.functions.home.rateDriverPopup
+  
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+              - name: store
+                string: 95122
+              - name: storeName
+                string: San Jose Supercenter
+
+
+      # petRx item list https://confluence.walmart.com/pages/viewpage.action?spaceKey=CDMPIDO&title=RCTSTAMPS-8350+NEW+PETRX+ITEMS 
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+       #Fetch stock available items using fetch API
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.email
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: itemList
+              string: us.data.flow.petRx.itemLists
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl} 
+              #walmart://ip/1996033768 #982872089 # walmart://ip/22471997, walmart://ip/894010516
+
+#Verify Petrx product details and add to cart
+      - executeFunction:
+          name: unified.us.functions.item.petrxItem.verifyPresent
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+           name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.increaseToMaxQty
+          params:
+            - name: maxQty
+              string: 1
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # Verify cart
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.cart.selectExistingAddress
+          params:
+            - name: address
+              string: 1353
+
+    # Continue to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+    # Add Pet and Vet details
+      - executeFunction:
+          name: unified.us.functions.checkout.AddPetVet
+          
+      - executeFunction:
+          name: unified.us.functions.checkout.MultiSelectPetVet
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.ratings
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+              
+      - storeIn:
+          key: testStatus
+          value: passed  
+      
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

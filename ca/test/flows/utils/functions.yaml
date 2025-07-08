@@ -1,0 +1,739 @@
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Use this method to scroll when R2 scroll is not working.
+  # PARAMS:
+  #     ${scrollContainer}        [Mandatory]  The mapping of the container to scroll.
+  #     ${untilIdentifier}        [Mandatory]  The mapping of the element upto which scroll to be performed.
+  #     ${searchDirection}        [Mandatory]  The direction to scroll. Options: [ up | down | right | left ]
+  - name: ca.test.functions.utils.scrollToView
+    flow:
+      # Input locators
+      - log: 
+          message: Identifier of container to be scrolled ${scrollContainer}
+          color: CYAN
+      - log: 
+          message: Identifier of product to be visible ${untilIdentifier}
+          color: CYAN
+      - log: 
+          message: Scrolling direction:${searchDirection}
+          color: CYAN
+
+      # If the container not in current view fail
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ${scrollContainer}
+          then:
+            - failTest:
+                message: "Element not in current view."
+
+      - executeFunction:
+         name: ca.test.functions.utils.findingContainerCoordinates
+         params:
+            - name: scrollContainer
+              string: ${scrollContainer}
+      
+      - log: 
+          message: "Container cooridnate of the element: ${containerBoundsJson}"
+          color: CYAN
+      - log: 
+          message: "Direction of the scroll: ${searchDirection}"
+          color: CYAN
+    # Finding the enpoints to drag the coordinates 
+      # For scrolling up      
+      - if:
+          condition: ${searchDirection} == 'up'
+          then:
+            - arithmetic:
+                expression: ${containerY} + 100
+                storeIn: fromY
+                asInt: true
+            - arithmetic:
+                expression: ${containerY2} - 100
+                storeIn: toY
+                asInt: true
+            - arithmetic:
+                expression: (${containerX2} + ${containerX}) / 2
+                storeIn: fromX
+                asInt: true
+            - storeIn:
+                key: toX
+                value: ${fromX}
+            
+      # For scrolling down
+      - if: 
+          condition: ${searchDirection} == 'down'
+          then:
+            - arithmetic:
+                expression: ${containerY} + 100
+                storeIn: toY
+                asInt: true
+            - arithmetic:
+                expression: ${containerY2} - 100
+                storeIn: fromY
+                asInt: true
+            - arithmetic:
+                expression: (${containerX2} + ${containerX}) / 2
+                storeIn: fromX
+                asInt: true
+            - storeIn:
+                key: toX
+                value: ${fromX}
+      # For scrolling right
+      - if:
+          condition: ${searchDirection} == 'right'
+          then:
+            - arithmetic:
+                expression: ${containerX} + 100
+                storeIn: toX
+                asInt: true
+            - arithmetic:
+                expression: ${containerX2} - 100
+                storeIn: fromX
+                asInt: true
+            - arithmetic:
+                expression: (${containerY2} + ${containerY}) / 2
+                storeIn: fromY
+                asInt: true
+            - storeIn:
+                key: toY
+                value: ${fromY}
+      # For scrolling left
+      - if:
+          condition: ${searchDirection} == 'left'
+          then:
+            - arithmetic:
+                expression: ${containerX} + 100
+                storeIn: fromX
+                asInt: true
+            - arithmetic:
+                expression: ${containerX2} - 100
+                storeIn: toX
+                asInt: true
+            - arithmetic:
+                expression: (${containerY2} + ${containerY}) / 2
+                storeIn: fromY
+                asInt: true
+            - storeIn:
+                key: toY
+                value: ${fromY}
+      # Draging to find the element.
+      - executeFunction:
+          name: ca.test.functions.utils.scrollingToElement
+      # Centering to the current view.
+      - executeFunction:
+          name: ca.test.functions.utils.scrollingElementToCenter
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: Drags until the required element is not found in the UI.
+  # PARAMS:
+  #     ${untilIdentifier}        [Mandatory]  The mapping of the element upto which scroll to be performed.
+  #     ${fromX}                  [Mandatory]  X-axis start cooridnates
+  #     ${fromY}                  [Mandatory]  X-axis final cooridnates
+  #     ${toX}                    [Mandatory]  Y-axis start cooridnates
+  #     ${toY}                    [Mandatory]  Y-axis final cooridnates
+  - name: ca.test.functions.utils.scrollingToElement
+    doWhile: true
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: ${untilIdentifier}
+      - drag:
+          from:
+            x: ${fromX}
+            y: ${fromY}
+          to:
+            x: ${toX}
+            y: ${toY}
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Drags until the required element is centered.
+  # PARAMS:
+  #     ${untilIdentifier}        [Mandatory]  The mapping of the element upto which scroll to be performed.
+  #     ${fromX}                  [Mandatory]  X-axis start cooridnates
+  #     ${fromY}                  [Mandatory]  X-axis final cooridnates
+  #     ${toX}                    [Mandatory]  Y-axis start cooridnates
+  #     ${toY}                    [Mandatory]  Y-axis final cooridnates
+  - name: ca.test.functions.utils.scrollingElementToCenter
+    flow:
+    # finding the coordinates of product container
+      - executeFunction:
+         name: ca.test.functions.utils.findingProductCoordinates
+         params:
+            - name: untilIdentifier
+              string: ${untilIdentifier}
+    # To find the coordinates of product container
+      - log: Product XCoordinate ${ProductX}
+      - log: Product X2Coordinate ${ProductX2}
+      - log: Product YCoordinate ${ProductY}
+      - log: Product Y2Coordinate ${ProductY2}
+      - log: Container XCoordinate ${containerX}
+      - log: Contaner X2Coordinate ${containerX2}
+      - log: Container YCoordinate ${containerY}
+      - log: Container Y2Coordinate ${containerY2}
+      - arithmetic:
+          expression: (${containerX} + ${containerX2}) / 2
+          storeIn: containerXCenter
+          asInt: true
+      - arithmetic:
+          expression: (${containerY} + ${containerY2}) / 2
+          storeIn: containerYCenter
+          asInt: true
+      - arithmetic:
+          expression: ((${ProductX} + ${ProductX2}) / 2) - 120
+          storeIn: productXCenter
+          asInt: true
+      - arithmetic:
+          expression:  (${ProductY} + ${ProductY2}) / 2
+          storeIn: productYCenter
+          asInt: true
+    # As Y coordinate is common for both container and product tile, so comparing x coordinate.
+      - if:
+          condition: ${searchDirection} == 'down' || ${searchDirection} == 'up'
+          then:
+            - if:
+                  condition: ${containerYCenter} < ${productYCenter} || ${containerYCenter} > ${productYCenter}
+                  then:
+                    - drag:
+                        from:
+                          x: ${containerXCenter}
+                          y: ${productYCenter}
+                        to:
+                          x: ${containerXCenter}
+                          y: ${containerYCenter}
+                        wait: 500
+
+                  else:
+                    - log:
+                        message: "Product is in current view."
+                        color: BLUE
+          else:
+            - if:
+                  condition: ${containerXCenter} < ${productXCenter} || ${containerXCenter} > ${productXCenter}
+                  then:
+                    - drag:
+                        from:
+                          x: ${productXCenter}
+                          y: ${productYCenter}
+                        to:
+                          x: ${containerXCenter}
+                          y: ${productYCenter}
+                  else:
+                    - log:
+                        message: "Product is in current view."
+                        color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This method will open PIP/PDP using deeplink
+  # Params:      ${product_sku}      [Mandatory]    Sku of PDP to open.
+  - name: ca.test.functions.utils.deepLink
+    flow:
+      - openLink: https://www-qa3.walmart.ca/en/ip/${product_sku}
+      - if: 
+          identifier:
+            present:
+              - identifier: ca.test.mappings.debugPanel.deepLink.openButton
+          then:
+            - executeFunction:
+                name: ca.test.functions.debugPanel.deepLink.tapOpenButton
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method will add items to cart based on the cart condition using deep link.
+  # Params: ${environment}             [Optional]     Environment to select the data file |  Options: [staging(d) | production]
+  #         ${seller}                  [Optional]     Seller type                         |  Options: [1P(d) | 2P | 3P]
+  #         ${category}                [Optional]     Product category                    |  Options: [GM(d) | GO | MX]
+  #         ${badges}                  [Optional]     To sort based on the badges         |  Options: [null(d) | Rollback | Clearance | Reduced Price | Multi-save]
+  #         ${others}                  [Optional]     To sort based on the others factors |  Options: [null(d) | Multi-variant | Discounted Price]
+  #         ${excludeOptionalParams}   [Optional]     To remove products with badges      |  Options: [false(d) | true]
+  #                                                   or other factors
+  #         ${required_cart_qty}       [Optional]     Required cart Qty                   |  Options: [single_sku(d) | multi_sku]
+  #         ${required_cart_condition} [Optional]     Required cart condition             |  Options: [greaterthanShipping(d) | lessThanShipping | lessThanHandling]
+  #         ${index}                   [Not Required] Assigned during execution
+  #         ${currentPrice}            [Not Required] Assigned during execution
+  #         ${isFlowApi}               [Optional]     To get product for API              |  Options: [false(d) | true]
+  #         ${skipAddToCart}           [Optional]     To perform add to cart              |  Options: [true(d) | false]
+  #                                                   (only for single_sku)
+  - name: ca.test.functions.utils.addToCartBasedOnConditionUsingDeepLink
+    flow:
+      - storeIn:
+          key: index
+          value: '0'
+      - if:
+          condition: ${required_cart_qty} == null
+          then:
+            - storeIn:
+                key: required_cart_qty
+                value: single_sku
+          else:
+            - storeIn:
+                key: required_cart_qty
+                value: ${required_cart_qty}
+      - if:
+          condition: ${isFlowApi} == null
+          then:
+            - storeIn:
+                key: isFlowApi
+                value: 'null'
+          else:
+            - storeIn:
+                key: isFLowApi
+                value: ${isFlowApi}
+      - loop:
+          begin: 0
+          end: 5
+          mode: increment
+          flow:
+            - executeNode:
+                file: ca/test/helpers/utils/productForAutomation.js
+                args:
+                  - value: ${environment}
+                  - value: ${seller}
+                  - value: ${category}
+                  - value: ${badges}
+                  - value: ${others}
+                  - value: ${excludeOptionalParams}
+                  - value: ${required_cart_qty}
+                  - value: ${required_cart_condition}
+                  - value: ${index}
+                  - value: ${currentPrice}
+                  - value: ${isFlowApi}
+                getValue:
+                  - key: pro_name
+                    storeIn: productName
+                  - key: pro_sku
+                    storeIn: productSku
+                  - key: pro_price
+                    storeIn: productPrice
+                  - key: index
+                    storeIn: index
+                  - key: quantity
+                    storeIn: qty
+            - log: 
+                message: "Produce name: ${productName}"
+                color: BLUE
+            - log:
+                message: "Product sku: ${productSku}"
+                color: BLUE
+            - log:
+                message: "Product price: ${productPrice}"
+                color: BLUE
+            - log:
+                message: "Product quantity: ${qty}"
+                color: BLUE
+            - if: 
+                condition: ${qty} != null
+                then:
+                  - log: 
+                      message: "${qty} quantity of Product will be added."
+                      color: BLUE
+                else:
+                  - storeIn:
+                      key: qty
+                      value: 1
+            - executeFunction:
+                name: ca.test.functions.utils.deepLink
+                params:
+                  - name: product_sku
+                    string: ${productSku}
+            - if:
+                condition: ${required_cart_qty} == 'single_sku'
+                then:
+                  - executeFunction:
+                      name: ca.test.functions.productPage.isProductPageDisplayed
+                  - executeFunction:
+                      name: ca.test.functions.productPage.assertNotAddedToCart
+                  - log: ${isReturnedDisplayed}, ${isProductAdded}
+                  - if:
+                      condition: "${isReturnedDisplayed} && ${isProductAdded}"
+                      then:
+                        - executeFunction:
+                            name: ca.test.functions.utils.error.isTechnicalIssueDisplayed
+                        - if: 
+                            condition: ${isErrorDisplayed}
+                            then: 
+                              - if:
+                                  condition: "!${skipAddToCart}"
+                                  then:
+                                    - executeFunction:
+                                        name: ca.test.functions.productPage.productAddToCart
+                                    - loop:
+                                        begin: 1
+                                        end: ${qty}
+                                        mode: increment
+                                        flow:
+                                          - executeFunction:
+                                              name: ca.test.functions.productPage.addToCart.tapQuantityIncrement
+                                          - sleep:
+                                              duration: 5000
+                                    - executeFunction:
+                                        name: ca.test.functions.productPage.assertAddedToCart
+                                    - if:
+                                        condition: "!${isProductAdded}"
+                                        then:
+                                          - executeFunction:
+                                              name: ca.test.functions.productPage.tapCloseBtn
+                                          - break: true
+                                        else:
+                                          - log:
+                                              message: "Warning: Product not added to cart"
+                                              color: YELLOW
+                                  else:
+                                    - log:
+                                        message: "Warning: Add to cart is disabled"
+                                        color: YELLOW_UNDERLINED
+                                    - break: true
+                            else:
+                              - log:
+                                  message: "Warning: flow encountered an error (Technical error)"
+                                  color: YELLOW_UNDERLINED
+                      else:
+                        - log:
+                            message: "Warning: Product page is not displayed"
+                            color: YELLOW_UNDERLINED
+                else:
+                  - if:
+                      condition: ${skipAddToCart} == true
+                      then:
+                        - executeFunction:
+                            name: ca.test.functions.productPage.isProductPageDisplayed
+                        - executeFunction:
+                            name: ca.test.functions.productPage.assertAddedToCart
+                        - if:
+                            condition: ${isReturnedDisplayed} == true && ${isProductAdded} == false
+                            then:
+                              - executeFunction:
+                                  name: ca.test.functions.utils.error.isTechnicalIssueDisplayed
+                              - if: 
+                                  condition: ${isErrorDisplayed} == false
+                                  then: 
+                                    - if: 
+                                        condition: ${qty} == null
+                                        then:
+                                          - executeFunction:
+                                              name: ca.test.functions.productPage.productAddToCart
+                                          - executeFunction:
+                                              name: ca.test.functions.productPage.assertAddedToCart
+                                          - if:
+                                              condition: ${isProductAdded} == true
+                                              then:
+                                                - executeFunction:
+                                                    name: ca.test.functions.productPage.tapCloseBtn
+                                                - storeIn:
+                                                    key: index
+                                                    value: '0'
+                                                - storeIn:
+                                                    key: currentPrice
+                                                    value: ${productPrice}
+                                              else:
+                                                - storeIn:
+                                                    key: currentPrice
+                                                    value: 'null'
+                                        else:
+                                          - executeFunction:
+                                              name: ca.test.functions.productPage.productAddToCart
+                                          - loop:
+                                              begin: 1
+                                              end: ${qty}
+                                              mode: increment
+                                              flow:
+                                                - executeFunction:
+                                                    name: ca.test.functions.productPage.addToCart.tapQuantityIncrement
+                                                - sleep:
+                                                    duration: 5000
+                                          - executeFunction:
+                                              name: ca.test.functions.productPage.tapCloseBtn
+                                          - break: true
+                            else:
+                              - storeIn:
+                                  key: currentPrice
+                                  value: 'null'
+                      else:
+                        - log:
+                            message: "Warning: multi_sku doesn't support skipAddToCart = true"
+                            color: YELLOW_UNDERLINED
+            - sleep:
+                duration: 2000
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method will add items to cart based on the cart condition using deep link.
+  # Params: ${environment}             [Optional]     Environment to select the data file |  Options: [staging(d) | production]
+  #         ${seller}                  [Optional]     Seller type                         |  Options: [1P(d) | 2P | 3P]
+  #         ${category}                [Optional]     Product category                    |  Options: [GM(d) | GO | MX]
+  #         ${badges}                  [Optional]     To sort based on the badges         |  Options: [null(d) | Rollback | Clearance | Reduced Price | Multi-save]
+  #         ${others}                  [Optional]     To sort based on the others factors |  Options: [null(d) | Multi-variant | Discounted Price]
+  #         ${excludeOptionalParams}   [Optional]     To remove products with badges      |  Options: [false(d) | true]
+  #                                                   or other factors
+  #         ${required_cart_qty}       [Optional]     Required cart Qty                   |  Options: [single_sku(d) | multi_sku]
+  #         ${required_cart_condition} [Optional]     Required cart condition             |  Options: [greaterthanShipping(d) | lessThanShipping | lessThanHandling]
+  #         ${index}                   [Not Required] Assigned during execution
+  #         ${emailId}                 [Mandatory]    Email id for add to cart
+  #         ${password}                [Mandatory]    Account password                    |  Default: [Astro123$]
+  #         ${storeId}                 [Optional]     Nearby Store                        |  Options: [5540(d), 5538]             
+  #         ${province}                [Optional]     province                            |  Options: [ON(d) | AB]
+  - name: ca.test.functions.utils.addToCartBasedOnConditionUsingApi
+    flow:
+      - if:
+          condition: ${required_cart_qty} == null
+          then:
+            - storeIn:
+                key: required_cart_qty
+                value: single_sku
+          else:
+            - storeIn:
+                key: required_cart_qty
+                value: ${required_cart_qty}
+      - if:
+          condition: ${emailId} == 'null' || ${password} == 'null'
+          then:
+            - failTest:
+                message: "Either email id or password not provided."
+      - loop:
+          begin: 0
+          end: 5
+          mode: increment
+          flow:
+            - executeNode:
+                file: ca/test/helpers/utils/productForAutomationApi.js
+                args:
+                  - value: ${environment}
+                  - value: ${seller}
+                  - value: ${category}
+                  - value: ${badges}
+                  - value: ${others}
+                  - value: ${excludeOptionalParams}
+                  - value: ${required_cart_qty}
+                  - value: ${required_cart_condition}
+                  - value: ${index}
+                getValue:
+                  - key: pro_sku
+                    storeIn: p1_sku
+                  - key: pro_price
+                    storeIn: p1_price
+                  - key: pro_name
+                    storeIn: p1_name
+                  - key: quantity1
+                    storeIn: quantity1
+                  - key: pro1_sku
+                    storeIn: p2_sku
+                  - key: pro1_price
+                    storeIn: p2_price
+                  - key: pro1_name
+                    storeIn: p2_name
+                  - key: index
+                    storeIn: index
+                  - key: quantity2
+                    storeIn: quantity2
+            - log: 
+                message: "P1 -> \nProduct name: ${p1_name}, \nProduct sku: ${p1_sku}, \nProduct price: ${p1_price}"
+                color: BLUE
+            - log:
+                message: "P2 -> \nProduct name: ${p2_name}, \nProduct sku: ${p2_sku}, \nProduct price: ${p2_price}"
+                color: BLUE
+            - log: 
+                message: "Index: ${index}, Quantity1: ${quantity1}, Quantity2: ${quantity2}"
+                color: BLUE
+            - executeFunction:
+                name: ca.test.functions.apis.addToCart
+                params:
+                  - name: emailId
+                    string: ${emailId}
+                  - name: password
+                    string: "Astro123$"
+                  - name: orderType
+                    string: S2H
+                  - name: s1
+                    string: ${p1_sku}
+                  - name: q1
+                    string: ${quantity1}
+                  - name: s2
+                    string: ${p2_sku}
+                  - name: q2
+                    string: ${quantity2}
+            - if:
+                condition: ${status} == 'SUCCESS'
+                then:
+                  - break: true
+
+  #--------------------------------------------------------------------------------------------------------------------
+ 
+  # Description: This method will provide tax calculation for scheduled cart which have varying slot price.
+  # Params: ${taxableTotal}            [Mandatory]    Subtotal amount on which tax is applicable.
+  #         ${slotPrice}               [Mandatory]    Reserved slot price
+  #         ${taxPercentage}           [Mandatory]    Tax Percentage
+  #         ${cartQuantity}            [Optional]     For delivery from store provide cart quantity to calculate bag fee
+  #         ${bagFee}                  [Optional]     Bag fee 
+  - name: ca.test.functions.utils.taxCalculation
+    flow:
+      - if:
+          condition: ${cartQuantity} == 'null'
+          then:
+            - storeIn:
+                key: ${cartQuantity}
+                value: 'null'
+      - if:
+          condition: ${bagFee} == 'null'
+          then:
+            - storeIn:
+                key: ${bagFee}
+                value: "0"
+      - log:
+          message: 'Taxable total provided: ${taxableTotal}'
+          color: CYAN_BOLD
+      - log:
+          message: 'Slot price provided: ${slotPrice}'
+          color: CYAN_BOLD
+      - log:
+          message: 'Tax percentage provided: ${taxPercentage}'
+          color: CYAN_BOLD
+      - log:
+          message: 'Cart quantity provided: ${cartQuantity}'
+          color: CYAN_BOLD
+      - log:
+          message: 'Bag fee provided: ${bagFee}'
+          color: CYAN_BOLD
+      - executeNode:
+          file: ca/test/helpers/taxCalculation.js
+          args:
+            - value: ${taxableTotal}
+            - value: ${slotPrice}
+            - value: ${taxPercentage}
+            - value: ${cartQuantity}
+            - value: ${bagFee}
+          getResponse:
+            storeIn: taxValue
+      - log: 
+          message: 'Total tax: ${taxValue}'
+          color: GREEN_BOLD_BRIGHT
+      - log:
+          message: 'End Function: utils.taxCalculation'
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+ 
+  # Description: This method calculates the estimated total
+  # Params: ${subTotal}                [Mandatory]    Subtotal amount
+  #         ${slotPrice}               [Mandatory]    Reserved slot price
+  #         ${tax}                     [Mandatory]    Tax Value
+  #         ${cartQuantity}            [Optional]     For delivery from store provide cart quantity to calculate bag fee
+  #         ${bagFee}                  [Optional]     Bag fee
+  #         ${driverTip}               [Optional]     Driver Tip
+  #         ${associateDiscount}       [Optional]     Associate Discount
+
+  - name: ca.test.functions.utils.estimatedTotalCalculation
+    flow:
+      - if:
+          condition: ${slotPrice} == 'FREE' || ${slotPrice} == 'GRATUIT'
+          then:
+            - storeIn:
+                key: slotPrice
+                value: "0"
+      - if: 
+          condition: ${bagFee}
+          then:
+            - storeIn:
+                key: bagFee
+                value: "0"              
+      - if: 
+          condition: ${associateDiscount}
+          then:
+            - storeIn:
+                key: associateDiscount
+                value: "0"
+      - if: 
+          condition: ${driverTip}
+          then:
+            - storeIn:
+                key: driverTip
+                value: "0"
+      - log:
+          message: "Estimated total calculation started"
+          color: GREEN_BOLD
+      - executeNode:
+          file: ca/test/helpers/estimateTotalCalculation.js
+          args:
+            - value: ${tax}
+            - value: ${subTotal}
+            - value: ${slotPrice}
+            - value: ${bagFee}
+            - value: ${cartQuantity}
+            - value: ${driverTip}
+            - value: ${associateDiscount}
+          getResponse:
+            storeIn: estimate_total
+      - log:
+          message: "End Function: Calculated estimated total: ${estimate_total}"
+          color: GREEN_BOLD     
+                      
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This Function is used to Add Default Payment Method Credentials
+  # Param   ${checkCreditCard}          [Optional]  >> Mark As True
+  #         ${checkWalmartMasterCard}   [Optional]  >> Mark As True
+  #         ${chcekAmexCard}            [Optional]  >> Mark As True
+  #         ${CheckWalmartRewardCard}   [Optional]  >> Mark As True
+  #         ${checkPaypal}              [Optional]  >> Mark As True
+  #         ${cardPage}                 [Mandatory] >> Used to Validate Card Page ---> [Add credit or debit card]/[Add a Gift Card]/[Pay with PayPal]
+  # @Author: pratik.shete [vn55ofc]
+  # @LastUpdate:
+
+  - name: ca.test.functions.utils.addPaymentMethods
+    flow:
+      - if: 
+          condition: ${checkCreditCard}
+          then:
+            - executeFunction:
+                name: ca.test.functions.utils.addCreditCard
+            - executeFunction:
+                name: ca.test.functions.walletPage.addDifferentPaymentMethods
+                params:
+                  - name: cardPage
+                    string: ${cardPage}
+      - if:
+          condition: ${checkWalmartMasterCard}
+          then:
+            - executeFunction:
+                name: ca.test.functions.utils.addWalmartMasterCard
+            - executeFunction:
+                name: ca.test.functions.walletPage.addDifferentPaymentMethods
+                params:
+                  - name: cardPage
+                    string: ${cardPage}
+      - if:
+          condition: ${chcekAmexCard}
+          then:
+            - executeFunction:
+                name: ca.test.functions.utils.addAmexCard
+            - executeFunction:
+                name: ca.test.functions.walletPage.addDifferentPaymentMethods
+                params:
+                  - name: cardPage
+                    string: ${cardPage}
+      - if:
+          condition: ${CheckWalmartRewardCard}
+          then:
+            - executeFunction:
+                name: ca.test.functions.utils.addWalmartRewardCard
+            - executeFunction:
+                name: ca.test.functions.walletPage.addDifferentPaymentMethods
+                params:
+                  - name: cardPage
+                    string: ${cardPage}
+      - if:
+          condition: ${checkPaypal}
+          then:
+            - executeFunction:
+                name: ca.test.functions.utils.addPaypal
+            - executeFunction:
+                name: ca.test.functions.walletPage.addDifferentPaymentMethods
+      - log:
+          message: "End Function: utils.addPaymentMethods"
+          color: GREEN_BOLD
+  
+  #--------------------------------------------------------------------------------------------------------------------

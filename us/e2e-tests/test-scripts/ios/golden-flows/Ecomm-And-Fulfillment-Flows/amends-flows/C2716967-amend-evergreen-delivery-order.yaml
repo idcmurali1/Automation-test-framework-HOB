@@ -1,0 +1,202 @@
+general:
+  platform: ios
+  tags: C2716967 #, p1-ecomm-teflon-e2e, us-golden-flows
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2716967
+  # metadata:
+  #   - name: scenarioId
+  #     string: EC010
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - storeIn:
+          key: email
+          value: amendstest19@walmart.com 
+        
+      - storeIn:
+          key: password
+          value: Test@123
+
+      # Will take the user to the account menu from where the user can sign in to the app
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $email
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32138
+            - name: storeName
+              string: San Jose Supercenter
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: store
+              string: 32138
+            - name: backupItem
+              string: 5017689513
+            - name: skipForNext
+              string: true
+            - name: storeId
+              string: 32138
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      # Add SC item to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Navigate to cart page
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      #Evergreen Time slot Reservation.
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: page
+              string: cart
+            - name: tab
+              string: delivery
+            - name: timeSlot
+              string: evergreen
+            - name: slotDay
+              string: today
+
+
+      #Evergreen Time slot and Price Validation on the Cart Page.
+      - executeFunction:
+          name: us.functions.evergreen.validations.on.cartAndPosPage
+
+      #Evergreen Time slot and Price Validation on the Review Order Page.
+      - executeFunction:
+          name: us.functions.evergreen.validations.on.reviewOrderPage
+
+      # Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      # Go to Last Order
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Go to home
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: storeId
+              string: 32138
+            - name: excludeFetchedItem
+              string: true
+            - name: backupItem
+              string: 5017689509
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      # add item to the cart
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - sleep:
+          duration: 10000
+
+      # Go to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.amend.addToExistingOrderFlow
+
+      - executeFunction:
+          name: us.functions.amend.creditCard.InCart
+          params:
+            - name: cvv
+              string: "111"
+
+      - executeFunction:
+          name: us.functions.amend.verify.itemAddedToOrder
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

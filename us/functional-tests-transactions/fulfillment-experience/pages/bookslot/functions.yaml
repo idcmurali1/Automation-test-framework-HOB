@@ -1,0 +1,407 @@
+functions:
+
+  # Verify alcohol restriction on Sunday and save alcohol restricted slot
+  - name: us.functions.functional.reserveSlot.alcoholRestrictionOnSunday
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.reservetime.particularDay
+          then:
+            - click:
+                identifier: us.mappings.cart.reservetime.particularDay
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reserveSlot.daySelectionView
+            - scroll:
+                direction: left
+                untilIdentifier: us.mappings.cart.reservetime.particularDay
+                withinIdentifier: us.mappings.reserveSlot.daySelectionView
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.reservetime.particularDay
+                then:
+                  - click:
+                      identifier: us.mappings.cart.reservetime.particularDay
+                else:
+                  - failTest:
+                      message: "FAILURE - Sunday is not available in the day list"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserveSlot.ineligibleItemsWarning
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+          then:
+              - click:
+                  wait: 2000
+                  identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+            - click:
+                wait: 2000
+                identifier: us.mappings.resreveSlot.bookAlcoholRestrictedSlot
+      - click:
+          wait: 2000
+          identifier: us.mappings.reserveSlot.saveButton
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.locallyRestrictedBanner
+            - sleep:
+                duration: 5000
+            - click:
+                identifier: us.mappings.reserveSlot.oos.itemUpdates.gotItButton
+            - sleep:
+                duration: 5000 
+
+  # Search for item and add first item to cart
+  - name: us.functions.functional.reserveSlot.searchItemAndAddToCart
+    flow:
+      # Click on search tab in sticky bar
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.search
+      - click:
+          identifier: us.mappings.tabBar.search
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.searchBar
+      - click:
+          identifier: us.mappings.home.searchBar
+          wait: 3000
+      - enterText:
+          identifier: us.mappings.home.searchBar
+          string: ${searchTerm}
+          pressEnter: true
+
+      # Close pop up to select intent is displayed
+      - executeFunction:
+          name: us.functions.search.closeHowDoYouWantYourOrderBottomTray
+
+      # Clear filters if any applied
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.clearAllFilters
+          then:
+            - click:
+                identifier: us.mappings.search.clearAllFilters
+                wait: 3000
+
+      # Scroll to first search result and verify display
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.firstItem 
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.firstItem
+          then:
+            - log: "successfully found an item for the above search criterion"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - No item found for the searched keyword"
+
+      # Click on first item
+      - executeFunction:
+          name: us.functions.search.clickOnFirstItem
+
+      # Add item to cart
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+  # Verify the number of items in cart
+  - name: us.functions.functional.reserveSlot.verifyItemCountInCart
+    flow:
+      # Scroll to make the subtotal label visible
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subtotalPricelabel
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+
+      # Verify the item count in the cart
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.reviewOrder.subtotalPricelabel
+              contains: ${itemCount}
+
+      # Scroll back to the top of the cart
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.cart.fulfillmentTopSection.fulfillmentTypeText
+            - name: direction
+              string: up
+            - name: scrollPosition
+              string: center
+
+  # Change the intent on GIC
+  - name: us.functions.functional.reserveSlot.changeIntent
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: ${intent}
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  #Open bookslot with pickup tab is selected        
+  - name: us.functions.bookslot.seeAllTimes.pickup
+    flow:
+      - sleep:
+          duration: 1000
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - click:
+          identifier: us.mappings.home.gic.module.pickupIntent
+      - log: GIC intent set to Pickup   
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.home.gic.module.pickupIntent.selected.inGicHeader
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.viewalltimes.text
+      - log: "View all times is displayed in GIC"
+      - click:
+          identifier: us.mappings.gic.reserve.viewalltimes.text
+      - log: Open BookSlot from GIC and pickup is selected
+
+  #Open bookslot with delivery tab selected
+  - name: us.functions.bookslot.seeAllTimes.delivery
+    flow:
+      - sleep:
+          duration: 1000
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - click:
+          identifier: us.mappings.home.gic.module.deliveryIntent
+      - log: GIC intent set to delivery   
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.home.gic.module.deliveryIntent.selected.inGicHeader
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.viewalltimes.text
+      - log: "View all times is displayed in GIC"
+      - click:
+          identifier: us.mappings.gic.reserve.viewalltimes.text
+      - log: Open BookSlot from GIC and delivery is selected
+
+# Select a pickup/delivery Slot
+  - name: us.functions.bookslot.selectATimeSlot
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserveSlot.timeSlot
+      - click:
+          identifier: us.mappings.reserveSlot.timeSlot
+      - log: "Selected the timeslot ${slotIndex}"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserve.slot.button
+
+# Select an express Slot
+  - name: us.functions.bookslot.selectAnExpressTimeSlot
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.timeslots.container
+      - click:
+          identifier: us.mappings.functional.day1.daySlot.button
+      - click:
+          identifier: us.mappings.functional.express.time.slot.button
+      - log: "Selected the express timeslot"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserve.slot.button
+
+# Select an evergreen Slot
+  - name: us.functions.bookslot.selectAnEvergreenTimeSlot
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.timeslots.container
+      - click:
+          identifier: us.mappings.functional.day1.daySlot.button
+      - click:
+          identifier: us.mappings.functional.evergreen.time.slot.button
+      - log: "Selected the evergreen timeslot"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserve.slot.button
+
+# Select an inHome Slot
+  - name: us.functions.bookslot.selectAnInHomeTimeSlot
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.gic.reserve.timeslots.container
+      - click:
+          identifier: us.mappings.functional.day2.daySlot.button
+      - click:
+          identifier: us.mappings.functional.inHome.time.slot.button
+      - log: "Selected the inHome timeslot"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserve.slot.button
+
+# Reserve an express Slot
+  - name: us.functions.bookslot.reserveAnExpressSlot
+    flow:
+      - executeFunction:
+          name: us.functions.bookslot.selectAnExpressTimeSlot
+      - click:
+          identifier: us.mappings.reserve.slot.button
+      - log: "Reserved an express timeslot"
+
+# Reserve an evergreen Slot
+  - name: us.functions.bookslot.reserveAnEvergreenSlot
+    flow:
+      - executeFunction:
+          name: us.functions.bookslot.selectAnEvergreenTimeSlot
+      - click:
+          identifier: us.mappings.reserve.slot.button
+      - log: "Reserved an evergreen timeslot"
+
+# Reserve an in-home Slot
+  - name: us.functions.bookslot.reserveAnInHomeSlot
+    flow:
+      - executeFunction:
+          name: us.functions.bookslot.selectAnInHomeTimeSlot
+      - click:
+          identifier: us.mappings.reserve.slot.button
+      - log: "Reserved an in-home timeslot"
+
+# Validate reservation
+  - name: us.functions.bookslot.validateReservation
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.home.gic.module.reservationLabel
+      - log: "Reservation is present in the GIC Slot Shortcut view."
+
+# Validate express slot reservation
+  - name: us.functions.bookslot.validateExpressSlotReservation
+    flow:
+      - if:
+          identifier:
+            label:
+              - identifier: us.mappings.functional.home.gic.module.expressSlotreservationLabel
+                contains: ${Express}
+          then:
+            - log: "Express reservation is present in the GIC Slot Shortcut view."
+          else:
+            - failTest:
+                message: "Express reservation isn't present in the GIC Slot Shortcut view."
+
+# Validate evergreen slot reservation
+  - name: us.functions.bookslot.validateEvergreenSlotReservation
+    flow:
+      - if:
+          identifier:
+            label:
+              - identifier: us.mappings.functional.home.gic.module.expressSlotreservationLabel
+                contains: ${Delivery in 3 hours or less}
+          then:
+            - log: "Evergreen reservation is present in the GIC Slot Shortcut view."
+          else:
+            - failTest:
+                message: "Evergreen reservation isn't present in the GIC Slot Shortcut view."
+
+# Validate inHome slot reservation
+  - name: us.functions.bookslot.validateInHomeSlotReservation
+    flow:
+      - if:
+          identifier:
+            label:
+              - identifier: us.mappings.functional.home.gic.module.expressSlotreservationLabel
+                contains: ${InHome delivery}
+          then:
+            - log: "InHome reservation is present in the GIC Slot Shortcut view."
+          else:
+            - failTest:
+                message: "InHome reservation isn't present in the GIC Slot Shortcut view."
+
+# Address selector functions
+
+  - name: us.functions.functional.bookslot.addressSelector.selectAddress
+    flow:
+      - click:
+          wait: 3000
+          identifier: us.mappings.functional.bookslot.addressSelector.selectAddress
+      - log: Selected Address with index ${addressIndex}
+
+  - name: us.functions.functional.bookslot.changeToAnotherAddress
+    flow:
+      - log: Selecting another address different from ${initialDeliveryAddress}
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.selectAddress.title
+
+      # Store the first delivery address
+      - getString:
+          identifier: us.mappings.functional.bookslot.selectAddress.firstDeliveryAddress
+          storeIn: firstDeliveryAddress
+      - log: "First delivery address: ${firstDeliveryAddress}"
+
+      - executeNode:
+          file: us/functional-tests/helpers/compareStringsIgnoreCase.js
+          args:
+            - value: ${initialDeliveryAddress}
+            - value: ${firstDeliveryAddress}
+          getResponse:
+            storeIn: deliveryAddressMatch
+      - log: "First address match: ${deliveryAddressMatch}"
+
+      # Check address match
+      - if:
+          condition: ${deliveryAddressMatch}
+          then:
+            - log: "Address is the same. Select another address."
+            - executeFunction:
+                name: us.functions.functional.bookslot.addressSelector.selectAddress
+                params:
+                  - name: addressIndex
+                    string: 2
+          else:
+            - log: "Address is different. Select first address."
+            - executeFunction:
+                name: us.functions.functional.bookslot.addressSelector.selectAddress
+                params:
+                  - name: addressIndex
+                    string: 1
+      - sleep:
+          duration: 3000
+
+      - click:
+          identifier: us.mappings.functional.bookslot.addressSelector.selectAddress.confirmButton
+      - log: "Another address selected"

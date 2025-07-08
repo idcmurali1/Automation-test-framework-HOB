@@ -1,0 +1,183 @@
+functions:
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This function utilizes a deep link to open the Product Detail Page (PDP) and verifies the
+  #              product's transactibility by attempting to add it to the cart. If the addition process
+  #              encounters an error, the function will skip the product and move to next iteration.
+  # Params:      ${productArray}         [Mandatory]  Search product using array.
+  - name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+    flow:
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            # - executeFunction:
+            #     name: functions.utils.handlePopUp
+            - if:
+                condition: ${market} == 'MX'
+                then:            
+                  - if:
+                      condition: ${platform} == 'iOS' && ${environment} == 'Teflon'
+                      then:
+                        - executeFunction:
+                            name: functions.utils.terminateApp            
+            - executeFunction:
+                name: functions.utils.searchItemUsingDeepLink
+            - executeFunction:
+                name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed      
+            - executeFunction:
+                name: functions.productDetailsPage.isAddToCartButtonAndErrorDisplayed # RETURNS --> ${isAddToCartButtonDisplayed}, ${isAddtoCartErrorDisplayed}
+            - if:
+                condition: (${isAddToCartButtonDisplayed}) && (!${isAddtoCartErrorDisplayed})
+                then:
+                  # Comment out for code simplification but keep for handling scenario where ATC is not selected after finding the available item
+                  # - executeFunction:
+                  #     name: functions.productDetailsPage.decreaseItemQuantity
+                  - break: true 
+
+      - log:
+          message: "End Functions:utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+  # Description: The function search item using deeplink, and navigate to product detail page
+  - name: functions.utils.searchItemUsingDeepLink
+    flow:
+      - executeFunction:
+          name: functions.utils.getMarketDeeplinkPrefix
+      - executeFunction:
+          name: functions.onboarding.navigation.goToDeepLink                       
+          params:
+          - name: deepLinkUrl
+            string: ${deeplinkMarketPrefix}item/${searchText}
+          - name: deeplinkMarketPrefix
+            string: ${deeplinkMarketPrefix}
+      # - executeFunction: this timign the tests , will enable if this required to handle any popups
+      #     name: functions.utils.handlePopUp
+      - log: 
+          message: "End function: Functions:utils.searchItemUsingDeepLink"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This function goest trough an array of items and utilizes a deep link to open each item's Product Detail Page (PDP)
+  # Params:      ${productArray}         [Mandatory]  Search product using array.
+  - name: functions.utils.openPDPWithDeeplink.multipleItems
+    flow:
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - executeFunction:
+                name: functions.utils.getMarketDeeplinkPrefix # -> ${deeplinkMarketPrefix}
+            - executeFunction:
+                name: functions.onboarding.navigation.goToDeepLink
+                params:
+                - name: deepLinkUrl
+                  string: ${deeplinkMarketPrefix}item/${searchText}
+                - name: deeplinkMarketPrefix
+                  string: ${deeplinkMarketPrefix}
+            - executeFunction:
+                name: functions.utils.handlePopUp
+      - log:
+          message: "End Functions: utils.openPDPWithDeeplink.multipleItems"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Deacription: This function initializes payment variables with default values.
+  # params:      ${paymentType}   Payment method used for placing order.
+  - name: function.utils.setDefaultDataForPayment
+    flow:
+      # For paypal
+      - if:
+          condition: ${paymentType} == 'PayPal'
+          then:
+            - if:
+                condition: ${payPalEmailId} == null
+                then:
+                  - storeIn:
+                      key: payPalEmailId
+                      value: data.default.payPalEmailId
+                  - storeIn:
+                      key: payPalPassword
+                      value: data.default.payPalPassword
+                  - storeIn:
+                      key: lastFourDigits
+                      value: data.default.payPalCredit.lastFourDigits
+      # For credit card payment
+      # If the card number is not provided from test cases default value will be assigned for different type of credit and debit.
+      - if:
+          condition: ${paymentType} == 'creditCard' || ${paymentType} == 'debitCard' || ${paymentType} == 'walmartRewardsCard'
+          then:
+            - if:
+                condition: ${cardNumber} == null 
+                then:
+                  - executeFunction:
+                      name: functions.utils.setDefaultCardInformation.forNewCard # <-- ${paymentType}}, ${brand}
+      - log:
+          message: "End utils.setDefaultDataForPayment"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This utility applies payment method in review order page.
+  # Params:  
+  - name: function.utils.applyPayments
+    flow:
+      - log:
+          message: Applying ${paymentType} as payment method for ${market} market.
+          color: GREEN_BOLD
+      - executeFunction:
+          name: function.utils.setDefaultDataForPayment
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.navigateFromCheckoutPaymentMethod
+      # For paypal payment
+      - if:
+          condition: ${paymentType} == 'PayPal'
+          then:
+            - if:
+                condition: ${environment} == 'Teflon'
+                then:
+                  - log:
+                      message: "\nTeflon: \n\tPaypal credential\n\tPaypal email id: ${payPalEmailId}\n\tPaypal Password: ${payPalPassword}"
+                      color: GREEN_BOLD
+                  - executeFunction:
+                      name: functions.checkoutPage.paymentMethod.applyPayPalPayment # Params <--- ${payPalEmailId}, ${payPalPassword}, ${lastFourDigits}
+                else:
+                  - log:
+                      message: "\nProduction: \n\tValidate paypal page is sucessfully loaded."
+                      color: GREEN_BOLD
+                  - if:
+                      condition: ${market} != 'US'
+                      then:
+                        - executeFunction:
+                            name: functions.checkoutPage.tapAddPaymentMethodBtn  
+                  - executeFunction:
+                      name: functions.checkoutPage.wallet.tapPayPalButton
+                  - executeFunction:
+                      name: functions.payPalPage.emailPage.validatePayPalEmailPage
+      # For credit card payment
+      - if:
+          condition: ${paymentType} == 'creditCard' || ${paymentType} == 'debitCard' || ${paymentType} == 'walmartRewardsCard'
+          then:
+            - if:
+                condition: ${environment} == 'Teflon'
+                then:
+                  - executeFunction:
+                      name: functions.addCreditDebitCardPage.fillCreditDebitCardInformationForm # <-- ${cardNumber}, ${cardHolderFirstName}, ${cardHolderLastName}, ${expirationMonthNumber}, ${expirationYear}, ${expirationDate}, ${cvv}, ${phoneNumber}, ${cardLast4Digits}, ${sameBillingAddress}, ${defaultCard}
+      - if:
+          condition: ${paymentType} == 'Gift Card' && ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.walletPage.paymentMethod.giftCard
+      - if:
+          condition: ${paymentType} == 'Klarna' && ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.walletPage.attachKlarna
+      - log:
+          message: "End function: utils.applyPayments"
+          color: BLUE

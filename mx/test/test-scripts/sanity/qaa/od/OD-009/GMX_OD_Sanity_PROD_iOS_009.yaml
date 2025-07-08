@@ -1,0 +1,926 @@
+#======================================================================================================================
+#    AUTHORS: Octavio Cabrales Zárate (vn53g23), Rodrigo Pacheco Cámara (vn53p0i)
+#   CREATED: Mar/21/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: batch-1-qaa-od-sanity-production-ios-009, batch-1-qaa-od-sanity-production-ios
+  testCaseId: MXMOB-1384
+
+scenarios:
+#######################################################################################################################
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MXMOB-QAA%3A+Tracking%3A+Test+Suite%3A+GlassMX+-+OD+-+Sanity+-+Production+-+iOS
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MXMOB-1384
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MXMOB-1941
+#
+#   - Flags used:
+#
+#       ${ORDER_DETAILS_AND_HISTORY_DELIVERY_SLOT_ASSERTION_WORKAROUND}  -  Values: [true | false]
+#       ${IOS_LOGIN_AS_REGISTERED_USER_WORKAROUND}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_CART}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_REVIEW_ORDER}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDER_CONFIRMATION}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDERS_HISTORY}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDER_DETAILS}  -  Values: [true | false]
+#       ${ASSERT_PAGE_TITLE}  -  Values: [true | false]
+#
+#######################################################################################################################
+
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_OD_Sanity_PROD_iOS_009
+      - storeIn:
+          key: OD_009_IS_CART_EMPTY
+          value: true
+      - storeIn:
+          key: OD_009_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+#######################################################################################################################
+
+  - name: Main
+    platform: ios
+    flow:
+      - log: "TEST START: QAA - OD - PRODUCTION SANITY - OD-009"
+
+    ## STEP 1: OPEN APP AND COMPLETE ONBOARDING AS GUEST - PRE-HOME SCREEN IS DISPLAYED
+    ## STEP 2: SELECT OD BANNER - HOME SCREEN IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1-2: LAUNCH AND LOGIN IN ONBOARDING SCREEN - SELECT OD BANNER."
+            - name: squadNames
+              string: CORE | QAA
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-009.zipCode
+            - name: banner
+              string: OD
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 3: ADD A PIECES PRODUCT FROM SLP - PRODUCT IS ADDED TO CART
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3-A: CHANGING STORE (IF NECESSARY)."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.expandSelectorIfCollapsed
+      - executeFunction:
+          name: mx.flows.od.delivery-method-selector.changeStoreFromSelector
+          params:
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-009.zipCode
+            - name: storeName
+              string: mx.data.qaa.sanity.od-009.storeName
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.closeSelector
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3-B: ADD A PIECES PRODUCT FROM SLP."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      # Adding first pieces product...
+      - log: "Adding a product sold by pieces..."
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.sanity.od-009.searchTerm1 # Always returns pieces products...
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductWithoutBadgesToCartInSLP
+          params:
+            - name: previousList
+              string: 'null'
+      - sleep:
+          duration: 3000 # Necessary wait for the button to collapse...
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.slp.getProductQuantityAsPieces
+      - storeIn:
+          key: qaa_od009_product_1_name
+          value: ${returnedProductName}
+          # [VARIABLE] Product Name 1 saved in ${qaa_od009_product_1_name}
+      - storeIn:
+          key: qaa_od009_product_1_price
+          value: ${returnedPrice}
+          # [VARIABLE] Price of product 1 saved in ${qaa_od009_product_1_price}
+      - storeIn:
+          key: qaa_od009_product_1_added_quantity
+          value: ${returnedProductPieces}
+          # [VARIABLE] Added quantity of product 1 saved in ${qaa_od009_product_1_added_quantity}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 4: OPEN CART - PRODUCT IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4: OPEN CART - PRODUCT IS DISPLAYED."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - storeIn:
+          key: qaa_od009_total_products_quantity
+          value: ${qaa_od009_product_1_added_quantity}
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${qaa_od009_total_products_quantity}
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${qaa_od009_product_1_name}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 5: CLOSE CART AND ADD FUTURE OOS PRODUCT - SLP IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5: CLOSE CART AND ADD FUTURE OOS PRODUCT."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.sanity.od-009.searchTerm2
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.od-009.product2Name
+            - name: direction
+              string: down
+      - sleep:
+          duration: 3000 # Necessary wait for the button to collapse...
+      - executeFunction:
+          name: mx.functions.slp.getProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.od-009.product2Name
+      - storeIn:
+          key: qaa_od009_product_2_added_quantity
+          value: ${returnedProductPieces}
+          # [VARIABLE] Added quantity of product 1 saved in ${qaa_od009_product_2_added_quantity}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 6: OPEN CART - PRODUCTS ARE DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 6: OPEN CART - PRODUCTS ARE DISPLAYED."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - arithmetic:
+          expression: ${qaa_od009_product_1_added_quantity} + ${qaa_od009_product_2_added_quantity}
+          storeIn: qaa_od009_total_products_quantity
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${qaa_od009_total_products_quantity}
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${qaa_od009_product_1_name}
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.od-009.product2Name
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 7: HIT 'RESERVAR UN HORARIO' - SHIPPING DETAILS SCREEN IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 7: HIT 'RESERVAR UN HORARIO'."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      - executeFunction:
+          name: mx.functions.login.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 8: SELECT PICKUP AND SELECT A DIFFERENT STORE - OOS POPUP IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 8: SELECT PICKUP AND SELECT A DIFFERENT STORE'."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapChange
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.store-selector-popup.assertPageDisplayed
+      - executeFunction:
+          name: mx.flows.od.store-selector-popup.quickChangeStoreFromPopup
+          params:
+            - name: storeName
+              string: mx.data.qaa.sanity.od-009.storeNameToChange
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-009.zipCode2
+      - sleep:
+          duration: 10000 # Necessary wait for the OOS Popup to display...
+      - executeFunction:
+          name: mx.functions.oos.assertPageDisplayed
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 9: HIT 'ELIMINAR Y CONTINUAR' BUTTON - CART SCREEN IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: HIT 'ELIMINAR Y CONTINUAR' BUTTON."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.oos.tapDeleteAndContinueButton
+      - sleep:
+          duration: 8000
+      - executeFunction:
+          name: mx.functions.reserve-slot.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 10: GET BACK TO CART - REMOVED OOS PRODUCT IS NOT DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: GET BACK TO CART."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.isCartEmpty
+      - if:
+          condition: ${returnedIsCartEmpty} == true
+          then:
+            - log:
+                message: "Product 1 was expected to have stock after store change but didn't, execution will finish here."
+                color: YELLOW
+            - storeIn:
+                key: OD_009_SUCCESSFUL_EXECUTION
+                value: true
+            - log: "TEST END: QAA - OD - PRODUCTION SANITY - OD-009"
+          else:
+            - executeFunction:
+                name: mx.functions.cart.assertProductListed
+                params:
+                  - name: productName
+                    string: ${qaa_od009_product_1_name}
+            - executeFunction:
+                name: mx.functions.cart.assertProductNotListed
+                params:
+                  - name: productName
+                    string: mx.data.qaa.sanity.od-009.product2Name
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 11: CONTINUE TO CHECKOUT - LOGIN SCREEN IS DISPLAYED
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 11: CONTINUE TO CHECKOUT."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+            - executeFunction:
+                name: mx.functions.cart.tapContinue
+            - executeFunction:
+                name: mx.functions.login.assertPageDisplayed
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 12: LOGIN EXISTING ACCOUNT - CONFIRM CORRECT CART MERGE AND FULL PRODUCT ASSERTIONS
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 12: LOGIN EXISTING ACCOUNT."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+    # Logging in with existing account...
+            - executeFunction:
+                name: mx.flows.od.login.loginFromPopup
+                params:
+                  - name: userEmail
+                    string: mx.data.qaa.sanity.od-009.userEmail
+                  - name: userPassword
+                    string: mx.data.qaa.sanity.od-009.userPassword
+            - storeIn:
+                key: OD_009_IS_CART_EMPTY
+                value: false
+
+  # Assert Cart is displayed...........................................................................................
+            - log: Assert Cart is displayed...
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.missing-something.pageTitle
+                then:
+                  - executeFunction:
+                      name: mx.functions.missing-something.closePopupIfDisplayed
+                else:
+                  - executeFunction:
+                      name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+                  - executeFunction:
+                      name: mx.flows.od.cart.backToCart
+            - executeFunction:
+                name: mx.functions.utils.closeBlackPopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.cart.assertPageDisplayed
+
+  # Validating products did not change after cart merge)...............................................................
+            - log: Validating products did not change after cart merge...
+            - log: Validating OOS product did not display after cart merge...
+            - executeFunction:
+                name: mx.functions.cart.assertProductNotListed
+                params:
+                  - name: productName
+                    string: mx.data.qaa.sanity.od-009.product2Name
+
+  # Running assertions for product 1 (Pieces)..........................................................................
+            - log: Running assertions for product 1 (Pieces)...
+            - executeFunction:
+                name: mx.flows.od.cart.quickPerformProductAssertions #--[RETURNS]--${returnedProductType}-->
+                params:
+                  - name: productName
+                    string: ${qaa_od009_product_1_name}
+                  - name: productType
+                    string: 'null'
+                  - name: expectedQuantity
+                    string: ${qaa_od009_product_1_added_quantity}
+                  - name: expectedWeightQuantity
+                    string: "null"
+                  - name: expectedUnitPrice
+                    string: ${qaa_od009_product_1_price}
+                  - name: expectedOriginalPrice
+                    string: "null"
+                  - name: expectedSubtotal
+                    string: ${qaa_od009_product_1_price}
+            - storeIn:
+                key: qaa_od009_product_1_type
+                value: ${returnedProductType}
+                # [VARIABLE] Type of product 1 saved in ${qaa_od009_product_1_type}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 13: SELECT 'HOME DELIVERY' AND SELECT TIME SLOT - CART SCREEN IS DISPLAYED AND CORRECT DELIVERY SLOT
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 13: SELECT 'HOME DELIVERY' AND SELECT TIME SLOT."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+            - executeFunction:
+                name: mx.flows.od.cart.reserveSlot
+                params:
+                  - name: deliveryMethod
+                    string: mx.data.qaa.sanity.od-009.deliveryMethod
+                  - name: addressName
+                    string: mx.data.qaa.sanity.od-009.userFullName
+                  - name: deliveryPlaceAction
+                    string: 'Change'
+                  - name: slotDate
+                    string: 'dayAfterTomorrow'
+                  - name: slotTime
+                    string: 'lastAvailable'
+
+  # Retrieving address values for future assertions....................................................................
+            - log: Retrieving address values for future assertions...
+            - storeIn:
+                key: qaa_od009_user_street_name
+                value: ${returnedStreetName}
+                # [VARIABLE] User Street Name saved in ${qaa_od009_user_street_name}
+            - storeIn:
+                key: qaa_od009_user_exterior_number
+                value: ${returnedExteriorNumber}
+                # [VARIABLE] User Exterior Number saved in ${qaa_od009_user_exterior_number}
+            - storeIn:
+                key: qaa_od009_user_city
+                value: ${returnedCity}
+                # [VARIABLE] User City saved in ${qaa_od009_user_city}
+            - storeIn:
+                key: qaa_od009_user_state
+                value: ${returnedState}
+                # [VARIABLE] User State saved in ${qaa_od009_user_state}
+            - storeIn:
+                key: qaa_od009_user_zip_code
+                value: ${returnedZipCode}
+                # [VARIABLE] User Zip Code saved in ${qaa_od009_user_zip_code}
+            
+  # Calculating values for totals Assertions...........................................................................
+            - log: Calculating values for totals Assertions
+            - storeIn:
+                key: qaa_od009_delivery_fee
+                value: mx.data.qaa.sanity.od-009.deliveryFee
+                # [VARIABLE] Delivery fee saved in ${qaa_od009_delivery_fee}
+            - arithmetic:
+                expression: ${qaa_od009_product_1_price}
+                numberOfDecimalPlaces: 2
+                storeIn: qaa_od009_subtotal
+                # [VARIABLE] Cart subtotal saved in ${qaa_od009_subtotal}
+            - arithmetic:
+                expression: ${qaa_od009_subtotal} + ${qaa_od009_delivery_fee}
+                numberOfDecimalPlaces: 2
+                storeIn: qaa_od009_total
+                # [VARIABLE] Cart estimated total saved in ${qaa_od009_total}
+            
+            - executeFunction:
+                name: mx.flows.od.cart.assertTotals
+                params:
+                  - name: expectedDeliveryFee
+                    string: ${qaa_od009_delivery_fee}
+                  - name: expectedSubtotal
+                    string: ${qaa_od009_subtotal}
+            # Adjusting total added products after removing OOS product...
+            - storeIn:
+                key: qaa_od009_total_products_quantity
+                value: ${qaa_od009_product_1_added_quantity}
+            - executeFunction:
+                name: mx.functions.cart.assertProductsCountInSubtotalLabel
+                params:
+                  - name: expectedProductsCount
+                    string: ${qaa_od009_total_products_quantity}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 14: CONTINUE TO CHECKOUT - REVIEW ORDER ASSERTIONS
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 14: CONTINUE TO CHECKOUT."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+            - executeFunction:
+                name: mx.functions.cart.tapContinue
+            - executeFunction:
+                name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+            - executeFunction:
+                name: mx.functions.review-order.assertPageDisplayed
+
+    # Validating Delivery Information..................................................................................
+            - executeFunction:
+                name: mx.flows.od.review-order.assertDeliveryInformation
+                params:
+                  - name: deliveryMethod
+                    string: mx.data.qaa.sanity.od-009.deliveryMethod
+                  - name: expectedDaySlot
+                    string: ${returnedSelectedDaySlot}
+                  - name: expectedTimeSlot
+                    string: ${returnedSelectedTimeSlot}
+                  - name: expectedStoreOrHomeName
+                    string: mx.data.qaa.sanity.od-009.userFullName
+                  - name: expectedStoreOrHomeAddress
+                    string: 'null'
+                  - name: expectedUserStreet
+                    string: ${qaa_od009_user_street_name}
+                  - name: expectedUserExteriorNumber
+                    string: ${qaa_od009_user_exterior_number}
+                  - name: expectedUserCity
+                    string: ${qaa_od009_user_city}
+                  - name: expectedUserState
+                    string: ${qaa_od009_user_state}
+                  - name: expectedUserZipCode
+                    string: ${qaa_od009_user_zip_code}
+
+            # This function adds the delivery message to the Walmart team so they do not deliver the products.
+            - executeFunction:
+                name: mx.flows.od.review-order.enterTestOrderDisclaimer
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 15: SELECT PAY AT DELIVERY - PAY AT DELIVERY METHOD IS SELECTED
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 15: SELECT PAY AT DELIVERY."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+  # Verifying Pay at Delivery is selected..............................................................................
+            - executeFunction:
+                name: mx.functions.review-order.scrollDownToSection
+                params:
+                  - name: sectionName
+                    string: "Pago"
+            - executeFunction:
+                name: mx.flows.od.review-order.selectPayAtDeliveryMethodIfNotSelected
+                params:
+                  - name: payAtDeliveryOption
+                    string: mx.data.qaa.sanity.od-009.payAtDeliveryFormat
+            
+  # Entering phone number if needed....................................................................................
+            - executeFunction:
+                name: mx.functions.review-order.scrollDownToSection
+                params:
+                  - name: sectionName
+                    string: "Número telefónico"
+            - executeFunction:
+                name: mx.flows.od.review-order.enterCellphoneNumber
+                params:
+                  - name: userPhoneNumber
+                    string: mx.data.qaa.sanity.od-009.userPhoneNumber
+
+  # Validating Totals information......................................................................................
+            - executeFunction:
+                name: mx.functions.review-order.scrollDownToSection
+                params:
+                  - name: sectionName
+                    string: Total
+            - executeFunction:
+                name: mx.flows.od.review-order.assertTotalsInformation
+                params:
+                  - name: expectedSubtotalProductsCount
+                    string: ${qaa_od009_total_products_quantity}
+                  - name: expectedSubtotal
+                    string: ${qaa_od009_subtotal}
+                  - name: assertDeliveryFee
+                    string: 'true'
+                  - name: expectedDeliveryFee
+                    string: ${qaa_od009_delivery_fee}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 16: PLACE ORDER - ORDER CONFIRMATION ASSERTIONS
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 16: PLACE ORDER."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+            - executeFunction:
+                name: mx.functions.review-order.tapPlaceOrder
+            - storeIn:
+                key: qaa_od009_ordered_date
+                value: ${returnedOrderedDate}
+                # [VARIABLE] Ordered Date saved in ${qaa_od009_ordered_date}
+            - sleep:
+                duration: 10000
+            - storeIn:
+                key: OD_009_IS_CART_EMPTY
+                value: true
+
+  # Order Confirmation assertions......................................................................................
+            - executeFunction:
+                name: mx.functions.order-confirmation.assertPageDisplayed
+            - executeFunction:
+                name: mx.flows.od.order-confirmation.assertConfirmation
+                params:
+                  - name: expectedTotal
+                    string: ${qaa_od009_total}
+                  - name: expectedDaySlot
+                    string: ${returnedSelectedDaySlot}
+                  - name: expectedTimeSlot
+                    string: ${returnedSelectedTimeSlot}
+                  - name: expectedProductsCount
+                    string: ${qaa_od009_total_products_quantity}
+                  - name: expectedDeliveryMethod
+                    string: mx.data.qaa.sanity.od-009.deliveryMethod
+                  - name: expectedHomeAddressName
+                    string: mx.data.qaa.sanity.od-009.userFullName
+                  - name: expectedUserStreet
+                    string: ${qaa_od009_user_street_name}
+                  - name: expectedUserExteriorNumber
+                    string: ${qaa_od009_user_exterior_number}
+                  - name: expectedUserCity
+                    string: ${qaa_od009_user_city}
+                  - name: expectedUserState
+                    string: ${qaa_od009_user_state}
+                  - name: expectedUserZipCode
+                    string: ${qaa_od009_user_zip_code}
+            
+  # Retrieving Order Number............................................................................................
+            - executeFunction:
+                name: mx.functions.order-confirmation.getOrderNumber
+            - storeIn:
+                key: qaa_od009_order_number
+                value: ${returnedOrderNumber}
+                # [VARIABLE] Order number saved in ${qaa_od009_order_number}"
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 17: HIT 'FIND MORE PRODUCTS' BUTTON - HOME SCREEN IS DISPLAYED
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 17: HIT 'FIND MORE PRODUCTS' BUTTON."
+                  - name: squadNames
+                    string: PURCHASE | QAA
+
+            - executeFunction:
+                name: mx.functions.utils.closeRateWalmartPopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.order-confirmation.tapFindMoreProducts
+            - executeFunction:
+                name: mx.functions.bottom-menu.tapHome
+            - executeFunction:
+                name: mx.functions.home.assertPageDisplayed
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 18: GO TO ACCOUNT AND OPEN ORDERS HISTORY - ORDERS HISTORY ASSERTIONS
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 18-A: GO TO ACCOUNT."
+                  - name: squadNames
+                    string: CUSTOMER | QAA
+
+  # Navigating to Account Page.........................................................................................
+            - executeFunction:
+                name: mx.functions.bottom-menu.tapAccount
+            - executeFunction:
+                name: mx.functions.account.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.account.assertUserLogged
+                params:
+                  - name: userName
+                    string: mx.data.qaa.sanity.od-009.userFirstName
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 18-B: OPEN ORDERS HISTORY."
+                  - name: squadNames
+                    string: POST-PURCHASE | QAA
+
+  # Performing Orders History assertions...............................................................................
+            - executeFunction:
+                name: mx.functions.account.openOrdersHistory
+            - executeFunction:
+                name: mx.flows.od.orders-history.assertOrder
+                params:
+                  - name: orderNumber
+                    string: ${qaa_od009_order_number}
+                  - name: expectedDeliveryMethod
+                    string: mx.data.qaa.sanity.od-009.deliveryMethod
+                  - name: expectedTotal
+                    string: ${qaa_od009_total}
+                  - name: expectedBanner
+                    string: mx.data.qaa.sanity.od-009.storeBanner
+                  - name: expectedDaySlot
+                    string: ${returnedSelectedDaySlot}
+                  - name: expectedTimeSlot
+                    string: ${returnedSelectedTimeSlot}
+                  - name: expectedOrderStatus
+                    string: mx.data.qaa.sanity.od-009.expectedOrderStatus
+                  - name: expectedProductsCount
+                    string: ${qaa_od009_total_products_quantity}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 19: SELECT NEWEST PLACED ORDER - ORDER DETAILS ASSERTIONS
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP 19: SELECT NEWEST PLACED ORDER."
+                  - name: squadNames
+                    string: POST-PURCHASE | QAA
+
+            - if:
+                condition: ${IOS_ORDERS_HISTORY_WORKAROUND} == true && ${APP_PLATFORM} == 'ios'
+                then:
+                  - executeFunction:
+                      name: mx.functions.orders-history.tapOrderDetailsByPosition
+                      params:
+                        - name: position
+                          string: '1'
+                else:
+                  - executeFunction:
+                      name: mx.functions.orders-history.openOrder
+                      params:
+                        - name: orderNumber
+                          string: ${qaa_od009_order_number}
+            - sleep:
+                duration: 5000
+
+  # Performing Order Details assertions................................................................................
+            - executeFunction:
+                name: mx.flows.od.order-details.assertDetailsWithoutAddressAndTotalsInformation
+                params:
+                  - name: orderNumber
+                    string: ${qaa_od009_order_number}
+                  - name: expectedOrderedDate
+                    string: ${qaa_od009_ordered_date}
+                  - name: expectedDeliveryMethod
+                    string: mx.data.qaa.sanity.od-009.deliveryMethod
+                  - name: expectedOrderStatus
+                    string: mx.data.qaa.sanity.od-009.expectedOrderStatus
+                  - name: expectedBanner
+                    string: mx.data.qaa.sanity.od-009.storeBanner
+                  - name: expectedDaySlot
+                    string: ${returnedSelectedDaySlot}
+                  - name: expectedTimeSlot
+                    string: ${returnedSelectedTimeSlot}
+                  - name: expectedProductsCount
+                    string: ${qaa_od009_total_products_quantity}
+
+  # Performing Order Details - Home Delivery assertions................................................................
+            - executeFunction:
+                name: mx.functions.order-details.assertHomeDeliveryAddressName
+                params:
+                  - name: expectedHomeAddressName
+                    string: mx.data.qaa.sanity.od-009.userFullName
+            - executeFunction:
+                name: mx.functions.order-details.assertHomeDeliveryAddressByIndividualValues
+                params:
+                  - name: streetName
+                    string: ${qaa_od009_user_street_name}
+                  - name: exteriorNumber
+                    string: ${qaa_od009_user_exterior_number}
+                  - name: city
+                    string: ${qaa_od009_user_city}
+                  - name: state
+                    string: ${qaa_od009_user_state}
+                  - name: zipCode
+                    string: ${qaa_od009_user_zip_code}
+
+  # Performing assertions for Product 1 (Pieces).......................................................................
+            - log: Performing assertions for Product 1 (Pieces)...
+            - executeFunction:
+                name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+            - executeFunction:
+                name: mx.flows.od.order-details.assertProductDetails
+                params:
+                  - name: productName
+                    string: ${qaa_od009_product_1_name}
+                  - name: expectedPrice
+                    string: ${qaa_od009_product_1_price}
+                  - name: expectedSubtotal
+                    string: ${qaa_od009_product_1_price}
+                  - name: productType
+                    string: ${qaa_od009_product_1_type}
+                  - name: expectedOrderedQuantityAsPieces
+                    string: ${qaa_od009_product_1_added_quantity}
+                  - name: expectedOrderedQuantityAsWeight
+                    string: ""
+
+  # Performing Totals assertions.......................................................................................
+            - executeFunction:
+                name: mx.functions.order-details.scrollToBottom
+            - executeFunction:
+                name: mx.flows.od.order-details.assertTotals
+                params:
+                  - name: expectedPaymentMethod
+                    string: mx.data.qaa.sanity.od-009.paymentMethod
+                  - name: expectedDeliveryFee
+                    string: ${qaa_od009_delivery_fee}
+                  - name: expectedSubtotal
+                    string: ${qaa_od009_subtotal}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+            - storeIn:
+                key: OD_009_SUCCESSFUL_EXECUTION
+                value: true
+            - log: "TEST END: QAA - OD - PRODUCTION SANITY - OD-009"
+
+  #####################################################################################################################
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${OD_009_SUCCESSFUL_EXECUTION}
+      - if:
+          condition: ${OD_009_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed: Resetting data for the next execution if necessary..."
+                color: GREEN_BOLD
+
+            # Relaunching app, login again if not logged and navigate to home page...
+            - executeFunction:
+                name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+            - executeFunction:
+                name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+                params:
+                  - name: userEmail
+                    string: mx.data.qaa.sanity.od-009.userEmail
+                  - name: userPassword
+                    string: mx.data.qaa.sanity.od-009.userPassword
+            - executeFunction:
+                name: mx.functions.bottom-menu.tapHome
+
+            # Empty Cart if not Empty.
+            - if:
+                condition: ${OD_009_IS_CART_EMPTY} == false
+                then:
+                  - log:
+                      message: "Products remained in Cart, deleting products..."
+                      color: GREEN_BOLD
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.openCartAndDeleteAllProducts
+                else:
+                  - log:
+                      message: "No Products were left in Cart, no need to empty it..."
+                      color: GREEN_BOLD
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"

@@ -1,0 +1,190 @@
+general:
+  tags: C2665166 # , unified-prod-e2e, p2-ecomm-prod-e2e, EC079
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2665166
+  metadata:
+    - name: scenarioId
+      string: EC079
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with Existing account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.C2665166.android.email
+            - name: android.password
+              string: us.data.prod.C2665166.android.password
+            - name: ios.email
+              string: us.data.prod.C2665166.ios.email
+            - name: ios.password
+              string: us.data.prod.C2665166.ios.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      # Click on Account from navigaiton Bar
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+      # Click on Addresses
+      - executeFunction:
+          name: unified.us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Addresses
+
+      - executeFunction:
+          name: unified.us.functions.account.removeAddress
+
+      - sleep:
+          duration: 5000
+
+      # Adding incorrect Address
+      - executeFunction:
+          name: unified.us.functions.account.invaildAddress.addAddress
+          params:
+            - name: firstName
+              string: first
+            - name: lastName
+              string: last
+            - name: streetAddress
+              string: us.data.invalid.streetAddress
+            - name: city
+              string: us.data.invalid.city
+            - name: state
+              string: us.data.invalid.state
+            - name: zipcode
+              string: us.data.invalid.zipcode
+            - name: phoneNumber
+              string: us.data.invalid.phoneNumber
+            - name: skippingSuggestion
+              string: true
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: chair
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      #       - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Adding wrong delivery address
+      - executeFunction:
+          name: unified.us.functions.cart.shippingAddress.addAddress
+          params:
+            - name: firstName
+              string: Mobile
+            - name: lastName
+              string: user
+            - name: streetAddress
+              string: us.data.flow004.streetAddress
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+
+      # Adding correct Address
+      - executeFunction:
+          name: unified.us.functions.cart.editAddress
+          params:
+            - name: firstName
+              string: firstname
+            - name: user
+              string: lastName
+            - name: streetAddress
+              string: us.data.flow004.streetAddress
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Verify review order page
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

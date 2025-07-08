@@ -1,0 +1,645 @@
+functions:
+  - name: unified.us.functions.orderDetails.ost.scheduledDelivery.verifyOrderStatus
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.fulfillmentTypeLabel
+                    equals: ${fulfillmentType}
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.progressBar
+                    equals: ${orderStatus}
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.progressBarMixedFulfiillment
+
+  # Verify Order details screen upon customer choice when driver returned back the order to store. 
+  - name: unified.us.functions.orderDetails.sparkShopper.verifyCustomerChoiceOnDriverReturns
+    flow:
+    - if:
+        condition: ${platform} == 'iOS'
+        then:
+          - verifyIdentifier: 
+              present: 
+                - identifier: us.mappings.orderDetails.newDelayMessage  
+          - getString:
+                identifier: us.mappings.orderDetails.newDelayMessage 
+                attribute: label
+                storeIn: delayMessage          
+          - log: Delay message '${delayMessage}' is displayed             
+    - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.viewMyOptionsButton 
+    - click:
+          identifier: us.mappings.orderDetails.viewMyOptionsButton
+    - sleep:
+          duration: 4000              
+    #Validating all the headers here displayed on bottomsheet.
+    - verifyIdentifier: 
+          present: 
+            - identifier: us.mappings.orderDetails.rescheduleDeliveryButton 
+            - identifier: us.mappings.orderDetails.switchToPickupButton 
+            - identifier: us.mappings.orderDetails.requestCancellationButton
+
+   # Select Reschedule/CTP/Cancel CTA upon driver return backs the order to store.
+  - name: unified.us.functions.orderDetails.sparkShopperDriverReturns.selectCTA
+    flow:
+      - if:
+          condition: ${option} == 'Reschedule'
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.rescheduleDeliveryButton
+            - sleep:
+               duration: 4000 
+            - executeFunction:
+                name: unified.us.functions.selectDayForSlotDisplay
+                params:
+                  - name: slotDay
+                    string: 'today' 
+            - executeFunction:
+                name: unified.us.functions.selectTimeSlot  
+                params:
+                  - name: slotIndex
+                    string: 2
+                  - name: timeSlot
+                    string: generic
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.customersave
+            - if:     
+                condition: ${platform} == 'Android'
+                then:
+                  - click:
+                      identifier: us.mappings.reserve.slot.button                                    
+      - if:
+          condition: ${option} == 'Pickup'
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.switchToPickupButton  
+            - sleep:
+               duration: 4000 
+            - executeFunction:
+                name: unified.us.functions.selectDayForSlotDisplay
+                params:
+                  - name: slotDay
+                    string: 'today' 
+            - executeFunction:
+                name: unified.us.functions.selectTimeSlot  
+                params:
+                  - name: slotIndex
+                    string: 2
+                  - name: timeSlot
+                    string: generic  
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.customersave
+            - if:     
+                condition: ${platform} == 'Android'
+                then:
+                  - click:
+                      identifier: us.mappings.reservePickup.confirmPickupCTA                 
+      - if:
+          condition: ${option} == 'Cancel'
+          then:
+            - executeFunction:
+               name: us.functions.cancel.order
+
+ # Verify new message banner on ODP
+  - name: unified.us.functions.orderDetails.verifyMessageBanner
+    flow:
+      - verifyIdentifier: 
+            present: 
+              - identifier: us.mappings.orderDetails.newBannerMsg 
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - getString:
+                  identifier: us.mappings.orderDetails.newBannerMsg 
+                  attribute: label
+                  storeIn: ODPMessageBanner          
+            - log: New message banner '${ODPMessageBanner}' on ODP is displayed
+      - if:
+          condition: ${platform} == 'Android'
+          then:  
+            - getString:
+                  identifier: us.mappings.orderDetails.newBannerMsg 
+                  attribute: text
+                  storeIn: ODPMessageBanner          
+            - log: New message banner '${ODPMessageBanner}' on ODP is displayed 
+
+  - name: unified.us.functions.orderDetails.verifyChargeHistoryPage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ledger.header.chargeHistory
+      - if:
+          condition: ${orderStatus} == 'order placed'
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.ledger.creditCardCarousel
+            - verifyIdentifier: 
+                present:
+                  - identifier: us.mappings.ledger.temporaryHold.string
+                  - identifier: us.mappings.ledger.temporaryHold.contextHelp.icon
+            - click:
+                  identifier: us.mappings.ledger.temporaryHold.contextHelp.icon
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.ledger.temporaryHold.inline.helpText
+                    contains: Your bank should remove the temporary hold on your card within 10 business days after receiving your order.
+      - if:
+          condition: ${platform} == "iOS"
+          then:    
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.ledger.temporaryHold.inline.helpText
+                    contains: Your bank should remove the temporary hold on your card within 10 business days after receiving your order.
+            - click:
+                identifier: us.mappings.ledger.temporaryHold.inlineText.close
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.ledger.tempoHold.string
+
+  - name: unified.us.functions.oderDetailPage.paymentClarity
+    flow:
+      - if: 
+          condition: ${paymentMethod} == 'Credit Card'
+          then:           
+            - if: 
+                condition: ${orderStatus} == 'Delivered'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.orderDetails.paymentClarity.subText
+                      position: center
+                  - verifyIdentifier:
+                      present: 
+                        - identifier: us.mappings.orderDetails.paymentClarity.subText
+                        - identifier: us.mappings.orderDetails.paymentClarity.forDeliveredState
+                  - log: After the time of order delivery, charge amount and temporary hold subtext is shown       
+                else:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.orderDetails.paymentMethodTitle
+                      position: center
+                  - verifyIdentifier:
+                      notPresent: 
+                        - identifier: us.mappings.orderDetails.paymentClarity.subText       
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmount    
+                  - log: Before the time of order delivery, charge amount is not shown
+      - if: 
+          condition: ${paymentMethod} == 'EBT Card'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.totalText
+            - verifyIdentifier:
+                notPresent: 
+                  - identifier: us.mappings.orderDetails.paymentClarity.subText 
+
+            - if: 
+                condition: ${orderStatus} == 'Delivered'
+                then:
+                  
+                  - verifyIdentifier:
+                      present: 
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmount
+                  
+                  - log: After the time of order delivery, charge amount is shown       
+                else:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.orderDetails.totalText
+                  - verifyIdentifier:
+                      notPresent: 
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmount    
+                  - log: Before the time of order delivery, charge amount is not shown
+
+      - if: 
+          condition: ${paymentMethod} == 'EBT and CC'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.totalText
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center          
+            - if: 
+                condition: ${orderStatus} == 'Delivered'
+                then:
+                  - verifyIdentifier:
+                      present: 
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmountEBT
+                        - identifier: us.mappings.orderDetails.paymentClarity.subText
+                        - identifier: us.mappings.orderDetails.paymentClarity.forDeliveredState 
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmountCC 
+                  - log: After the time of order delivery, charge amount is shown  
+                else:                  
+                  - verifyIdentifier:
+                      notPresent: 
+                        - identifier: us.mappings.orderDetails.paymentClarity.subText         
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmountEBT   
+                        - identifier: us.mappings.orderDetails.paymentClarity.chargeAmountCC 
+                  - log: Before the time of order delivery, charge amount is not shown
+
+      - if: 
+          condition: ${paymentMethod} == 'EBT and PayPal'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.totalText
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center  
+               
+            - verifyIdentifier:
+                present: 
+                - identifier: us.mappings.orderDetails.paymentMethods.paypal
+                - identifier: us.mappings.orderDetails.paymentMethods.ebt
+
+  - name: unified.us.functions.orderDetails.editTip.OnTheWayStatus
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.editTipButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.editTipButton
+      - click:
+          identifier: us.mappings.orderDetails.editTipButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderdetails.customtipButton
+      - click:
+          identifier: us.mappings.orderdetails.customtipButton
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.orderdetails.enterCustomTipamount
+          then:
+            - click: 
+                identifier: us.mappings.orderdetails.editCustomTipamount #us.mappings.orderdetails.customtipButton            
+      - enterText:
+          identifier: us.mappings.orderdetails.enterCustomTipamount
+          string: ${custTipAmount}
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.tipping.custom.numpad.doneButton
+          then:
+            - click:
+                identifier: us.mappings.tipping.custom.numpad.doneButton
+          else:
+            - click:
+                identifier: Done
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tipping.confirmButton
+      - click:
+          identifier: us.mappings.tipping.confirmButton
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.verifyDriverTip
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.verifyDriverTip
+      - if:
+          condition: ${platform} == 'Android'
+          then:  
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.verifyDriverTip
+                    contains: ${custTipAmount} 
+          else:
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.orderDetails.verifyDriverTip
+                    contains: ${custTipAmount}
+      - log: "Your tip label is displayed with correct tip amount $ ${custTipAmount}"
+
+  - name: unified.us.functions.ODP.restored.validations
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.writeAReview.itemDetails
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.ODP.QtyLabel
+          then:
+            - click: 
+                identifier: us.mappings.orderDetails.writeAReview.itemDetails  
+                wait: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ODP.itemDescription.conditionLabel
+            - identifier: us.mappings.search.conditions.restored.item
+            - identifier: us.mappings.ODP.productImage
+      - log: Validated ${type} label on ODP
+
+  - name: unified.us.functions.orderDetails.expandItemDetails
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+            - loop:
+                begin: 0
+                end: 5
+                storeIndex: i
+                mode: increment
+                flow:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+                        - click:
+                            identifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+                      else:
+                        - log: All item sections expanded
+                        - scroll:
+                            direction: down
+                            untilIdentifier: us.mappings.orderDetails.barcode
+                            scrollLimit: 6
+                        - storeIn:
+                            key: prerequisiteScrollRequired
+                            value: true
+                        - break: true
+          else:
+            - log: Item sections already expanded
+            - storeIn:
+                key: prerequisiteScrollRequired
+                value: false  
+
+  - name: unified.us.functions.orderDetails.scheduledDelivery.verifyDeliveryAddressAndDeliveryInstrutions
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.deliveryAddress.label
+            - identifier: us.mappings.orderDetails.deliveryAddress.name  
+            - identifier: us.mappings.orderDetails.deliveryAddress.address
+            - identifier: us.mappings.orderDetails.deliveryInstructionsTitle
+            - identifier: us.mappings.orderDetails.deliveryInstructions
+            - identifier: us.mappings.orderDetails.deliveryInstructionsLabel
+
+  - name: unified.us.functions.orderDetails.scheduleDelivery.lot.verifyLot
+    flow:
+      - verifyIdentifier:
+          present: 
+             - identifier: us.mappings.orderDetails.trackOrder
+      - click:
+          identifier: us.mappings.orderDetails.trackOrder
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderdetails.trackorder.mapView.map
+            - identifier: us.mappings.orderdetails.trackorder.mapView.ostStatus
+            - identifier: us.mappings.orderdetails.trackorder.mapView.contactDriverButton
+            - identifier: us.mappings.orderdetails.trackorder.mapView.trackingProgressBar
+      - click:
+          identifier: us.mappings.orderdetails.trackorder.mapView.closeButton
+      - verifyIdentifier:
+          notPresent: 
+            - identifier: us.mappings.orderdetails.trackorder.mapView.map
+
+  - name: unified.us.functions.purchaseHistory.orderDetails.assertOrderId
+    flow:
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.orderDetails.orderNumberText # us.mappings.ost.seeMore.odp.orderNumber
+      - getString:
+          identifier: us.mappings.orderDetails.orderNumberText #us.mappings.ost.seeMore.odp.orderNumber
+          attribute: ${attribute}
+          extractNumbers: true
+          storeIn: viewDetailsOrderId
+      - log : order id ${viewDetailsOrderId}
+      - if:
+          condition: ${viewDetailsOrderId} == ${orderNo}
+          then: 
+            - log: 
+                message: Verify Order successful
+          else:
+            - failTest:
+                message: Order verify failed
+                
+  - name: unified.us.functions.purchaseHistory.orderDetails.assertOrderStatusTrack
+    flow:
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.orderHistory.orderDetails.orderStatusLabel
+              equals: ${orderStatusLabel}
+      - log:
+          message: order status assertion is successful
+  - name: unified.us.functions.oderDetailPage.curbsidePickup.groceryPickup.verifyEditItem
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.groceryPickupInstructions
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.groceryPickupInstructions
+            - click:
+                identifier: us.mappings.orderDetails.editOrderButton
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.amend.editItem.saveButton
+            - click:
+                identifier: us.mappings.orderDetails.backButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.paymentMethodTitle
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.paymentMethodTitle
+            - click:
+                identifier: us.mappings.orderDetails.singleEditOrderButton
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.amend.editItem.updateOrder
+
+  - name: unified.us.functions.oderDetailPage.curbsidePickup.liquorPickup.verifyEditAndAmendItem
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.liquorPickupInstructions
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.liquorPickupInstructions
+            - click:
+                identifier: us.mappings.orderDetails.editOrderButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.fulfillmentType.gardenCenterCurbsidePickup
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.fulfillmentType.gardenCenterCurbsidePickup
+            - click:
+                identifier: us.mappings.orderDetails.singleEditOrderButton
+      - verifyIdentifier:
+          present: 
+             - identifier: us.mappings.amend.editItem.saveButton
+      - click:
+          identifier: us.mappings.amend.item.quanity.incrementButton
+      - click:
+          identifier: us.mappings.amend.editItem.saveButton
+      - verifyIdentifier:
+          present: 
+             - identifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.liquorPickupInstructions
+
+  - name: unified.us.functions.oderDetailPage.gardenCenterCurbsidePickup.verifyEditItemNotPresent
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.fulfillmentType.gardenCenterCurbsidePickup.gardenCenterPickupInstructions
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.fulfillmentType.gardenCenterCurbsidePickup.gardenCenterPickupInstructions
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.orderDetails.editOrderButton
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.groceryPickup
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.orderDetails.fulfillmentType.curbsidePickup.groceryPickup
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.orderDetails.singleEditOrderButton
+
+  - name: unified.us.functions.orderDetails.signInAgain
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.emailField
+          then:
+            - executeFunction:
+                name: us.functions.global.authentication.signInAccount
+            
+  - name: unified.us.functions.orderDetails.verifyOrderStatusMsgAndTrackerDetails
+    flow:
+    - if:
+        condition: ${platform} == 'Android'
+        then:
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.orderDetails.statusMsgLabel
+                - identifier: us.mappings.orderDetails.progressBar
+              text:
+                - identifier: us.mappings.orderDetails.statusMsgLabel
+                  contains: ${message}
+              contentDescription:
+                - identifier: us.mappings.orderDetails.progressBar
+                  contains: ${orderStatus}
+          - if:
+              condition: ${orderStatus} == 'On the way'
+              then:
+                - verifyIdentifier:
+                    present:
+                      - identifier: us.mappings.orderDetails.trackOrder
+                - click:
+                    identifier: us.mappings.orderDetails.trackOrder
+                - verifyIdentifier:
+                    present:
+                      - identifier: us.mappings.orderdetails.trackOrder.mapView
+                - click:
+                    identifier: us.mappings.orderdetails.trackorder.mapView.closeButton
+                - verifyIdentifier:
+                    present:
+                      - identifier: us.mappings.orderDetails.trackOrder
+          - if:
+              condition: ${orderStatus} == 'Delivered'
+              then:
+                - verifyIdentifier:
+                    notPresent:
+                      - identifier: us.mappings.orderDetails.trackOrder
+                    present:
+                      - identifier: us.mappings.orderDetails.returnMessage
+                      - identifier: us.mappings.orderDetails.deliveryProofImage
+                      - identifier: us.mappings.orderDetails.deliveryProofDescription
+    - if:
+        condition: ${platform} == 'iOS'
+        then:
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.orderDetails.statusMsgLabel
+                - identifier: us.mappings.orderDetails.progressBar
+              label:
+                - identifier: us.mappings.orderDetails.statusMsgLabel
+                  contains: ${message}
+              value:
+                - identifier: us.mappings.orderDetails.progressBar
+                  contains: ${orderStatus}
+          - if:
+              condition: ${orderStatus} == 'On the way'
+              then:
+                - verifyIdentifier:
+                    present:
+                      - identifier: us.mappings.orderDetails.trackOrderStatusButton
+          - if:
+              condition: ${orderStatus} == 'Delivered'
+              then:
+                - verifyIdentifier:
+                    notPresent:
+                      - identifier: us.mappings.orderDetails.trackOrderStatusButton
+                    present:
+                      # - identifier: us.mappings.orderDetails.returnEligibilityText
+                      - identifier: us.mappings.orderDetails.deliveryProofImage
+                      - identifier: us.mappings.orderDetails.deliveryProofDescription
+

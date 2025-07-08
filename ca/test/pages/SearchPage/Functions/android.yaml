@@ -1,0 +1,96 @@
+functions:
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This functions get the first product name in seach result page
+  # No params
+  - name: ca.test.functions.search.getProductName
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mapping.searchPage.productName
+      - getString:
+          identifier: ca.test.mapping.searchPage.productName
+          attribute: text
+          storeIn: productName
+      - executeNode:
+          file: ca/test/helpers/sanitizeProductName.js
+          args:
+            - value: ${productName}
+          getResponse:
+            storeIn: productName
+      - log:
+          message: "Product name: ${productName}!"
+          color: BLUE
+      - log:
+          message: "End function: search.getProductName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions gets the product price after adding to cart
+  # param:       ${quantity}    [Mandatory]  Quantity to add to cart
+  - name: ca.test.functions.searchPage.getProductCost
+    platform: android
+    flow:
+      - getString:
+          identifier: ca.test.mappings.searchPage.productCost
+          attribute: text
+          storeIn: productValue
+      - log:
+          message: "First product price... ${productValue}"
+          color: GREEN_BOLD
+      - executeNode:
+          file: ca/test/helpers/global/extractingProductCost.js
+          args:
+            - value: ${productValue}
+          getResponse:
+            storeIn: productCost
+      - log:
+          message: "Removing string from the product value... ${productCost}"
+          color: GREEN_BOLD
+      - log:
+          message: "Required product quantity in cart... ${quantity}"
+          color: GREEN_BOLD
+      - if:
+          condition: ${quantity} > 1
+          then:
+            - loop:
+                begin: 1
+                end: ${quantity}
+                mode: increment
+                flow:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: ca.test.mappings.searchPage.increaseQuantity    
+                      then: 
+                        - click:
+                            identifier: ca.test.mappings.searchPage.carouselQuantityBarClick
+                  - click:
+                      identifier: ca.test.mappings.searchPage.increaseQuantity   
+      - log:
+          message: Product added to cart
+          color: GREEN_BOLD
+      - executeNode:
+          file: ca/test/helpers/sanitizePrice.js
+          args:
+            - value: ${productCost}
+          getResponse:
+            storeIn: productPrice
+      - if:
+          condition: ${totalPrice} != "null"
+          then:
+            - arithmetic:
+                expression: ${totalPrice} + (${productPrice} * ${quantity})
+                storeIn: totalPrice
+          else:
+            - arithmetic:
+                expression: ${productPrice} * ${quantity}
+                storeIn: totalPrice
+      - log: 
+          message: "Total product price...${totalPrice}"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: searchPage.getProductCost"
+          color: BLUE

@@ -1,0 +1,220 @@
+#======================================================================================================================
+#  AUTHOR: Olga González (vn55r4a)
+#  CREATED: Oct/04/2024
+#  REVISION: ---
+#  JIRA MANUAL TICKET: https://jira.walmart.com/browse/MMC-4260
+#  JIRA AUTOMATED TICKET: https://jira.walmart.com/browse/MMC-4493
+#  FLOW: Navigate to EA Banner, open Account page,perform login verify account is logged in correctly and
+#        add new payment method.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#======================================================================================================================
+
+general:
+#TODO: Ticket blocked, there is an issue in simulator for app.
+#  tags: customer-walmart-ea-smoke-production-ios, customer-walmart-ea-smoke-production-ios-4260
+#  testCaseId: MMC-4493
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: testStatus 
+          value: false
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      - storeIn:
+          key: userEmail 
+          value: mx.data.customer.userEmail
+      - storeIn:
+          key: fromAccount
+          value: true
+      - storeIn:
+          key: sameBillingAddress
+          value: true
+      - storeIn:
+          key: cardLast4Digits
+          value: mx.data.customer.shared.cardLast4Digits
+      - storeIn:
+          key: billingCheckboxStatus
+          value: "1"
+
+      # Step 1: Onboarding
+      - log:
+          message: "Step 1: Onboarding"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Step 2: Tap global account button and sign in.
+      - log:
+          message: "Step 2: Succesfully login"
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: mx.data.customer.password
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+      
+      # Step 3: Tap add payment method
+      - log:
+          message: "Step 2: Wallet page displayed"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.accountPage.openWallet
+
+      # This condition is needed as pre-requisite.
+      - log: 
+          message: "[!] EXTRA STEP: ASSERT PAYMENT IS NOT ADDED BEFORE ADDING A NEW ONE (PRE-REQUISITE)"
+          color: ORANGE
+      - executeFunction:
+          name: mx.functions.wallet.isCardDisplayedWallet # --> RETURNS: ${isCardInWallet}
+      - if:
+          condition: ${paymentAlreadyAdded} == true # If card already displayed, then execute this.
+          then:
+            - executeFunction:
+                name: mx.functions.wallet.removeExistingCard/loop # --> USES: ${isCardInWallet}
+      
+      # Step 4: Tap add credit or debit card option
+      - log:
+          message: "Step 4: CreditDebit card option displayed"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.walletPage.addPaymentMethod.creditDebitCardButton
+      - executeFunction:
+          name: functions.walletPage.addCreditOrDebitCard.isPageDisplayed
+
+      # Step 5-6: Validate requiered fields and fill credit card data
+      - log:
+          message: "Step 5-6: Validate requiered fields and fill credit card data"
+          color: GREEN_BOLD 
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterCardNumber
+          params:
+           - name: cardNumber
+             string: mx.data.customer.shared.cardNumber
+      - executeFunction:
+          name: mx.functions.add-card-form.selectExpirationDate
+          params:
+            - name: expectedExpirationMonth
+              string: mx.data.customer.shared.expirationMonth
+            - name: expectedExpirationYear
+              string: mx.data.customer.shared.expirationYear
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.enterCVV
+          params:
+            - name: cvv
+              string: mx.data.customer.shared.cvv
+
+       # Step 7: Validate requiered fields and fill credit card data
+      - log:
+          message: "Step 7: Validate requiered fields and fill invoice address"
+          color: GREEN_BOLD  
+      - if: 
+          identifier:
+            present:
+              - identifier: walletPage.addCreditOrDebitCard.billingAddress
+          then:
+            - if:
+                condition: ${sameBillingAddress} == true # <-- ${sameBillingAddress}
+                then:
+                  - executeFunction:
+                      name: functions.addCreditDebitCardPage.setBillingAddressToSameAsDeliveryAddress # <-- ${billingCheckboxStatus}
+                else:
+                  - executeFunction:
+                      name: functions.addCreditDebitCardPage.addBillingAddress
+          else:
+            - executeFunction:
+                name: functions.addCreditDebitCardPage.addBillingAddress
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.tapSaveCardBtn
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${fromAccount} == true # <-- ${fromAccount}
+          then:
+            - executeFunction:
+                name: functions.walletPage.assertCardListed # <-- ${cardLast4Digits}
+            - executeFunction:
+                name: functions.walletPage.tapBackNavigationButton 
+          else:
+            - executeFunction:
+                name: functions.checkoutPage.walletPopup.cardSavedConfirmationMsg.assertDisplayed
+            - executeFunction:
+                name: functions.checkoutPage.walletPopup.assertCardListed # <-- ${cardLast4Digits}
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapContinueButton
+            - executeFunction:
+                name: functions.checkoutPage.paymentMethod.assertCreditOrDebitCardSelected # <-- ${cardLast4Digits}
+      - log:
+          message: "End flow: addCreditDebitCardPage.fillCreditDebitCardInformationForm"
+          color: BLUE
+        
+      # Go back home page
+      - log:
+          message: "EXTRA STEP: NAVIGATE BACK TO HOME PAGE..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      
+      #Test Execution Status    
+      - storeIn:
+          key: testStatus 
+          value: true
+      
+      # Main HOOK completed
+      - log:
+          message: "MAIN HOOK COMPLETED SUCCESSFULLY!"
+          color: CYAN
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testStatus} == true
+          then:
+            - log:
+                  message: "4260: Customer_Smoke_PROD_iOS_Payment_Verify_AddPaymentMethodFromAccount - Completed Succesfully!!"
+                  color: YELLOW_BOLD
+          else:
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+      - log: "AFTER SCENARIO END" 

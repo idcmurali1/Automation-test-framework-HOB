@@ -1,0 +1,198 @@
+#======================================================================================================================
+#  AUTHOR: Sergio Fernández (vn0t1qt)
+#  CREATED: Nov/27/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION: This flow creates an order using a quick process in which the minimal assertions will be performed in
+  #   order for it to waste the less time posible. The process includes adding only 1 product with quantity of 1 by using
+  #   PDP deep links to avoid product searching (to save even more time in the process). The user will be able to provide
+  #   some specific values for other Order Information in a JSON string (see params list below for additional details).
+  #
+  # PARAMS:
+  #   ${useSpecificData}  [Optional]
+  #       To control wether to use specific or default data to create the Order. OPTIONS: [ true | false ].
+  #       If value not provided, param will be defaulted to 'false'.
+  #
+  #   ${orderData}  [Conditioned]
+  #       Json string containing the order data to be used when ${useSpecificData} is set to 'true'.
+  #       Data structure:
+  #         {
+  #             "upcsList": [String],        # Array of UPCs
+  #             "fulfillmentType": String,   # Options: [ pickup | delivery ]
+  #             "paymentMethod": String      # Options: [ payAtStore | payPal | cashi | cc/dc ]
+  #         }
+  #
+  # RETURNS:
+  #   ${returnedOrderInfo}
+  #       A Json string containing the Order Information displayed in the Order Confirmation/Thank You Page.
+  #       See function 'mx.functions.order-confirmation.getOrderInformation' for additional details.
+  #
+  # AUTHOR: Sergio Fernández (vn0t1qt)
+  - name: mx.flows.od.order-creation.quickOrderCreation
+    flow:
+      # Check for null and invalid values for param ${useSpecificData}...
+      - if:
+          condition: ${useSpecificData} == null
+          then:
+            - storeIn:
+                key: useSpecificData
+                value: 'false'
+      - if:
+          condition: ${useSpecificData} != true && ${useSpecificData} != false
+          then:
+            - failTest:
+                message:  "X Quick Order Creation Failed: param <useSpecificData>: Invalid value '${useSpecificData}'."
+
+      # Define data to use...
+      - if:
+          condition: '!${useSpecificData}'
+          then:
+            - storeIn:
+                key: defaultUpcsList
+                value: mx.data.quick-order-creation.defaultData.upcsList
+            - storeIn:
+                key: orderData
+                value: mx.data.quick-order-creation.defaultData # <-- ${defaultUpcsList}
+            - log:
+                message: "Default data to be used: ${orderData}"
+                color: CYAN
+          else:
+            - log:
+                message: "Provided data to be used: ${orderData}"
+                color: CYAN
+
+      # Extract the individual values to use from the Json string...
+      - executeNode:
+          file: mx/test/helpers/utils/getJsonValues.js
+          args:
+            - value: ${orderData}
+          getValue:
+            - key: upcsList
+              storeIn: upcsList
+            - key: fulfillmentType
+              storeIn: fulfillmentType
+            - key: paymentMethod
+              storeIn: paymentMethod
+
+      # Loop through the UPCs List trying to add the first product possible to Cart from the list...
+      - loop:
+          each: ${upcsList}
+          storeElement: upc
+          flow:
+            - log:
+                message: Trying upc ${upc}...
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.utils.navigateToDeepLink.PDP # <-- ${upc}
+            - executeFunction:
+                name: functions.productDetailsPage.isAddToCartButtonAndErrorDisplayed
+                      # Returns --> ${isAddToCartButtonDisplayed}, ${isAddtoCartErrorDisplayed}
+                      # Note: This function also taps on the ATC button if it was displayed.
+
+            # Break loop if product was added to Cart and no error happened...
+            - if:
+                condition: (${isAddToCartButtonDisplayed}) && (!${isAddtoCartErrorDisplayed})
+                then:
+                  - break: true
+
+      # Loop is over, validate if product was able to be added...
+      - if:
+          condition: (!${isAddToCartButtonDisplayed}) || ${isAddtoCartErrorDisplayed}
+          then:
+            - failTest:
+                message:  'X Quick Order Creation Failed: no product from upcsList was able to be added to cart.'
+
+      # Close PDP...
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+
+      # Open Cart & Select fulfillment type & continue to checkout...
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - if:
+          condition: ${fulfillmentType} != 'pickup' && ${fulfillmentType} != 'delivery'
+          then:
+            - failTest:
+                message:  "X Quick Order Creation Failed: <orderData.fulfillmentType> not correct (${fulfillmentType})."
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${fulfillmentType} == 'pickup'
+          then:
+            - executeFunction:
+                name: functions.cartPage.switchDeliveryToPickup
+                params:
+                  - name: cartPage.fulfillmentType # Set param to 'Delivery' to force switch to 'Pickup'.
+                    string: Delivery
+      - if:
+          condition: ${fulfillmentType} == 'delivery'
+          then:
+            - executeFunction:
+                name: functions.cartPage.switchPickupToDelivery
+                params:
+                  - name: cartPage.fulfillmentType # Set param to 'Pickup' to force switch to 'Delivery'.
+                    string: Pickup
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      # Select Payment Method...
+      - if:
+          condition: ${paymentMethod} != 'payAtStore' && ${paymentMethod} != 'payPal' && ${paymentMethod} != 'cashi' && ${paymentMethod} != 'cc/dc'
+          then:
+            - failTest:
+                message:  "X Quick Order Creation Failed: <orderData.paymentMethod> not correct (${paymentMethod})."
+      - click:
+          identifier: mx.mappings.review-order.payment-section.editOrAddPaymentMethod
+      - if:
+          condition: ${paymentMethod} == 'payAtStore'
+          then:
+            - click:
+                identifier: mx.mappings.payment.payAtDeliveryOption
+      - if:
+          condition: ${paymentMethod} == 'payPal'
+          then:
+            - failTest:
+                message: "X Quick Order Creation Failed: process to pay with PayPal not created yet. Contact the developer." # TODO: complete process once required and remove forced failure.
+      - if:
+          condition: ${paymentMethod} == 'cashi'
+          then:
+            - failTest:
+                message: "X Quick Order Creation Failed: process to pay with Cashi not created yet. Contact the developer." # TODO: complete process once required and remove forced failure.
+      - if:
+          condition: ${paymentMethod} == 'cc/dc'
+          then:
+            - failTest:
+                message: "X Quick Order Creation Failed: process to pay with CC/DC not created yet. Contact the developer." # TODO: complete process once required and remove forced failure.
+      - click:
+          identifier: mx.mappings.payment.continueButton
+
+      # Uncheck phone notifications...
+      - executeFunction:
+          name: mx.functions.review-order.scrollToPhoneNumber
+      - executeFunction:
+          name: mx.functions.review-order.uncheckUpdatesByPhoneCheckbox
+
+      # Place Order...
+      - executeFunction:
+          name: functions.checkoutPage.tapPlaceOrderButton
+
+      # Collect Order Information...
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderInformation # RETURNS --> ${returnedOrderInfo}
+
+      - log:
+          message: ✓ Order Created
+          color: GREEN_BOLD
+
+      # Set back default optional parameters...
+      - storeIn:
+          key: useSpecificData
+          value: false
+      - log:
+          message: "End flow: mx.flows.od.order-creation.quickOrderCreation"
+          color: BLUE

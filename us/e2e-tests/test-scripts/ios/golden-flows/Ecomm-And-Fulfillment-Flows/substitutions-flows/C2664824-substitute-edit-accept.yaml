@@ -1,0 +1,190 @@
+general:
+  platform: ios
+  tags: C2664824, teflon-e2e-sim-dct, us-golden-flows, p1-fulcrum-teflon-e2e, p0-ecomm-teflon-e2e,faultboard
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  testCaseId: C2664824
+  metadata:
+    - name: scenarioId
+      string: EC017
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+  # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtusers${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+  # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow030.createAccountPayload
+      - sleep:
+          duration: 10000
+
+#***************************************************************************************************************
+
+ # Astro - Create order and move order to pick complete status for subs
+
+ #***************************************************************************************************************
+      #Commenting this part since API fetches invalid items many times causing the failure
+      #  Fetch stock available items using fetch API 
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: source
+      #         string: astro
+      #       - name: itemType
+      #         string: STORE_SCHEDULED_PICKUP      
+      #       - name: store
+      #         string: 32144
+      #       - name: itemFilter
+      #         string: subsallowed
+
+      # Fetch substitute eligible item from the list
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem #us.functions.utils.getSearchableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP      
+            - name: store
+              string: 32144
+            - name: itemFilter
+              string: subsallowed
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.subAcceptFlow.createOrderPayload
+
+    # Fetch subtitute item from the list
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: ${customerEmail}  
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: itemList
+              string: us.data.substitute.itemList
+      - storeIn:
+          key: item3
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.utils.astro.subs.setOrderStatus
+          params:
+            - name: payload
+              string: us.data.subAcceptFlow.subs
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_PICKUP
+            - name: status
+              string: PO Pick Complete
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+  # Signin
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: ${customerEmail}
+              - name: password
+                string: $password
+
+      - executeFunction:
+            name: us.functions.global.navigation.goToDeepLink
+            params:
+              - name: deepLinkUrl
+                string: walmart://orders/$orderNo
+
+  # Navigate to accept your subs flow
+      - executeFunction:
+          name: us.functions.subs.acceptSubItems
+
+#*******************************************************************************************************
+
+      # Astro - Move order status to PO Ready For Pickup and Customer Picked
+
+#*******************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_PICKUP
+            - name: status
+              string: PO Ready For Pickup
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_PICKUP
+            - name: status
+              string: Customer Picked
+
+      - executeFunction:
+            name: us.functions.global.navigation.goToDeepLink
+            params:
+              - name: deepLinkUrl
+                string: walmart://orders/$orderNo
+       
+  # Verify subs order details page after order is picked up
+      - executeFunction:
+          name: us.functions.subs.orderPickedUpNonSubsAndSubsOrderDetailPage
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,97 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-17
+#       Flow : CartIcon-Qty-Total
+#    
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179332
+#
+#   INEP Ticket
+#     https://jira.walmart.com/browse/INEP-17
+#
+#   JIRA TEST PLAN ID:
+#      https://jira.walmart.com/browse/INEP-25
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-17
+  tags: INEP-17, OPIF-179332, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   M A I N   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "CartIcon-Qty-Total"
+    flow:
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded  
+ 
+      # Add items to cart..
+      - log:
+          message: Add items to cart..
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+          params:
+            - name: productArray
+              string: data.opif-179332.itemsArray
+            - name: quantity
+              string: data.global.item.2count
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose        
+
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.global.item.2count
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - executeFunction:
+          name: functions.utils.after

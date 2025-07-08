@@ -1,0 +1,2514 @@
+functions:
+
+################################################################# iOS ##############################################
+
+  - name: us.functions.account.paymentMethod.newUser
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.selectCardType.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.addCardButton
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+
+  - name: us.functions.homepage.bottomSheet.addCard.newUser
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.bottomSheet.verify.noCardOnFileText
+      - click:
+         identifier: us.mappings.paymentMethod.bottomSheet.addCreditCard.addCardLink
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetailsAndAddress
+          params:
+            - name: firstName
+              string: us.data.flow005.payment.firstName
+            - name: lastName
+              string: us.data.flow005.payment.lastName
+            - name: number
+              string: us.data.flow005.payment.creditCard
+            - name: expiration
+              string: us.data.flow005.payment.expiration
+            - name: cvv
+              string: us.data.flow005.payment.cvv
+            - name: streetAddress
+              string: us.data.flow005.streetAddress
+            - name: city
+              string: us.data.flow005.city
+            - name: state
+              string: us.data.flow005.state
+            - name: zipcode
+              string: us.data.flow005.zipcode
+            - name: phoneNumber
+              string: us.data.flow005.phoneNumber
+
+  # Enter card details and save
+  - name: us.functions.account.paymentMethod.addCardDetails      
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.FirstName
+          string: Native
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.LastName
+          string: Native
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+          string: ${expirationMonth}
+          clearField: false
+          clickFirst: false
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${expirationYear}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.useExistingAddress.link
+          then:
+            - log: "Selecting the Existing Address!!!"
+            - click:
+                identifier: us.mappings.paymentMethod.useExistingAddress.link
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+                wait: 10000
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                      string: ${streetAddress}
+                  - click:
+                      wait: 2000
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                        - name: direction
+                          string: down
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                      string: ${city}
+                  - click:
+                      wait: 2000
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                      string: ${state}
+                  - click:
+                      wait: 2000
+                      identifier: us.mappings.default.keyboardDoneButton
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                      string: ${zipcode}
+                  - click:
+                      wait: 2000
+                      identifier: us.mappings.default.keyboardDoneButton
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+                wait: 10000
+            - if:
+                condition: "${qmSessionCardError}"
+                then:
+                  - log: "Inside the QMSession Add CC"
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.paymentMethod.unableToSaveCard.errorMessage
+                      then:
+                        - log: "Inside the QMSession Add CC error, closing the pop-up"
+                        - click:
+                            identifier: us.mappings.global.closeButton
+      - loop:
+         begin: 0
+         end: 3
+         storeIndex: i
+         flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.technicalerror 
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+                else:
+                  - break: true               
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.technicalerror   
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Unable to save card"  
+
+  - name: us.functions.account.paymentMethod.newUserWithoutCardDetails
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.selectCardType.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.addCardButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+          wait: 10000
+
+  # Navigates from account/checkout page and selects appropriate card type link for addition
+  - name: us.functions.account.paymentMethod.selectPaymentType
+    platform: ios
+    flow:
+      # If when the flow is from wallet page addition
+      - if:
+          condition: ${walletPage}
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.paymentAvailableTitle
+                then:
+                  - executeFunction: 
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.accounts.wallet.addPaymentButton
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center 
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addPaymentButton
+                      
+          # Else when the flow is from checkout page addition
+          else:
+            # If a card already exists
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+                then:
+                  - scroll:
+                      direction: down
+                  - click:
+                      identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+                  - sleep:
+                      duration: 5000
+                  # Click on Add new payment method link if some cards are already available
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.paymentMethod.checkout.wallet.title
+                      then:
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.paymentMethod.checkout.wallet.title
+                        - click:
+                            identifier: us.mappings.paymentMethod.checkout.wallet.estimatedTotal
+                        - executeFunction: 
+                            name: us.functions.utils.scrollIfNotVisible
+                            params:
+                              - name: identifier
+                                string: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton
+                              - name: direction
+                                string: down
+                              - name: scrollPosition
+                                string: center 
+                        - click:                       
+                            identifier: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton
+                      else:
+                        - log: Add a new payment method to Wallet window already displayed
+                # If card is being added for the first time
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.paymentMethod.checkout.addPaymentMethodButton
+                      then: 
+                        - executeFunction: 
+                            name: us.functions.utils.scrollIfNotVisible
+                            params:
+                              - name: identifier
+                                string: us.mappings.paymentMethod.checkout.addPaymentMethodButton
+                              - name: direction
+                                string: down
+                              - name: scrollPosition
+                                string: center 
+                        - click:
+                            identifier: us.mappings.paymentMethod.checkout.addPaymentMethodButton
+                      
+      - if:
+          condition: ${type} == 'creditCard'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addCreditDebitCardLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addCreditDebitCardLink   
+      - if:
+          condition: ${type} == 'giftCard'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addGiftCardLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addGiftCardLink
+      - if:
+          condition: ${type} == 'EBT'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addEBTLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addEBTLink
+      - if:
+          condition: ${type} == 'benefitCard'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addBenefitCardLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addBenefitCardLink
+      - if:
+          condition: ${type} == 'EBTATPICKUP'
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.reviewOrder.paymentMethod.changePaymentpageTitle
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.reviewOrder.paymentMethod.changePaymentpageTitle
+                wait: 3000
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.accounts.wallet.addEBTATPICKUPLink
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.accounts.wallet.addEBTATPICKUPLink
+                wait: 2000
+            - click:
+                identifier: us.mappings.paymentMethod.confirmEBTpayment
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.paymentMethod.EBTPaymentAtPickUp     
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation 
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation 
+                  - sleep:
+                      duration: 4000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.paymentMethod.reviewOrder.EBTPaymentAtPickUp
+                
+  # Add credit/debit card from accounts
+  - name: us.functions.account.paymentMethod.addCreditCardDetails
+    platform: ios
+    flow:
+      - if:
+          condition: ${page} == 'wallet'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.accounts.wallet.addPaymentButton
+            - click:
+                identifier: us.mappings.accounts.wallet.addPaymentButton
+          else:
+            - verifyIdentifier:
+                timeout: 20000
+                present:
+                  - identifier: us.mappings.paymentMethod.addPayment.selectCardType.title
+      - click:
+          identifier: us.mappings.accounts.wallet.addCreditDebitCardLink
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+      - sleep: 
+          duration: 5000          
+
+  # Add EBT card from accounts
+  - name: us.functions.account.paymentMethod.addEBTDetails
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: EBT
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.EBT.title
+      # - enterText:
+      #     identifier: us.mappings.paymentMethod.EBT.firstName
+      #     string: ${firstName}
+      # - enterText:
+      #     identifier: us.mappings.paymentMethod.EBT.lastName
+      #     string: ${lastName}
+      - enterText:
+          identifier: us.mappings.paymentMethod.EBT.cardNumber
+          string: ${EBTNumber}
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+          wait: 3000
+      # - verifyIdentifier:
+      #     notPresent:
+      #       - identifier: us.mappings.paymentMethod.EBT.title
+
+  # Function to validate EBT payment during checkout/amend
+  - name: us.functions.account.paymentMethod.enterEBTPin
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.continueButton # us.mappings.paymentMethod.checkout.EBT.continueButton
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.continueButton # us.mappings.paymentMethod.checkout.EBT.continueButton
+          wait: 10000
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.EBTPage.cardNumber
+      - loop:
+          begin: 1
+          end: 5
+          storeIndex: index
+          mode: increment
+          flow:
+            - click:
+                identifier: us.mappings.paymentMethod.checkout.EBTPage.pin
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.EBTPage.cardNumber
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.EBTPage.submit
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.EBTPage.submit
+          wait: 5000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.paymentMethod.checkout.EBTPage.cardNumber
+
+  # Add gift card from accounts
+  - name: us.functions.account.paymentMethod.addGiftCard
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: giftCard
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.giftCard.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.giftCard.number
+          string: ${giftCardNumber}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.cardTypeField
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.cardTypeField
+            - click:    
+                identifier: us.mappings.paymentMethod.cardTypeFieldPickerWheel      
+                coordinates: 30%,70% 
+            - enterText:
+                identifier: us.mappings.paymentMethod.cardTypeFieldPickerWheel
+                string: Walmart Gift card
+            - click:
+                identifier: us.mappings.reviewOrder.PetPickerWheelDone1
+      - enterText:
+          identifier: us.mappings.paymentMethod.giftCard.pin
+          string: ${giftCardPin}
+      - if:
+          condition: ${walletPage}
+          then:
+            - enterText:
+                identifier: us.mappings.paymentMethod.giftCard.nickname
+                string: ${nickName}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+          wait: 3000
+      - sleep: 
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.saveButton
+          then:
+              - click:
+                  identifier: us.mappings.paymentMethod.saveButton
+      - sleep: 
+          duration: 5000
+      - if:                
+          identifier:
+            present:
+              - identifier: us.mappings.wallet.verifyGiftcardTitle # us.mappings.paymentMethod.giftCartTitle
+          then:                                      
+            - log: Gift card is added     
+          else:     
+            - failTest:
+                message: "FAILURE - ${env} - Unble to add Gift card" 
+          
+      # - verifyIdentifier:
+      #     notPresent:
+      #       - identifier: us.mappings.paymentMethod.giftCard.title
+
+  # Add credit/debit card from checkout page
+  - name: us.functions.account.paymentMethod.addCreditCardFromCheckout
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.reviewOrder.placeOrderButton
+      - scroll:
+          direction: ${scrollDirection} 
+          untilIdentifier: us.mappings.reviewOrder.walletSection
+          position: center
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: creditCard
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+      - click:
+          identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+          wait: 3000
+
+  # Add gift card from checkout page
+  - name: us.functions.account.paymentMethod.addGiftCardFromCheckout
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - scroll:
+          direction: ${scrollDirection}
+          untilIdentifier: us.mappings.reviewOrder.walletSection
+          position: center
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addGiftCard
+      - click:
+          identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+          wait: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.walletSection
+      - scroll:
+          direction: up
+          scrollLimit: 2
+
+  # Delete gift card from accounts
+  - name: us.functions.account.paymentMethod.deleteGiftCard
+    platform: ios
+    flow:
+      - loop:
+          begin: 0
+          end: 5
+          storeIndex: i
+          mode: increment
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.giftCard.edit
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.giftCard.edit
+                      wait: 3000
+                  - click:
+                      identifier: us.mappings.paymentMethod.giftCard.delete
+                      wait: 3000
+                  - click:
+                      identifier: us.mappings.paymentMethod.giftCard.deleteConfirmation
+                      wait: 3000
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.accounts.wallet.title
+                  - sleep:
+                      duration: 3000
+                else:
+                  - log: No gift cart available or all are deleted
+                  - break: true
+
+  #verify orderstatus for EBT at Pickup
+  - name: us.functions.orderDetails.ost.EBTATPICKUP.verifyOrderStatus
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderdetails.payAtPickUpTitle
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderdetails.payAtPickUpTitle
+          label:
+            - identifier: us.mappings.orderdetails.payAtPickUpTitle
+              contains: Pay at pickup
+
+ #  Wallet Powered By One
+  - name: us.functions.account.paymentMethod.addCreditCardFromCheckoutWithGiftOnFile
+    platform: ios
+    flow:
+        - if:
+            identifier:
+              notPresent:
+                - identifier: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton
+            then:
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton
+                  position: center  
+        
+        - click:
+            identifier: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton 
+
+        - enterText:
+            identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+            string: ${number}
+        - click:
+           identifier: us.mappings.default.keyboardDoneButton
+        - sleep:
+            duration: 3000
+
+  - name: us.functions.account.paymentMethod.verify.walletPoweredByOneModule
+    platform: ios
+    flow:
+        - executeFunction:
+            name: us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.data.paymentMethod.walletByOne.module
+              - name: direction
+                string: down
+              - name: scrollPosition
+                string: center
+        
+        - verifyIdentifier:
+            present:
+              - identifier: us.data.paymentMethod.walletByOne.checkbox
+        - click:
+              identifier: us.data.paymentMethod.walletByOne.checkbox
+        - log: "Wallet Powered By One UI module is present and checkbox selected"
+
+################################################### ANDROID #################################################
+
+  - name: us.functions.account.paymentMethod.newUser
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.selectCardType.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.addCardButton
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+
+  # Enter card details and save
+  - name: us.functions.account.paymentMethod.addCardDetails
+    platform: android
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - sleep:
+          duration: 3000    
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - sleep:
+          duration: 3000
+      #- goBack: true
+      #- hideKeyboard: true
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.locationBannerButton
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.deliveryAddress.add.firstName
+                  - name: direction
+                    string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.firstName
+          then:
+            # - click:
+            #     identifier: us.mappings.deliveryAddress.add.firstName
+            - enterText:
+                identifier: us.mappings.deliveryAddress.add.firstName
+                string: Native
+            #- goBack: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.lastName
+          then:
+            # - click:
+            #     identifier: us.mappings.deliveryAddress.add.lastName
+            - enterText:
+                identifier: us.mappings.deliveryAddress.add.lastName
+                string: Native
+
+      # - click:
+      #     identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+
+      - hideKeyboard: true
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+          string: ${expiration}
+
+      #- goBack: true
+
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+          
+      - goBack: true
+
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          then:
+            - hideKeyboard: true
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+                string: ${phoneNumber}
+            - goBack: true
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.countryField
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.paymentMethod.addPayment.overlay.countryField
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.countryField
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.paymentMethod.addPayment.overlay.expirationDropdown
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.countryField
+                      wait: 2000
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.countryField.selectCountry
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.countryField.confirmCountry
+
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.paymentMethod.addPayment.overlay.cityField
+            - name: direction
+              string: down
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                string: ${streetAddress}
+            - goBack: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                string: ${city}
+            - goBack: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                string: ${state}
+            - goBack: true
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+            - name: direction
+              string: down
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                string: ${zipcode}
+            - goBack: true
+      - if:
+          identifier:
+            checked:
+               - identifier: us.mappings.paymentMethod.add.defaultcard
+                 value: false
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.add.defaultcard  
+
+      - if:
+          condition: ${walletPoweredByOne}
+          then:
+          - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.paymentMethod.addPayment.overlay.walletPoweredByOneConsent
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+          - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.walletPoweredByOneConsentCheckbox
+          - verifyIdentifier:
+                present:
+                   - identifier: us.mappings.paymentMethod.addPayment.overlay.walletPoweredByOneWelcomeBonusBanner
+      - click:
+          identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+
+      - sleep:
+         duration: 7000
+      - loop:
+         begin: 0
+         end: 3
+         storeIndex: i
+         flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.technicalerror 
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+                else:
+                  - break: true
+      - if:
+          condition: "${qmSessionCardError}"
+          then:
+            - log: "Inside the QMSession Add CC"
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.addCreditCard.error
+                then:
+                  - log: "Inside the QMSession Add CC error, closing the pop-up"
+                  - click:
+                      identifier: us.mappings.global.closeButton
+                else:
+                  - log: "Card saved successfully"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.technicalerror   
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Unable to save card"        
+
+  # Enter card details and save for BuyNow with existing address
+  - name: us.functions.account.paymentMethod.addCardDetailsBuyNow
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000    
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.locationBannerButton
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.deliveryAddress.add.firstName
+                  - name: direction
+                    string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.firstName
+          then:
+            - enterText:
+                identifier: us.mappings.deliveryAddress.add.firstName
+                string: Native
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.lastName
+          then:
+            - enterText:
+                identifier: us.mappings.deliveryAddress.add.lastName
+                string: Native
+            - goBack: true
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+          string: ${expiration}
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+          
+      - goBack: true
+
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField    
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberTextField
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberTextField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberTextField
+                string: ${phoneNumber}
+                pressEnter: true
+            - goBack: true 
+      - click:
+          identifier: us.mappings.payment.add.saveCard
+          wait: 3000
+
+  - name: us.functions.paymentMethod.dismissAddPaymentMethodPage
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentmethod.dismissPageButton
+          then:
+              - click:
+                  identifier: us.mappings.paymentmethod.dismissPageButton
+
+  # Navigates from account/checkout page and selects appropriate card type link for addition
+  - name: us.functions.account.paymentMethod.selectPaymentType
+    platform: android
+    flow:
+      # If when the flow is from wallet page addition
+      - if:
+          condition: ${walletPage}
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.accounts.wallet.title
+            - getString:
+                identifier: us.mappings.accounts.wallet.title
+                attribute: text
+                storeIn: paymentData
+            # If a card already exists
+            - if:
+                condition: ${paymentData} != 'Add a payment method'
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.accounts.wallet.addPaymentButton
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addPaymentButton
+                      wait: 3000
+
+          # Else when the flow is from checkout page addition
+          else:
+            - scroll:
+                direction: down
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+                      wait: 5000
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.paymentMethod.checkout.walletTitle
+                  - sleep:
+                      duration: 3000
+                  - getString:
+                      identifier: us.mappings.paymentMethod.checkout.walletTitle
+                      attribute: text
+                      storeIn: titleText
+                  - log: ${titleText}
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.paymentMethod.checkout.walletEstimatedTotal 
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.paymentMethod.checkout.addNewPaymentMethodButton
+                  - click:
+                      identifier: us.mappings.paymentMethod.checkout.addNewPaymentMethodButton
+                      wait: 3000
+                # If card is being added for the first time
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.paymentMethod.addPaymentMethodButton
+                      then:
+                        - click:
+                            identifier: us.mappings.paymentMethod.addPaymentMethodButton
+                            wait: 3000
+                      else:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+                            then:
+                              - verifyIdentifier:
+                                  present:
+                                    - identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+
+      - if:
+          condition: ${type} == 'creditCard'
+          then:
+            - log: "Control is Inside creditCard"
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.wallet.addCreditCardOrDebitCardLink
+                then:
+                  - click:
+                      identifier: us.mappings.account.wallet.addCreditCardOrDebitCardLink
+                else:
+                  - scroll:
+                      direction: up
+                      untilIdentifier: us.mappings.account.wallet.addCreditCardOrDebitCardLink
+                  - click:
+                      identifier: us.mappings.account.wallet.addCreditCardOrDebitCardLink
+
+
+      - if:
+          condition: ${type} == 'giftCard'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addGiftCardLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addGiftCardLink
+            # - click:
+            #     identifier: us.mappings.paymentMethod.cardNumberfield
+      - if:
+          condition: ${type} == 'EBT'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addEBTLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addEBTLink
+
+      - if:
+          condition: ${type} == 'benefitCard'
+          then:
+
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.accounts.wallet.addBenefitCardLink
+                then:
+                  - click:
+                      identifier: us.mappings.accounts.wallet.addBenefitCardLink
+
+
+      - if:
+          condition: ${type} == 'EBTATPICKUP'
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.accounts.wallet.addEBTATPICKUPLink
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.accounts.wallet.addEBTATPICKUPLink     
+            - if:                
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.affirmPopUpConfirmButton
+                then:                                                
+                  - click:
+                      identifier: us.mappings.reviewOrder.affirmPopUpConfirmButton
+                  - sleep:
+                      duration: 3000
+            - if:                
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+                then:                                                
+                  - click:
+                      identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+
+  # Add credit/debit card from accounts
+  - name: us.functions.account.paymentMethod.addCreditCardDetails
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+
+  # Add EBT card from accounts
+  - name: us.functions.account.paymentMethod.addEBTDetails
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: EBT
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.EBT.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.EBT.firstName
+          string: ${firstName}
+      - enterText:
+          identifier: us.mappings.paymentMethod.EBT.lastName
+          string: ${lastName}
+      - enterText:
+          identifier: us.mappings.paymentMethod.EBT.cardNumber
+          string: ${EBTNumber}
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+          wait: 3000
+
+  # Function to validate EBT payment during checkout/amend
+  - name: us.functions.account.paymentMethod.enterEBTPin
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.continueButton
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.continueButton
+          wait: 10000
+      - sleep:
+          duration: 20000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.EBTPage.cardNumber
+      - loop:
+          begin: 1
+          end: 5
+          storeIndex: index
+          mode: increment
+          flow:
+            - click:
+                identifier: us.mappings.paymentMethod.checkout.EBTPage.pin
+                wait: 3000
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.EBTPage.cardNumber
+      - verifyIdentifier:
+          timeout: 30000
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.EBTPage.submit
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.EBTPage.submit
+          wait: 5000
+      - sleep: 
+          duration: 5000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.paymentMethod.checkout.EBTPage.cardNumber
+
+  # Add gift card from accounts
+  - name: us.functions.account.paymentMethod.addGiftCard
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: giftCard
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.giftCard.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${giftCardNumber}
+      - enterText:
+          identifier: us.mappings.paymentMethod.giftCard.pin
+          string: ${giftCardPin}
+      - if:
+          condition: ${walletPage}
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.giftCard.nickname
+                then:
+                  - enterText:
+                      identifier: us.mappings.paymentMethod.giftCard.nickname
+                      string: ${nickName}
+      - goBack: true
+      - scroll:
+          direction: down
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+          wait: 3000
+      - sleep:
+          duration: 5000
+      - if:                
+          identifier:
+            present:
+              - identifier: us.mappings.pgc.giftCardsSectionHeader
+          then:                                      
+            - log: Gift card is added     
+          else:     
+            - failTest:
+                message: "FAILURE - ${env} - Unble to add Gift card" 
+
+  # Add credit/debit card from checkout page
+  - name: us.functions.account.paymentMethod.addCreditCardFromCheckout
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.reviewOrder.walletSection
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.reviewOrder.walletSection
+                position: center
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: creditCard
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+      - sleep:
+          duration: 6000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+            - sleep:
+                duration: 5000
+
+  # Add gift card from checkout page
+  - name: us.functions.account.paymentMethod.addGiftCardFromCheckout
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.reviewOrder.walletSection
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.reviewOrder.walletSection
+                position: center
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addGiftCard
+      - click:
+          identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+          wait: 3000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.walletSection
+            - name: direction
+              string: up
+            - name: scrollPosition
+              string: center          
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.walletSection
+      - scroll:
+          direction: up
+          scrollLimit: 2
+
+  # Add EBT card from checkout page
+  - name: us.functions.account.paymentMethod.addEBTCardFromCheckout
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.placeOrderButton
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.reviewOrder.walletSection
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.reviewOrder.walletSection
+                position: center
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addEBTDetails
+      - click:
+          identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+          wait: 3000
+
+  # Add Benefit card from accounts
+  - name: us.functions.account.paymentMethod.addBenefitCard
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: benefitCard
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.benefitCard.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCard.number
+          string: ${benefitCardNumber}
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCard.pin
+          string: ${securityCode}
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+          wait: 3000
+
+  # Add Nations Benefit card from accounts
+  - name: us.functions.account.paymentMethod.addNationsBenefitCard
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.accounts.wallet.addPaymentButton
+          wait: 2000
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: benefitCard
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.NationsbenefitCard.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.nationsBenefitCard.number
+          string: ${benefitCardNumber}
+      - click:
+          identifier: us.mappings.paymentMethod.benefitCard.expirationDate
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+          string: ${expirationMonth}
+          clearField: false
+          clickFirst: false
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${expirationYear}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCard.CVV
+          string: ${benefitCardCVV}
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCard.zipcode
+          string: ${zipcode}
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.wallet.benefitcardSavedMessage
+      - log: "Nations benefit card is added successfully"
+
+# Add Nations Benefit card from accounts
+  - name: us.functions.account.paymentMethod.addNationsBenefitCard
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.accounts.wallet.addPaymentButton
+          wait: 2000
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: type
+              string: benefitCard
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.NationsbenefitCard.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.nationsBenefitCard.number
+          string: ${benefitCardNumber}
+      - click:
+          identifier: us.mappings.paymentMethod.benefitCard.expirationDate
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+          string: ${expiration}
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCard.CVV
+          string: ${benefitCardCVV}
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCard.zipcode
+          string: ${zipcode}
+      - click:
+          identifier: us.mappings.paymentMethod.saveButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.wallet.benefitcardSavedMessage
+      - log: "Nations benefit card is added successfully"
+      
+  # Delete gift card from accounts
+  - name: us.functions.account.paymentMethod.deleteGiftCard
+    platform: android
+    flow:
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.accounts.wallet.expandCollapseButton
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.accounts.wallet.expandCollapseButton
+      #           wait: 3000
+      - loop:
+          begin: 0
+          end: 5
+          storeIndex: i
+          mode: increment
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.giftCard.edit
+                then:
+                  - click:
+                      identifier: us.mappings.paymentMethod.giftCard.edit
+                      wait: 3000
+                  - click:
+                      identifier: us.mappings.paymentMethod.giftCard.delete
+                      wait: 3000
+                  - click:
+                      identifier: us.mappings.paymentMethod.giftCard.deleteConfirmation
+                      wait: 3000
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.accounts.wallet.title
+                else:
+                  - log: No gift cart available or all are deleted
+                  - break: true
+
+  # Delete credit/debit card from accounts
+  - name: us.functions.account.paymentMethod.deleteCreditCard
+    platform: android
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.accounts.walletTitle
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.accounts.walletTitle
+          then:
+            - click:
+                identifier: us.mappings.accounts.walletTitle
+                wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.creditCard.edit
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.edit
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.delete
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation
+                wait: 3000
+            - sleep: 
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.accounts.wallet.title
+
+  # Delete EBT card from accounts
+  - name: us.functions.account.paymentMethod.deleteEBTCard
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.accounts.wallet.expandCollapseButton
+          then:
+            - click:
+                identifier: us.mappings.accounts.wallet.expandCollapseButton
+                wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.EBT.delete
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.EBT.delete
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.EBT.deleteConfirmation
+                wait: 3000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.accounts.wallet.title
+
+#verify orderstatus for EBT at Pickup
+  - name: us.functions.orderDetails.ost.EBTATPICKUP.verifyOrderStatus
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderdetails.payAtPickUpTitle
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center                           
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderdetails.payAtPickUpTitle
+          text:
+            - identifier: us.mappings.orderdetails.payAtPickUpTitle
+              contains: Pay at pickup
+
+  - name: us.functions.account.paymentMethod.deleteCreditCard
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.accounts.wallet.expandCollapseButton
+          then:
+            - click:
+                identifier: us.mappings.accounts.wallet.expandCollapseButton
+                wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.creditCard.edit
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.edit
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.delete
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation
+                wait: 3000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.accounts.wallet.title
+
+  - name: us.functions.account.paymentMethod.editExistingCard
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.creditCard.editFirstNameField 
+      - click:
+          identifier: us.mappings.paymentMethod.creditCard.editFirstNameField          
+      - enterText:
+          identifier: us.mappings.paymentMethod.creditCard.editFirstNameField
+          string: ${FirstNameCard}
+          clearField: true  
+      - click:
+          identifier: Done    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.creditCard.editLastNameField  
+      - click:
+          identifier: us.mappings.paymentMethod.creditCard.editLastNameField            
+      - enterText: 
+          identifier: us.mappings.paymentMethod.creditCard.editLastNameField
+          string: ${LastNameCard}
+          clearField: true 
+      - click:
+          identifier: Done    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.amend.cc.ccv
+      - click:
+          identifier: us.mappings.amend.cc.ccv      
+      - enterText:
+          identifier: us.mappings.amend.cc.ccv
+          string: ${cvv}  
+      - click:
+          identifier: Done     
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton                    
+                 
+  - name: us.functions.account.paymentMethod.editExistingCreditCard
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.firstNameField
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.firstNameField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.firstNameField
+          string: ${firstName}
+          clearField: true
+      - goBack: true
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.lastNameField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.lastNameField
+          string: ${lastName}          
+          clearField: true
+      - goBack: true
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+          string: ${expiration}
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+      - goBack: true
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+      - goBack: true
+      - click:
+          identifier: us.mappings.item.SubsPayment.save
+          wait: 1000                  
+
+  # Delete Benefit card from accounts
+  - name: us.functions.account.paymentMethod.deleteBenefitCard
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.accounts.walletTitle
+          then:
+            - click:
+                identifier: us.mappings.accounts.walletTitle
+                wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.verifyBenefitCard
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.benefitCard.remove
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation
+                wait: 3000
+
+  - name: us.functions.account.paymentMethod.addBenefitCardFromBenefitCardProgram
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.benefitCard.title
+      - click:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.number    
+      - enterText:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.number
+          string: ${benefitCardNumber}
+      - sleep: 
+          duration: 1000
+      - click:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.securityCode         
+      - enterText:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.securityCode
+          string: ${securityCode}
+      - sleep: 
+          duration: 1000
+      - click:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.dob       
+      - enterText:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.dob
+          string: ${dob}
+      - sleep:
+          duration: 1000
+      - goBack: true
+      - click:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.addressZipcode   
+      - enterText:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.addressZipcode
+          string: ${zipcode}                    
+      - sleep: 
+          duration: 1000
+      - goBack: true          
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      - sleep: 
+          duration: 3000
+      - click:
+          identifier: us.mappings.paymentMethod.skyBenefitCard.addButton
+      - sleep: 
+          duration: 5000
+
+  # Verify Benefit card from accounts
+  - name: us.functions.account.paymentMethod.verifySkyBenefitCardInWallet
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.accounts.walletTitle
+          then:
+            - click:
+                identifier: us.mappings.accounts.walletTitle
+                wait: 3000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.paymentMethod.verifyBenefitCard
+            - sleep: 
+                duration: 5000              
+
+  - name: us.functions.reviewOrder.paymentMethod.addCreditCardFromCheckout
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.reviewOrder.placeOrderButton
+      - scroll:
+          direction: ${scrollDirection} 
+          untilIdentifier: us.mappings.reviewOrder.walletSection
+          position: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+          then:
+            - scroll:
+                direction: down
+            - click:
+                identifier: us.mappings.reviewOrder.paymentMethod.changeLink
+      - sleep:
+          duration: 5000   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.checkout.wallet.title
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.paymentMethod.checkout.wallet.title
+            - click:
+                identifier: us.mappings.paymentMethod.checkout.wallet.estimatedTotal
+            - executeFunction: 
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center   
+            - click:                       
+                identifier: us.mappings.paymentMethod.checkout.wallet.addNewPaymentMethodButton   
+      - sleep:
+          duration: 5000   
+      - executeFunction:
+          name: us.functions.reviewOrder.paymentMethod.addCardDetails
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+                wait: 3000
+
+  - name: us.functions.reviewOrder.paymentMethod.addCardDetails      
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - click:
+          identifier: Done
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+          string: ${firstName}
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+          string: ${lastName}     
+      - click:
+          identifier: Done    
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      - sleep:
+          duration: 3000
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+          string: ${expirationMonth}
+          clearField: false
+          clickFirst: false
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${expirationYear}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+      - click:
+          identifier: Done
+
+
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+          clearField: true
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+          wait: 10000
+
+  - name: us.functions.account.paymentMethod.deleteBenefitCard
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.benefitCardPresent
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.deleteBenefitCard
+                wait: 3000
+            - click:
+                identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation
+                wait: 3000
+            - sleep:
+                duration: 4000
+            - click:
+                identifier: us.mappings.paymentMethod.backToAccountButton
+                wait: 3000
+
+  - name: us.functions.account.paymentMethod.verifyBenefitCardRefund
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.benefitCardPresent
+      - click:
+          identifier: us.mappings.paymentMethod.benefitCard.viewCardHistory
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.benefitCard.transactionHistory
+      - log: "Amount is refunded for the order"
+      - click:
+          identifier: us.mappings.paymentMethod.transactionHistory.gotItButton        
+
+  - name: us.functions.account.paymentMethod.verifySkyBenefitCardPresent
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.benefitCardPresent
+          then:
+            - log: "Benefit card present"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Benefit card not present as expected"
+
+      # - verifyIdentifier: us.mappings.paymentMethod.benefitCardPresent
+      #     present:
+      #       - identifier: us.mappings.paymentMethod.benefitCardPresent
+      - click:
+          identifier: us.mappings.paymentMethod.backToAccountButton
+          wait: 3000 
+
+  # Close Substitution Preference popup in the review order page
+  - name: us.functions.checkout.reviewOrder.subsPreferencePopup
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.viewSubstitutionPopUp # us.mappings.checkout.reviewOrder.subsPreference.popUp
+          then:
+            - click:
+                identifier: us.mappings.checkout.reviewOrderpopUp.subsPreference.popUp.closeButton
+
+  # Enter card details and save
+  - name: us.functions.checkout.newpaymentMethod.saveCard     
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+
+  - name: us.functions.checkout.newpaymentMethod.saveCard     
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+
+  # Enter card details and save
+  - name: us.functions.checkout.newpaymentMethod.addCardDetails     
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+          string: ${firstName}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+          string: ${lastName}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton    
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelMonth
+          string: ${expirationMonth}
+          clearField: false
+          clickFirst: false
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${expirationYear}
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+      - click:
+          identifier: Done
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - if:
+            identifier:
+                present:
+                    - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+            then:
+                - click:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                - enterText:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                    string: ${streetAddress}
+                - click:
+                    identifier: us.mappings.default.keyboardDoneButton
+                - enterText:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                    string: ${city}
+                - click:
+                    identifier: us.mappings.default.keyboardDoneButton
+                - enterText:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                    string: ${state}
+                - click:
+                    identifier: us.mappings.default.keyboardDoneButton
+                - enterText:
+                    identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                    string: ${zipcode}
+                - click:
+                    identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+
+  - name: us.functions.checkout.newpaymentMethod.addCardDetails
+    platform: android
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.paymentMethod.addPayment.overlay.title
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+          pressEnter: true
+      # - click:
+      #     identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.FirstNameField
+          string: ${firstName}
+          clearField: false
+          clickFirst: false
+          # pressEnter: true
+      # - click:
+      #     identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+      - enterText:
+          identifier: us.mappings.reviewOrder.editPickupPerson.LastNameField
+          string: ${lastName}
+          clearField: false
+          clickFirst: false
+          pressEnter: true
+      # - scroll:
+      #      direction: down
+      # - click:
+      #     identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.paymentMethod.addPayment.overlay.splashPage.expiry
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.splashPage.expiry
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.splashPage.expiry
+          string: ${expiration}
+          clearField: false
+          clickFirst: false
+          pressEnter: true
+      # - enterText:
+      #     identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+      #     string: ${expirationYear}
+      #     clearField: false
+      #     clickFirst: false
+      # - click:
+      #     identifier: Done
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+          string: ${cvv}
+          pressEnter: true
+      # - click:
+      #     identifier: Done
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+          string: ${phoneNumber}
+          pressEnter: true
+      # - click:
+      #     identifier: us.mappings.default.keyboardDoneButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+          then:
+            - click:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.streetAddressField
+                string: ${streetAddress}
+                pressEnter: true
+            # - click:
+            #     identifier: us.mappings.default.keyboardDoneButton
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.cityField
+                string: ${city}
+                pressEnter: true
+            # - click:
+            #     identifier: us.mappings.default.keyboardDoneButton
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.stateDropdown
+                string: ${state}
+                pressEnter: true
+            # - click:
+            #     identifier: us.mappings.default.keyboardDoneButton
+            - enterText:
+                identifier: us.mappings.paymentMethod.addPayment.overlay.zipCodeField
+                string: ${zipcode}
+                pressEnter: true
+            # - click:
+            #     identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+
+
+  # Verify Gift card History from wallet
+  - name: us.functions.account.paymentMethod.verifyGiftCardHistory
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wallet.verifyGiftcardTitle
+            - identifier: us.mappings.wallet.verifyViewCardHistory
+      - click:
+          identifier: us.mappings.wallet.verifyViewCardHistory
+      - sleep:
+          duration: 7000
+      - click:
+          identifier: us.mappings.reserveSlot.closeButton  
+      - sleep:
+          duration: 4000
+      - click:
+          identifier: us.mappings.wallet.verifyViewCardHistory
+      - sleep:
+          duration: 7000
+      - click:
+          identifier: us.mappings.wallet.verifyGcHistoryTransaction
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.wallet.verifyGiftCardHistoryTitle
+      #       - identifier: us.mappings.wallet.verifyGiftCardNumber
+      #       - identifier: us.mappings.wallet.verifyGcHistoryDate
+      #       - identifier: us.mappings.wallet.verifyGcHistoryDesription
+      #       - identifier: us.mappings.wallet.verifyGcHistoryTransaction
+      #       - identifier: us.mappings.wallet.verifyGcHistoryBalance
+      #       - identifier: us.mappings.wallet.verifyGcHistoryDesriptionDetails
+      #       - identifier: us.mappings.reserveSlot.closeButton
+      # - click:
+      #     identifier: us.mappings.reserveSlot.closeButton  
+      - loop:
+         begin: 0
+         end: 3
+         mode: increment
+         storeIndex: i
+         flow:
+           - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.wallet.verifyGcHistoryDesriptionDetails
+                then:
+                  - executeFunction:
+                      name: us.functions.account.paymentMethod.closeGiftCardHistoryPage
+                  - executeFunction:
+                      name: us.functions.account.paymentMethod.openGiftCardHistoryPage
+                else:
+                  - executeFunction:
+                      name: us.functions.account.paymentMethod.verifyGiftCardHistoryData
+                  - break: true
+
+
+  - name: us.functions.account.paymentMethod.verifyGiftCardHistoryData
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wallet.verifyGiftCardHistoryTitle
+            - identifier: us.mappings.wallet.verifyGiftCardNumber
+            - identifier: us.mappings.wallet.verifyGcHistoryDate
+            - identifier: us.mappings.wallet.verifyGcHistoryDesription
+            - identifier: us.mappings.wallet.verifyGcHistoryTransaction
+            - identifier: us.mappings.wallet.verifyGcHistoryBalance
+            - identifier: us.mappings.wallet.verifyGcHistoryDesriptionDetails
+            - identifier: us.mappings.reserveSlot.closeButton 
+
+  - name: us.functions.account.paymentMethod.closeGiftCardHistoryPage
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserveSlot.closeButton    
+      - click:
+          identifier: us.mappings.reserveSlot.closeButton  
+      - sleep:
+          duration: 2000
+
+  - name: us.functions.account.paymentMethod.openGiftCardHistoryPage
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.wallet.verifyViewCardHistory
+      - sleep:
+          duration: 7000
+
+
+  # Verify Gift card History from wallet
+  - name: us.functions.account.paymentMethod.verifyGiftCardHistory
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wallet.verifyGiftcardTitle # us.mappings.paymentMethod.giftCartTitle
+            - identifier: us.mappings.wallet.verifyViewCardHistory
+      - click:
+          identifier: us.mappings.wallet.verifyViewCardHistory
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wallet.verifyGiftCardHistoryTitle
+            - identifier: us.mappings.wallet.verifyGiftCardNumber
+            - identifier: us.mappings.wallet.verifyGcHistoryDateDescription
+            - identifier: us.mappings.wallet.verifyGcHistoryBalance
+            - identifier: us.mappings.paymentMethod.closeButton
+      - click:
+          identifier: us.mappings.paymentMethod.closeButton
+
+  # Function to validate EBT payment during checkout/amend
+  - name: us.functions.account.paymentMethod.enterEBTPinNew
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.continueButton
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.continueButton
+          wait: 10000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.newEBTPage.title
+      - enterText:
+          identifier: us.mappings.paymentMethod.checkout.newEBTPage.pinEdit
+          string: ${pin}
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.EBTPage.newSubmit
+          wait: 5000
+
+  # Function to validate WIC payment during checkout/amend
+  - name: us.functions.account.paymentMethod.enterWICPin
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.Wic.continueButton
+      - click:
+          identifier:  us.mappings.paymentMethod.checkout.Wic.continueButton
+          wait: 10000
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.WicPage.cardNumber
+      - enterText:
+          identifier: us.mappings.paymentMethod.checkout.newWicPage.pinEdit # This Identifier needs to be updated as per the Fiserv Edit Screen During Wic intiative 05/06
+          string: ${pin}
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.WicPage.cardNumber
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.WicPage.submit
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.WicPage.submit
+          wait: 5000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.paymentMethod.checkout.WicPage.cardNumber
+
+  # Function to validate EBT payment during checkout/amend
+  - name: us.functions.account.paymentMethod.enterWicPin
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.wic.continueButton
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.wic.continueButton
+          wait: 10000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.wicPage.cardNumber
+      - enterText:
+          identifier: us.mappings.paymentMethod.checkout.newWicPage.pinEdit # This Identifier needs to be updated as per the Fiserv Edit Screen During intiative 05/06
+          string: ${pin}
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.wicPage.cardNumber
+      - verifyIdentifier:
+          timeout: 30000
+          present:
+            - identifier: us.mappings.paymentMethod.checkout.wicPage.submit
+      - click:
+          identifier: us.mappings.paymentMethod.checkout.wicPage.submit
+          wait: 5000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.paymentMethod.checkout.wicPage.cardNumber
+
+ #  Wallet Powered By One
+  - name: us.functions.account.paymentMethod.verify.walletPoweredByOneModule
+    platform: android
+    flow:
+        - scroll:
+            direction: down
+            untilIdentifier: us.data.paymentMethod.walletByOne.module
+            scrollLimit: 5
+
+        - verifyIdentifier:
+            present:
+              - identifier: us.data.paymentMethod.walletByOne.module
+      
+        - verifyIdentifier:
+            present:
+              - identifier: us.data.paymentMethod.walletByOne.checkbox
+        - sleep:
+            duration: 3000
+
+        - click:
+           identifier: us.data.paymentMethod.walletByOne.checkbox
+        - log: "Wallet Powered By One UI element is present and checkbox is selected"
+
+        - click:
+           identifier: us.mappings.paymentMethod.1Pitem.overlay.saveButton
+
+        - click:
+            identifier: us.data.paymentMethod.walletByOne.deleteGiftCard
+            wait: 3000
+        - click:
+            identifier: us.mappings.paymentMethod.giftCard.deleteConfirmation
+            wait: 3000
+        - click:
+            identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+            wait: 3000
+
+  - name: us.functions.account.paymentMethod.addCreditCardFromCheckoutWithGiftOnFile
+    platform: android
+    flow:
+        - if:
+            identifier:
+              notPresent:
+                - identifier: us.mappings.paymentMethod.checkout.addNewPaymentMethodButton
+            then:
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.paymentMethod.checkout.addNewPaymentMethodButton 
+                  position: center
+                  scrollLimit: 5
+        
+        - click:
+            identifier: us.mappings.paymentMethod.checkout.addNewPaymentMethodButton 
+
+        - enterText:
+            identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+            string: ${number}
+            pressEnter: true
+        - sleep:
+            duration: 3000
+
+        - enterText:
+            identifier: us.mappings.deliveryAddress.add.firstName
+            string: Native
+
+        - enterText:
+            identifier: us.mappings.deliveryAddress.add.lastName
+            string: Native
+            pressEnter: true
+
+        - sleep:
+            duration: 3000
+
+        - enterText:
+            identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+            string: ${expiration}
+            clickFirst: true
+
+        - enterText:
+            identifier: us.mappings.paymentMethod.addPayment.overlay.securityCodeField
+            string: ${cvv}
+
+        - enterText:
+            identifier: us.mappings.paymentMethod.addPayment.overlay.phoneNumberField
+            string: ${phoneNumber}
+        - goBack: true
+        
+        - if:
+            identifier:
+              checked:
+                - identifier: us.mappings.paymentMethod.add.defaultcard
+                  value: false
+            then:
+              - click:
+                  identifier: us.mappings.paymentMethod.add.defaultcard 

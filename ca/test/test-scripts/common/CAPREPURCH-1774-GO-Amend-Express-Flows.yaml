@@ -1,0 +1,164 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Amend Order : Amend option not visible for amend order
+# Scenarios covered:
+# Navigate onboarding to home
+# Create an express order
+# Navigate to purchase history page
+# Validate amend option, cancel order option and edit order option is not present 
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  tags: flow304
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.flow304.onboardingZipCode
+
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.apis.createAccount
+
+       # Add product to cart
+      - executeFunction:
+          name: ca.test.functions.apis.addToCart
+          params:
+            - name: s1
+              string: ca.test.data.flow304.goItemSku
+            - name: q1
+              string: ca.test.data.flow304.itemQuantity
+            - name: orderType
+              string: SCHEDULED_PICKUP
+
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+     # Sign In Page 
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ${emailId}
+            - name: password
+              string: ${password}
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.globalIntent.updateStore$DeliveryAddress
+          params:
+            - name: updateStore
+              string: true
+            - name: postalCode
+              string: ca.test.data.flow304.zipCode
+            - name: storeName
+              string: ca.test.data.flow304.storeName 
+            - name: storeAddress
+              string: ca.test.data.flow304.storeAddress             
+            - name: updateAddress
+              string: true
+            - name: userAddress
+              string: ca.test.data.flow304.userAddress
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *          
+
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigationToCart
+      
+      # Select express delivery slot
+      - executeFunction:
+          name: ca.functions.cartPage.selectExpressDeliverySlot
+      
+      # Select continue to checkout and navigate to checkout page
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOut
+      
+      # Add CVV value if field is present
+      - executeFunction:
+          name: ca.test.functions.checkoutPage.addCVV
+          params:
+            - name: cvv
+              string: ca.test.data.flow304.cvvValue
+      
+      # Add phone number 
+      - executeFunction:
+          name: ca.test.functions.checkoutPage.enterContactNumber
+          params:
+            - name: phoneNumber
+              string: ca.test.data.flow304.phoneNumber
+
+      # Place order
+      - executeFunction:
+          name: ca.test.functions.checkOut.PlacingOrder
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+      # Handle rating popup
+      - executeFunction:
+          name: ca.test.functions.orderConfirmationPage.handleRatingPopUp
+
+      # Tap Continue Shopping button
+      - executeFunction:
+          name: ca.test.functions.orderConfirmationPage.tapcontinueShopping 
+      
+      # Vvalidate if home is loaded
+      - executeFunction:
+          name: ca.test.functions.homePage.assertPageLoaded
+
+      # Navigate to account page
+      - executeFunction:
+          name: ca.test.functions.homePage.accountButton
+
+      # Tap Purchase History in Account Page
+      - executeFunction:
+          name: ca.test.functions.accountPage.tapPurchaseHistory
+
+     # Tap on View Details Button
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.tapViewDetailsButton
+
+      # Verify Order details Page
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.validateForExpressOrder
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: CAPREPURCH-1774-GO-Amend-Express-Flows
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

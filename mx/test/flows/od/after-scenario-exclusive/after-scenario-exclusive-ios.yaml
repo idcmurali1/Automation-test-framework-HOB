@@ -1,0 +1,144 @@
+#======================================================================================================================
+#    AUTHOR: Sergio Fernandez (vn0t1qt)
+#   CREATED: Jan/11/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function re-launches the app and navigates to OD Home page.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: -----
+  - name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+          params:
+            - name: bundleId
+              string: ${BUNDLE_ID}
+      - executeFunction:
+          name: mx.functions.login.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.prehome.tapODBanner
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.closeSelectorIfExpanded
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+      - log:
+          message: "End function: after-scenario-exclusive.relaunchAndNavigateToHomePage"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function navigates to account page from home and performs a quick login if the user logged out during the main scenario.
+  # PARAMS:
+  #   ${userEmail}      [Mandatory]   In case the execution logs out the test user after re-launching the app.
+  #   ${userPassword}   [Mandatory]   In case the execution logs out the test user after re-launching the app.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: -----
+  - name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.account.loginButton
+          then:
+            - log:
+                message: "User logged out during Main Scenario..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.account.tapLogin
+            - executeFunction:
+                name: mx.flows.od.login.loginFromPopup
+                params:
+                  - name: userEmail
+                    string: ${userEmail}
+                  - name: userPassword
+                    string: ${userPassword}
+            - executeFunction:
+                name: mx.functions.confirm-phone-number-popup.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.account.assertPageDisplayed
+          else:
+            - log:
+                message: "User did not log out during Main Scenario..."
+                color: GREEN_BOLD
+      - log:
+          message: "End function: after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function empties the cart after test execution.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: -----
+  - name: mx.flows.od.after-scenario-exclusive.openCartAndDeleteAllProducts
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      - log:
+          message: "End function: after-scenario-exclusive.openCartAndDeleteAllProducts"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.after-scenario-exclusive.openAndEmptyFavoritesList
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.products-and-lists.tapLists
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.lists.openFavoritesList
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params:
+            - name: expectedListName
+              string: Tus favoritos
+      - executeFunction:
+          name: mx.functions.list.emptyList
+      - log:
+          message: "End function: after-scenario-exclusive.openAndEmptyFavoritesList"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This flow deletes all cards from wallet after test execution.
+  # AUTHOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.after-scenario-exclusive.deleteCards
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.openWallet
+      - executeFunction:
+          name: mx.flows.od.wallet.deleteAllCards
+      - executeFunction:
+          name: mx.functions.wallet.assertNoCardsAreDisplayed
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - log:
+          message: "End function: after-scenario-exclusive.deleteCards"
+          color: BLUE

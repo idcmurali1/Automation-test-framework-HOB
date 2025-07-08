@@ -1,0 +1,135 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: iOS[PROD] Flows - Feature build
+          call: run_tests_prod(SAUCE_APP = '${SAUCE_APP_FILE_NAME}.zip', APP_BUILD_BRANCH = 'development-latest', TEST_TAGS = 'p1-sc-prod-e2e', DEPENDENCY_PROFILE = 'looper')
+
+      - manual:
+          name: Android[PROD] Flows - Feature build
+          call: run_tests_prod(SAUCE_APP = '${SAUCE_APP_FILE_NAME}.apk', APP_BUILD_BRANCH = 'development-latest', TEST_TAGS = 'p1-sc-prod-e2e', DEPENDENCY_PROFILE = 'looper')
+
+envs:
+  global:
+    variables:
+      MARKET: sellerCenter
+      POST_TO_ES: true
+      POST_TO_ANIVIA: true
+      APPLITOOLS_API_KEY: ENC[Rt+/oXg4fNf9b2Pq2MQ47frfGB42KVDp7l7/tQ/1na985VV7Ia42QMgDDOppIoaDTWfXJmsQW0Imo7rpXjXaQQ==]
+
+  env_ios_prod:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: sellerCenter/e2e-tests/dependencies/ios/ios-default.yaml
+    #   DEPENDENCY_PROFILE: looper
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      APP_PLATFORM: ios
+      SAUCE_FILE_NAME: ${SAUCE_APP_FILE_NAME}.zip
+      FILE_TYPE: zip
+
+  # Environment profiles can be specified here with specific environment variable values.
+  env_android_prod:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: sellerCenter/e2e-tests/dependencies/android/android-default.yaml
+    #   DEPENDENCY_PROFILE: looper
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      APP_PLATFORM: android
+      SAUCE_FILE_NAME: ${SAUCE_APP_FILE_NAME}.apk
+      FILE_TYPE: apk
+
+flows:
+
+  upload_build_to_sauce_labs:
+    - node(label = linux, isolation = except_project, ws = exclusive):
+        try:
+          # - declare(APP_BRANCH)
+          - declare(APP_VERSION)
+          # - call: get_app_branch
+          - if: $APP_VERSION
+            then:
+              - shell (Using manually specified APP_VERSION):
+                  echo $APP_VERSION
+            else:
+              - call: get_app_version
+          - (name Environment dump) printenv|sort
+          - call: download_build
+          - call: upload_build
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+
+  setup:
+    - hygieia.publishBuild()
+    - shell (name Remove node_modules): |
+        rm -frv node_modules
+    - shell (name npm cache clear): |
+        npm cache clear --force
+    - shell (name sleep 10): |
+        sleep 10
+    - shell (name npm install): |
+        npm install
+    - if: |
+        %{USE_CUSTOM_R2_JAR == 'false'}
+      then:
+        - shell (name download r2 binary): |
+            npm run download-r2
+      else:
+        - shell: echo Using custom R2 jar
+
+  run_tests_prod:
+    - call: build_tunnel(env_ios_prod)
+
+  build_tunnel:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: upload_build_to_sauce_labs
+          - call: setup
+          - if: |
+              %{GLASS_ENV == 'teflon'}
+            then:
+              - shell: npm i -g saucelabs@7.2.2
+              - call: start_sc
+          - call: execute_test
+          - if: |
+              %{GLASS_ENV == 'teflon'}
+            then:
+              - call: stop_sc
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          - call: get_test_failures
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          - call: slack_test_run_helper
+          - call: post_test_results_json_to_es
+          - call: post_test_results_json_to_splunk
+          - call: update_test_results_to_xray
+
+  start_sc:
+    - shell:
+        sl sc --region us-west-1 --no-autodetect --tunnel-name "sc-sauce-tunnel-${BUILD_ID}" > sc.log 2>&1 &
+    - shell: sleep 30s
+    - shell: cat sc.log
+
+  stop_sc:
+    try:
+      - shell: pkill -f '/bin/sc'
+    catch:
+      - echo "Stop Sauce Connect Tunnel failed - $flowErrorMessage"

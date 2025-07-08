@@ -1,0 +1,163 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-750
+#       Flow - MH: Order Details Page for OD, EA and Mixed Orders : Pay at store unscheduled order is displayed correctly
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179447
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-750
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-746
+#
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-750
+  tags: INEP-750, OPIF-179447, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-746, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Pay at store unscheduled order is displayed correctly"
+    flow:
+    
+      # Create user and order with pay at store
+      - log:
+          message: "Create user and order with pay at store."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload  # Return -> $userEmail , $userPassword
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+      - executeFunction:
+          name: functions.astroApi.createOrder
+          params:
+            - name: payload
+              string: data.mh.createOrderPayload.unscheduledDelivery.payLater 
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+    
+      # Log in
+      - log:
+          message: "Log In."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${userPassword}
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+    
+      # Go to Order History Page and validate order is created and opened
+      - log:
+          message: "Go to Order History Page and validate order is created and opened."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+      - executeFunction:
+          name: functions.orderHistoryPage.navigateToLatestOrder
+
+   # Validate pending payment.
+      - log:
+          message: "Validate pending payment"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.validatePendingPayment
+
+   # Validate the return CTA is not displayed.
+      - log:
+          message: "Validate the return CTA is not displayed"
+          color: PURPLE_BOLD_BRIGHT
+   # TO-DO: No existing RETURN CTA button in Android ATM. Issue has been reported. Need to update once fix gets merged
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: functions.orderDetailPage.validateReturnCTANotDisplayed
+      # Validate the track CTA is not displayed.
+      - log:
+          message: "Validate the track CTA is not displayed"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.validateCTANotDisplayed
+          params:
+            - name: ctaTextButton
+              string: data.orderTracker.primaryMainButton.trackShipment
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+      - log: 'INEP-750: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'AFTER SCENARIO START'
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+      - log: 'AFTER SCENARIO END'

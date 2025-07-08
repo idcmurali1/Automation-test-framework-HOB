@@ -1,0 +1,243 @@
+#======================================================================================================================
+#    AUTHOR: Osmar Juárez (vn56dce)
+#   CREATED: Jun/26/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-od-smoke-production-android-2685, prepurchase-od-smoke-production-android
+  testCaseId: MMS-3270
+
+scenarios:
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [GLASS-MX] Verify that a user can add an item to cart from order again
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+Android 
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-3270
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-2685
+#
+#######################################################################################################################
+ 
+
+  # BEFORE HOOK #######################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - storeIn:
+          key: __SQUAD_REPORTING_TEST_CASE_NAME
+          value: GMX_OD_Smoke_PROD_PrePurchase_Android_2685
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+      
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+          params:
+            - name: packageName
+              string: ${APP_PACKAGE}
+      - storeIn:
+          key: MMS_2685_SUCCESSFUL_EXECUTION
+          value: false
+      - storeIn:
+          key: MMS_2685_IS_CART_EMPTY
+          value: true
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN HOOK #########################################################################################################
+  - name: Main
+    platform: android
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN WALMART APP AND COMPLETE ONBOARDING. (2) OPEN THE OD BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.smoke.od.prepurchase-2685.zipCode
+            - name: banner
+              string: 'OD'
+      
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: LOG IN BY GOING TO 'Cuenta' > 'Iniciar sesión'"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.smoke.od.prepurchase-2685.userEmail
+            - name: userPassword
+              string: mx.data.qaa.smoke.od.prepurchase-2685.userPassword
+            - name: userName
+              string: mx.data.qaa.smoke.od.prepurchase-2685.userFirstName
+
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: NAVIGATE TO REORDER TAB IN MY ITEMS."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+          
+      
+      # STEP 5 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: TAP ON ONE OF THE PRODUCTS OF THE REORDER LIST."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.reorder.getProductNameByIndex # RETURN: --${returnedProductName}-- 
+          params:
+            - name: i
+              string: "1"
+      - storeIn:
+          key: MMS_2685_PRODUCT_NAME_1
+          value: ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.reorder.openPDPByIndex
+          params:
+            - name: i
+              string: "1"
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.pdp.assertCorrectProductDisplayed
+          params:
+            - name: expectedProductName
+              string: ${MMS_2685_PRODUCT_NAME_1}
+
+      # STEP 6 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6: TAP 'Add' BUTTON IN PDP AND CLOSE PDP."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.pdp.addToCart
+      - storeIn:
+          key: MMS_2685_IS_CART_EMPTY
+          value: false
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+      
+      # STEP 7 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: ADD ANOTHER PRODUCT TO CART."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.reorder.getProductNameByIndex # RETURN: --${returnedProductName}--
+          params:
+            - name: i
+              string: "3"
+      - storeIn:
+          key: MMS_2685_PRODUCT_NAME_2
+          value: ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.reorder.openPDPByProductName
+          params:
+            - name: productName
+              string: ${MMS_2685_PRODUCT_NAME_2}
+      - executeFunction:
+          name: mx.functions.pdp.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.pdp.addToCart
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+      
+      # STEP 8 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 8: OPEN CART AND ASSERT PRODUCTS ARE ADDED CORRECTLY."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${MMS_2685_PRODUCT_NAME_2}
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: ${MMS_2685_PRODUCT_NAME_1}
+
+      # STEP 9 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 9: DELETE ALL ITEMS FROM CART."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.cart.deleteAllProducts
+      
+  # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_2685_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+  # AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..."
+
+      - if:
+          condition: ${MMS_2685_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. Resseting data for next execution."
+                color: RED
+            - if:
+               condition: ${MMS_2685_IS_CART_EMPTY} == false
+               then:
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+                  - executeFunction:
+                      name: mx.functions.bottom-menu.tapHome
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.emptyCart
+                      params:
+                        - name: userEmail
+                          string: mx.data.qaa.smoke.od.prepurchase-2685.userEmail
+                        - name: userPassword
+                          string: mx.data.qaa.smoke.od.prepurchase-2685.userPassword
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"
+  

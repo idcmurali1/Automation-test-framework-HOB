@@ -1,0 +1,175 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-285
+#       Flow - MH:  Place order with GM(1P pickup) and GO(pickup)
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-196579
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-285
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-284
+#
+#   TODO: Mixed basquet requeriment in progress, pending validate payload to create order in astro.
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-285
+  tags: INEP-285, OPIF-196579, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Place order with GM(1P pickup) and GO(pickup)"
+    flow:
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # Return -> ${userEmail} and ${userPassword}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+      # Create order using astro api.
+      - log:
+          message: PREREQUISITE — Creating  WFS order using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createOrder
+          params:
+            - name: payload
+              string: data.mh.inep285.createOrderPayload.MG1PPickUpGOPickup # Param -> ${userEmail}
+      - storeIn:
+          key: orderId
+          value: ${returnedOrderNumber}
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+    
+      # Go to Order History Page
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # Params -> ${userEmail} and ${userPassword}
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+
+      # Validate only 1 order in PH for user
+      - executeFunction:
+          name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn # Param -> ${orderId}
+
+      # Move line 1 in order using Astro API
+      - storeIn:
+         key: lineId
+         value: 1
+      - log:
+          message: Move line 1 in order using Astro API -> Customer Picked
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.unscheduledPickup.customerPicked
+
+      # Validate LOT with "Picked" status in Order Details
+      - executeFunction:
+          name: functions.orderDetailPage.reloadOrderDetailPage
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.EDD.deliveredToday
+      
+       # Move line 2 in order using Astro API
+      - storeIn:
+         key: lineId
+         value: 2
+      - log:
+          message: Move line 2 in order using Astro API -> Customer Picked
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string:  data.moveOrder.scheduledPickup.lineId.customerPicked
+
+      # Validate LOT with "Picked" status in Order Details
+      - executeFunction:
+          name: functions.orderDetailPage.reloadOrderDetailPage
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.EDD.deliveredToday
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

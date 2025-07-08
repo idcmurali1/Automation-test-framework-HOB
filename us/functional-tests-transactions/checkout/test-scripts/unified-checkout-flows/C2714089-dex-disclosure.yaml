@@ -1,0 +1,171 @@
+# Validate dex disclosure age consent form in checkout - validate dex checkbox for place order
+
+general:
+  tags: C2714089, unified-prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714089
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # Set environment
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+      # Set platform
+      - executeFunction:
+          name: functions.utils.setPlatformInfo   
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate dex disclosure age consent form in checkout - validate dex checkbox for place order
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate dex disclosure age consent form in checkout - validate dex checkbox for place order"
+
+      #Onboarding Steps
+      - executeFunction:
+          name: unified.us.functions.transactions.onboarding.navigateOnboardingToHome
+
+      #Navigate to Signin
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # #Signin to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.checkout.dexdisclosure.android.email
+            - name: android.password
+              string: us.data.prod.checkout.dexdisclosure.android.password
+            - name: ios.email
+              string: us.data.prod.checkout.dexdisclosure.ios.email
+            - name: ios.password
+              string: us.data.prod.checkout.dexdisclosure.ios.password
+
+      # Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      #Navigate to Home tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+      
+       # Select Delivery intent from GIC
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.functional.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.checkout.dexdisclosure.item
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.item.postAddToCartSteps
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.functional.bookslot.changeOrReserve
+
+      - executeFunction:
+          name: unified.us.functions.functional.bookslot.reserveASlot
+          params:
+            - name: tab
+              string: delivery
+            - name: slotDay
+              string: 3
+            - name: slotIndex
+              string: 2
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Validate no delivery options displayed to customer
+      - executeFunction:
+            name: us.functions.functional.checkout.reviewOrder.dex.validateNoDeliveryOptionsDisplayed
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.dex.validateAgeConsentForm
+
+      # Opt out of text message updates
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.mobileContactText
+          position: center
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.OptinCheckboxTextboxChecked
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.getTextCheckBox
+
+      # Enter cvv
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+          name: us.functions.functional.checkout.enterCVVAndPlaceOrder
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.dex.validateErrorMessage
+
+      # Validate placeorder success with age consent and order confirmation page
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.dexDisclosureFormTitle
+
+      - executeFunction:
+          name: us.functions.functional.checkout.revieworder.toggleDexConsentFormOn
+
+      - executeFunction:
+          name: us.functions.functional.checkout.placeOrder
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.paymentsCloseTray
+
+      - executeFunction:
+          name: us.functions.functional.checkout.thankyou.orderConfirmation.getOrderNumber  
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

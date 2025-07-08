@@ -1,0 +1,968 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#  CREATED: Oct/18/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This function asserts if the PDP view is displayed.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.assertPageDisplayed
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.productNameLabel
+              - identifier: mx.mappings.ea.pdp.topProductPriceLabel
+              - identifier: mx.mappings.ea.pdp.productPicture
+              - identifier: mx.mappings.ea.pdp.zoomIcon
+          then:
+            - log:
+                message: "Success: PDP is displayed."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed: PDP did not display."
+      - log:
+          message: "End function: pdp.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description:  This function asserts if the PDP view is displayed by using a generic element that can be validated
+  #                 at any level of the page.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.genericPageAssertion
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.pdp.genericPageContainer
+          timeout: 60000
+      - log:
+          message: "Success: Page is displayed."
+          color: CYAN
+      - log:
+          message: "End function: pdp.genericPageAssertion"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Param: ${productName}  [Mandatory]  Full expected product name to be displayed.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.assertCorrectProductDisplayed
+    platform: android
+    flow:
+      - log:
+          message: "Product name: '${productName}'"
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.ea.pdp.productNameLabel
+              contains: ${productName}
+      - log:
+          message: "End function: pdp.assertCorrectProductDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.addToCart
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.addToCartButton
+      - log:
+          message: "End function: pdp.addToCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.clickBuyNow
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.buyNowButton
+      - log:
+          message: "End function: pdp.clickBuyNow"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------              
+  
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.assertAddedToCart
+    platform: android
+    flow: 
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.pdp.addToCartButton
+          then:
+            - failTest:
+                message: "The product has not been added to cart."
+          else:
+            - log:
+                message: "Success: Product has been added to cart."
+                color: CYAN
+      - log:
+          message: "End function: pdp.assertAddedToCart"
+          color: BLUE 
+
+  # -------------------------------------------------------------------------------------------------------------------              
+  
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.tapClose
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.closeButton
+      - log:
+          message: "End function: pdp.tapClose"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------              
+  
+  # DESCRIPTION: This function asserts if the product have payments promotions like months without interest.
+  # AUTHOR: Osmar Juárez  (vn56dce)
+  - name: mx.functions.ea.pdp.assertMonthsWithoutInterestDetails
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.pdp.monthsWithoutInterestBadgeLabel
+            - identifier: mx.mappings.ea.pdp.monthsWithoutInterestTextLabel
+          timeout: 10000
+      - log:
+          message: "Assertion Succeded: Product have Months without interest"
+          color: CYAN
+      - log:
+          message: "End function: ea.pdp.assertMonthsWithoutInterestDetails (Displayed)"
+          color: BLUE
+          
+  # -------------------------------------------------------------------------------------------------------------------              
+  
+  # DESCRIPTION: This function returns the product name from the pdp displayed.
+  # RETURN: ${returnedProductName}
+  # AUTHOR: Osmar Juárez  (vn56dce)
+  - name: mx.functions.ea.pdp.getProductName
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.pdp.productNameLabel
+          storeIn: returnedProductName
+      - log:
+          message: "Product Name Label with value: '${returnedProductName}'"
+          color: CYAN
+      - log:
+          message: "End function: mx.functions.ea.pdp.getProductName"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------              
+
+  # DESCRIPTION: This function returns product's final price from the pdp displayed.
+  # RETURNS:
+  #   ${returnedPrice}
+  #   ${returnedOriginalPrice} If available, if not, the same value as '${returnedPrice}' will be returned.
+  #   ${returnedDiscountAmount} This is the amount that the user will save by purchasing the product. Only if product has discount.
+  # AUTHOR: Osmar Juárez  (vn56dce)
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.getProductPrice
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.pdp.topProductPriceLabel
+          storeIn: productPrice
+      - executeNode:
+          file: mx/test/helpers/utils/getNumberFromPriceString.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: returnedPrice
+
+      # Verifying if product has a discount...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.topProductOriginalPriceLabel
+          then:
+            # Extraction of the Original Price...
+            - log:
+                message: "Discount found, extracting Original Price value..."
+                color: CYAN
+            - getString:
+                identifier: mx.mappings.ea.pdp.topProductOriginalPriceLabel
+                attribute: text
+                storeIn: originalPrice
+            - executeNode:
+                file: mx/test/helpers/utils/getNumberFromPriceString.js
+                args:
+                  - value: ${originalPrice}
+                getResponse:
+                  storeIn: returnedOriginalPrice
+
+            # Extraction of the Discount Amount (used later for Order Details)...
+            - getString:
+                identifier: mx.mappings.ea.pdp.savingsAmountValue
+                attribute: text
+                storeIn: returnedDiscountAmount
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceString.js
+                args:
+                  - value: ${returnedDiscountAmount}
+                getResponse:
+                  storeIn: returnedDiscountAmount
+          else:
+            - log:
+                message: "Discount not found, returning Current Price..."
+                color: CYAN
+            - storeIn:
+                key: returnedOriginalPrice
+                value: ${returnedPrice}
+            - storeIn:
+                key: returnedDiscountAmount
+                value: '0.00'
+
+      # Logging Results...
+      - log:
+          message: "Price Got: '${returnedPrice}'"
+          color: CYAN
+      - log:
+          message: "Original Price Got: '${returnedOriginalPrice}'"
+          color: CYAN
+      - log:
+          message: "Discount Amount Got: '${returnedDiscountAmount}'"
+          color: CYAN
+      - log:
+          message: "End function: mx.functions.ea.pdp.getProductPrice"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedDeliveryDate} This is the displayed delivery date located under the Product images.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.getDeliveryDate
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.pdp.deliveryDateLabel
+          then:
+            - scroll:
+                wait: 1000
+                position: center
+                direction: down
+                scrollLimit: 1
+                untilIdentifier: mx.mappings.ea.pdp.deliveryDateLabel
+      - getString:
+          identifier: mx.mappings.ea.pdp.deliveryDateLabel
+          storeIn: returnedDeliveryDate
+      - executeNode:
+           file: mx/test/helpers/pdp/parseDeliveryDateEA.js
+           args:
+             - value: ${returnedDeliveryDate}
+           getResponse:
+               storeIn: returnedDeliveryDate
+      - log:
+          message: "Returned Delivery Date: '${returnedDeliveryDate}'"
+          color: CYAN
+      - log:
+          message: "End function: pdp.getDeliveryDate"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Increases the actual quantity of a product by the desired amount of increments. i.e. for a product which
+  #     its current quantity is 12, if the desired amount of increments is 5, the final quantity will be 17 (assuming
+  #     there was enough stock to supply the demand, otherwise, the app will cap the quantity to the max available stock).
+  #
+  # PARAMS:
+  #     ${quantity}  [Mandatory]
+  #         Amount of increments to to the actual quantity.
+  #
+  #     ${ignoreClickException}  [Optional]
+  #         Flag to tell the clicking action (to perform the quantity increments) to ignore the exception in case the click
+  #         cannot be done. This scenario mostly happens when the product reaches the Max Quantity Limit; the increase
+  #         button becomes not clickable and so and exception (and a failure) will be thrown. Use this flag only when
+  #         necessary.
+  #         Options: [ true | false | null ]
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.increaseProductQuantityBy
+    platform: android
+    flow:
+      - log:
+          message: "Increments: '${quantity}'"
+          color: CYAN
+      - log:
+          message: "Ignore Click Exception: '${ignoreClickException}'"
+          color: CYAN
+      - try:
+          flow:
+            - click:
+                identifier: mx.mappings.ea.pdp.increaseQuantityButton
+                numberOfClicks: ${quantity}
+                waitBetweenClicks: 1
+          catch:
+            flow:
+              - if:
+                  condition: ${ignoreClickException} == true
+                  then:
+                    - log:
+                        message: "Increment Quantity Button not clickable, process will continue..."
+                        color: GREEN
+                    # Close the 'Not enough pieces' popup if displayed...
+                    - sleep:
+                        duration: 3000
+                    - executeFunction:
+                        name: mx.functions.ea.pdp.not-enough-pieces-popup.closePopupIfDisplayed
+                  else:
+                    - failTest:
+                        message: "Increment Quantity Button not clickable, quantity cannot be incremented"
+      - sleep:
+          duration: 5000
+      - log:
+          message: "End function: pdp.increaseProductQuantityBy"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Decreases the actual quantity of a product by the desired amount of decrements. i.e. for a product which
+  #     its current quantity is 12, if the desired amount of decrements is 5, the final quantity will be 7.
+  #
+  # PARAMS:
+  #     ${quantity}  [Mandatory]
+  #         Amount of increments to to the actual quantity.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.decreaseProductQuantityBy
+    platform: android
+    flow:
+      - log:
+          message: "Decrements: '${quantity}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.pdp.decreaseQuantityButton
+          numberOfClicks: ${quantity}
+          waitBetweenClicks: 1
+      - sleep:
+          duration: 5000
+      - log:
+          message: "End function: pdp.decreaseProductQuantityBy"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Closes the specified popup in case it displays, sometimes multiple popups can display at once, so function
+  #                 will close all of them in case this happens.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.not-enough-pieces-popup.closePopupIfDisplayed
+    platform: android
+    flow:
+      - loop:
+          begin: 0
+          end: 12
+          mode: increment
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.ea.pdp.not-enough-pieces-popup.popupTitle
+                then:
+                  - log:
+                      message: "Closing 'Not enough pieces' popup..."
+                      color: GREEN_BOLD
+                  - click:
+                      identifier: mx.mappings.ea.pdp.not-enough-pieces-popup.understoodButton
+                else:
+                  - log:
+                      message: "The 'Not enough pieces' popup did not display."
+                      color: GREEN_BOLD
+                  - break: true
+      - log:
+          message: "End function: pdp.not-enough-pieces-popup.closePopupIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedProductQuantity}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.pdp.getProductQuantity
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.pdp.productQuantity
+          storeIn: returnedProductQuantity
+      - executeNode:
+          file: mx/test/helpers/utils/sanitizeQuantity.js
+          args:
+            - value: ${returnedProductQuantity}
+          getResponse:
+            storeIn: returnedProductQuantity
+      - log:
+          message: "Quantity Got: '${returnedProductQuantity}'"
+          color: CYAN
+      - log:
+          message: "End function: pdp.getProductQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Verifies if the product has discount or not and returns the result in a boolean value.
+  # RETURNS:  ${returnedHasDiscount}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.pdp.checkIfProductHasDiscount
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.discountAmountLabel
+          then:
+            - storeIn:
+                key: returnedHasDiscount
+                value: true
+          else:
+            - storeIn:
+                key: returnedHasDiscount
+                value: false
+      - log:
+          message: "Returned Result: 'returnedHasDiscount' = '${returnedHasDiscount}'"
+          color: CYAN
+      - log:
+          message: "End function: pdp.checkIfProductHasDiscount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Assertion to validate the product has the correct number of stars or customer rating by param value.
+  #
+  # PARAMS:
+  #     ${customerRating}  [Mandatory]
+  #         Expected integer number of stars to select, example options: [ 1 | 2 | 5 ].
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.assertCorrectCustomerRating
+    platform: android
+    flow:
+      # Verifying provided Rating value...
+      - log:
+          message: "Expected Customer Rating Value: '${customerRating}' Stars."
+          color: CYAN
+      - if:
+          condition: ${customerRating} > 5 || ${customerRating} < 1
+          then:
+            - failTest:
+                message: "Invalid! 'Customer Rating' value can only be an integer between 1 and 5. Input Provided: '${customerRating}'"
+
+      # Assertion...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.customerRatingByNumber # <--PARAM--${customerRating}
+          then:
+            - log:
+                message: "Success: The Product has the correct Customer Rating."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Incorrect Customer Rating or it was not visible."
+      - log:
+          message: "End function: pdp.assertCorrectCustomerRating"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Opens the full details section (the "Más información" link).
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.pdp.tapMoreDetailsLink
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.ea.pdp.expandProductDetailsSectionIfNotExpanded
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.pdp.moreDetailsLink
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.ea.pdp.moreDetailsLink
+                wait: 1000
+                scrollLimit: 4
+                position: center
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.ea.pdp.moreDetailsLink
+          else:
+            - executeFunction:
+                name: mx.functions.utils.positionElementToTheCenter
+                params:
+                  - name: elementToPositionCenter
+                    string: mx.mappings.ea.pdp.moreDetailsLink
+      - click:
+          identifier: mx.mappings.ea.pdp.moreDetailsLink
+      - log:
+          message: "End function: pdp.tapMoreDetailsLink"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Expands the product details section inside PDP if not expanded.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.pdp.expandProductDetailsSectionIfNotExpanded
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.pdp.productDetailsSection
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.ea.pdp.productDetailsSection
+                wait: 1000
+                scrollLimit: 4
+                position: center
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.ea.pdp.productDetailsSection
+          else:
+            - executeFunction:
+                name: mx.functions.utils.positionElementToTheCenter
+                params:
+                  - name: elementToPositionCenter
+                    string: mx.mappings.ea.pdp.productDetailsSection
+      - if:
+          identifier:
+            contentDescription:
+              - identifier: mx.mappings.ea.pdp.productDetailsSection
+                contains: Contraído
+          then:
+            - click:
+                identifier: mx.mappings.ea.pdp.productDetailsSection
+          else:
+            - log:
+                message: "Product Details Section is already Expanded."
+                color: GREEN_BOLD
+      - log:
+          message: "End function: pdp.expandProductDetailsSectionIfNotExpanded"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts if the Product's full details popup is displayed.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.more-details.assertPageDisplayed
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.pdp.more-details.title
+            - identifier: mx.mappings.ea.pdp.more-details.detailsContainer
+            - identifier: mx.mappings.ea.pdp.more-details.closeButton
+            - identifier: mx.mappings.ea.pdp.more-details.backButton
+          timeout: 60000
+      - log:
+          message: "Success: Page is displayed."
+          color: CYAN
+      - log:
+          message: "End function: pdp.more-details.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.more-details.tapBack
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.more-details.backButton
+      - log:
+          message: "End function: pdp.more-details.tapBack"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.refurbished-product-popup.tapContinueIfDisplayed
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.refurbished-product-popup.popupTitle
+          then:
+            - log:
+                message: "Closing Refurbished Product Popup..."
+                color: GREEN_BOLD
+            - click:
+                identifier: mx.mappings.ea.pdp.refurbished-product-popup.continueButton
+          else:
+            - log:
+                message: "Refurbished Product Popup did not display."
+                color: GREEN_BOLD
+      - log:
+          message: "End function: pdp.refurbished-product-popup.tapContinueIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino  (vn53dge)
+  - name: mx.functions.ea.pdp.openBankPromotionsDetails
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.msi-more-details.moreDetailsLink
+      - log:
+          message: "End function: pdp.openBankPromotionsDetails"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino  (vn53dge)
+  - name: mx.functions.ea.pdp.bank-promotions-popup.assertBankPromotionsDisplayed
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.pdp.bank-promotions-popup.pageTitle
+            - identifier: mx.mappings.ea.pdp.bank-promotions-popup.bankPromotionsContainer
+      - log:
+          message: "End function: pdp.bank-promotions-popup.assertBankPromotionsDisplayed"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino  (vn53dge)
+  - name: mx.functions.ea.pdp.bank-promotions-popup.tapClose
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.bank-promotions-popup.closeButton
+      - log:
+          message: "End function: pdp.bank-promotions-popup.tapClose"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Scrolls down to first available carousel on PDP disregarding sponsored or normal carousels.
+  # RETURNS:      ${returnedCarouselName}   Name of the first available carousel on PDP.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.scrollDownToFirstCarouselAvailable
+    platform: android
+    flow:
+      - log:
+          message: "Scrolling down to first available carousel..."
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.firstAvailableCarouselName
+          then:
+            - executeFunction:
+                name: mx.functions.utils.positionElementToTheCenter
+                params:
+                  - name: elementToPositionCenter
+                    string: mx.mappings.ea.pdp.firstAvailableCarouselName
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.ea.pdp.firstAvailableCarouselName
+                wait: 1000
+                position: center
+                scrollLimit: 8
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.pdp.firstAvailableCarouselName
+      - getString:
+          identifier: mx.mappings.ea.pdp.firstAvailableCarouselName
+          attribute: text
+          storeIn: returnedCarouselName
+      - log:
+          message: "Carousel Name Found: '${returnedCarouselName}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: pdp.scrollDownToFirstCarouselAvailable"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Gets the name of the first available product from the specified carousel on PDP.
+  # PARAM:        ${carouselName}         Name of the carousel to select a product from.
+  # RETURNS:      ${returnedProductName}  Name of the first available product by carousel name on PDP.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.pdp.carousels.getFirstAvailableProductNameByCarouselName
+    platform: android
+    flow:
+      - log:
+          message: "Carousel Name to select a product from: '${carouselName}'..."
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.carousels.firstAvailableProductNameByCarouselName # <--PARAM--${carouselName}
+          then:
+            - getString:
+                identifier: mx.mappings.ea.pdp.carousels.firstAvailableProductNameByCarouselName # <--PARAM--${carouselName}
+                attribute: text
+                storeIn: returnedProductName
+          else:
+            - failTest:
+                message: "There was a problem trying to get the name of the first available product from the selected carousel."
+      - log:
+          message: "Product Name Found: '${returnedProductName}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: pdp.carousels.getFirstAvailableProductNameByCarouselName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:
+  #   ${carouselName}   Name of the carousel to select a product from.
+  #   ${productName}    Name of the Product to add.
+  # AUTHOR: Rodrigo Pacheco   (vn53p0i)
+  - name: mx.functions.ea.pdp.carousels.addProductToCartByProductAndCarouselName
+    platform: android
+    flow:
+      - log:
+          message: "Carousel Name: '${carouselName}'"
+          color: CYAN
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.pdp.carousels.addToCartButtonByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+      - log:
+          message: "End function: pdp.carousels.addProductToCartByProductAndCarouselName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:
+  #   ${carouselName}   Name of the carousel.
+  #   ${productName}    Name of the Product to assert.
+  # AUTHOR: Rodrigo Pacheco   (vn53p0i)
+  - name: mx.functions.ea.pdp.carousels.assertProductAddedToCartByProductAndCarouselName
+    platform: android
+    flow:
+      - log:
+          message: "Carousel Name: '${carouselName}'"
+          color: CYAN
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.carousels.addToCartButtonByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+          then:
+            - failTest:
+                message: "Failed: Expected product was not added to Cart."
+          else:
+            - log:
+                message: "Successful Assertion: Expected Product was added to Cart."
+                color: GREEN_BOLD
+      - log:
+          message: "End function: pdp.carousels.assertProductAddedToCartByProductAndCarouselName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:
+  #   ${carouselName}   Name of the carousel.
+  #   ${productName}    Name of the Product.
+  # RETURNS:
+  #   ${returnedProductQuantity}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.pdp.carousels.getProductQuantityByProductAndCarouselName
+    platform: android
+    flow:
+      - log:
+          message: "Carousel Name: '${carouselName}'"
+          color: CYAN
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.pdp.carousels.productQuantityByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+          storeIn: returnedProductQuantity
+      - executeNode:
+          file: mx/test/helpers/utils/sanitizeQuantity.js
+          args:
+            - value: ${returnedProductQuantity}
+          getResponse:
+            storeIn: returnedProductQuantity
+      - log:
+          message: "Quantity Got: '${returnedProductQuantity}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: pdp.carousels.getProductQuantityByProductAndCarouselName"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------              
+
+  # DESCRIPTION: This function returns product's final price from a product inside a carousel.
+  # NOTE: The discount amount does not display in carousels, instead, it will be calculated from the difference between the original and discounted prices.
+  # PARAMS:
+  #   ${carouselName}   Name of the carousel.
+  #   ${productName}    Name of the Product.
+  # RETURNS:
+  #   ${returnedPrice}
+  #   ${returnedOriginalPrice} If available, if not, the same value as '${returnedPrice}' will be returned.
+  #   ${returnedDiscountAmount} This is the amount that the user will save by purchasing the product. Only if product has discount, if not, value becomes '0.00'.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.pdp.carousels.getProductPriceByProductAndCarouselName
+    platform: android
+    flow:
+      - log:
+          message: "Carousel Name: '${carouselName}'"
+          color: CYAN
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+
+      # Price extraction...
+      - getString:
+          identifier: mx.mappings.ea.pdp.carousels.productPriceByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+          storeIn: productPrice
+      - executeNode:
+          file: mx/test/helpers/utils/getNumberFromPriceString.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: returnedPrice
+
+      # Verifying if product has a discount...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.carousels.productOriginalPriceByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+          then:
+            # Extraction of the Original Price...
+            - log:
+                message: "Discount found, extracting Original Price value..."
+                color: CYAN
+            - getString:
+                identifier: mx.mappings.ea.pdp.carousels.productOriginalPriceByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+                attribute: text
+                storeIn: originalPrice
+            - executeNode:
+                file: mx/test/helpers/utils/getNumberFromPriceString.js
+                args:
+                  - value: ${originalPrice}
+                getResponse:
+                  storeIn: returnedOriginalPrice
+
+            # Calculate the Discount Amount...
+            - arithmetic:
+                expression: ${returnedOriginalPrice} - ${returnedPrice}
+                numberOfDecimalPlaces: 2
+                storeIn: returnedDiscountAmount
+          else:
+            - log:
+                message: "Discount not found, returning Current Price..."
+                color: CYAN
+            - storeIn:
+                key: returnedOriginalPrice
+                value: ${returnedPrice}
+            - storeIn:
+                key: returnedDiscountAmount
+                value: '0.00'
+
+      # Logging Results...
+      - log:
+          message: "Price Got: '${returnedPrice}'"
+          color: CYAN
+      - log:
+          message: "Original Price Got: '${returnedOriginalPrice}'"
+          color: CYAN
+      - log:
+          message: "Discount Amount Got: '${returnedDiscountAmount}'"
+          color: CYAN
+      - log:
+          message: "End function: pdp.carousels.getProductPriceByProductAndCarouselName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:
+  #   ${carouselName}   Name of the carousel.
+  #   ${productName}    Name of the Product.
+  # DESCRIPTION: Verifies if the product inside a carousel has discount or not and returns the result in a boolean value.
+  # RETURNS:  ${returnedHasDiscount}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.pdp.carousels.checkIfProductHasDiscountByProductAndCarouselName
+    platform: android
+    flow:
+      - log:
+          message: "Carousel Name: '${carouselName}'"
+          color: CYAN
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.pdp.carousels.productOriginalPriceByProductAndCarouselName # <--PARAMS--${carouselName}--${productName}
+          then:
+            - storeIn:
+                key: returnedHasDiscount
+                value: true
+          else:
+            - storeIn:
+                key: returnedHasDiscount
+                value: false
+      - log:
+          message: "Returned Result: 'returnedHasDiscount' = '${returnedHasDiscount}'"
+          color: CYAN
+      - log:
+          message: "End function: pdp.carousels.checkIfProductHasDiscountByProductAndCarouselName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino  (vn53dge)
+  - name: mx.functions.ea.pdp.assertSizeContainerDisplayed
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.pdp.sizeContainer
+      - log:
+          message: "End function: pdp.assertSizeContentDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino  (vn53dge)
+  - name: mx.functions.ea.pdp.selectFirstAvailableSize
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.ea.pdp.firstAvailableSizeButton
+      - log:
+          message: "End function: pdp.selectFirstAvailableSize"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedSizeSelected} .
+  # AUTHOR: Isis Tolentino  (vn53dge)
+  - name: mx.functions.ea.pdp.getSelectedSize
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.pdp.sizeSelectedText
+          attribute: text
+          storeIn: returnedSizeSelected
+      - log:
+          message: "Size Selected: '${returnedSizeSelected}'"
+          color: CYAN
+      - log:
+          message: "End function: pdp.selectFirstAvailableSize"
+          color: BLUE

@@ -1,0 +1,211 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-628
+#       Flow - MH:  Validate registered user ATC unscheduled assorted itemTypes no intent
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179322
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-628
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-627
+#
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-628
+  tags: INEP-628, OPIF-179322, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Validate registered user ATC unscheduled assorted itemTypes no intent"
+    flow:
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+      
+      # Navigate to shop button.
+      - log:
+          message: "Navigate to shop button."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      
+      # Go to GIC and expand it
+      - log:
+          message: "Validate GIC opens"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.homePasge.gic.expandIfCollapsed
+
+      # Validate no intent is selected
+      - log:
+          message: "# Validate no intent is selected"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.gic.unselectIntent
+      - executeFunction:
+          name: functions.global.gic.verifyNoIntentIsSelected
+    
+      # Collapsed GIC
+      - log:
+          message: "Close GIC"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.homePage.gic.collapseIfExpanded
+
+      # Add 1P/2P/WFS/3P unscheduled items to cart.
+      - log:
+          message: "Add 1P/2P/WFS/3P unscheduled items to cart."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails #--> Returns ${productName}
+          params:
+            - name: productArray
+              string: data.global.1PItems #TO-DO: Update items, current data in production not in teflon
+      # [VARIABLE] Product's name saved in ${1P_product_name}
+      - storeIn:
+          key: 1P_product_name
+          value: ${productName}
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+          params:
+            - name: productArray
+              string: data.globalShared_2PRegularItems #TO-DO: Update items, current data in production not in teflon
+      # [VARIABLE] Product's name saved in ${2P_product_name}
+      - storeIn:
+          key: 2P_product_name
+          value: ${productName}
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails #--> Returns ${productName}
+          params:
+            - name: productArray
+              string: data.globalShared_3PWFSItems #TO-DO: Update items, current data in production not in teflon
+      # [VARIABLE] Product's name saved in ${WFS_product_name}
+      - storeIn:
+          key: WFS_product_name
+          value: ${productName}
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails #--> Returns ${productName}
+          params:
+            - name: productArray
+              string: data.globalShared_3PSOSItems #TO-DO: Update items, current data in production not in teflon
+      # [VARIABLE] Product's name saved in ${3P_product_name}
+      - storeIn:
+          key: 3P_product_name
+          value: ${productName}
+
+     # Navigate to cart.
+      - log:
+          message: "Navigate to cart "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon
+    
+    # Validate 1P/2P/WFS/3P unscheduled items in cart.
+      - log:
+          message: "Validate 1P/2P/WFS/3P unscheduled items in cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateProductInCart
+          params:
+            - name: productName
+              string: ${1P_product_name}
+      - executeFunction:
+          name: functions.cartPage.validateProductInCart
+          params:
+            - name: productName
+              string: ${2P_product_name}
+      - executeFunction:
+          name: functions.cartPage.validateProductInCart
+          params:
+            - name: productName
+              string: ${WFS_product_name}
+      - executeFunction:
+          name: functions.cartPage.validateProductInCart
+          params:
+            - name: productName
+              string: ${3P_product_name}
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - executeFunction:
+          name: functions.utils.after
+        

@@ -1,0 +1,204 @@
+#======================================================================================================================
+#  AUTHOR: Fenrnada Peruyero (vn54e7a)
+#  CREATED: Nov/07/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-walmart-ea-smoke-production-android-4640, prepurchase-walmart-ea-smoke-production-android,
+        prepurchase-bodega-ea-smoke-production-android-4640, prepurchase-bodega-ea-smoke-production-android,
+        prepurchase-schema-validation-production-ios-4640, prepurchase-schema-validation-production-android
+  testCaseId: MMS-4945
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [PLP] - Verify that a guest can add and remove items from PLP / browse / L3
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MX+Mobile+-+Test+Suite+-+PrePurchase+-+EA+-+Smoke+-+Production
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-4945 
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-4640 
+#
+#######################################################################################################################
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+       - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+            
+       - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      # setting GMX_PP_APP_NAME variable for department selection
+       - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+
+       - storeIn:
+          key: MMS_4640_SUCCESSFUL_EXECUTION
+          value: false
+
+       - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: android
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+ 
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN APP AND COMPLETE ONBOARDING. (2) OPEN THE EA BANNER."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+     
+      # STEP 3 Go to "Departamentos" by tapping on the corresponding icon in the bottom bar -----------------------------
+      - log:
+         message: "STEP 3: GO TO 'DEPARTAMENTOS' BY TAPPING ON THE CORRESPONDING ICON IN THE BOTTOM BAR"
+         color: ORANGE
+
+      - executeFunction: 
+          name: mx.functions.bottom-menu.tapDepartments
+
+      # STEP 4 Open "Celulares" by tapping it ------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: OPEN 'CELULARES' BY TAPPING IT."
+
+      - if:
+          condition: ${GMX_PP_APP_NAME} == '_bodega'
+          then:
+            - executeFunction:
+                name: mx.functions.departments.selectDepartment
+                params:
+                  - name: departmentName
+                    string: mx.data.bodega.prepurchase-4640.departmentName
+          else:
+            - executeFunction:
+                name: mx.functions.departments.selectDepartment
+                params:
+                  - name: departmentName
+                    string: mx.data.walmart.prepurchase-4640.departmentName
+        
+      # STEPS 5 Tap the first brand that appears from the "best brands" section. Example: "Iphone" ----------------------
+      - log:
+         message: "STEPS 5: TAP THE FIRST BRAND THAT APPEARS FROM THE 'BEST BRANDS' SECTION."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.department-l1-l2.tapFirstBrandButton
+     
+      - storeIn:
+          key: brandName
+          value: ${brandName}
+
+       # STEP 6 Add the first item that appears to cart by tapping in the "+" icon on the stepper -----------------------     
+      - log:
+         message: "STEP 6: ADD THE FIRST ITEM THAT APPEARS TO CART BY TAPPING IN THE '+' ICON ON THE STEPPER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.slp.addToCartFirstProductListed
+      
+      - executeFunction:
+          name: functions.searchResultPage.getProductName
+
+      #STEP 6.1 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6.1: VERIFY THAT THE QUANTITY IN THE STEPPER IS THE EXPECTED ONE."
+         color: ORANGE
+ 
+      - executeFunction:
+          name: mx.functions.slp.assertItemQuantity
+          params:
+            - name: expectedQuantity
+              string: mx.data.prepurchase-1140.itemQuantity
+            - name: productName
+              string: ${productName}
+
+        
+       # STEP 7 Delete the selected item by tapping in the "-" icon on the stepper ----------------------------------------
+      - log:
+         message: "STEP 7: DELETE THE SELECTED ITEM BY TAPPING IN THE '-' ICON ON THE STEPPER."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.slp.decreaseProductQuantityBy
+          params:
+            - name: productName
+              string: ${productName}
+            - name: quantity
+              string: mx.data.prepurchase-1140.itemQuantity
+ 
+       # STEPS 7.1 -----------------------------------------------------------------------------------------------------
+              
+      - log:
+         message: "STEP 5.1: VERIFY THAT NO ITEMS APPEAR IN THE STEPPER."
+      
+      - executeFunction:
+          name: mx.functions.slp.assertItemQuantity
+          params:
+            - name: expectedQuantity
+              string: "Agregar"
+            - name: productName
+              string: ${productName}
+
+      # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_4640_SUCCESSFUL_EXECUTION
+          value: true
+
+ # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_4640_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"
+  

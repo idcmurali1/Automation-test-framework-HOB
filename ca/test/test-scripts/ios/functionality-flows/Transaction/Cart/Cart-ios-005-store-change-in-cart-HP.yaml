@@ -1,0 +1,160 @@
+general:
+  platform: ios
+  tags: cart-005-ios, ca-function-run, cart_ios
+  testCaseId: cart-005-ios
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+
+  - name: Validate store shown in cart is same as HP. Then change the store in cart page and validate same is updated in HP.
+    flow:
+            - log:
+                message: Validate store shown in cart is same as HP. Then change the store in cart page and validate same is updated in HP.
+                color: GREEN_BOLD
+
+            # Navigate onboarding to home
+            - executeFunction:
+                name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+                params:
+                  - name: ZIP_CODE
+                    string: ca.test.data.onboarding.zipCodeT6N0A9
+            - log:
+                message: Navigated onboarding to home - T6N0A9 
+                color: YELLOW
+
+            # Navigate to sign in page
+            - executeFunction:
+                name: ca.test.functions.home.navigateHomeToSignInIos
+            - log:
+                message: Navigated to sign in page
+                color: YELLOW 
+     
+            # Sign In to the account
+            - executeFunction:
+                name: ca.test.functions.global.authentication.signInAccountIos
+                params:
+                  - name: email
+                    string: ca.test.data.cart005.emailios
+                  - name: password
+                    string: ca.test.data.cart005.passwordios 
+            - executeFunction:
+                name: ca.test.functions.home.verifyUserNameInTopleft
+            - log:
+                message: signed in
+                color: YELLOW 
+
+            #Clear Cart
+            - executeFunction:
+                name:  ca.test.functions.cart.removeCartItems
+            - log:
+                message: cart cleared
+                color: YELLOW
+
+            # Selecting store at home
+            - executeFunction:
+                name: ca.test.functions.global.authentication.storeSelect
+                params:
+                  - name: Zip_Code
+                    string: ca.test.data.orleansZipCode
+                  - name: storeName
+                    string: ca.test.data.orleansStoreName
+            - log:
+                message: Selecting Orleans store at home page.
+                color: GREEN_BOLD
+
+            - executeFunction:
+                name: ca.functions.searchPage.searchItemArray
+                params:
+                  - name: items
+                    string: ca.test.data.cart005.gmItemArray
+                  - name: quantity
+                    string: ca.test.data.product_1_qty
+                  - name: checkNonPromotionBadges
+                    string: true 
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+          # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCartIos
+            - log:
+                message: Navigated to cart
+                color: YELLOW 
+
+          # change to pickup fulfilment
+            - executeFunction:
+                name: ca.test.functions.cart.selectPickupOptionsIos
+            - log:
+                message: Changing and validating pickup fulfillment title in cart.
+                color: GREEN_BOLD
+
+          #validate store in cart
+            - executeFunction:
+                name: ca.test.functions.HP.validateStoreinCart
+                params:
+                  - name: StoreAdress
+                    string: ca.test.data.ios.store.orleans
+            - log:
+                message: Validated cart store name
+                color: YELLOW 
+
+          # Chaneged store from cart
+            - executeFunction:
+                name: ca.test.functions.cart.changePickupStore
+                params:
+                  - name: Zip_Code
+                    string: ca.test.data.edmontonZipCode
+                  - name: storeName
+                    string: ca.test.data.storeName
+            - log:
+                message: changed pickup store in cart.
+                color: GREEN_BOLD
+
+          #validate store in cart
+            - executeFunction:
+                name: ca.test.functions.HP.validateStoreinCart
+                params:
+                  - name: StoreAdress
+                    string:  ca.test.data.ios.edmontonSuperCentre
+            - log:
+                message: Validated cart store name
+                color: YELLOW 
+
+            - goBack: true
+
+          #validate store in HP
+            - executeFunction:
+                name: ca.test.functions.HP.validateStoreinHP
+                params:
+                  - name: storeName
+                    string: ca.test.data.edmontonStoreNameAssertion
+            - log:
+                message: Validated HP store name
+                color: YELLOW 
+
+#------------------------------------------------------------------------------
+            - storeIn:
+                key: testStatus
+                value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-005-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps  

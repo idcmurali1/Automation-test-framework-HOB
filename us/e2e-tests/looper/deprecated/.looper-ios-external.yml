@@ -1,0 +1,84 @@
+# Looper job for ci.mobile.walmart.com
+
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - push:
+          manualOnly: true
+      
+      - pr: disabled
+
+      - manual:
+          name: Run iOS Teflon Regression Tests - All
+          call: run_teflon_regression
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      APP_PLATFORM: ios
+      SLACK_CHANNEL: r2-glass-test-result
+      # TESTRAIL_PROJECT_ID: 142
+      # TESTRAIL_PLAN_ID: '' # OPTIONAL: Declare global var TESTRAIL_PLAN_ID to be used in test configs
+      # SKIP_SLACK_TEST_RUN: passed # OPTIONAL: Set value to skip posting slack message for test runs using condition "all" or "passed"
+      APP_BUILD_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+
+  env_ios_teflon_regression:
+    variables:
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/ios/ios-default.yaml
+      DEPENDENCY_PROFILE: looper
+      GLASS_ENV: teflon
+      MAPPING_LABELS: teflon
+      SLACK_CHANNEL: r2-glass-regression-test-results
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}\n
+        *App Branch*: ${APP_BRANCH_NAME}\n
+        *App Build Link*: ${APP_BUILD_URL}\n
+        *App Build Owner*: ${SLACK_HANDLE}"
+      SAUCE_APP: "storage:filename=${APP_PLATFORM}-${APP_BUILD_ID}.zip"
+
+flows:
+  run_teflon_regression_base:
+    - call: build(env_ios_teflon_regression)
+
+  # run_teflon_regression:
+  #   try:
+  #     - call: run_download_app
+  #     - call: run_upload_app
+  #     - parallel(failsafe):
+  #       - call: run_teflon_regression_base(TEST_TAGS = 'signin_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'amend_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'cancel_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'home_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'checkout_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'bookslot_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'myitems_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'cart_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'orderdetails_ios_test', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'orderhistory_ios_test', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'returns_ios_tests', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'item_ios_tests_teflon', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+  #       # - call: run_teflon_regression_base(TEST_TAGS = 'search_ios_tests_teflon', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_download_app:
+    - shell: |
+        sh us/scripts/download_build_looper.sh
+
+  run_upload_app:
+    - shell: |
+        sh us/scripts/upload_build_looper.sh
+

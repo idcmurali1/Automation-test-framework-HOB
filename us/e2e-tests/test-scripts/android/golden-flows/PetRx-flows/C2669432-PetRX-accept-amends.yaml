@@ -1,0 +1,199 @@
+general:
+  platform: android
+  tags: C2669432, PetRx
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2669432
+  metadata:
+    - name: scenarioId
+      string: PV004
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.android.flowPetRXAcceptAmend.email
+
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Will take the user to the account menu from where the user can sign in to the app
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.android.flowPetRXAcceptAmend.email
+            - name: password
+              string: us.data.android.flowPetRXAcceptAmend.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.changeStore
+          params:
+              - name: zipcode
+                string: 95122 
+              - name: storeName
+                string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.item.petrx1.itemlink
+
+      - executeFunction:
+          name: us.functions.item.petrxItem.verifyPresent
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.item.petrx2.itemlink
+
+      - executeFunction:
+          name: us.functions.item.petrxItem.verifyPresent
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: us.data.fulfillment.shipping
+
+      - executeFunction:
+          name: us.functions.item.increaseToMaxQty
+          params:
+            - name: maxQty
+              string: 2
+
+      # Continue to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping    
+
+      #  Add Pet and Vet details
+      - executeFunction:
+          name: us.functions.checkout.AddPetVet
+
+      - executeFunction:
+          name: us.functions.checkout.SelectPetVet
+          params:
+            - name: multipleItems
+              string: true
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: us.data.fulfillment.shipping
+
+      - executeFunction:
+          name: us.functions.checkout.petrx.orderVerification
+
+      - executeFunction:
+          name: us.functions.utils.astro.petrxOrder.increaseQtyandMoveOrder
+          params:
+            - name: orderNo
+              string: $orderNo
+            - name: payload
+              string: us.data.flow.petrx.acceptAmmend.createOrderPayload
+            - name: incQuantity
+              string: 9
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY_PETRX
+            - name: status
+              string: PO Acknowledged
+
+      - executeFunction:
+          name: us.functions.utils.astro.petrxOrder.increaseQtyandMoveOrder
+          params:
+            - name: orderNo
+              string: $orderNo
+            - name: payload
+              string: us.data.flow.petrx.rejectAmmend.createOrderPayload
+            - name: incQuantity
+              string: 2
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY_PETRX
+            - name: status
+              string: PO Acknowledged
+
+      - executeFunction:
+          name: us.functions.petrx.postAmendment.acceptReject
+          params:
+            - name: acceptRejectPetrx
+              string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps  
+
+      
+
+      

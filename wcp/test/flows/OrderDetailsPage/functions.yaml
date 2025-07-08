@@ -1,0 +1,375 @@
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: Cancel the order from Order details page
+  # Param  ${reasonIndex} [Optional] To select cancellation reason from bottom sheet
+  - name: functions.orderDetailsPage.cancelOrder
+    flow:
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: functions.orderDetailPage.scrollToPOS
+      - executeFunction:
+          name: functions.orderDetailPage.isCancelButtonDispalyed
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:          
+            - executeFunction:
+                name: functions.orderDetailPage.tapCancelButton
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.validateBottomSheet
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.selectReason  #<----${reasonIndex}
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.confirmCancellation
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.checkForErrorPopup
+          else:
+            - failTest:
+                message: "Cancel Button is not displayed in ODP"
+      - log: 
+          message: "End functions: orderDetailsPage.cancelOrder"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: Returns items by carrier
+  
+  - name: functions.orderDetailsPage.deliveryReturnbyCarrier
+    flow:
+      - executeFunction:
+          name:  functions.orderDetailsPage.tapReturnCta
+      - executeFunction:
+          name: functions.returnWebPage.selectAllReturnableItems
+      - executeFunction:
+          name: functions.returnWebPage.tapContinuarBtn
+      - executeFunction:
+          name: functions.returnWebPage.chooseReturnMethod.tapReturnMethod
+          params:
+            - name: lineItem
+              string: "1"
+      - executeFunction:
+          name: functions.returnWebPage.tapContinuarBtn
+      - executeFunction:
+          name: functions.returnWebPage.reviewSubmitRequest.validatereturndetails
+      - executeFunction:
+          name: functions.returnWebPage.reviewSubmitRequest.tapReturnSendrequest
+      - executeFunction:
+          name: functions.returnWebPage.SubmitRequest.validateReturnInitiatedDetails
+      - executeFunction:
+          name: functions.returnWebPage.SubmitRequest.tapDone
+      - executeFunction:
+          name:  functions.orderDetailPage.validateReturnInprogressMsg
+      - goBack: true 
+      - executeFunction:
+          name:  functions.orderDetailPage.validateReturnInprogressMsg
+      - log: 
+          message: "End functions: orderDetailsPage.deliveryReturnbyCarrier"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+  
+ # Description: The function navigates from the ODP page to the PDP page
+  # No param  
+  - name: functions.orderDetailPage.navigateODPTOPDPPage
+    flow:  
+      
+      - executeFunction:
+          name: functions.orderDetailPage.scrollToItemDetails
+      - executeFunction:
+          name: functions.orderDetailPage.expandItemDetails 
+      - executeFunction:
+          name: functions.orderDetailPage.tapItemImage     
+      - log:
+          message: "End functions: orderDetailPage.navigatePDPTOODPpage"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Validate Order details page after cancellation
+  # Param : ${orderCancelled} [Optional] To validate total amount after order cancellation
+  - name: functions.orderDetailsPage.validateAfterCancellation
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: orderDetailPage.orderNumber
+          timeout: 10000
+      - executeFunction:
+          name: functions.orderDetailPage.orderCancellation.validateOrderStatus
+      - executeFunction:
+         name: functions.orderDetailPage.validateMoneybox #<-- ${orderCancelled}
+      - log: 
+          message: "End functions: orderDetailsPage.validateAfterCancellation"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function performs actions on mixed bag order
+  # No params
+  - name: functions.orderDetailsPage.mixedBagOrderActions
+    flow:
+       - executeFunction:
+           name: functions.orderHistoryPage.searchField.enterText
+           params:
+             - name: searchText
+               string: ${returnedOrderNumber}
+       - executeFunction:
+           name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn
+       - if:
+           identifier:
+             present:
+               - identifier: amends.editButton
+           then:
+             - executeFunction:
+                 name: functions.amends.editButton
+             - executeFunction:
+                 name: functions.amendOrder.increaseQty
+             - executeFunction:
+                 name: functions.amendOrder.updateOrderButton
+             - executeFunction:
+                 name: functions.orderDetailPage.tapbackButton
+           else:
+             - executeFunction:
+                 name: functions.orderDetailPage.verifySectionDisplayed
+             - executeFunction:
+                 name: functions.orderDetailPage.verifyItemDetails
+             - executeFunction:
+                 name: functions.orderDetailPage.verifyPaymentMethodSection
+             - executeFunction:
+                 name: functions.orderDetailPage.tapbackButton
+
+ #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function is used to select existing invoice details or to add new invoice from ODP
+  # Params ${addNewInvoice}  [Optional] To select add new invoice details
+  - name: functions.orderDetailPage.addInvoice 
+    flow:
+       - executeFunction:
+           name: functions.orderDetailPage.invoiceLabelDisplayed 
+       - if:
+            condition: ${invoiceDisplayed}
+            then:
+              - executeFunction:
+                  name: functions.orderDetailPage.validateInvoiceSection # TODO: Missing function implementation
+            else:
+              - failTest:
+                  message: "Invoice section details are not displayed in ODP "
+       - executeFunction:
+           name: functions.orderDetailPage.tapOnRequestInvoiceLink
+       - if: 
+            condition: ${addNewInvoice} 
+            then:
+            - executeFunction:
+                 name: functions.invoicePage.addNewInvoice
+            else:
+              - log: "Adding existing invoice detials"
+              - executeFunction:
+                  name: functions.checkoutPage.selectExistingInvoiceFromSheet
+       - executeFunction:
+            name: functions.orderDetailPage.validateNewlyAddedInvoiceDetails
+       - log: 
+           message: "End functions: orderDetailPage.addInvoice"
+           color: BLUE
+ #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function is used to edit existing invoice details 
+  # Param ${invoiceFirstName}  [Mandatory] Invoice page first name
+  - name: functions.orderDetailPage.editInvoice 
+    flow:
+      - executeFunction:
+          name: functions.amends.editButton
+      - executeFunction:
+          name: functions.checkoutPage.tapInvoiceEditButton
+      - executeFunction:
+          name: functions.invoicePage.enterFirstName  # < -- ${invoiceFirstName}
+      - executeFunction:
+          name: functions.invoicePage.tapOnSaveButton
+      - if:
+          condition: ${market} == 'MX' && ${platform} == 'Android''
+          then:
+              - executeFunction:
+                  name: functions.invoicePage.handleInvoiceMessageWhenAddNewInvoice
+      - executeFunction:
+          name: functions.invoiceBottomSheet.saveExistingInvoice          
+      - executeFunction:
+            name: functions.global.navigateToODPUseDeeplink  
+            params:
+              - name: returnedOrderNumber
+                string: ${returnedOrderNumber}
+      - log: 
+          message: "End functions: orderDetailPage.editInvoice"
+          color: BLUE
+ #--------------------------------------------------------------------------------------------------------------------            
+  # Description: This function is used to validate resend invoice details in ODP 
+  # No params
+  - name: functions.orderDetailPage.validateResendInvoice
+    flow:
+      - executeFunction:
+          name: functions.orderHistoryPage.resendInvoiceButton.isPageDisplayed
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - executeFunction:
+                name: functions.orderDetailPage.selectResendInvoice
+          else:
+            - failTest:
+                message: "Resend invoice button is missing in ODP"
+      - executeFunction:
+          name: functions.orderHistoryPage.resendInvoiceSuccessMessage.isPageDisplayed
+      - log: 
+          message: "End functions: orderDetailPage.validateResendInvoice"
+          color: BLUE
+ #--------------------------------------------------------------------------------------------------------------------                       
+  # Description: The function verify invoice section in ODP
+  # No param  
+  - name: functions.orderDetailPage.validateInvoiceDetails
+    flow:  
+      - executeFunction:
+          name: functions.orderDetailPage.validateInvoiceDetails.isPageDisplayed
+      - if:   
+          condition: ${invoiceDetailsIsDisplayed}
+          then:
+            - log: "Invoice details section is present in ODP "
+          else:
+            - failTest:
+                message: "Invoice details section is not present in ODP"
+      - if: 
+          condition: ${validateCustomerName}
+          then:                
+            - executeFunction:
+                name: functions.orderDetailPage.validateCutomerName
+      - executeFunction:
+          name: functions.orderDetailPage.validateInvoiceSectionCustomerData # TODO: Missing function implementation
+      - log: 
+          message: "End functions: orderDetailPage.validateInvoiceDetails"
+          color: BLUE
+ #--------------------------------------------------------------------------------------------------------------------           
+  # Description: Cancel Partial order from Order details page
+  - name: functions.orderDetailsPage.cancelPartialOrder
+    flow:
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: functions.orderDetailPage.scrollToPOS
+      - executeFunction:
+          name: orderDetailsPage.orderPartialCancellationButton
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:          
+            - executeFunction:
+                name: functions.orderDetailPage.tapCancelParcialButton
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.validateBottomSheet
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.selectReason  #<----${reasonIndex}
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.confirmCancellation
+            - executeFunction:
+                name: functions.orderDetailPage.orderCancellation.checkForErrorPopup
+          else:
+            - failTest:
+                message: "Cancel Button is not displayed in ODP"
+      - log: 
+          message: "End functions: orderDetailsPage.cancelOrder"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates the express in POS
+  - name: functions.orderDetailsPage.validatebelowMinFeeAndExpressSlotFee
+    flow:
+      - executeFunction:
+          name: functions.orderDetailPage.scrollToPOS
+      - executeFunction:
+          name: functions.orderDetailPage.validateBelowMinimumFee
+      - if:
+          condition: ${env} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.orderDetailPage.DPuserValidateExpressScheduleDeliveryFee
+      - log: 
+          message: "End function: orderDetailsPage.validatebelowMinFeeAndExpressSlotFee"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates a certain number of shipments from a expected delivery
+  #               type are displayed as well as their products
+  # Params ${expectedDeliveryType}    [Mandatory] Delivery type to assert
+  # Params ${expectedShipmentCount}   [Mandatory] Expected number of shipments to be displayed
+  - name: functions.orderDetailsPage.validateShipmentIsDisplayed
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: orderDetailPage.orderNumber
+
+      - executeFunction:
+          name: functions.orderDetailPage.verifyDeliveryType # PARAMS: <--- ${expectedDeliveryType}, RETURNS: ---> ${foundShipmentCount}
+
+      - if:
+          condition: ${foundShipmentCount} != ${expectedShipmentCount}
+          then:
+            - failTest: "[X] Expected shipment count: ${expectedShipmentCount}, Got: ${foundShipmentCount}"
+
+      - scroll:
+          direction: up
+          untilIdentifier: orderDetailPage.orderNumber
+
+      - loop:
+          begin: 0
+          end: ${foundShipmentCount}
+          storeIndex: indexShipment
+          flow:
+            - getString:
+                identifier: orderDetailPage.itemCount
+                extractNumbers: true
+                storeIn: itemCount
+            - executeFunction:
+                name: functions.orderDetailsPage.validateItemDetailsByIndex # PARAMS: <--- ${itemCount}
+            - if:
+                condition: ${indexShipment} < ${foundShipmentCount}
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: orderDetailPage.orderItemCountByDeliveryType
+                      position: center
+      - log:
+          message: "End function: orderDetailsPage.validateShipmentIsDisplayed"
+          color: BLUE
+
+  # Description: This function is used to Validate Checkin Functionality
+  # No Param
+  - name: functions.orderdetails.checkin
+    flow:
+      - executeFunction:
+          name: functions.orderDetailsPage.verifyRFPOrderStatus
+      - executeFunction:
+          name: functions.orderDetailsPage.tapIamOnWayCTA
+      - executeFunction:
+          name: functions.orderDetailsPage.allowDeviceLocationPermissionMsg
+      - executeFunction:
+          name: functions.orderDetailsPage.verifyTripOverviewPageDisplay
+      - executeFunction:
+          name: functions.orderDetailsPage.tripOverviewPageValidation
+      - executeFunction:
+          name: functions.orderDetailsPage.tripOverview.validateStoreName
+      - executeFunction:
+          name: functions.orderDetailsPage.tripOverviewPage.validateFulfillmentDetails
+      - executeFunction:
+          name: functions.orderDetailsPage.tripOverviewPage.tapI'veParkedCTA
+      - executeFunction:
+          name: functions.orderDetailsPage.validateParkingInfoPage
+      - executeFunction:
+          name: functions.orderDetailsPage.parkingInfoPage.selectParkingSpot
+      - executeFunction:
+          name: functions.orderDetailsPage.parkingInfoPage.selectCarColor
+      - executeFunction:
+          name: functions.orderDetailsPage.parkingInfoPage.tapDoneBtn
+      - executeFunction:
+          name: functions.orderDetailsPage.validatePickupDetailsPage
+      - executeFunction:
+          name: functions.orderDetailsPage.pickupDetailsPage.tapI'mFinishedBtn
+      - executeFunction:
+          name: functions.orderDetailsPage.validateViewPickupDetailsCTA
+      - log:
+          message: "End function: functions.orderdetails.checkin"
+          color: BLUE
+      

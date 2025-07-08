@@ -1,0 +1,176 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-734
+#       Flow - MH: Validate returned GM order displayed correctly in PH
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179446
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-734 
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-389
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-734
+  tags: INEP-734, OPIF-179446, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-389, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Validate returned GM order displayed correctly in PH"
+    flow:
+
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload  # Return -> $userEmail , $userPassword
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+
+      # Create order using astro api.
+      - log:
+          message: PREREQUISITE — Creating order using Astro API and create Return...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createOrderWithTransactableItems
+          params:
+            - name: items
+              string: data.global.itemsArray.unscheduledGM1P_S2H
+            - name: orderType
+              string: data.global.fulfillmentType.FC_DELIVERY
+
+
+      - storeIn:
+          key: returnedStatusOrderId
+          value: ${returnedOrderNumber}
+
+
+      # Move order using astro api.
+      - log:
+          message: Move order ${deliveredOrderId} using Astro API -> "Delivered"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.moveOrderWithStatusCheck
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: orderStatus
+              string: data.global.orderStatus.delivered
+            - name: orderType
+              string: data.global.fulfillmentType.FC_DELIVERY
+      - log:
+          message: Return order using Astro API...
+          color: GREEN_BOLD
+
+
+      # Create return order using astro api.
+      - log:
+          message: PREREQUISITE — Creating return order using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.returnOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.returnOrder.1PReturnPayload
+
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+
+      # Go to Order History Page and validate orders are created and visibles in PH
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # Param -> $userEmail , $userPassword
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+
+
+      # Assert return link and cta button in order in progress
+      - executeFunction:
+          name: functions.orderHistoryPage.assertReturnLinkDisplayedInOrderCard
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.delivered
+      - executeFunction:
+          name: functions.orderHistoryPage.assertCTAButtonDisplayedInOrderCard
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.delivered
+            - name: ctaTextButton
+              string: data.orderTracker.primaryMainButton.trackShipment
+
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

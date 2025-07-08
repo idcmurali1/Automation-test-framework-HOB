@@ -1,0 +1,206 @@
+# TC: 14
+# Flow: TC 14 : Payment Information: CC  +  1P 3P(SOS) item
+general:
+  testCaseId: C2720135
+  tags: C2720135, p1-mx-ea-teflon, p1-bodega-ea-teflon, p1-mx-ea-prod, p1-bodega-ea-prod,  p1-ca-en-prod, p1-ca-en-teflon, p1-us-prod, p1-ca-fr-prod, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon
+  combineScenarios: true
+
+scenarios:
+
+  - name: Before
+    before: true
+    flow:
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      # Onboarding to home page with EA Options
+      - executeFunction: 
+          name: functions.onboardingToHomePage.usingPostalCode 
+          params: 
+            - name: PostalCode 
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+          # Create new Account using Astro API
+            - executeFunction:
+                name: functions.astroApi.generateTimeStampEmail
+
+            - executeFunction:
+                name: functions.astroApi.createAccount
+                params:
+                  - name: payload
+                    string: data.global.payload.visaCard4242
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            - if: 
+                condition: ${platform} == 'Android'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp014.android.email
+            - if: 
+                condition: ${platform} == 'iOS'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp014.ios.email
+
+      # Tap global account button
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      # Tap Sign in button
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      #Log in
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      
+      - if:
+          condition: ${environment} == 'Production'
+          then: 
+            - executeFunction:
+                name: functions.cartPage.clearCart
+
+            # Get 1 1P item using search filter
+            - executeFunction:
+                name: functions.searchField.enterText
+                params:
+                  - name: searchText
+                    string: data.tc14.filter1P.itemText
+            - executeFunction:
+                name: functions.searchResultPage.get1PItemByFilter
+            - executeFunction:
+                name: functions.searchResultPage.addItemToCart
+
+            # Get the first available item and add into cart(3P SOS item)
+            - executeFunction:
+                name: functions.searchPage.addToCartUsingItemArray
+                params:
+                  - name: productArray
+                    string: data.globalShared_3PSOSItems
+          else:
+            # Teflon : Add 1P & 3P SOS item into cart using deeplink 
+            - executeFunction:
+                name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                params:
+                    - name: productArray
+                      string: data.global.1PItems
+            - executeFunction:
+                name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                params:
+                    - name: productArray
+                      string: data.globalShared_3PSOSItems 
+            - executeFunction:
+                name: functions.productDetailsPage.tapClose
+
+      # Go to Cart
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      
+      # Go to checkout and handle address pop up
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+          params:
+            - name: invoiceColoniaName
+              string: data.defaultAddress.coloniaName
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            # Validate user is able to load wallet
+            - executeFunction:
+                name: functions.checkoutPage.validateWalletIsDisplayed
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                  name: functions.checkoutPage.scrollToCVVTextfield
+            
+            - executeFunction:
+                name: functions.checkoutPage.addCVV
+                params:
+                  - name: CVV
+                    string: data.global.card.cvv.123
+      
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # Thank you page validation
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+          # Add new invoice for new account, and continue to checkout
+            - executeFunction:
+                  name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: functions.utils.terminateApp
+                  - sleep:
+                      duration: 10000
+
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifySectionDisplayed
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyDeliveryType
+                params:
+                  - name: expectedDeliveryType
+                    string: data.global.deliveryText.delivery
+      
+            - executeFunction:
+                name: functions.orderDetailPage.scrollToPOS
+        
+            - executeFunction:
+                name: functions.orderDetailPage.verifyCardPayment
+                params:
+                  - name: expectedCardLastFourDigit
+                    string: data.global.creditCard.visa.4242.last4DigitsOnly
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

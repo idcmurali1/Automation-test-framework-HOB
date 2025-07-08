@@ -1,0 +1,271 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#   CREATED: Nov/23/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  - name: mx.functions.addresses.tapBack
+    flow:
+      - click:
+          identifier: mx.mappings.addresses.backButton
+      - log:
+          message: "End function: addresses.tapBack"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  - name: mx.functions.addresses.assertPageDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.addresses.pageTitle
+            - identifier: mx.mappings.addresses.addAddressButton
+            - identifier: mx.mappings.addresses.addressesListContainer
+            - identifier: mx.mappings.addresses.backButton
+      - log:
+          message: "End function: addresses.assertPageDisplayed (Page Displayed)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function asserts a specific address is displayed by using the user's full name and address. First
+  #                 verify the structure of the displayed user's address and create a string with the specific values to assert.
+  # Param: ${userFullName}    [Mandatory] User's full name.
+  # Param: ${userAddress} [Mandatory] User's full address according to the structure of this view (may be different
+  #                                       from other views).
+  - name: mx.functions.addresses.assertAddressDisplayed
+    flow:
+      - log:
+          message: "User full name: ${userFullName}"
+          color: CYAN
+      - log:
+          message: "User address to assert: ${userAddress}"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.addresses.editAddressButtonByUserFullName
+            - identifier: mx.mappings.addresses.deleteAddressButtonByAddressName
+            - identifier: mx.mappings.addresses.backButton
+      - getString:
+          identifier: mx.mappings.addresses.addressStringByUserFullName
+          storeIn: displayedAddress
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAll.js
+          args:
+            - value: ${displayedAddress}
+            - value: ${userAddress}
+          getResponse:
+            storeIn: isAddressCorrect
+      - if:
+          condition: ${isAddressCorrect} == true
+          then:
+            - log:
+                message: "Address is correct."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed: address is not correct, please verify displayed or expected address or read helper's documentation."
+      - log:
+          message: "End function: addresses.assertAddressDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: asserts a specific address is displayed by using the user's full name and the address by its individual values.
+  # Params  ${expectedStreetName}     [Mandatory]   Name of the street to be validated.
+  #         ${expectedExteriorNumber} [Mandatory]   Exterior number to be validated.
+  #         ${expectedCity}           [Mandatory]   City to be validated.
+  #         ${expectedState}          [Mandatory]   State to be validated.
+  #         ${expectedZipCode}        [Mandatory]   ZIP Code to be validated.
+  #         ${userFullName}           [Mandatory]   User's full name.
+  - name: mx.functions.addresses.assertAddressByIndividualValues
+    flow:
+      # Using '\e[36m' to print in CYAN and '\e[0m' to reset color, to simplify logs.
+      - log: "\e[36mExpected StreetName: '${expectedStreetName}'\e[0m"
+      - log: "\e[36mExpected ExteriorNumber: '${expectedExteriorNumber}'\e[0m"
+      - log: "\e[36mExpected City: '${expectedCity}'\e[0m"
+      - log: "\e[36mExpected State: '${expectedState}'\e[0m"
+      - log: "\e[36mExpected ZipCode: '${expectedZipCode}'\e[0m"
+      - getString:
+          identifier: mx.mappings.addresses.addressStringByUserFullName
+          storeIn: displayedAddress
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAll.js
+          args:
+            - value: ${displayedAddress}
+            - value: ${expectedStreetName}, ${expectedExteriorNumber}, ${expectedCity}, ${expectedState}, ${expectedZipCode}
+          getResponse:
+            storeIn: isAddressCorrect
+      - if:
+          condition: ${isAddressCorrect} == true
+          then:
+            - log:
+                message: "Address is correct."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Expected address not contained in: '${displayedAddress'}"
+      - log: 
+          message: "End function: addresses.assertAddressByIndividualValues"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  - name: mx.functions.addresses.tapAddAddress
+    flow:
+      - click:
+          identifier: mx.mappings.addresses.addAddressButton
+      - log:
+          message: "End function: addresses.tapAddAddress"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts a specific address is marked as favorite by the address name.
+  # Param: ${userFullName}    [Mandatory] User's full name.
+  - name: mx.functions.addresses.assertAddressIsMarkedAsFavorite
+    flow:
+      - log:
+          message: "User full name: ${userFullName}"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.addresses.addressMarkedAsFavorite
+          then:
+            - log: 
+                message: "Expected address is marked as favorite."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Expected address is not marked as favorite or it is not displayed."
+      - log:
+          message: "End function: addresses.assertAddressIsMarkedAsFavorite"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts a specific address is not marked as favorite by the address name.
+  # Param: ${userFullName}    [Mandatory] User's full name.
+  - name: mx.functions.addresses.assertAddressIsNotMarkedAsFavorite
+    flow:
+      - log:
+          message: "User full name: ${userFullName}"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.addresses.addressNotMarkedAsFavorite
+          then:
+            - log: 
+                message: "Expected address is not marked as favorite."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Expected address is marked as favorite or it is not displayed."
+      - log:
+          message: "End function: addresses.assertAddressIsNotMarkedAsFavorite"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function clicks the Edit Address button by the user's first and last name.
+  # Param: ${userFullName} [Mandatory] User's full name.
+  - name: mx.functions.addresses.tapEditAddress
+    flow:
+      - click:
+          identifier: mx.mappings.addresses.editAddressButtonByUserFullName
+      - log:
+          message: "End function: addresses.tapEditAddress"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function clicks the Delete Address button using the address name.
+  # Param: ${addressName} [Mandatory] User's full name.
+  - name: mx.functions.addresses.tapDeleteAddressByName
+    flow:
+      - click:
+          identifier: mx.mappings.addresses.deleteAddressButtonByAddressName
+      - log:
+          message: "End function: addresses.tapDeleteAddress"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function clicks the Delete Address button.
+  - name: mx.functions.addresses.tapDeleteAddress
+    flow:
+      - click:
+          identifier: mx.mappings.addresses.deleteAddressButton
+      - log:
+          message: "End function: addresses.tapDeleteAddress"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts a specific address by its name.
+  # Param: ${addressName}    [Mandatory] Address name.
+  - name: mx.functions.addresses.assertAddressNotDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.addresses.addressByName 
+          then:
+            - failTest:
+                message: "Expected address is still displayed: ${addressName}"
+          else:
+            - log: 
+                message: "Success: Expected address is not present."
+                color: CYAN
+      - log:
+          message: "End function: addresses.assertAddressNotDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts there is no addresses displayed
+  - name: mx.functions.addresses.assertNoAddressesAreDisplayed
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.addresses.editAddressButton
+              - identifier: mx.mappings.addresses.deleteAddressButton
+          then:
+            - log:
+                message: "No addresses displayed"
+          else:
+            - failTest:
+                message: "Found addresses displayed"
+      - log:
+          message: "End function: addresses.assertNoAddressesAreDisplayed"
+          color: BLUE
+
+  ## DELETE ADDRESS CONFIRMATION POPUP ################################################################################
+
+  - name: mx.functions.addresses.delete-address-confirmation-popup.tapDelete
+    flow:
+      - click:
+          identifier: mx.mappings.addresses.delete-address-confirmation-popup.deleteButton
+      - log:
+          message: "End function: addresses.delete-address-confirmation-popup.tapDelete"
+          color: BLUE
+
+  - name: mx.functions.addresses.delete-address-confirmation-popup.assertPopupDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.addresses.delete-address-confirmation-popup.popupTitle
+            - identifier: mx.mappings.addresses.delete-address-confirmation-popup.popupMessage
+            - identifier: mx.mappings.addresses.delete-address-confirmation-popup.cancelButton
+            - identifier: mx.mappings.addresses.delete-address-confirmation-popup.deleteButton
+      - log:
+          message: "End function: addresses.delete-address-confirmation-popup.assertPopupDisplayed"
+          color: BLUE
+          

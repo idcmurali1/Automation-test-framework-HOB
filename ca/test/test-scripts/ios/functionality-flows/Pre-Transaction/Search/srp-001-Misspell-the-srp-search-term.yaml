@@ -1,0 +1,148 @@
+general:
+  platform: ios
+  tags: srp-001, ca_authpoc
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: false
+    flow:
+      - log: Execute before steps 
+
+     # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+              
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *      
+  
+  - name: Verify user gets correct search result and correct spelling in SRP even if search term is misspelled.
+    flow:
+      - log:
+          message: Verify user gets correct search result and correct spelling in SRP even if search term is misspelled.
+          color: GREEN_BOLD
+
+     # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.data.search001.emailios
+            - name: password
+              string: ca.test.data.search001.passwordios
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+      # Login us registered user
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.search001.emailios
+            - name: password
+              string: ca.test.data.search001.passwordios
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: ca.test.data.onboarding.storeName
+
+      - log: 
+          message: Searching for a GO product with incorrect name.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:
+            - name: product
+              string: ca.test.data.wrongProductName
+
+      - log: 
+          message: Asserting srp is showing correct product suggestion.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.function.productSearch.validatingSearchResultForMisspelledSearchIos
+          params:
+            - name: productName
+              string: ca.test.data.correctProductName
+            - name: product
+              string: ca.test.data.wrongProductName
+
+      - log: 
+          message: Searching for a category with incorrect name.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:
+            - name: product
+              string: ca.test.data.wrongProductCategory
+      
+      - log: 
+          message: Asserting srp is showing correct product category name.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.function.productSearch.validatingSearchResultForMisspelledSearchIos
+          params:
+            - name: productName
+              string: ca.test.data.correctProductCategory
+            - name: product
+              string: ca.test.data.wrongProductCategory
+     
+      - log: 
+          message: Searching a random word.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch        
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:
+            - name: product
+              string: ca.test.data.randomProductName
+      
+      - log: 
+          message: Asserting srp is showing "Do you mean" text instead of product suggestion.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.function.productSearch.validatingSearchResultForMisspelledSearchIosRandom
+          params:
+            - name: productName
+              string: ca.test.data.randomProductName
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: srp-001-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps  

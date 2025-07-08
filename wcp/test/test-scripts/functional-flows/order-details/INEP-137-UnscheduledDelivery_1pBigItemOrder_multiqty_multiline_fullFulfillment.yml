@@ -1,0 +1,330 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - OPIF-179472
+#       Flow - MH: Fulfillment: Fulfill 1P items/orders from FCs
+#    
+#
+#   CONFLUENCE OPIF TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179472
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-137
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-108
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-137
+  tags: INEP-137, OPIF-179472, p1-mh-opif-teflon-d-feb, INEP-108, p1-mh-opif-teflon, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Basic Cart Operations - Add 1P Item Grocery Item and validate purchase limit in cart."
+    flow:
+
+      # Create Account with Payload
+      - log:
+          message: "Create Account with Payload."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # <- RETURNS ${userEmail}, CREATES ${tenant-id}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa
+
+      # Place order via AstroAPI and save orderId for further use.
+      - log:
+          message: "Create order through Astro API"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createOrder
+          params:
+            - name: payload
+              string: data.mh.inep137.createOrderPayload # Param -> ${userEmail}
+  
+      #Complete the onboarding.
+      - log:
+          message: "Complete the onboarding."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      - executeFunction:
+          name: functions.global.tapShopBtn
+    
+      #Perfom login
+      - log:
+          message: "Perform Login."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+      
+      #Validate order is present in Purchase History
+      - log:
+          message: "Validate order is present in Purchase History."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+      - executeFunction:
+         name: functions.orderHistoryPage.isPageDisplayed
+      - sleep:
+          duration: 4000
+      - executeFunction:
+          name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+ 
+    # Validate ordered items are shown in order details and qty is correct.
+      - log:
+          message: "Validate ordered items are shown in order details and qty is correct."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.verifySectionDisplayed
+      - executeFunction:
+          name: functions.orderDetailPage.verifyDeliveryType
+          params:
+            - name: expectedDeliveryType
+              string: data.global.deliveryText.delivery
+
+    # Verify ordered items are shown and qty is correct
+      - log:
+          message: "Verify ordered items are shown and qty is correct"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.verifyTotalItemsInOrder
+          params:
+            - name: totalItemCount
+              string: data.mh.inep137.totalCountItemsInOrder
+      - executeFunction:
+          name: functions.orderDetailPage.verifyQuantityPerLine 
+          params:
+            - name: lineItem
+              string: "1"
+            - name: quantity
+              string: data.mh.inep137.lineItem1.quantity
+
+      # Verify order status (Preparing/Preparando)
+      - log:
+          message: "Verify order status (Preparing/Preparando)."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+           name: functions.orderDetailPage.scrollUpToSection
+           params:
+             - name: section
+               string: orderDetailPage.statusTracker # <- Tracker view
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.preparing
+
+      # Verify request cancellation button is displayed when order is in "preparing".
+      - log:
+          message: "Verify request cancellation button is displayed when order is in preparing."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.assertRequestCancelButtonDisplayed
+
+    ###################################################################################
+    # Change order status from Preparing -> Shipped.                                  #
+    # Move 1p item using astro api                                                    #
+    ###################################################################################
+      - log:
+          message: MOVE ORDER TO SHIPPED...
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.fcDelivery.shippedStatus   
+      - sleep:
+          duration: 5000
+
+      # Reload Order Details Page displayed.
+      - executeFunction:
+          name: functions.orderDetailPage.reloadOrderDetailPage 
+
+      - executeFunction:
+           name: functions.orderDetailPage.scrollDownToSection
+           params:
+             - name: section
+               string: orderDetailPage.statusTracker # <-- scroll up until status tracker is visible.
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.onTheWay
+      
+    # After preparing(astro), status="on the way/En camino", we can see Track/Rastrear button
+    # TO-DO: No existing RETURN CTA button in Android ATM. Issue has been reported. Need to update once fix gets merged
+      - log:
+          message: "Verify that when order is 'en camino', we can see Track/Rastrear button"
+          color: PURPLE_BOLD_BRIGHT 
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: functions.orderDetailPage.validateReturnCTANotDisplayed
+
+    ###################################################################################
+    # Change order status from Shipped -> Out for delivery                            #
+    # Move 1p item using astro api                                                    #
+    ###################################################################################
+      - log:
+          message: MOVE ORDER TO OUT FOR DELIVERY...
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.fcDelivery.outForDelivery   
+
+    ###################################################################################
+    #  Change order status from Out for delivery -> Delivered.                         #
+    #  Move 1p item using astro api                                                    #
+    ##################################################################################
+      - log:
+          message: MOVE ORDER TO DELIVERED...
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.fcDelivery.delivered          
+      - sleep:
+          duration: 5000
+
+    #  After delivery, status in LOT is correct ( Delivered/Entregado )
+      - log:
+          message: "After delivery, status in LOT is correct ( Delivered/Entregado )"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+           name: functions.orderDetailPage.scrollUpToSection
+           params:
+             - name: section
+               string: orderDetailPage.statusTracker
+      - executeFunction:
+          name: functions.orderDetailPage.verifyOrderStatusInOrderTracker
+          params:
+            - name: orderStatus
+              string: data.orderTracker.status.delivered
+
+    #  Verify that ater fulfillment, ordered items are shown and qty is correct
+      - log:
+          message: "Verify that once item is delivered Write opinion/Escribir opinion is shown"
+          color: PURPLE_BOLD_BRIGHT
+    
+      # Validate Total items in order and quantity items for first product (line item 1)
+      - executeFunction:
+          name: functions.orderDetailPage.verifyTotalItemsInOrder
+          params:
+            - name: totalItemCount
+              string: data.mh.inep137.totalCountItemsInOrder
+      - executeFunction:
+          name: functions.orderDetailPage.verifyQuantityPerLine 
+          params:
+            - name: lineItem
+              string: "1"
+            - name: quantity
+              string: data.mh.inep137.lineItem1.quantity
+      
+      #Verify that once item is delivered 'Request cancellation' per item line is not shown
+      #TBD
+
+      #Verify that once item is delivered Write opinion/Escribir opinion is shown
+      - log:
+          message: "Verify that once item is delivered Write opinion/Escribir opinion is shown"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.assertWriteAReviewIsDisplayed 
+  
+     #Verify that after fulfillment, Solicitar devolucion/request cancellation button is shown  
+      - log:
+          message: "Verify that after fulfillment, Solicitar devolucion/request cancellation button is shown"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.scrollDownToSection
+          params:
+              - name: section
+                string: orderDetailsPage.returnCta # <-- Request a Return button
+      - executeFunction:
+          name: functions.orderDetailPage.assertRequestAReturnIsDisplayed
+      - log:
+          message: "MH: Fulfillment: Fulfill 1P items/orders from FCs - Add 1P Regular Items and Validate all the order status."  
+          color: GREEN_BOLD_BRIGHT
+      
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"

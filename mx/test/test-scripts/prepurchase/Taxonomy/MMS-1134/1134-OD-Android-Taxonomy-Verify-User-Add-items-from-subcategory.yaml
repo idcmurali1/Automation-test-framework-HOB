@@ -1,0 +1,279 @@
+#======================================================================================================================
+#    AUTHOR: Osmar Juárez (vn56dce)
+#   CREATED: Jun/10/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-od-smoke-production-android-1134, prepurchase-od-smoke-production-android
+  testCaseId: MMS-3150
+
+scenarios:
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [GlassMX][Pre-Purchase][OD] - Verify that a user can add an item from a subcategory
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+Android 
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-3150
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-1134
+#
+#######################################################################################################################
+ 
+
+  # BEFORE HOOK #######################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - storeIn:
+          key: __SQUAD_REPORTING_TEST_CASE_NAME
+          value: GMX_OD_Smoke_PROD_PrePurchase_Android_1134
+
+      # setting GMX_PP_APP_NAME variable for user email
+      - if:
+          condition: ${APP_PACKAGE} == 'com.walmart.mg.debug'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+            - storeIn:
+                key: MMS_1134_ONBORDING_ZIP_CODE
+                value: mx.data.qaa.smoke.od.prepurchase-1134.zipCode
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+            - storeIn:
+                key: MMS_1134_ONBORDING_ZIP_CODE
+                value: mx.data.qaa.smoke.bodega.od.prepurchase-1134.zipCode
+      
+      - storeIn:
+          key: MMS_1134_IS_CART_EMPTY
+          value: true
+      - storeIn:
+          key: MMS_1134_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN HOOK #########################################################################################################
+  - name: Main
+    platform: android
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN WALMART APP AND COMPLETE ONBOARDING. (2) OPEN THE OD BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: ${MMS_1134_ONBORDING_ZIP_CODE}
+            - name: banner
+              string: 'OD'
+      
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: LOG IN BY GOING TO 'Cuenta' > 'Iniciar sesión'"
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.smoke.od.prepurchase-1134.userEmail
+            - name: userPassword
+              string: mx.data.qaa.smoke.od.prepurchase-1134.userPassword
+            - name: userName
+              string: mx.data.qaa.smoke.od.prepurchase-1134.userFirstName
+
+      # STEP 4 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: TAP 'Departamentos'."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapDepartments
+      - executeFunction:
+          name: mx.functions.departments.assertPageDisplayed
+      
+      # STEP 5 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: TAP A CATEGORY TO NAVIGATE TO A CONTENT PAGE."
+         color: ORANGE
+
+      - if:
+          condition: ${GMX_PP_APP_NAME} == '_bodega'
+          then:
+            - executeFunction:
+                name: mx.functions.departments.selectDepartment
+                params:
+                  - name: departmentName
+                    string: mx.data.qaa.smoke.bodega.od.prepurchase-1134.departmentName
+          else:
+            - executeFunction:
+                name: mx.functions.departments.selectDepartment
+                params:
+                  - name: departmentName
+                    string: mx.data.qaa.smoke.walmart.od.prepurchase-1134.departmentName
+      
+      # STEP 6 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6: TAP A SUB-CATEGORY TO NAVIGATE TO A CONTENT PAGE."
+         color: ORANGE
+      - if:
+          condition: ${GMX_PP_APP_NAME} != '_bodega'
+          then:
+            - executeFunction:
+                name: mx.functions.department-l1-l2.selectCategory
+                params:
+                  - name: categoryName
+                    string: mx.data.qaa.smoke.od.prepurchase-1134.categoryName
+                  - name: departmentName
+                    string: mx.data.qaa.smoke.walmart.od.prepurchase-1134.departmentName
+      - executeFunction:
+          name: mx.functions.department-l1-l2.assertPageDisplayed # Assert navpills and back button
+
+      # STEP 7 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: ADD THE FIRST ITEM THAT APPEARS TO CART."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.department-l3.addProductToCartByIndex 
+          params:
+            - name: indexProduct
+              string: '0'      
+      - storeIn:
+          key: MMS_1134_IS_CART_EMPTY
+          value: false
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: '1'
+      
+      # STEP 8 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 8: TAP A SUB-CATEGORY/L3 TO NAVIGATE TO A BROWSE PAGE."
+         color: ORANGE
+      - if:
+          condition: ${GMX_PP_APP_NAME} == '_bodega'
+          then:
+            # Bodega OD only has two taxonomy levels.
+            - executeFunction:
+                name: mx.functions.department-l1-l2.selectCategory
+                params:
+                  - name: categoryName
+                    string: mx.data.qaa.smoke.od.prepurchase-1134.categoryName
+                  - name: departmentName
+                    string: mx.data.qaa.smoke.bodega.od.prepurchase-1134.departmentName
+            - executeFunction:
+                name: mx.functions.department-l3.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.department-l3.assertCorrectCategoryOpened
+                params:
+                  - name: category
+                    string: mx.data.qaa.smoke.bodega.od.prepurchase-1134.categoryName
+          else: 
+            - executeFunction:
+                name: mx.functions.department-l1-l2.selectCategory
+                params:
+                  - name: categoryName
+                    string: mx.data.qaa.smoke.walmart.od.prepurchase-1134.browseName
+                  - name: departmentName
+                    string: mx.data.qaa.smoke.walmart.od.prepurchase-1134.departmentName
+            - executeFunction:
+                name: mx.functions.department-l3.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.department-l3.assertCorrectCategoryOpened
+                params:
+                  - name: category
+                    string: mx.data.qaa.smoke.walmart.od.prepurchase-1134.browseName
+
+      
+      # STEP 9 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 9: ADD THE FIRST ITEM THAT APPEARS TO CART."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.department-l3.addProductToCartByIndex
+          params:
+            - name: indexProduct
+              string: '0'
+              
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: '2'
+
+      # STEP 10 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 10: DELETE ALL ITEMS FROM CART."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      - executeFunction:
+          name: mx.functions.cart.assertCartIsEmpty
+  
+  # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_1134_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+  # AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..." 
+
+      - if:
+          condition: ${MMS_1134_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. Resseting data for next execution."
+                color: RED
+            - if:
+                condition: ${MMS_1134_IS_CART_EMPTY} == false
+                then: 
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+                  - executeFunction:
+                      name: mx.functions.bottom-menu.tapHome
+                  - executeFunction:
+                      name: mx.flows.od.after-scenario-exclusive.emptyCart
+                      params:
+                        - name: userEmail
+                          string: mx.data.qaa.smoke.od.prepurchase-1134.userEmail
+                        - name: userPassword
+                          string: mx.data.qaa.smoke.od.prepurchase-1134.userPassword
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"
+  

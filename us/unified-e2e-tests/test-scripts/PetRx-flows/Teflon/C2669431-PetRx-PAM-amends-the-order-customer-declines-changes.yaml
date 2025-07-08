@@ -1,0 +1,162 @@
+general:
+  tags: C2669431, unified-teflon-e2e, unified-p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2669431
+  metadata:
+    - name: scenarioId
+      string: PV003
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+      # Get Environment and set platform values
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: email
+              string: us.data.android.flowPetRXDeclineAmends.email
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: email
+              string: us.data.ios.flowPetRXDeclineAmends.email
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Will take the user to the account menu from where the user can sign in to the app
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.android.flowPetRXDeclineAmends.email
+            - name: android.password
+              string: us.data.android.flowPetRXDeclineAmends.password
+            - name: ios.email
+              string: us.data.ios.flowPetRXDeclineAmends.email 
+            - name: ios.password
+              string: us.data.ios.flowPetRXDeclineAmends.password 
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Fetch stock available items using fetch API for petRX items
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.android.flowPetRXDeclineAmends.email
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: itemList
+              string: us.data.flow.petRx.itemLists
+
+      # Add items to cart using deeplink
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      # Add item to the cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar       
+
+      - executeFunction:
+          name: unified.us.functions.cart.increaseItemQtyInCart
+          params:
+            - name: quantity
+              string: 3
+
+      # Proceeding to checkout/Review order page
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Add Pet and Vet details
+      - executeFunction:
+          name: unified.us.functions.checkout.AddPetVet
+
+      - sleep:
+          duration: 2000
+
+      - executeFunction:
+          name: unified.us.functions.checkout.SelectPetVet
+
+      - sleep:
+          duration: 2000
+
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.ratings
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+
+      - log: "The order number is: ${orderNo}"
+      - executeFunction:
+          name: unified.us.functions.utils.astro.petrxOrder.increaseQtyandMoveOrder
+          params:
+            - name: payload
+              string: us.data.petRx.incQuantityAndMoveOrder.payload
+            - name: incQuantity
+              string: 9
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY_PETRX
+            - name: status
+              string: PO Acknowledged
+
+      - sleep:
+          duration: 3000
+
+      - executeFunction:
+          name: unified.us.functions.petrx.postAmendment.acceptReject
+          params:
+            - name: rejectPetrx
+              string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

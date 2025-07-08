@@ -1,0 +1,88 @@
+general:
+  tags: sc-e2e, sc-staging-feature-build, C2715341, p1-sc-teflon-e2e
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Setting required attribute for identifier based on platform
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - storeIn:
+                key: identifierAttribute
+                value: "text"
+          else:
+            - storeIn:
+                key: identifierAttribute
+                value: "value"
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Login
+      - executeFunction:
+          name: sc.functions.accounts.login
+          params:
+            - name: email
+              string: sc.partner1.email
+            - name: password
+              string: sc.partner1.password
+
+      # Navigate to item details page through search in android and using deeplink in iOS
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: sc.functions.navigation.toTab
+                params:
+                  - name: tab
+                    string: Catalog
+
+            - executeFunction:
+                name: sc.functions.global.search
+                params:
+                  - name: searchType
+                    string: "Item ID"
+                  - name: searchValue
+                    string: sc.data.items.itemId
+
+            - executeFunction:
+                name: sc.functions.items.selectFirstItem
+
+          else:
+            - storeIn:
+                key: itemId
+                value: sc.data.items.itemId
+
+            - executeFunction:
+                name: sc.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: sc.data.items.itemDetails.deepLinkUrl
+            
+      - sleep:
+          duration: 5000
+
+      # Validate item details page
+      - executeFunction:
+          name: sc.functions.items.verifyItemDetailsPage
+      
+      #Validate if the selling price can be updated
+      - executeFunction:
+          name: sc.functions.catalog.item.idemDetails.updateSellingPrice
+          params:
+            - name: updatePriceMoreThanDouble
+              string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: sc.functions.utils.afterSteps

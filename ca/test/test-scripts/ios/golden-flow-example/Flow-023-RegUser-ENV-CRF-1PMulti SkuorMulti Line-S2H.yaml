@@ -1,0 +1,390 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: 023
+# User : Registered User
+# Order: Type: GM
+# Fulfillment: S2H
+# Payment Type : GC (Multiple GC)
+# Experience: A2C search
+# Validation: Env fee ,Crf fee in cart and checkout, Tool-tip in cart(Not implemented)
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  platform: ios
+  tags: flow-023, ca_authpoc, E2E-iOS-English, E2E-iOS-French
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+          
+      #temporary#
+      - executeFunction:
+          name: ca.test.functions.utils.avoidTestPopup
+
+     # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.flow023.zipCode
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.ios.data.flow023.email
+            - name: password
+              string: ca.test.ios.data.flow023.password
+     
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.ios.data.flow023.email
+            - name: password
+              string: ca.test.ios.data.flow023.password
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.flow023.zipCode
+            - name: storeName
+              string: ca.test.data.flow023.storeName
+
+       # Selecting address at home page
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: address
+              string: ca.test.data.flow023.deliveryPinCode
+
+       # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:           
+            - name: product
+              string: ca.test.data.flow023.product_p1_sku
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.productSearch.addToCart
+          params:
+            - name: productName
+              string: ca.test.data.flow023.product_p1_name
+            - name: quantity
+              string: ca.test.data.flow023.product_p1_qty
+
+      #clear search box
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch               
+
+       # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:           
+            - name: product
+              string: ca.test.data.flow023.product_p2_sku
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.productSearch.addToCart
+          params:
+            - name: productName
+              string: ca.test.data.flow023.product_p2_name
+            - name: quantity
+              string: ca.test.data.flow023.product_p2_qty
+
+      # Validate cart quantity
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantity
+           params:
+            - name: cartQuantity
+              string: ca.test.data.flow023.cartQuantity
+
+      # Asserting cart total
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ca.test.data.flow023.assertCartTotal
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *                                                    
+     
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+      
+      # Cart fulfillment verification
+      - executeFunction:
+          name: ca.test.functions.cart.deliveryS2H.verifyCard
+
+      # Selecting pickup or shipping
+      - executeFunction:
+          name: ca.test.functions.cart.selectShippingOptionsIos
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow023.product_p1_name
+      
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow023.product_p2_name
+      
+      # Verify cart subTotal
+      - executeFunction:
+          name: ca.test.functions.cart.cartSubTotal
+          params: 
+            - name: subTotal
+              string: ca.test.data.flow023.assertCartTotal
+
+      # Verify cart walmart shipping
+      - executeFunction:
+          name: ca.test.functions.cart.cartWalmartShipping
+          params: 
+            - name: walmartShipping
+              string: ca.test.data.flow023.walmartShippingValue
+ 
+      # Verify eco handling fee
+      - executeFunction:
+          name: ca.test.functions.cartox.validate.otherFees
+          params: 
+            - name: feeName
+              string: ca.test.data.flow023.crfFeesText
+            - name: feeValues
+              string: ca.test.data.flow023.crfFeesValue
+
+      # Verify eco handling fee
+      - executeFunction:
+          name: ca.test.functions.cartox.validate.otherFees
+          params: 
+            - name: feeName
+              string: ca.test.data.flow023.bevDepositFeesText
+            - name: feeValues
+              string: ca.test.data.flow023.bevDepositFeesValue
+
+      # Verify eco handling fee
+      - executeFunction:
+          name: ca.test.functions.cartox.validate.otherFees
+          params: 
+            - name: feeName
+              string: ca.test.data.flow023.ecoHandlingFeesText
+            - name: feeValues
+              string: ca.test.data.flow023.ecoHandlingFeesValue
+
+      # Verify cart Taxes
+      - executeFunction:
+          name: ca.test.functions.cart.cartTaxes
+          params: 
+            - name: taxes
+              string: ca.test.data.flow023.totalTaxAmount
+
+      # Verify cart gst
+      - executeFunction:
+          name: ca.test.functions.cart.gstTaxAssertion
+          params: 
+            - name: gst_percentage
+              string: ca.test.data.flow023.gstTaxText
+            - name: tax_gst
+              string: ca.test.data.flow023.gstTaxValue
+
+      # Verify cart estimated total
+      - executeFunction:
+          name: ca.test.functions.cart.cartEstimatedTotal
+          params: 
+            - name: estimate_total
+              string: ca.test.data.flow023.estimatedTotal
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos
+
+      # # CheckOut page order review validation
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+      #     params:
+      #       - name: fulfillment
+      #         string: ca.test.data.flowios.fullfillmentType
+
+      - executeFunction:
+          name:  ca.test.functions.astroUrl.createGiftCard
+          params:
+            - name: giftCardAmount
+              string: 100
+
+      - storeIn:
+          key: GCN001
+          value: ${giftCardNumber}
+      
+      - storeIn:
+          key: GCP001
+          value: ${giftCardPin}
+
+      - executeFunction:
+          name:  ca.test.functions.astroUrl.createGiftCard
+          params:
+            - name: giftCardAmount
+              string: 186.35
+
+      - storeIn:
+          key: GCN002
+          value: ${giftCardNumber}
+      
+      - storeIn:
+          key: GCP002
+          value: ${giftCardPin}
+
+      # Navigating edit payment page
+      - executeFunction:
+          name: ca.test.functions.checkOut.editPayment
+      
+      - executeFunction:
+          name: ca.test.functions.checkOut.paymentOptions.editPayments.removeGiftCard
+
+      - executeFunction:
+          name: ca.test.functions.checkOut.editPayment.addNewGiftCard
+          params:
+            - name: giftCardNumber
+              string: ${GCN001}
+            - name: giftCardPin
+              string: ${GCP001}
+      
+      - executeFunction:
+          name: ca.test.functions.checkOut.paymentMethod.addNewPaymentMethod
+
+      - executeFunction:
+          name: ca.test.functions.checkOut.editPayment.addNewGiftCard
+          params:
+            - name: giftCardNumber
+              string: ${GCN002}
+            - name: giftCardPin
+              string: ${GCP002}
+
+      - executeFunction:
+          name: ca.test.functions.checkOut.paymentMethod.countinueButton
+
+      # Validating mobile number
+      - executeFunction:
+          name: ca.test.functions.checkOut.assertPhoneNumberIsDisplayed
+
+      # #Promo Code Check
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.promoCodeAvailabilityCheck               
+
+      # # Checkout page sub total assertion
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.subTotalValidation
+      #     params:
+      #       - name: subTotal
+      #         string: ca.test.data.flow023.subtotal  
+
+      # # Verify walmart shipping
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.walmartShippingAssertion
+      #     params: 
+      #       - name: walmartShipping
+      #         string: ca.test.data.flow023.shippingfee                    
+
+      # # Checkout page tax assertion
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.taxesAssertion
+      #     params:
+      #       - name: total_tax
+      #         string: ca.test.data.flow023.Taxes
+              
+      # # Checkout page gst assertion
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.gstAssertion
+      #     params:
+      #       - name: gst_percentage
+      #         string: ca.test.data.flow023.gstPercentage
+      #       - name: tax_gst
+      #         string: ca.test.data.flow023.gst
+
+      # # Verify eco handling fee
+      # - executeFunction:
+      #     name: ca.test.functions.checkout.validateEcoHandlingFeesIos
+      #     params: 
+      #       - name: eco_fee
+      #         string: ca.test.data.flow023.ecoFee  
+
+      # # Verify crf fees in checkout
+      # - executeFunction:
+      #     name: ca.test.functions.checkout.validateCrfFees 
+      #     params:
+      #       - name: crf_fee
+      #         string: ca.test.data.flow023.crf 
+
+      # # Verify bev fees in checkout
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.validateBevFees
+      #     params: 
+      #       - name: bev_fee
+      #         string: ca.test.data.flow023.bev                        
+
+      # Checkout page estimate total assertion
+      - executeFunction:  
+          name: ca.test.functions.checkOut.estimateTotalAssertion
+          params:
+            - name: estimate_total
+              string: ca.test.data.flow023.estimatedTotal
+
+      # Order placement 
+      - executeFunction:
+          name: ca.test.functions.checkOut.PlacingOrder
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *          
+
+      # Order Confirmation screen validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.orderConfirmationValidationIos              
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps        
+              
+  # Tooltip is not implemented and Payment type GC is not available so done with CC            

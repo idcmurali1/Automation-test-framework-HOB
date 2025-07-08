@@ -1,0 +1,79 @@
+general:
+  platform: android
+  tags: C2662641, fetchItem
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  testCaseId: C2662641
+  metadata:
+    - name: scenarioId
+      string: 294
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *          
+      - getTimestamp:
+          asDate: true
+          dateFormat: 'YYYY-MM-dd'
+          storeIn: endDate
+
+      - executeNode:
+          file: us/e2e-tests/helpers/dateGeneratorInRequestedFormat.js
+          args:
+            - value: '-5'
+            - value: 'YYYY-MM-DD'
+          getResponse:
+            storeIn: startDate
+
+      # Fetch newly created item using any time data
+      - executeFunction:
+          name: us.functions.utils.fetchNewItem
+          params:
+            - name: email
+              string: '{"userEmail": "fr@wm1.com"}'
+            - name: startDate
+              string: ${startDate}
+            - name: endDate
+              string: ${endDate}
+
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.android.fetchItemCreateOrder.createOrderPayload
+            
+            
+      
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Delivered
+          
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

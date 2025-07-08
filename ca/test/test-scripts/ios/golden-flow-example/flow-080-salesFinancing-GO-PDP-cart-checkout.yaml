@@ -1,0 +1,275 @@
+#*****************************************************************************************
+## Registered user should not get Sales Financing details if cart contains GR items in cart page
+# 1. Sales financing links in PDP. 2. Emi information in PDP.
+# 3. Sales financing details not present in cart page.
+# Scenarios covered:
+# Navigate onboarding to home, clear cart through astro
+# Navigate to sign in page and signin, Checking and selecting Store
+# Search a GO product and Go to PDP
+#*****************************************************************************************
+
+general:
+  platform: ios
+  tags: flow-080 , ca_authpoc, E2E-iOS-English
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+          
+      #temporary#
+      - executeFunction:
+          name: ca.test.functions.utils.avoidTestPopup
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome 
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.data.flow080.email_ios
+            - name: password
+              string: ca.test.data.flow080.password_ios 
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos    
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.flow080.email_ios
+            - name: password
+              string: ca.test.data.flow080.password_ios
+            # - name: emailPageValidation  - Signin page validation js file pending.
+            #   string: true
+            # - name: passwordPageValidation
+            #   string: true  
+  
+
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameInTopleft 
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: ca.test.data.onboarding.storeName
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:           
+            - name: product
+              string: ca.test.data.flow080.searchProduct.sku_1
+
+      # Product SRP to PDP page
+      - executeFunction:
+          name: ca.test.functions.productSearch.srpToPdpPage
+          params:
+            - name: productName
+              string: ca.test.data.flow080.productName.sku_1
+
+      - executeFunction:
+          name: ca.test.functions.productDetailsPage.saleFinancing
+          params:
+            - name: productName
+              string: ca.test.data.flow080.productName.sku_1
+            - name: monthlyFinancing
+              string: $77
+            - name: weeklyFinancing
+              string: $115.00
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.pdp.addToCart
+          
+      # close PDP page
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage
+
+      # clear search box
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:           
+            - name: product
+              string: ca.test.data.flow080.searchProduct.sku_2
+        
+      # Product SRP to PDP page
+      - executeFunction:
+          name: ca.test.functions.productSearch.srpToPdpPage
+          params:
+            - name: productName
+              string: ca.test.data.flow080.productName.sku_2
+
+      - executeFunction:
+          name: ca.test.functions.productDetailsPage.saleFinancing
+          params:
+            - name: productName
+              string: ca.test.data.flow080.productName.sku_2
+            - name: weeklyFinancing
+              string: $19.30
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.pdp.addToCart
+          
+      # close PDP page
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage
+
+      #clear search box
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:           
+            - name: product
+              string: ca.test.data.flow080.searchProduct.sku_3
+
+      # Product SRP to PDP page
+      - executeFunction:
+          name: ca.test.functions.productSearch.srpToPdpPage
+          params:
+            - name: productName
+              string: ca.test.data.flow080.productName.sku_3
+
+      - executeFunction:
+          name: ca.test.functions.productDetailsPage.saleFinancing
+          params:
+            - name: productName
+              string: ca.test.data.flow080.productName.sku_3
+            - name: weeklyFinancing
+              string: $19.30
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.pdp.addToCart
+          
+      #close PDP page
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage
+
+      # Asserting cart quantity
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantityIos
+           params:
+            - name: cartQuantity
+              string: ca.test.data.flow080.assertingCardQuantity
+      
+      # Asserting cart total
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ca.test.data.flow080.assertingCardValue
+
+# #...........................................................................
+# # Validate Sales Financing and Emi information links in Cart.
+#       # navigate to cart
+#       - executeFunction:
+#           name: ca.test.functions.global.navigation.goToCartIos
+#       # # increase qty - cart
+#       # - executeFunction:
+#       #     name: ca.test.functions.cart.increaseQtyCart
+#       # - executeFunction:
+#       #     name: ca.test.functions.cart.increaseQtyCart
+
+#       # Cart product details validation 
+#       - executeFunction:
+#           name: ca.test.functions.cart.verifyProductTitle
+#           params:
+#             - name: productName
+#               string: ca.test.data.flow080.productName.skuSF
+
+#       # Cart product details validation 
+#       - executeFunction:
+#           name: ca.test.functions.cart.verifyProductTitle
+#           params:
+#             - name: productName
+#               string: ca.test.data.flow080.productName.sku_2SF
+
+#       # Cart product details validation 
+#       - executeFunction:
+#           name: ca.test.functions.cart.verifyProductTitle
+#           params:
+#             - name: productName
+#               string: ca.test.data.flow080.productName.sku_3SF
+
+#       # validate the SF option not there
+#       - executeFunction:
+#           name: ca.test.functions.cart.verifySFnotPresent
+#           params:
+#             - name: priceAndDate
+#               string: ca.test.data.cart079.priceandDate
+
+#       #change the slot for GO to pickup
+#       - executeFunction:
+#           name: ca.test.functions.timeReservePickUp.standardTimeSlot
+# #...........................................................................
+# # Sales financing checkbox and details not present in checkout page.
+#       # Proceed to Checkout
+#       - executeFunction:
+#           name: ca.test.functions.cart.proceedToCheckOutIos
+
+#       # CheckOut page order review validation
+#       - executeFunction:
+#           name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+#           params:
+#             - name: fulfillment
+#               string: ca.test.data.flow031.fulfillmentType
+              
+#       # validate the SF option not there
+#       - executeFunction:
+#           name: ca.test.functions.cart.verifySFnotPresent
+#           params:
+#             - name: priceAndDate
+#               string: ca.test.data.cart077.priceandDate
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

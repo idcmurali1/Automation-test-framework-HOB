@@ -1,0 +1,144 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Cancel Order : Cancel GM order from order details page
+# Scenarios covered:
+# Navigate onboarding to home
+# Place a GM order with 2 items using astro api
+# Navigate to purchase history page
+# Remove first item
+# Cancel whole order by removing second item
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  tags: flow301
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.flow301.onboardingZipCode
+
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.apis.createAccount
+
+      # Create GM order with one items 
+      - executeFunction:
+          name: ca.test.functions.astro.placeOrder.S2H
+          params:
+            - name: email
+              string: ${emailId}
+            - name: password
+              string: ${password}
+            - name: payLoad
+              string: ca.data.flow.amendablePayload301
+
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+     # Sign In Page 
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ${emailId}
+            - name: password
+              string: ${password}  
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Navigate to account page
+      - executeFunction:
+          name: ca.test.functions.homePage.accountButton
+
+     # Tap Purchase History in Account Page
+      - executeFunction:
+          name: ca.test.functions.accountPage.tapPurchaseHistory
+
+     # Tap on View Details in Purchase History
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.tapViewDetailsButton
+
+    # Tap cancel item
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.tapCancelItem
+    
+    # Verify Edit items page
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.verifyEditItemsPageForCancel
+    
+    # Tap remove button
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.editItemsPage.tapRemoveLink
+
+    # Select reason and remove first item
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.editItemsPage.removeItem
+          params:
+            - name: returnReason
+              string: ca.test.data.flow301.firstItemReturnReason
+    
+    # Verify success message
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.editItemsPage.verifySuccessMessage
+    
+    # Navigate back to ODP
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.editItemsPage.tapBackNavigation
+
+    # Verify ODP after first order is cancelled 
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.verifyAfterFirstOrderCancellation
+        
+    # Cancel whole order
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.tapRemoveItem
+      
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.editItemsPage.removeItem
+          params:
+            - name: returnReason
+              string: ca.test.data.flow301.secondItemReturnReason 
+
+    # Verify ODP after whole order is cancelled 
+      - executeFunction:
+          name: ca.test.functions.orderDetailsPage.verifyAfterWholeCancellation
+        
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: CAPREPURCH-1772-GM-Order-Cancellation
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

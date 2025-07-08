@@ -1,0 +1,205 @@
+general:
+  tags:  C2737180, unified-p0-wplus-teflon-e2e, wplus-optimize-flows
+  testCaseId: C2737180
+  inherit:
+    filesRunAll:
+      - errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: C2737180
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flow030.createAccountPayload
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      #Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+       #Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: ${customerEmail}
+            - name: android.password
+              string: $password
+            - name: ios.email
+              string: ${customerEmail}
+            - name: ios.password
+              string: $password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToHomeFromTabBar
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      #Navigate to Accounts Tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+      #navigate to Walmart Plus
+      - executeFunction:
+          name: unified.us.functions.account.navigateToWalmartPlusBenefits
+
+
+      #Start Trial Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.startFree30daysTrailMembership
+          params:
+            - name: tenure
+              string: monthly
+
+      #Navigate to Accounts Tab     
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar   
+
+      #Verify Enrollment
+      - executeFunction:
+          name: unified.us.functions.wplus.accountTab.yourTrialEndsMsg
+
+      #verify Benefits Banner
+      - executeFunction:
+          name: unified.us.functions.wplus.benefitScreen.benefitScreenDetails
+
+      #Navigate to Manage Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      # Verify the membership upgrade to monthly
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+              - name: tenure
+                string: monthly
+              - name: membershipType
+                string: trial
+
+      #Upgrade membership to annual
+      - executeFunction:
+          name: unified.us.functions.wplus.manageMembership.upgradeToAnnual
+
+      # Verify the membership upgrade to annual
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: trial
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.wplus.account.navigateToWalmartPlus
+          
+      - executeFunction:
+          name: unified.us.functions.wplus.account.convertTrailMemberToPaidMember
+          params:
+            - name: tenure
+              string: annual    
+
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage    
+
+      #Validate Trial membership on Managemembership screen
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: paid
+      
+      - executeFunction:
+          name: unified.us.functions.wplus.managemembership.cancelPaidMembership
+
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.afterPaidMembershipCancellation
+          params:
+            - name: tenure
+              string: annual
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: unified.us.functions.benefits.clickChurnedActiveReactivateWplus   
+
+      #Navigate to Manage membership
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage 
+ 
+        # Verify Monthly Plan Activation on Manage Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: paid   
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

@@ -1,0 +1,146 @@
+general:
+  tags: unified-prod-e2e, C2682761
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2682761
+  metadata:
+    - name: scenarioId
+      string: 425, EC100
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Account info
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.android01.consolidatedshipping
+            - name: android.password
+              string: us.data.prod.android.password
+            - name: ios.email
+              string: us.data.prod.ios.consolidatedshipping
+            - name: ios.password
+              string: us.data.prod.ios.password
+
+      # clear cart  
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar 
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: storeName
+              string: Bentonville Supercenter
+            - name: store
+              string: 72712  
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      # Add unscheduled shipping items to the cart
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.flow.prod.consolidatedShippingItem1  #367992038 #920582058 #367992038 #803187184 #305879066 #625248544
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+      
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: toothbrush #417088583 #335860517 # 36442127 #911276151  #1212999628 #911276151
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem       
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.flow.prod.consolidatedShippingItem3 #578155018 #2308181499  # 578155018 #417088583 #950058508 #578155018
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout         
+
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: reviewOrder
+              string: true
+            - name: listOfExpectedFulfilment
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.verifyConsolidatedShipping
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

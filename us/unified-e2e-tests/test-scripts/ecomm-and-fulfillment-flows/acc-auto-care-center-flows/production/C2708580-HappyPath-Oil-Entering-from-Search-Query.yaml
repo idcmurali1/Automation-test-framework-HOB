@@ -1,0 +1,115 @@
+general:
+  tags: C2708580, unified-prod-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2708580
+  metadata:
+    - name: scenarioId
+      string: EC137
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+     
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup 
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn 
+
+      # Sign in with default account
+           # Account info
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.oil.search.android.email
+            - name: android.password
+              string: us.data.prod.oil.search.android.password
+            - name: ios.email
+              string: us.data.prod.oil.search.android.email
+            - name: ios.password
+              string: us.data.prod.oil.search.android.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+              - name: store
+                string: 85305
+              - name: storeName
+                string: Glendale Supercenter
+
+     # Search for an oil change service for installation 
+      - executeFunction:
+          name: unified.us.functions.search.searchOilChangeInstallationService
+          params:
+            - name: searchTerm
+              string: "oil change" #447948350
+      
+      # click schedule appoinment
+      - executeFunction:
+          name: unified.us.functions.services.acc.schedulingService.clickOnScheduleAppoinment   
+
+      # select vechile information
+      - executeFunction:
+          name: unified.us.functions.services.acc.schedulingService.selectVehicle
+
+    # service selection screen not available by default oil change is selected due to searchTerm oil change
+
+      # select service
+      - executeFunction:
+          name: unified.us.functions.services.acc.schedulingService.selectService
+          params:
+            - name: servicesName
+              string: Oil change
+      
+      # schedule installation
+
+      - executeFunction:
+          name: unified.us.functions.services.acc.scheduleAutoService
+          params:
+            - name: slotIndex
+              string: 1
+      
+      # review confirmation screen
+
+      - executeFunction:
+          name: unified.us.functions.services.acc.schedulingService.reviewConfirmation
+      
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

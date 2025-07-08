@@ -1,0 +1,333 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: 008
+# User : Registered User 
+# Order Type: GM order with Multi Sku
+# Fulfillment: PFS PickUp
+# Payment Type : RR (As CC+ Points)
+# Experience: A2C HP Carousel
+# Validation: Shipping Charges and Handling Charges
+#
+# Remark: RR is not present
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: android
+  tags: flow-008, E2E-Android-English, E2E-Android-French, ca_authpoc, fr_ca
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true 
+    endTestOnFailure: true 
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - log: timeStamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.flow008.onboardingZipcode
+
+      # Navigating to account section
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToAccountFromTabBar
+        
+      # Validating Account Before login Page
+      - executeFunction:
+          name: ca.test.functions.accountPage.accountPageBeforeLogin
+
+      # Login us registered user
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.flow008.email
+            - name: password
+              string: ca.test.data.flow008.password
+            - name: signInBtnAccountPage
+              string: true
+
+      # Cart merge pop
+      - executeFunction:
+          name: ca.test.functions.utils.cartMergePop
+
+      # Validating Account After login Page
+      - executeFunction:
+          name: ca.test.functions.accountPage.accountPageAfterLogin
+  
+      # Navigating back to store
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToShopTab
+      
+      # Selecting store at home
+      - executeFunction:
+          name: ca.test.functions.home.GICPhase2.selectStore
+          params:
+            - name: Zip_Code
+              string: ca.test.data.flow008.onboardingZipcode
+            - name: storeName
+              string: ca.test.data.flow008.storeName
+
+      # Selecting address at home page
+      - executeFunction:
+          name: ca.test.functions.home.GICPhase2.changeLocationLink
+          params:
+            - name: pinCode
+              string: ca.test.data.flow008.onboardingZipcode
+
+      # Remove Item from cart
+      - executeFunction:
+          name: ca.test.functions.productSearch.checkItemsInCartAndRemovingThem
+
+      # Scrolling to manual carousel
+      - executeFunction:
+          name: ca.test.functions.home.scrollToCarousel
+          params:
+            - name: carouselName
+              string: ca.test.data.carouselName.manualCarousel
+            - name: scrollContainer 
+              string: ca.test.mappings.home.manualCarousel  
+
+      # Adding 1st product based on product name to cart
+      - executeFunction:
+          name: ca.test.functions.home.addToCartFromCarousel
+          params:
+            - name: productName
+              string: ca.test.data.flow008.product_1_Name
+            - name: quantity
+              string: ca.test.data.flow008.product_1_Qty
+            - name: scrollContainer 
+              string: ca.test.mappings.home.manualCarousel 
+
+
+      - executeFunction:
+          name: ca.test.functions.home.scrollToCarousel
+          params:
+            - name: carouselName
+              string: ca.test.data.carouselName.couponsCarousel
+            - name: scrollContainer
+              string: ca.test.mappings.home.couponsCarousel       
+
+      # Adding 2nd product based on product name to cart
+      - executeFunction:
+          name: ca.test.functions.home.addToCartFromCarousel
+          params:
+            - name: productName
+              string: ca.test.data.flow008.product_2_Name
+            - name: quantity
+              string: ca.test.data.flow008.product_2_Qty
+            - name: scrollContainer
+              string: ca.test.mappings.home.couponsCarousel  
+
+      # Adding 3rd product based on product name to cart
+      - executeFunction:
+          name: ca.test.functions.home.addToCartFromCarousel
+          params:
+            - name: productName
+              string: ca.test.data.flow008.product_3_Name
+            - name: quantity
+              string: ca.test.data.flow008.product_2_Qty
+            - name: scrollContainer
+              string: ca.test.mappings.home.couponsCarousel    
+    
+      # Validate cart quantity
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantity
+           params:
+            - name: cartQuantity
+              string: ca.test.data.flow008.cartQuantity
+      
+      # Asserting cart total
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ca.test.data.flow008.assertCartTotal
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCart
+      
+      # Selecting ship instead
+      - executeFunction:
+          name: ca.test.functions.cart.selectPickupOptions
+
+      # # Selecting store
+      # - executeFunction:
+      #     name: ca.test.functions.cart.validatingStoreForPickUp
+      #     params:
+      #       - name: storeAddress
+      #         string: ca.test.data.flow008.cartStoreAddress
+      #       - name: storeZipCode
+      #         string: ca.test.data.flow008.pickupZipCode
+      #       - name: storeName
+      #         string: ca.test.data.flow008.storeName
+
+       # Cart fulfillment verification
+      - executeFunction:
+          name: ca.test.functions.cart.deliveryPFS.verifyCard
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow008.product_1_Name
+            - name: quantity
+              string: ca.test.data.flow008.product_1_Qty
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow008.product_2_Name
+            - name: quantity
+              string: ca.test.data.flow008.product_2_Qty
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow008.product_3_Name
+            - name: quantity
+              string: ca.test.data.flow008.product_2_Qty
+
+      # Asserting cart subTotal
+      - executeFunction:
+          name: ca.test.functions.cart.subTotalAssertion
+          params:
+            - name: subTotal
+              string: ca.test.data.flow008.assertCartTotal
+
+      # Asserting Walmart shipping fee
+      - executeFunction:
+          name: ca.test.functions.cart.otherFee
+          params:
+            - name: fee
+              string: ca.test.data.flow008.walmartPickupText
+            - name: additionalFee
+              string: ca.test.data.flow008.walmartPickupFee
+      
+      # Asserting cart taxes
+      - executeFunction:
+          name: ca.test.functions.cart.totalTaxAssertion
+          params:
+            - name: total_tax
+              string: ca.test.data.flow008.totalTaxAmount
+
+      # Asserting hst tax
+      - executeFunction:
+          name: ca.test.functions.cart.hstTaxAssertion
+          params:
+            - name: hst_percentage
+              string: ca.test.data.flow008.hstTaxPercentageAssertion
+            - name: hst_tax_value
+              string: ca.test.data.flow008.hstTaxAmountAssertion
+
+      # Asserting cart estimate sub total
+      - executeFunction:
+          name: ca.test.functions.cart.estimatedTotal
+          params:
+            - name: estimate_total
+              string: ca.test.data.flow008.estimatedTotal
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOut
+
+      # Adding CVV
+      - executeFunction:
+          name: ca.test.functions.checkOut.payment.addCVV
+          params:
+            - name: cvv
+              string: ca.test.data.flow008.cvvNumber
+
+      # Enter mobile number
+      - executeFunction:
+          name: ca.test.functions.checkOut.mobileContact.enterMobileNumber
+          params:
+            - name: phoneNumber
+              string: ca.test.data.flow008.mobileNumber
+
+      # Checkout page sub total assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.subTotalValidation
+          params: 
+            - name: subTotal
+              string: ca.test.data.flow008.assertCartTotal
+
+      # CheckOut page grocery pickup and walmart shipping fee
+      - executeFunction:
+          name: ca.test.functions.checkOut.shippingCharges
+          params:
+            - name: shippingFee
+              string: ca.test.data.flow008.walmartPickupFee
+      
+      # HST Tax Assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.taxesAssertion
+          params: 
+            - name: tax_Name
+              string: ca.test.data.flow008.checkOut.hstTax
+            - name: tax_value
+              string: ca.test.data.flow008.hstTaxAmountAssertion
+
+      # Checkout page tax assertion
+      - executeFunction:
+          name: ca.test.functions.checkOut.totalTaxesAssertion
+          params:
+            - name: total_tax
+              string: ca.test.data.flow008.totalTaxAmount
+
+      # Checkout page estimate total assertion
+      - executeFunction:  
+          name: ca.test.functions.checkOut.estimateTotalAssertion
+          params:
+            - name: estimate_total
+              string: ca.test.data.flow008.estimatedTotal
+
+      # Placing order
+      - executeFunction:
+          name: ca.test.functions.checkout.placeOrderButton
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-008
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

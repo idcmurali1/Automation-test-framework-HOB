@@ -1,0 +1,1218 @@
+functions:
+
+  # Purchase history to view details
+  - name: ca.test.functions.purchaseHistory.viewDetailsButton
+    platform: android
+    flow:
+      - loop:
+          begin: 1
+          end: 4
+          mode: increment
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.purchaseHistory.title
+            - if:
+                identifier:
+                  present:
+                    - identifier: ca.test.mappings.purchaseHistory.orderStatusTracker
+                then:       
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+                  - click:
+                      identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: ca.test.mappings.purchaseHistory.title
+                  - break: true
+                else:
+                  - goBack: true
+                  - executeFunction:
+                      name: ca.test.functions.utils.personalizedExperiencePopUp
+                  - executeFunction:
+                      name: ca.test.functions.accountPage.purchaseHistoryButton
+  
+
+  # Cancelling the order
+  - name: ca.test.functions.purchaseHistory.orderCancellation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsTitle
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.title
+      - click:
+          identifier: ca.test.mappings.radioButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancellationButton
+  
+  - name: ca.test.functions.purchaseHistoryPageValidation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsTitle
+            #- identifier: ca.test.mappings.purchaseHistorySearchBar
+            - identifier: ca.test.mappings.purchaseHistory.orderStatusTracker
+            - identifier: ca.test.mappings.purchaseHistoryPage.productOrderDate
+  
+  - name: ca.test.functions.purchaseHistory.viewDetails.orderIdAssertion
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.orderId
+      - getString:
+          identifier: ca.test.mappings.purchaseHistory.viewDetails.orderId
+          extractNumbers: true
+          storeIn: viewDetailsOrderId
+      - if:
+          condition: ${viewDetailsOrderId} == ${orderNo}
+          then: 
+            - log: 
+                message: Order id assertion successful
+                color: GREEN_BOLD
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.addressAssertion
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.purchaseHistory.customerNameAssertion
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: ca.test.mappings.purchaseHistory.addressAssertion
+                    equals: ${address}
+                  - identifier: ca.test.mappings.purchaseHistory.customerNameAssertion
+                    equals: ${customerName}
+          else:
+            - verifyIdentifier:
+                text:
+                  - identifier: ca.test.mappings.purchaseHistory.pickupAddressAssertion
+                    equals: ${address}
+      - log: 
+          message: Address assertion successful
+          color: GREEN_BOLD
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.costAssertion
+    platform: android
+    flow:
+      - loop:
+          begin: 1
+          end: 3
+          mode: increment
+          flow:
+            - try:
+                flow:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: ca.test.mappings.purchaseHistory.viewDetails.total
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: ca.test.mappings.purchaseHistory.viewDetails.total
+                            position: center
+                        - verifyIdentifier:
+                            present:
+                              - identifier: ca.test.mappings.cart.subTotalText
+                        - break: true
+                catch:
+                  flow:
+                    - goBack: true
+                    - sleep:
+                        duration: 7000
+
+      - verifyIdentifier:
+          text:
+            - identifier: ca.test.mappings.purchaseHistory.purchaseValue
+              contains: ${estimate_total}
+      - verifyIdentifier:
+          text:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.subtotal
+              contains: ${subTotalAstro}
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.cart.subTotal.taxesText
+      - verifyIdentifier:
+          text:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.taxes
+              contains: ${totalTax}
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.total
+      - verifyIdentifier:
+          text:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.totalValue
+              contains: ${estimate_total}
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.editOrderButton
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.editButton
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: ca.test.mappings.purchaseHistory.editButton
+                position: center
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.needToMakeChangeText
+            - identifier: ca.test.mappings.purchaseHistory.editButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.editButton
+      - verifyIdentifier:
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.needToMakeChangeText
+  
+  - name: ca.test.functions.purchaseHistory.viewDetails.editPageValidation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: ca.test.mappings.global.pageHeading
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendOrderTime
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPagesubstitutionToggleSwitch
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageProductCard
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageSubTotal
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageUpdateOrderButton
+            - identifier: ca.test.mappings.global.productQtyMinus
+            - identifier: ca.test.mappings.global.productQtyPlus
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageProductLinePrice
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.amendQuantity
+    platform: android
+    flow:
+      - if:
+          condition: ${amendQuantity} == 'Increase'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.amendOrder.qtyincrease
+            - loop:
+                begin: 0
+                end: ${Quantity}
+                mode: increment
+                flow:
+                  - click:
+                      identifier: ca.test.mappings.amendOrder.qtyincrease
+      - if:
+          condition: ${amendQuantity} == 'Decrease'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.amendOrder.qtydecrease
+            - loop:
+                begin: 0
+                end: ${Quantity}
+                mode: increment
+                flow:
+                  - click:
+                      identifier: ca.test.mappings.amendOrder.qtydecrease
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageUpdateOrderButton
+
+
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.amendPageQtyDecrease
+    platform: android
+    flow:
+      - getString:
+          identifier: ca.test.mappings.global.extractItemQty
+          attribute: text
+          storeIn: numb
+      - loop:
+          begin: 0
+          end: ${numb}
+          mode: increment
+          flow:
+            - getString:
+                identifier: ca.test.mppings.purchaseHistory.viewDetails.amendPageProductPriceBox
+                attribute: text
+                extractNumbers: true
+                storeIn: cost
+            - log: ${cost}
+            - if:
+                condition: ${cost} < 3500
+                then: 
+                  - break: true
+                else:
+                  - click:
+                      identifier: ca.test.mappings.global.productQtyMinus
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageUpdateOrderButton
+  
+  - name: ca.test.functions.purchaseHistory.viewDetails.addItemsButton
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendOrderTime
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetails.amendOrderTime
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetails.amendOrderAddItems
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendOrderAddItems
+
+  - name: ca.test.functions.purchaseHistory.viewDetailsValidatingProductAmend
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.orderId
+      - if:
+          identifier: 
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetailsProductName
+          then:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsProductName
+      - verifyIdentifier:
+          text:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsAmendQty
+              contains: "${Qty} items"
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsProductName
+              contains: ${productName}
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.removeItems
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendOrderTime
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsRemoveItems
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsRemoveItems
+      - verifyIdentifier:
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsProductName
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageUpdateOrderButton
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.assertingProductRemoved
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.orderId
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsProductName
+      - verifyIdentifier:
+          text:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsProductName
+              contains: ${productName}
+            
+  # View Details Page Product Tile Validation
+  - name: ca.test.functions.purchaseHistory.validatingProductTile
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetails.productQuantity
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetails.productQuantity
+                position: center
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.productName
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.productQuantity
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.amendPageProductLinePrice
+
+  - name: ca.test.functions.purchaseHistory.orderCancellationPageValidation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.statusMessage
+            #- identifier: ca.test.mappings.purchaseHistory.category
+  
+  - name: ca.test.functions.purchaseHistory.cancelItems
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.cancelItems
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.cancelItems
+                position: center
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancelItems
+      - verifyIdentifier:
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.cancelItems
+  
+  - name: ca.test.functions.purchaseHistory.removeItems
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.editPage.productName
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.editPage.removeItems
+      - click:
+          identifier: ca.test.mappings.radioButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancellationButton
+      - verifyIdentifier:
+          timeout: 10000
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.editPage.productName
+      
+  - name: ca.test.functions.purchaseHistory.removeGoItems
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.editPage.productName
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.editPage.removeGoItems
+      - verifyIdentifier:
+          timeout: 10000
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.editPage.productName
+      - click:
+          identifier: ca.test.mapping.purchaseHistory.editPage.updateOrder
+      - sleep:
+          duration: 10000
+  
+  - name: ca.test.functions.purchaseHistory.viewDetails.assertingGOProductRemoved
+    platform: android
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: ca.test.mappings.purchaseHistory.assertingProduct
+
+  - name: ca.test.functions.purchaseHistory.viewDetails.statusTrackerValidation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.statusTracker
+            - identifier: ca.test.mapings.purchaseHistory.statusTitle
+            - identifier: ca.test.mappings.purchaseHistory.etaInfo
+            - identifier: ca.test.mappings.purchaseHistory.trackerBar
+            - identifier: ca.test.mappings.purchaseHistory.orderStatus
+
+  # Purchase History Page Validation
+  - name: ca.test.functions.purchaseHistoryPageValidationIos
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: ca.test.mappings.purchaseHistoryPage.productOrderDate  
+#            - identifier: ca.test.mappings.purchaseHistorySearchBar
+            - identifier: ca.test.mappings.purchaseHistory.orderStatusTracker
+#            - identifier: ca.test.mappings.purchaseHistoryPage.editItems
+
+  # Purchase history to view details
+  - name: ca.test.functions.purchaseHistory.viewDetailsButtonIos
+    platform: ios
+    flow:
+      - loop:
+          begin: 1
+          end: 4
+          mode: increment
+          flow:
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: ca.test.mappings.purchaseHistory.title
+            - if:
+                identifier:
+                  present:
+                    - identifier: ca.test.mappings.purchaseHistory.orderStatusTracker
+                then:      
+                  # - if:
+                  #     identifier:
+                  #       notPresent:
+                  #         - identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+                  #     then:
+                  #       - scroll:
+                  #           direction: down
+                  #           untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+                  - sleep:
+                      duration: 5000
+
+                  - click:
+                      identifier: ca.test.mappings.purchaseHistory.viewDetailsButton                 
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: ca.test.mappings.purchaseHistory.title
+                  - break: true          
+
+  # Order Id Assertion
+  - name: ca.test.functions.purchaseHistory.viewDetails.orderIdAssertion
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.orderId
+      - getString:
+          identifier: ca.test.mappings.purchaseHistory.viewDetails.orderId
+          extractNumbers: true
+          storeIn: viewDetailsOrderId
+      - if:
+          condition: ${viewDetailsOrderId} == ${orderNo}
+          then:
+            - log: Order id assertion successful
+  
+  #edit order
+  - name: ca.test.functions.purchaseHistory.editItems
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.functions.purchaseHistory.editItemsbutton
+          then:
+            - click:
+                identifier: ca.test.functions.purchaseHistory.editItemsbutton
+      - sleep:
+          duration: 10000
+
+ # Cancelling the order
+  - name: ca.test.functions.purchaseHistory.orderCancellation
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsTitle
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.title
+      - click:
+          identifier: ca.test.mappings.radioButton
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancellationButton
+      - sleep:
+          duration: 2000
+
+  - name: ca.test.functions.purchaseHistory.orderCancellationPageValidation
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.orderStatus
+            - identifier: ca.test.mappings.purchaseHistory.statusMessage
+            - identifier: ca.test.mappings.purchaseHistory.addressTitle
+            - identifier: ca.test.mappings.purchaseHistory.address                   
+
+ # Address Assertion
+  - name: ca.test.functions.purchaseHistory.viewDetails.addressAssertion
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          label:
+            - identifier: ca.test.mappings.purchaseHistory.addressAssertion
+              contains: ${addressLine}
+      - log: Address assertion successful
+
+  # Cost Assertion
+  - name: ca.test.functions.purchaseHistory.viewDetails.costAssertion
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetails.total
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetails.total
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.cart.subTotalText
+      - verifyIdentifier:
+          label:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.subtotal
+              contains: ${subTotalAstro}
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.cart.subTotal.tax
+      - verifyIdentifier:
+          label:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.taxes
+              contains: ${totalTax}
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetails.total
+      - verifyIdentifier:
+          label:
+            - identifier: ca.test.mappings.purchaseHistory,viewDetails.totalValue
+              contains: ${estimate_total}
+
+
+  # Wair for order to load
+  - name: ca.test.functions.purchaseHistory.waitForOrderToUpdate
+    platform: ios
+    flow:
+      - sleep:
+          duration: 120000
+      - log:
+          message: Wait complete for order to load
+          color: GREEN_BOLD
+
+  # Cost Assertion
+  - name: ca.test.functions.purchaseHistory.orderViewDetails
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.tab
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.tab
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.orderSelection
+      - sleep:
+          duration: 10000
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.orderNumber
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.orderStatusOnTheWay
+      - log:
+          message: Item is shipped
+          color: GREEN_BOLD
+
+  - name: ca.test.functions.purchaseHistory.goingBackToAccounts
+    platform: ios
+    flow:
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.backToPurchaseHistory
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.backToAccount
+
+   #Cancel Single Item
+  - name: ca.test.functions.purchaseHistory.orderCancellationSingleItem
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.cancelItems
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.cancelItems
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.amendOrder.editButton
+      - click:
+          identifier: ca.test.mappings.amendOrder.editButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancelItems
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.editItems
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancelItemOne
+      - click:
+          identifier: ca.test.mappings.radioButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.removeItem
+  
+  - name: ca.test.functions.purchaseHistory.searchOrderId
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.title
+      - enterText:
+          identifier: ca.test.mappings.purchaseHistorySearchBar
+          string: ${orderId}
+ 
+  #Removeing Single Item for GR
+  - name: ca.test.functions.purchaseHistory.orderRemoveSingleItem
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.amendOrder.editButton
+      - click:
+          identifier: ca.test.mappings.amendOrder.editButton
+      - click:
+          identifier: ca.test.mappings.amendOrder.removeItem
+      - click:
+          identifier: ca.test.mappings.amendOrder.saveButton
+  - name: ca.test.functions.purchaseHistory.orderCancellationForGOandMXOrder
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.title
+      - if:
+          condition: ${orderId_1} != 'null'
+          then:
+            - enterText:
+                identifier: ca.test.mappings.purchaseHistorySearchBar
+                string: ${orderId_1}
+                pressEnter: true
+            - hideKeyboard: true
+            - click:
+                identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+            - verifyIdentifier:
+                timeout: 10000
+                present:
+                  - identifier: ca.test.mappings.orderDetails.orderNumber
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+            - click:
+                identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.title
+            - click:
+                identifier: ca.test.mappings.radioButton
+            - click:
+                identifier: ca.test.mappings.purchaseHistory.cancellationButton
+      - if:
+          condition: ${orderId_2} != 'null'
+          then:
+            - sleep:
+                duration: 10000
+            - goBack: true
+            - sleep:
+                duration: 5000
+            - enterText:
+                identifier: ca.test.mappings.purchaseHistorySearchBar
+                string: ${orderId_2}
+                pressEnter: true
+            - hideKeyboard: true
+            - sleep:
+                duration: 5000
+            - scroll:
+                direction: down
+                scrollLimit: 2
+            - click:
+                identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+            - verifyIdentifier:
+                timeout: 10000
+                present:
+                  - identifier: ca.test.mappings.orderDetails.orderNumber
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+            - click:
+                identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.title
+            - click:
+                identifier: ca.test.mappings.radioButton
+            - click:
+                identifier: ca.test.mappings.purchaseHistory.cancellationButton
+  #DiliveryOrder
+  - name: ca.test.functions.purchaseHistory.PHDeliveryOrderscroll
+    platform: android
+    flow:
+        - log:
+            message: "Product name validation ${productName} started"
+            color: GREEN_BOLD
+        - loop:
+            begin: 1
+            end: 3
+            mode: increment
+            flow:
+              - try:
+                  flow:
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+                        then:
+                          - scroll:
+                              direction: down
+                              untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+                    - verifyIdentifier:
+                        present:
+                          - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+
+                    - break: true
+                  catch:
+                    flow:
+                      - scroll:
+                          direction: up
+                          untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+  #DiliveryOrder
+  - name: ca.test.functions.purchaseHistory.scrollToDeliveryOrder
+    platform: ios
+    flow:
+      - log:
+          message: "Product name validation ${productName} started"
+          color: GREEN_BOLD
+      - loop:
+          begin: 1
+          end: 3
+          mode: increment
+          flow:
+            - try:
+                flow:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+                  - verifyIdentifier:
+                      present:
+                        - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+
+                  - break: true
+                catch:
+                  flow:
+                    - scroll:
+                        direction: up
+                        untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+
+  - name: ca.test.functions.purchaseHistory.viewDetailsButtonDeliveryOrderscroll
+    platform: android
+    flow:
+      - click:
+            identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+      - log:
+          message: "Product name validation ${productName} started"
+          color: GREEN_BOLD
+      - loop:
+          begin: 1
+          end: 3
+          mode: increment
+          flow:
+            - try:
+                flow:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+                      then:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+                  - verifyIdentifier:
+                      present:
+                        - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+
+                  - break: true
+                catch:
+                  flow:
+                    - scroll:
+                        direction: up
+                        untilIdentifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+
+  - name: ca.test.functions.purchaseHistory.viewDetailsButtonDeliveryOrderscrollIos
+    platform: ios
+    flow:
+#        - click:
+#            identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+        - log:
+            message: "Product name validation ${productName} started"
+            color: GREEN_BOLD
+        - loop:
+            begin: 1
+            end: 3
+            mode: increment
+            flow:
+              - try:
+                  flow:
+                    - if:
+                        identifier:
+                          notPresent:
+                            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForDeliveryOrder
+                        then:
+                          - scroll:
+                              direction: down
+                              untilIdentifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+                    - verifyIdentifier:
+                        present:
+                          - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+
+                    - break: true
+                  catch:
+                    flow:
+                      - scroll:
+                          direction: up
+                          untilIdentifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+
+
+      #PickedUPOrder
+  - name: ca.test.mappings.purchaseHistory.viewDetails.pickupOrder
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForPickupOrder
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+#      - log:
+#          message: View order Details clicked successful
+#          color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+#            - log:
+#                message: verified Request A Refund in OD Page
+#                color: GREEN_BOLD
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+#            - log:
+#                message: View Track button in Order details screen
+#                color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForPickupOrder
+#            - log:
+#                message: Status of the order is DeliveryOrder
+#                color: GREEN_BOLD
+#
+  #PickedUPOrder
+  - name: ca.test.mappings.purchaseHistory.viewDetails.pickupOrder
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForPickupOrder
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+      #      - log:
+      #          message: View order Details clicked successful
+      #          color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForPickupOrder
+  
+  #PlacedOrder
+  - name: ca.test.mappings.purchaseHistory.viewDetails.placedOrder
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+          doubleClick: true
+      # - button: ca.test.mappings.purchaseHistory.viewDetailsButtons
+      
+  - name: ca.test.mappings.purchaseHistory.viewDetailsButtonForReadyToPickupOrder
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForReadyToPickupOrder
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForReadyToPickupOrder
+
+  - name: ca.test.mappings.purchaseHistory.viewDetailsButtonForReadyToPickupOrderIos
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForReadyToPickupOrder
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonReturnlink
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsButton
+      #      - log:
+      #          message: View order Details clicked successful
+      #          color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.orderDetailsPageForRequestARefund
+      #            - log:
+      #                message: verified Request A Refund in OD Page
+      #                color: GREEN_BOLD
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForTrackerButton
+      #            - log:
+      #                message: View Track button in Order details screen
+      #                color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.purchaseHistory.viewDetailsButtonForReadyToPickupOrder
+  #            - log:
+  #                message: Status of the order is DeliveryOrder
+  #                color: GREEN_BOLD
+
+  # Cancelling the order
+  - name: ca.test.functions.purchaseHistory.orderCancellationHome
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - goBack: true
+      - sleep:
+          duration: 1000
+      - click:
+          identifier: ca.test.mappings.tabBar.shop    
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.amendorder.addnew.viewDetails
+          then:
+            - scroll:
+                direction: up 
+                scrollLimit: 2
+      - click:
+          identifier: ca.test.mappings.amendorder.addnew.viewDetails
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.viewDetailsCancelOrder
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.title
+      - click:
+          identifier: ca.test.mappings.radioButton
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.cancellationButton    
+      
+ # Open Contextual Help Modal
+  - name: ca.test.functions.purchaseHistory.viewContextualHelpModal
+    platform: android
+    flow:
+      - click:
+          identifier: ca.test.mappings.purchaseHistory.contextaulHelp.helpButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.title
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.closeButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.title
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.yesButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.noButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.needAdditionHelp.Title
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.needAdditionHelp.helpCenterButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.needAdditionHelp.contactUsButton
+      
+  - name: ca.test.functions.contextaulHelp.missingItem.feedback.notHelpfulAction
+    platform: android
+    flow:
+      - click:
+          identifier: ca.test.mappings.contextualHelp.modal.feedback.noButton
+      - log:
+          message: "Clicking on feedback yes button"
+          color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.header
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option.title
+      - verifyIdentifier:
+          enabled:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.submitButton
+              value: false
+      - log: Submit button should not enable if no opion selected
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option1
+          then:
+            - click:
+                identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option1        
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option2
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option3
+          then:
+            - click:
+                identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option3
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.option4
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.skipButton
+      - if:
+          identifier:
+            present:
+              - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.submitButton
+          then:
+            - click:
+                identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.submitButton
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.header 
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.header.image
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.negative.sumbit.successMessage
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.contactUs.title.text
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.contactUs.Button
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.contactUs.Button.rightArrow
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.helpCenter.title.text
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.helpCenter.Button
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.helpCenter.Button.rightArrow
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.moreHelp.contactUs.Button
+
+  - name: ca.test.functions.contextaulHelp.missingItem.feedback.helpfulAction
+    platform: android
+    flow:          
+      - click:
+          identifier: ca.test.mappings.contextualHelp.modal.feedback.yesButton
+      - log:
+          message: "Clicking on feedback yes button"
+          color: GREEN_BOLD
+      - verifyIdentifier:
+          present:
+            - identifier: ca.test.mappings.contextualHelp.modal.feedback.positive.submit.success.message
+  
+  - name: ca.test.functions.contextaulHelp.modal.closeAction
+    platform: android
+    flow:
+      - click:
+          identifier: ca.test.mappings.contextualHelp.modal.closeButton
+      - log:
+          message: "Clicking on modal close button"
+          color: GREEN_BOLD
+          

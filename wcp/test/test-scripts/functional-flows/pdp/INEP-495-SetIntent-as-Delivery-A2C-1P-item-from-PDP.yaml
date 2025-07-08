@@ -1,0 +1,176 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-495
+#       Flow - Set Intent as Delivery A2C 1P item from PDP
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-196601
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-495
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-455
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-495
+  tags: INEP-495, OPIF-196601, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "Set Intent as Delivery A2C 1P item from PDP"
+    flow:
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - if: 
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction: 
+                name: functions.login.storeEmail
+                params:
+                  - name: userAndroidEmail
+                    string: data.mh.inep-295.userEmail-android # Need to update
+                  - name: useriOSEmail
+                    string: data.mh.inep-295.userEmail-ios # Need to update
+          else:
+            - executeFunction:
+                name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+      # Click on login and select sign in.
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user.
+      - log:
+          message: "Login with existing user using password as authentication method and ensure user is logged in.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password2
+
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+
+      - if: 
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction: 
+                name: functions.cartPage.clearCart
+
+      # Select delivery intent from gic..
+      - log:
+          message: "Select delivery intent from gic"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.gic.selectDeliveryIntent
+          params:
+            - name: page
+              string: home
+
+      # Navigate to PDP for 1P item
+      - log:
+          message: "Navigate to PDP for 1P item"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: data.global.items.1P.pickup
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapAddToCart
+          params:
+            - name: quantity
+              string: data.itemCount.qty1
+
+      - executeFunction:
+           name: functions.productDetailsPage.tapClose  
+
+      # Validate item is added to cart.
+      - log:
+          message: "Validate add to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.itemCount.qty1   
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

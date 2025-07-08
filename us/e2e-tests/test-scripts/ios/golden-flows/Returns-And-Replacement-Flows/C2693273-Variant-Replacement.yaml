@@ -1,0 +1,136 @@
+general:
+  platform: ios
+  tags: us-golden-flows, us-golden-flows-ecom-p2, C2693273, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  testCaseId: C2693273
+  metadata:
+    - name: scenarioId
+      string: 470
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.variantReplacement.email
+            - name: password
+              string: us.data.variantReplacement.password
+      
+      - sleep:
+          duration : 3000              
+
+#***************************************************************************************************************
+
+  # Astro - Create order and move to Customer Picked / Delivered status
+
+#***************************************************************************************************************
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList 
+          params:
+            - name: email
+              string: us.data.variantReplacement.email   
+            - name: itemType
+              string: FC_DELIVERY
+            - name: itemList
+              string: us.data.variantReplacement.itemLists
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.variantReplacement.createOrderPayload
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Shipped
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Delivered             
+      - sleep:
+          duration : 30000       
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.returns.goToStartReturn
+      
+      - executeFunction:
+          name: us.functions.returns.verifyStartReturnScreen
+
+      - executeFunction:
+          name: us.functions.returns.variantReplacement    
+          params:
+            - name: itemIndex
+              string: 1 
+            - name: returnReason
+              string: Item arrived damaged
+            - name: returnMethod
+              string: Return by mail
+            - name: returnType
+              string: Replacement
+            - name: itemType
+              string: fc
+            - name: replacementType
+              string: variant
+            
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps      

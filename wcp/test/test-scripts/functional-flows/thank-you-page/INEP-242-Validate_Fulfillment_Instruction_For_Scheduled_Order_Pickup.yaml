@@ -1,0 +1,232 @@
+#######################################################################################################################
+#
+#   TEST CASE DETAILS: 
+#
+#      [ TC - INEP-242 ]
+#      FLOW: Validate detailed summary of the order.
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF ID:
+#      https://jira.walmart.com/browse/OPIF-179425
+#
+#   JIRA STORY ID:
+#      Https://jira.walmart.com/browse/INEP-12
+#
+#   JIRA SUB-TASK ID:
+#      WIP
+#
+#   JIRA TEST PLAN ID:
+#      https://jira.walmart.com/browse/INEP-239
+#
+#   JIRA TEST ID:
+#      https://jira.walmart.com/browse/INEP-242
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-242
+  tags: p1-mh-opif-teflon, OPIF-179425, p1-mh-opif-teflon-d-feb, INEP-242, INEP-239, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   B E F O R E   S C E N A R I O                                                                                     #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: 'INEP-242: BEFORE SCENARIO START'
+      
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: tcVars_userEmail
+                value: data.mh.inep242.user.email-android
+            - storeIn:
+                key: tcVars_deliveryAddress
+                value: data.defaultAddress.fullString.forThankYouPage.android
+          else:
+            - storeIn:
+                key: tcVars_userEmail
+                value: data.mh.inep242.user.email-ios
+            - storeIn:
+                key: tcVars_deliveryAddress
+                value: data.defaultAddress.fullString.forThankYouPage.ios
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo  
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+
+      - log: 'INEP-242: BEFORE SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   M A I N   S C E N A R I O                                                                                         #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: 'INEP-242: Validate detailed summary of the order'
+    flow:
+
+      - log: 'INEP-242: MAIN SCENARIO START'
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 1: COMPLETE ONBOARDING'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.collapseGicIfExpanded
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 2: LOGIN WITH AN EXISTING USER ACCOUNT...'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${tcVars_userEmail}
+            - name: userPassword
+              string: data.global.password.Password2
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 3: NAVIGATE TO HOME AND CLEAR CART IF REQUIRED...'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 4: ADD SCHEDULED ITEMS'
+          color: PURPLE_BOLD_BRIGHT
+      
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.scheduled
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 5: VALIDATE ITEMS IN CART AND SELECT PICK-UP SLOT'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      # Select in reserve time    
+      - executeFunction:
+           name: functions.cartPage.tapReserveATimeBtn
+      
+      # book slot for scheduled delivery order
+      - executeFunction:
+           name: functions.reserveATime.bookSlot
+           params:
+             - name: fufillment
+               string: data.global.deliveryText.delivery
+             - name: slotType
+               string: Standard  
+             - name: slotDay
+               string: tomorrow
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 6: CONTINUE TO CHECKOUT AND PLACE ORDER'
+          color: PURPLE_BOLD_BRIGHT
+      # Continue to checkout page
+      - executeFunction:
+           name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded
+      # Get fullfillment date
+      - executeFunction:
+          name: functions.checkoutPage.getFulfillmentDate # Return -> ${returnedFulfillmentDate}
+      # Scroll until payment method and add CVV for card
+      - executeFunction:
+            name: functions.checkoutPage.scrollToCVVTextfield
+      - executeFunction:
+          name: functions.checkoutPage.addCVV
+          params:
+            - name: CVV
+              string: data.global.card.cvv.123
+      # Place order
+      - executeFunction:
+          name: functions.checkoutPage.tapPlaceOrderButton
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 7: THANK YOU PAGE VALIDATIONS'
+          color: PURPLE_BOLD_BRIGHT
+            
+      - executeFunction:
+            name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+      - executeFunction:
+          name: functions.thankYouPage.assertCorrectDeliveryType
+          params:
+            - name: expectedDeliveryType
+              string: 'Pickup' 
+      
+      - executeFunction:
+          name: functions.thankYouPage.assertFulfillmentName
+          params:
+            - name: expectedFulfillmentName
+              string: data.mh.inep242.fullfillmentName # this may change in the future once we create a get deliverySlot function in Checkout- Review Order
+
+      - executeFunction:
+          name: functions.thankYouPage.assertFulfillmentDate
+          params:
+            - name: expectedFulfillmentDate
+              string: ${returnedFulfillmentDate}
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-242: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-242: AFTER SCENARIO START'
+
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+
+      - log: 'INEP-242: AFTER SCENARIO END'

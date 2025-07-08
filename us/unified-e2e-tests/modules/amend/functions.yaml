@@ -1,0 +1,538 @@
+functions:
+
+  - name: unified.us.functions.amend.addToExistingOrderFlow
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:        
+                present:
+                  - identifier: us.mappings.amend.timeLeftForAmendBanner
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.amend.addItemsToExistingOrderButton
+                then:
+                    - log: "Add to exsiting button is visible" 
+                else:
+                  - scroll:
+                      direction: down
+                      position: center
+                      scrollLimit: 2
+                      untilIdentifier: us.mappings.amend.addItemsToExistingOrderButton
+            - click:
+                identifier: us.mappings.amend.addItemsToExistingOrderButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.orderConfirmation.amendsBanner  
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderConfirmation.amendsBanner
+                  - identifier: us.mappings.cart.startNewOrderButton
+            - sleep:
+                duration: 6000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.addToExistingOrderButton
+                then:
+                  - click:
+                      identifier: us.mappings.cart.addToExistingOrderButton
+                else:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.cart.addToExistingOrderButton
+                  - click:
+                      identifier: us.mappings.cart.addToExistingOrderButton
+                      wait: 60000
+            - sleep:
+                duration: 3000                      
+
+ # Functions to handle CVV during Amend flow
+  - name: unified.us.functions.amend.creditCard.InCart
+    flow:
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.amend.cc.ccv
+          then:
+            - click:
+                identifier: us.mappings.amend.cc.ccv 
+            - enterText:
+                identifier: us.mappings.amend.cc.ccv
+                string: ${cvv}
+            - if:
+                condition: ${platform} == 'iOS'
+                then: 
+                  - click:
+                      identifier: Done
+                  - click:
+                       identifier: us.mappings.wallet.confirmCVV
+                       wait: 4000
+            - if:
+                condition: ${platform} == 'Android'
+                then:       
+                  - goBack: true  
+            - sleep:
+                duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.amend.cc.confirmbutton
+                then:
+                  - click:
+                      identifier: us.mappings.amend.cc.confirmbutton                                                                                                                         
+            - sleep:
+                duration: 2000  
+            - log: Your payment method was updated sucessfully
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popup.okButton
+            - click:
+                identifier: us.mappings.popup.okButton
+
+  - name: unified.us.functions.amend.verify.itemAddedToOrder
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - if:
+          condition: ${platform} == 'Android'
+          then:    
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.amend.itemAddedConfimationMessage
+                then:
+                  - scroll:
+                      direction: up
+                      untilIdentifier: us.mappings.amend.itemAddedConfimationMessage
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.itemAddedConfimationMessage
+                  - identifier: us.mappings.amend.viewDetailsLink
+            - sleep:
+                duration: 5000
+            - click:
+                identifier: us.mappings.amend.viewDetailsLink
+            - sleep:
+                duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.navBarTitle
+            - if:
+                identifier:
+                  text:
+                    - identifier: us.mappings.orderDetails.amendText
+                      contains: Your order has been updated successfully, and the changes will be reflected shortly.
+                then:
+                  - sleep:
+                      duration: 60000
+                  - scroll:
+                      direction: up
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - sleep:
+                duration: 10000
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.amend.itemAddedConfimationMessage
+                then:
+                  - sleep:
+                      duration: 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.itemAddedConfimationMessage
+                  - identifier: us.mappings.amend.viewDetailsLink
+            - click:
+                wait: 30000
+                identifier: us.mappings.amend.viewDetailsLink
+            # - if:
+            #     identifier:
+            #       notPresent:
+            #         - identifier: unified.us.mappings.orderDetails.navBarTitle
+            #     then: 
+            #       - click: 
+            #           identifier: us.mappings.amend.viewDetailsLink
+            #           coordinates: 75%,50%   
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.navBarTitle
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.amend.noOfitems
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.amend.noOfitems
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.noOfitems
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.noOfitems                
+
+  - name: unified.us.functions.amend.selectNewSlotandSave
+    flow:
+      - executeFunction:
+          name: unified.us.functions.slotDataSetUp    
+      - executeFunction:
+          name: unified.us.functions.selectDayForSlotDisplay  
+      - executeFunction:
+          name: unified.us.functions.selectTimeSlot
+          params:
+            - name: slotIndex
+              string: 2
+            - name: timeSlot
+              string: generic                           
+      - click:
+          identifier: us.mappings.editSlot.saveButton
+          wait: 6000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.pickup.itemUnabailableText
+          then:
+              - log: "Item is not available for new store due to Teflon data set up limitation, keep checking other functionalities"
+              - click:
+                  identifier: us.mappings.amend.pickup.removeButton
+              - storeIn:
+                  key: itemNotAvailable
+                  value: true
+          else:
+            - if:
+                identifier:
+                    present:
+                      - identifier: us.mappings.amend.pickup.confirmChanges
+                then:
+                    - click:
+                        identifier: us.mappings.amend.pickup.confirmChanges  
+            - if:
+                identifier:
+                    present:
+                      - identifier: us.mappings.orderDetails.updateStoreLocationError
+                then:
+                    - failTest:
+                        message: "ENV_FAILURE - ${env} - The store location couldn't be updated because of an unexpected error."   
+
+
+  - name: unified.us.functions.amend.verify.altPickupPerson
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.addOrEditPickupPersonOption
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.addOrEditPickupPersonOption
+            - click:
+                identifier: us.mappings.amend.addOrEditPickupPersonOption
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.editPickupPerson
+            - click:
+                identifier: us.mappings.amend.editPickupPerson
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.amend.pickupfname
+      - click:
+          identifier: us.mappings.amend.pickupfname
+      - enterText:
+          identifier: us.mappings.amend.pickupfname
+          string: ${fname}
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.amend.pickuplname
+      - click:
+          identifier: us.mappings.amend.pickuplname
+      - enterText:
+          identifier: us.mappings.amend.pickuplname
+          string: ${lname}
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.save
+            - click:
+                identifier: us.mappings.amend.save
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.amend.pickupEmail
+      - click:
+          identifier: us.mappings.amend.pickupEmail
+      - enterText:
+          identifier: us.mappings.amend.pickupEmail
+          string: ${pickupEmail}    #edit.pickupPerson@test.com
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.default.keyboardDoneButton
+                then:
+                  - click:
+                     identifier: us.mappings.default.keyboardDoneButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.amend.save
+      - click:
+          identifier: us.mappings.amend.save
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.amend.person
+      - log: pickup person is edited
+                         
+  - name: unified.us.functions.amend.editPickupSlot
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.editSlot.bookslotLink
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.editSlot.bookslotLink
+                  - click:
+                      identifier: us.mappings.editSlot.bookslotLink
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.rescheduleSlotOption
+                  - click:
+                      identifier: us.mappings.reviewOrder.rescheduleSlotOption
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.editSlotLink
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.editSlotLink
+                  - click:
+                      identifier: us.mappings.reviewOrder.editSlotLink  
+                else:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.reviewOrder.rescheduleSlotOption
+                  - click:
+                      identifier: us.mappings.reviewOrder.rescheduleSlotOption
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.editSlot.bookSlotTitle
+         #   - identifier: us.mappings.editSlot.oneTimeEditCopy commenting out as text changes and fails the script
+      - executeFunction:
+          name: unified.us.functions.amend.switchToDeliveryTab.verifyMessage
+      - executeFunction:
+          name: unified.us.functions.amend.selectNewSlotandSave   
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo         
+      - executeFunction:
+          name: unified.us.functions.amend.verifySlotAmended    
+
+  - name: unified.us.functions.amend.switchToDeliveryTab.verifyMessage
+    flow:
+      - click:
+          identifier: us.mappings.editSlot.deliveryTab
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.editSlot.weAreSorry
+            - identifier: us.mappings.editSlot.cannotSwitchToDelivery
+      - click:
+          identifier: us.mappings.editSlot.pickupTab
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup      
+
+  - name: unified.us.functions.amend.verifySlotAmended
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.orderDetails.statusMsgLabel
+                    notEquals: today
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.orderDetails.statusMsgLabel
+                    notEquals: tomorrow
+            # - verifyIdentifier:
+            #     notPresent:
+            #       - identifier: us.mappings.editSlot.bookslotLink
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.editSlot.bookslotLink
+                    - identifier: us.mappings.reviewOrder.rescheduleSlotOption
+                then:
+                  - log: "Slot was successfully amended"
+                else:
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - SLOT NOT AMENDED"
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+             - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.statusMsgLabel
+                    notEquals: today
+             - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.orderDetails.statusMsgLabel
+                    notEquals: tomorrow
+             - if:
+                identifier:
+                  text:
+                    - identifier: us.mappings.orderDetails.amendText
+                      contains: Your order has been updated successfully, and the changes will be reflected shortly.
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.editSlot.bookslotLink
+                else:
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: us.mappings.editSlot.bookslotLink
+                      then:
+                        - log: "Slot was successfully amended"
+                      else:
+                        - failTest:
+                            message: "ENV_FAILURE - ${env} - SLOT NOT AMENDED"    
+
+  - name: unified.us.functions.amend.addQuantityFromOrderDetailsPage 
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.orderDetails.editOrderButton.delivery
+                then:
+                  - executeFunction:
+                        name: us.functions.utils.scrollIfNotVisible
+                        params:
+                          - name: identifier
+                            string: us.mappings.orderDetails.editOrderButton.delivery
+                          - name: direction
+                            string: down
+            - click:
+                identifier: us.mappings.orderDetails.editOrderButton.delivery
+            - click:
+                identifier: us.mappings.orderDetails.addItem
+            - sleep:
+                duration: 3000 
+            - getString:
+                identifier: us.mappings.item.zeekit.chooseMyModelChooseHeightCount 
+                attribute: value
+                storeIn: amendQty
+            - log: ${amendQty}         
+            - click:
+                identifier: us.mappings.item.editItem.Save
+            - sleep:
+                duration: 6000 
+            - if:
+                identifier:
+                  present: 
+                    - identifier: us.mappings.popup.technicalError
+                then:
+                  - click:
+                      identifier: us.mappings.error.dismissButton
+                  - sleep: 
+                     duration: 6000
+                  - if:
+                      identifier:
+                        present: 
+                          - identifier: us.mappings.item.editItem.Save
+                      then:
+                        - click:
+                            identifier: us.mappings.item.editItem.Save
+                        - sleep: 
+                            duration: 4000    
+            - executeFunction:
+                name: unified.us.functions.utils.handleTechnicalErrorPopup         
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.checkout.wallet.title
+                then:
+                  - click:
+                      identifier: us.mappings.reviewOrder.confirmCvv.cvvField            
+                  - enterText:
+                      identifier: us.mappings.reviewOrder.confirmCvv.cvvField
+                      string: ${cvv}
+                  - click:
+                      identifier: us.mappings.default.keyboardDoneButton    
+                  - click:
+                      identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton                                          
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.confirmation
+      - if:
+          condition: ${platform} == 'Android'
+          then:            
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.editOrderButton
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.orderDetails.editOrderButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.orderDetails.addItem
+                then:
+                  - click:
+                      identifier: us.mappings.orderDetails.addItem
+            - click:
+                identifier: us.mappings.amend.editItem.saveButton
+            - sleep:
+                duration: 15000
+            - executeFunction:
+                name: us.functions.utils.handleTechnicalErrorPopup
+            - sleep:
+                duration: 10000    
+            # - scroll:  #Joel updated 11/30/21  extraneous step, and failing to scroll
+            #     direction: down
+            #     wait: 10000         
+            #     untilIdentifier: us.mappings.orderDetails.editOrderButton
+            #     position: center  
+            # - verifyIdentifier:
+            #     timeout: 50000
+            #     present:
+            #       - identifier: us.mappings.orderDetails.editOrderButton

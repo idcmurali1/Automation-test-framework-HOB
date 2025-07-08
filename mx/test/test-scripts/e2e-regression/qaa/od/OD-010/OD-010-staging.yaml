@@ -1,0 +1,976 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Mar/2/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-e2e-regression-staging-010
+
+scenarios:
+
+  #--------------------------------------------------------------------------------------------------------------------
+  - name: Main
+    flow:
+      - log: TEST START - E2E REGRESSION - OD-010
+      
+    ## STEP 1: OPEN APP AND COMPLETE ONBOARDING AS GUEST - PRE-HOME SCREEN IS DISPLAYED.
+    ## STEP 2: SELECT OD BANNER - HOME SCREEN IS DISPLAYED.
+      - log: "STEP 1: LAUNCH AND LOGIN IN ONBOARDING SCREEN."
+      - log: "STEP 2:  SELECT OD BANNER."
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCode
+            - name: banner
+              string: OD
+
+    ## STEP 3: GO TO SEARCH AND FIND PRODUCT BY NAME - SLP SCREEN SHOULD BE DISPLAYED.
+      - log: "STEP 3: GO TO SEARCH AND FIND PRODUCT BY NAME."
+
+      # Step 3 main objective check.
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.e2e-regression.qaa.od.staging-010.searchTerm1
+      
+    ## STEP 4: ADD ITEM TO CART - ITEM IS ADDED TO CART.
+      - log: "STEP 4: ADD ITEM TO CART."
+
+      # Step 4 main objective check for product 1.
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName1
+            - name: direction
+              string: "down"
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName1
+      - storeIn:
+          key: qaa_od010_product_price_1
+          value: ${returnedPrice}
+          # [VARIABLE] Price of product 1 saved in ${qaa_od010_product_price_1}
+
+      # Step 4 main objective check for product 2.
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName2
+            - name: direction
+              string: "down"
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName2
+      - storeIn:
+          key: qaa_od010_product_price_2
+          value: ${returnedPrice}
+          # [VARIABLE] Price of product 2 saved in ${qaa_od010_product_price_2}
+
+    ## STEP 5: OPEN CART - PRODUCTS ADDED ARE DISPLAYED IN CART AND PRODUCTS QUANTITIES ARE CORRECT.
+      - log: "STEP 5: OPEN CART."
+      
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: mx.data.e2e-regression.qaa.od.staging-010.cartBadgeQuantity
+      
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+
+      # Step 5 main objective check for product 1
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName1
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: mx.data.e2e-regression.qaa.od.staging-010.productsInitialQuantity
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${qaa_od010_product_price_1}
+            - name: expectedSubtotal
+              string: ${qaa_od010_product_price_1}
+      - storeIn:
+          key: qaa_od010_product_type_1
+          value: ${returnedProductType}
+          # [VARIABLE] Type of product 1 saved in ${qaa_od010_product_type_1}
+      
+      # Step 5 main objective check for product 2
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName2
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: mx.data.e2e-regression.qaa.od.staging-010.productsInitialQuantity
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedPrice
+              string: ${qaa_od010_product_price_2}
+            - name: expectedSubtotal
+              string: ${qaa_od010_product_price_2}
+      - storeIn:
+          key: qaa_od010_product_type_2
+          value: ${returnedProductType}
+          # [VARIABLE] Type of product 2 saved in ${qaa_od010_product_type_2}
+      
+    ## STEP 6: HIT RESERVAR HORARIO - SHIPPING DETAILS SCREEN IS DISPLAYED.
+      - log: "STEP 6: HIT RESERVAR HORARIO."
+      
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+
+      # Step 6 main objective check
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+
+    ## STEP 7: SELECT PICKUP AND CHOOSE A DIFFERENT STORE - STORE IS SELECTED.
+      - log: "STEP 7: SELECT PICKUP AND CHOOSE A DIFFERENT STORE."
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+      
+      - if:
+          condition: ${STORE_ASSERTION_AFTER_CART_MERGE} == true && ${APP_PLATFORM} == 'android'
+          then:
+            - log:
+                message: "Execution flag detected. Flow will perform workaround for store validation, flag: STORE_ASSERTION_AFTER_CART_MERGE"
+                color: YELLOW
+            - executeFunction:
+                name: mx.functions.reserve-slot.getSelectedStore
+            - storeIn:
+                key: qaa_od010_workaround_store_name_1
+                value: ${returnedStoreName}
+          # [VARIABLE] Store 1 name saved in ${qaa_od010_workaround_store_name_1}
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapChange
+      
+      - executeFunction:
+          name: mx.flows.od.store-selector-popup.changeStoreFromPopup
+          params:
+            - name: storeName
+              string: mx.data.e2e-regression.qaa.od.staging-010.storeNameToChange
+            - name: expectedZipcode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCode
+
+      # Step 7 main objective check
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertSelectedStore
+          params:
+            - name: storeName
+              string: mx.data.e2e-regression.qaa.od.staging-010.storeNameAfterSelection
+
+    ## STEP 8: CLOSE SHIPPING DETAILS AND CONTINUE CHECKOUT - LOGIN SCREEN IS DISPLAYED.
+      - log: "STEP 8: CLOSE SHIPPING DETAILS AND CONTINUE CHECKOUT."
+    
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapClose
+    
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+    
+      # Step 8 main objective check
+      - executeFunction:
+          name: mx.functions.login.assertPageDisplayed
+
+    ## STEP 9: CREATE ACCOUNT - USER ACCOUNT IS CREATED AND TAKEN TO SHIPPING DETAILS SCREEN.
+      - log: "STEP 9: CREATE ACCOUNT"
+
+      - executeFunction:
+          name: mx.flows.od.login.createAccountFromLoginPopup
+          params:
+            - name: userFirstName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFirstName
+            - name: userLastName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userLastName
+            - name: userPassword
+              string: mx.data.e2e-regression.qaa.od.staging-010.userPassword
+            - name: testCaseNum
+              string: '010'
+      - storeIn:
+          key: qaa_od010_user_email
+          value: ${returnedUniqueEmail}
+          # [VARIABLE] Generated user email saved in ${qaa_od010_user_email}
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      
+      # Step 9 main objective check
+      - if:
+          condition: ${STORE_ASSERTION_AFTER_CART_MERGE} == true && ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: mx.functions.reserve-slot.assertSelectedStore
+                params:
+                  - name: storeName
+                    string: ${qaa_od010_workaround_store_name_1}
+            - log:
+                message: "End of workaround for store validation, flag: STORE_ASSERTION_AFTER_CART_MERGE"
+                color: YELLOW
+          else:
+            - executeFunction:
+                name: mx.functions.reserve-slot.assertSelectedStore
+                params:
+                  - name: storeName
+                    string: mx.data.e2e-regression.qaa.od.staging-010.storeNameAfterSelection
+
+    ## STEP 10: SELECT ENVIO A DOMICILIO AND ADD A NEW DELIVERY ADDRESS - DELIVERY ADDRESS IS ADDED AND TIME SLOTS LIST IS DISPLAYED.
+      - log: "STEP 10: SELECT ENVIO A DOMICILIO AND ADD A NEW DELIVERY ADDRESS"
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapAddAddress
+
+      - executeFunction:
+          name: mx.flows.od.addresses.addHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFirstName
+            - name: userLastName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userLastName
+            - name: userStreet
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStreet
+            - name: userExteriorNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userExteriorNumber
+            - name: userZipCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCode
+            - name: userNeighborhood
+              string: mx.data.e2e-regression.qaa.od.staging-010.userNeighborhood
+            - name: expectedUserState
+              string: mx.data.e2e-regression.qaa.od.staging-010.userState
+            - name: expectedUserCity
+              string: mx.data.e2e-regression.qaa.od.staging-010.userCity
+            - name: expectedUserMunicipality
+              string: mx.data.e2e-regression.qaa.od.staging-010.userMunicipality
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userPhoneNumber
+            - name: markAsFavorite
+              string: 'true'
+            - name: userFullAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullAddress
+
+      # Step 10 main objective check
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertSelectedAddress
+          params:
+            - name: expectedUserAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInReserveSlot
+
+    ## STEP 11: GET BACK TO HOME PAGE - HOME SCREEN IS DISPLAYED.
+      - log: "STEP 11: GET BACK TO HOME PAGE"
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapBack
+      
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      
+      # Step 11 main objective check
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+
+    ## STEP 12: GO TO PROFILE SCREEN AND SELECT ADDRESSES - ADDRESSES SCREEN AND PREVIOUSLY ADDED ADDRESS ARE DISPLAYED.
+      - log: "STEP 12: GO TO PROFILE SCREEN AND SELECT ADDRESSES"
+    
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+    
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+          params:
+            - name: userName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFirstName
+      
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+      
+      # Step 12 main objective check
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressDisplayed
+          params:
+            - name: userFullName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullName
+            - name: userAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInAddressesPage
+    
+    ## STEP 13: ADD A NEW ADDRESS WITHOUT MARKING IT AS FAVORITE - NEW ADDRESS IS ADDED.
+      - log: "STEP 13: ADD A NEW ADDRESS WITHOUT MARKING IT AS FAVORITE"
+      
+      - executeFunction:
+          name: mx.functions.addresses.tapAddAddress
+
+      - executeFunction:
+          name: mx.flows.od.addresses.addHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFirstName2
+            - name: userLastName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userLastName2
+            - name: userStreet
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStreet2
+            - name: userExteriorNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userExteriorNumber2
+            - name: userInteriorNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userInteriorNumber2
+            - name: userZipCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCode2
+            - name: userNeighborhood
+              string: mx.data.e2e-regression.qaa.od.staging-010.userNeighborhood2
+            - name: expectedUserState
+              string: mx.data.e2e-regression.qaa.od.staging-010.userState2
+            - name: expectedUserCity
+              string: mx.data.e2e-regression.qaa.od.staging-010.userCity2
+            - name: expectedUserMunicipality
+              string: mx.data.e2e-regression.qaa.od.staging-010.userMunicipality2
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userPhoneNumber
+            - name: markAsFavorite
+              string: 'false'
+            - name: userFullAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullAddress2
+
+      # Step 13 main objective check
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressDisplayed
+          params:
+            - name: userFullName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullName2
+            - name: userAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInAddressesPage2
+
+      # Validating Address 1 is marked as favorite.
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressIsMarkedAsFavorite
+          params:
+            - name: userFullName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullName
+            - name: userAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInAddressesPage
+      
+      # Validating Address 2 is not marked as favorite.
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressIsNotMarkedAsFavorite
+          params:
+            - name: userFullName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullName2
+            - name: userAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInAddressesPage2
+
+    ## STEP 14: GOT TO CART - CART SCREEN IS DISPLAYED.
+      - log: "STEP 14: GOT TO CART"
+
+      - executeFunction:
+          name: mx.functions.addresses.tapBack
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      
+      # Step 14 main objective check
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+    
+    ## STEP 15: HIT 'RESERVAR HORARIO' - SHIPPING DETAILS IS DISPLAYED.
+      - log: "STEP 15: HIT 'RESERVAR HORARIO'"
+      
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      
+      # Step 15 main objective check
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+
+    ## STEP 16: SELECT 'ENVIO A DOMICILIO' AND SELECT THE NEW ADDED ADDRESS - DELIVERY ADDRESS IS SELECTED AND TIME SLOTS DISPLAY.
+      - log: "STEP 16: SELECT 'ENVIO A DOMICILIO' AND SELECT THE NEW ADDED ADDRESS"
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+
+      # Step 16 main objective check
+      - executeFunction:
+          name: mx.flows.od.reserve-slot.changeDeliveryAddress
+          params:
+            - name: addressName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressName2
+            - name: expectedUserAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInReserveSlot2
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+      
+    ## STEP 17: GET BACK TO PROFILE SCREEN - PROFILE SCREEN IS DISPLAYED.
+      - log: "STEP 17 - GET BACK TO PROFILE SCREEN"
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapBack
+      
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      
+      # Step 17 main objective check
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+          params:
+            - name: userName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFirstName
+    
+    ## STEP 18: SELECT ADDRESSES - ADDRESSES SCREEN IS DISPLAYED.
+      - log: "STEP 18 - SELECT ADDRESSES"
+    
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+      
+      # Step 18 main objective check
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+    
+    ## STEP 19: EDIT SECOND ADDRESS PREVIOUSLY ADDED - ADDRESS IS UPDATED.
+      - log: "STEP 19 - EDIT SECOND ADDRESS PREVIOUSLY ADDED"
+
+      - executeFunction:
+          name: mx.functions.addresses.tapEditAddress
+          params:
+            - name: userFullName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressName2
+
+      - executeFunction:
+          name: mx.flows.od.addresses.editHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: 'null'
+            - name: userLastName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userLastNameEdit
+            - name: userStreet
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStreetEdit
+            - name: userExteriorNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userExteriorNumberEdit
+            - name: userInteriorNumber
+              string: 'null'
+            - name: clearInteriorNumberOption
+              string: mx.data.e2e-regression.qaa.od.staging-010.clearInteriorNumberOption
+            - name: userZipCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCodeEdit
+            - name: userNeighborhood
+              string: mx.data.e2e-regression.qaa.od.staging-010.userNeighborhoodEdit
+            - name: expectedUserState
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStateEdit
+            - name: expectedUserCity
+              string: mx.data.e2e-regression.qaa.od.staging-010.userCityEdit
+            - name: expectedUserMunicipality
+              string: mx.data.e2e-regression.qaa.od.staging-010.userMunicipalityEdit
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userPhoneNumberEdit
+            - name: markAsFavorite
+              string: 'false'
+            - name: userFullAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullAddressEdit
+
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+      
+      # Step 19 main objective check
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressDisplayed
+          params:
+            - name: userFullName
+              string: mx.data.e2e-regression.qaa.od.staging-010.userFullNameEdit
+            - name: userAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInAddressesPageEdit
+
+    ## STEP 20: GOT TO CART - CART SCREEN IS DISPLAYED.
+      - log: "STEP 20: GOT TO CART"
+
+      - executeFunction:
+          name: mx.functions.addresses.tapBack
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      
+      # Step 20 main objective check
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+
+    ## STEP 21: TAP RESERVE A SLOT - SHIPPING DETAILS IS DISPLAYED.
+    ## STEP 22: SELECT 'ENVIO A DOMICILIO' AND CHOOSE DELIVERY ADDRESS PREVIOUSLY UPDATED - RECENTLY UPDATED DELIVERY ADDRESS IS SELECTED.
+    ## STEP 23: SELECT TIME SLOT - CART SCREEN IS DISPLAYED AND DATE AND HOUR SELECTED ARE DISPLAYED.
+      - log: "STEP 21: TAP RESERVE A SLOT"
+      - log: "STEP 22: SELECT 'ENVIO A DOMICILIO' AND CHOOSE DELIVERY ADDRESS PREVIOUSLY UPDATED"
+      - log: "STEP 23: SELECT TIME SLOT"
+      
+      # Step 21, 22, 23 main objective check, all these 3 steps are performed by this flow.
+      - executeFunction:
+          name: mx.flows.od.cart.reserveSlot
+          params:
+            - name: deliveryMethod
+              string: mx.data.e2e-regression.qaa.od.staging-010.deliveryMethod
+            - name: addressName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressNameEdit
+            - name: expectedUserAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInReserveSlotEdit
+            - name: deliveryPlaceAction
+              string: 'Change'
+            - name: slotDate
+              string: 'firstAvailable'
+            - name: slotTime
+              string: 'firstAvailable'
+      - storeIn:
+          key: qaa_od010_selected_delivery_address_from_reserve_slot
+          value: ${returnedDeliveryAddress}
+          # [VARIABLE] Selected delivery address as displayed on reserve-slot page saved in 
+          #               ${qaa_od010_selected_delivery_address_from_reserve_slot}
+      - storeIn:
+          key: qaa_od010_delivery_fee
+          value: ${returnedDeliveryFee}
+          # [VARIABLE] Delivery fee saved in ${qaa_od010_delivery_fee}
+
+    ## STEP 24: CONTINUE TO CHECKOUT - ORDER REVIEW SCREEN IS DISPLAYED AND DELIVERY ADDRESS IS ALREADY SELECTED.
+      - log: "STEP 24: CONTINUE TO CHECKOUT"
+      
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.cart.totalBottomSection
+            - name: direction
+              string: 'down'
+
+      - executeFunction:
+          name: mx.functions.cart.assertDeliveryFee
+          params:
+            - name: deliveryFee
+              string: ${qaa_od010_delivery_fee}
+
+      - arithmetic:
+          expression: ${qaa_od010_product_price_1} + ${qaa_od010_product_price_2}
+          numberOfDecimalPlaces: 2
+          storeIn: qaa_od010_cart_subtotal
+          # [VARIABLE] Cart subtotal saved in ${qaa_od010_cart_subtotal}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${qaa_od010_cart_subtotal}
+
+      - arithmetic:
+          expression: ${qaa_od010_cart_subtotal} + ${qaa_od010_delivery_fee}
+          numberOfDecimalPlaces: 2
+          storeIn: qaa_od010_cart_estimated_total
+          # [VARIABLE] Cart estimated total saved in ${qaa_od010_cart_estimated_total}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${qaa_od010_cart_estimated_total}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromBottom
+          params:
+            - name: totalBottom
+              string: ${qaa_od010_cart_estimated_total}
+      
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+    
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+
+      # Step 24 main objective check.
+      - executeFunction:
+          name: mx.flows.od.review-order.assertDeliveryInformation
+          params:
+            - name: deliveryMethod
+              string: mx.data.e2e-regression.qaa.od.staging-010.deliveryMethod
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedStoreOrHomeName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressNameEdit
+            - name: expectedStoreOrHomeAddress
+              string: mx.data.e2e-regression.qaa.od.staging-010.userAddressInReviewOrderEdit
+
+    ## STEP 25: GO TO PAYMENT SECTION AND SELECT PAYPAL - PAYPAL IS SELECTED.
+      - log: "STEP 25: GO TO PAYMENT SECTION AND SELECT PAYPAL."
+      
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Pago"
+      
+      # Step 25 main objective check.
+      - executeFunction:
+          name: mx.flows.od.review-order.selectPaypalMethod
+          params:
+            - name: userPaypalEmail
+              string: mx.data.e2e-regression.qaa.od.staging-010.paypalEmail
+            - name: userPaypalPassword
+              string: mx.data.e2e-regression.qaa.od.staging-010.paypalPassword
+            - name: expectedTotal
+              string: ${qaa_od010_cart_estimated_total}
+            - name: paypalCardFourDigits
+              string: mx.data.e2e-regression.qaa.od.staging-010.paypalCardFourDigits
+            - name: paypalMethodAction
+              string: mx.data.e2e-regression.qaa.od.staging-010.paypalMethodAction
+            - name: savePaypalDataCheckboxState
+              string: mx.data.e2e-regression.qaa.od.staging-010.savePaypalDataCheckboxState
+            - name: expectedPaypalUserName
+              string: mx.data.e2e-regression.qaa.od.staging-010.paypalUserName
+
+    ## STEP 26: ADD PROMOTIONAL COUPON - COUPON IS APPLIED CORRECTLY.
+      - log: "STEP 26: ADD PROMOTIONAL COUPON"
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Número telefónico"
+              
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userPhoneNumber
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: 'Tienes un código'
+            - name: expectedPromoCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.promotionalCode
+
+      # Step 26 main objective check.
+      - executeFunction:
+          name: mx.flows.od.review-order.applyCoupon
+          params:
+            - name: promoCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.promotionalCode
+      
+      # This test case uses a 'free delivery' coupon and after coupon is applied, delivery fee becomes free.
+      # The current delivery fee amount will now be the 'discounted amount' from the coupon to be validated in order details.
+      # And the Delivery Fee will also be updated for future assertions.
+      # NOTE: If coupon is changed, make the needed changes accordingly.
+      - storeIn:
+          key: qaa_od010_discounted_amount_for_order_details
+          value: ${qaa_od010_delivery_fee}
+          # [VARIABLE] Delivery Fee saved in ${qaa_od010_discounted_amount_for_order_details}
+      - storeIn:
+          key: qaa_od010_delivery_fee
+          value: "0.00"
+          # [VARIABLE] Delivery Fee saved in ${qaa_od010_delivery_fee}
+
+
+    ## STEP 27: PLACE ORDER - ORDER REVIEW FINAL ASSERTIONS, ORDER CONFIRMATION ASSERTIONS AND DELIVERY METHOD IS HOME DELIVERY, DELIVERY ADDRESS AND DELIVERY SLOT ARE CORRECT.
+      - log: "STEP 27: PLACE ORDER: REVIEW-ORDER AND ORDER-CONFIRMATION ASSERTIONS"
+
+      - executeFunction:
+          name: mx.flows.od.review-order.assertTotalsInformation
+          params:
+            - name: expectedSubtotalProductsCount
+              string: mx.data.e2e-regression.qaa.od.staging-010.cartBadgeQuantity
+            - name: expectedSubtotal
+              string: ${qaa_od010_cart_subtotal}
+            - name: assertDeliveryFee
+              string: 'false'
+            - name: expectedDeliveryFee
+              string: ${qaa_od010_delivery_fee}
+
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+
+      # Wait needed for the page to load.
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'OrderConfirmation'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+          # [VARIABLE] Delivery slot saved in ${returnedDeliverySlot}
+
+      # Step 27 main objective check.
+      - executeFunction:
+          name: mx.flows.od.order-confirmation.assertConfirmation
+          params:
+            - name: expectedTotal
+              string: ${qaa_od010_cart_subtotal}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od.staging-010.deliveryMethod
+            - name: expectedDeliverySlot
+              string: ${returnedDeliverySlot}
+            - name: expectedUserStreet
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStreetEdit
+            - name: expectedUserExteriorNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userExteriorNumberEdit
+            - name: expectedUserCity
+              string: mx.data.e2e-regression.qaa.od.staging-010.userCityEdit
+            - name: expectedUserState
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStateEdit
+            - name: expectedUserZipCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCodeEdit
+            - name: expectedHomeAddressName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressNameEdit
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.qaa.od.staging-010.cartBadgeQuantity
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertProductImageDisplayed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName1
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertProductImageDisplayed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName2
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+      - storeIn:
+          key: qaa_od010_order_number
+          value: ${returnedOrderNumber}
+          # [VARIABLE] Cart subtotal saved in ${qaa_od010_order_number}
+      
+    ## STEP 28: HIT 'DESCUBRIR MAS PRODUCTOS' BUTTON - HOME SCREEN IS DISPLAYED.
+      - log: "STEP 28: HIT 'DESCUBRIR MAS PRODUCTOS' BUTTON"
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+      
+      # Wait needed for the order to load in orders-history.
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+
+      # Step 28 main objective check.
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+
+    ## STEP 29: GO TO PROFILE AND SELECT 'PEDIDOS' - ORDERS HISTORY IS DISPLAYED AND ORDERS ARE DISPLAYED.
+      - log: "STEP 29: GO TO PROFILE AND SELECT 'PEDIDOS'"
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      
+      # Wait needed for the order to load in orders-history.
+      - sleep:
+          duration: 10000
+      
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+
+      # TURN ON WORKAROUND, EXPORT VARIABLE ORDERS_HISTORY_WORKAROUND AND SET IT TO TRUE, DELETE THIS WHEN ORDER ID APPEARS ON ORDERS HISTORY PAGE.
+      # Step 29 main objective check.
+      - executeFunction:
+          name: mx.flows.od.orders-history.assertOrder
+          params:
+            - name: position
+              string: mx.data.e2e-regression.qaa.od.staging-010.ordersHistoryPosition
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od.staging-010.deliveryMethod
+            - name: expectedTotal
+              string: ${qaa_od010_cart_subtotal}
+            - name: expectedBanner
+              string: mx.data.e2e-regression.qaa.od.staging-010.banner
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: orderStatus
+              string: mx.data.e2e-regression.qaa.od.staging-010.expectedOrderStatus
+            - name: productsCount
+              string: mx.data.e2e-regression.qaa.od.staging-010.cartBadgeQuantity
+      
+    ## STEP 30: SELECT THE NEWEST PLACED ORDER - ORDER ID IS DISPLAYED AND ORDER-CONFIRMATION ASSERTIONS.
+      - log: "STEP 30 - SELECT THE NEWEST PLACED ORDER"
+
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: position
+              string: mx.data.e2e-regression.qaa.od-001.orderPosition
+
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderDetails
+          params:
+            - name: expectedOrderNumber
+              string: ${qaa_od010_order_number}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od.staging-010.deliveryMethod
+            - name: expectedOrderStatus
+              string: mx.data.e2e-regression.qaa.od.staging-010.expectedOrderStatus
+            - name: expectedBanner
+              string: mx.data.e2e-regression.qaa.od.staging-010.banner
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedHomeAddressName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressNameEdit
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.qaa.od.staging-010.cartBadgeQuantity
+            - name: expectedPaymentMethod
+              string: mx.data.e2e-regression.qaa.od.staging-010.paymentMethod
+            - name: expectedSubtotal
+              string: ${qaa_od010_cart_subtotal}
+            - name: expectedDeliveryFee
+              string: ${qaa_od010_discounted_amount_for_order_details}
+            - name: expectedTotal
+              string: ${qaa_od010_cart_estimated_total}
+            - name: assertDiscount
+              string: 'true'
+            - name: expectedDiscount
+              string: ${qaa_od010_discounted_amount_for_order_details}
+            - name: expectedUserStreet
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStreetEdit
+            - name: expectedUserExteriorNumber
+              string: mx.data.e2e-regression.qaa.od.staging-010.userExteriorNumberEdit
+            - name: expectedUserCity
+              string: mx.data.e2e-regression.qaa.od.staging-010.userCityEdit
+            - name: expectedUserState
+              string: mx.data.e2e-regression.qaa.od.staging-010.userStateEdit
+            - name: expectedUserZipCode
+              string: mx.data.e2e-regression.qaa.od.staging-010.zipCodeEdit
+
+      # Product 1 assertions.
+      - executeFunction:
+          name: mx.flows.od.order-details.assertProductDetails
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName1
+            - name: expectedPrice
+              string: ${qaa_od010_product_price_1}
+            - name: expectedSubtotal
+              string: ${qaa_od010_product_price_1}
+            - name: productType
+              string: ${qaa_od010_product_type_1}
+            - name: expectedOrderedQuantityAsPieces
+              string: mx.data.e2e-regression.qaa.od-001.orderedQuantityAsPiecesProduct2
+      
+      # Product 2 assertions.
+      - executeFunction:
+          name: mx.flows.od.order-details.assertProductDetails
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od.staging-010.productName2
+            - name: expectedPrice
+              string: ${qaa_od010_product_price_1}
+            - name: expectedSubtotal
+              string: ${qaa_od010_product_price_1}
+            - name: productType
+              string: ${qaa_od010_product_type_2}
+            - name: expectedOrderedQuantityAsPieces
+              string: mx.data.e2e-regression.qaa.od-001.orderedQuantityAsPiecesProduct1
+
+      # Step 30 main objective check.
+      - log: "All Order Details page assertions were successful."
+
+    ## STEP 31: GO TO ACCOUNT AND SELECT ADDRESSES - ADDRESSES SCREEN IS DISPLAYED.
+      - log: "STEP 31: GO TO ACCOUNT AND SELECT ADDRESSES"
+
+      - executeFunction:
+          name: mx.functions.order-details.tapBack
+          
+      - executeFunction:
+          name: mx.functions.orders-history.tapBack
+
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+
+      # Step 31 main objective check
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+
+    ## STEP 32: REMOVE ADDRESS - ADDRESS IS REMOVED SUCCESSFULLY.
+      - log: "STEP 32: REMOVE ADDRESS"
+      
+      # Step 32 main objective check
+      - executeFunction:
+          name: mx.flows.od.addresses.deleteAddressByName
+          params:
+            - name: expectedAddressName
+              string: mx.data.e2e-regression.qaa.od.staging-010.addressNameEdit
+      
+      - log: END OF TEST - E2E REGRESSION - OD-010

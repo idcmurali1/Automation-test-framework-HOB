@@ -1,0 +1,431 @@
+#======================================================================================================================
+#    AUTHOR: Isis Rojas Tolentino (vn53dge)
+#   CREATED: Oct/17/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt), Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.home.assertPageLoaded
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.home.walmartLogo
+              - identifier: mx.mappings.home.anyInitialElement # Used this general mapping to avoid scrolling and improve function performance.
+          then:
+            - log:
+                message: "Assertion succeeded: Home Page Loaded Correctly."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Home Page did not load."
+      - log:
+          message: "End function: home.assertPageLoaded"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts Home Page is displayed.
+  - name: mx.functions.home.assertPageDisplayed
+    flow:
+      - executeFunction:
+          name: mx.functions.home.scrollToTop
+      - verifyIdentifier: 
+          present: 
+            - identifier: mx.mappings.home.walmartLogo
+            - identifier: mx.mappings.home.genericPageContainer
+      - log:
+          message: "End function: home.assertPageDisplayed (Page displayed)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Scrolls up to "most popular" section until is displayed on home.
+  - name: mx.functions.home.scrollUpToMostPopularSection
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.home.mostPopularSection
+          position: center
+          scrollLimit: 8
+          wait: 1000
+      - log:
+          message: "End function: home.scrollUpToMostPopularSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Scrolls down to "most popular" section until is displayed on home.
+  - name: mx.functions.home.scrollDownToMostPopularSection
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.home.mostPopularSection
+          position: center
+          scrollLimit: 10
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.home.mostPopularSection
+      - log: 
+          message: "End function: home.scrollDownToMostPopularSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  - name: mx.functions.home.scrollToTop
+    flow:
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - sleep:
+                duration: 2000
+            - executeFunction:
+                name: mx.functions.utils.scrollToTop
+          else:
+            - sleep:
+                duration: 5000
+      - log:
+          message: "End function: home.scrollUpToTop"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function scrolls up to location banner.
+  - name: mx.functions.home.scrollUpToLocationBanner
+    flow:
+      - executeFunction:
+          name: mx.functions.home.scrollToTop
+      - log:
+          message: "End function: home.scrollUpToLocationBanner"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This assertion checks if subtotal addition to cart is correct
+  # Param: ${subtotal}              [Mandatory]  Product subtotal
+  #        ${previousCartSubtotal}  [Mandatory]  Previous cart subtotal
+  - name: mx.functions.home.assertSubtotalAdditionToCart
+    flow:
+      - getString:
+          identifier: mx.mappings.home.homeCartSubtotal
+          storeIn: homeCartSubtotal
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromLabel.js
+          args:
+            - value: ${homeCartSubtotal}
+          getResponse:
+            storeIn: homeCartSubtotal
+      - executeNode:
+          file: mx/test/helpers/slp/sanitizePrice.js
+          args:
+            - value: ${homeCartSubtotal}
+          getResponse:
+            storeIn: homeCartSubtotal
+      - log:
+          message: "Checking if ${homeCartSubtotal} is the same as ${previousCartSubtotal} + ${subtotal}"
+          color: CYAN
+      - arithmetic:
+          expression: ${subtotal} + ${previousCartSubtotal}
+          storeIn: subtotalHome 
+      - if:
+          condition: ${subtotalHome} == ${homeCartSubtotal}
+          then:
+            - log:
+                message: Subtotals match
+                color: CYAN
+          else:
+            - failTest:
+                message: Subtotals don't match
+      - log:
+          message: "End function: home.assertSubtotalAdditionToCart"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function clicks on the CTA button ("Comprar", "Comprar ahora", "Ver más", etc) inside of the 
+  #              any of the promotions banner/carousel also known as "Hero POV".
+  # AUTHOR: Osmar Juárez (vn56dce) 
+  - name: mx.functions.home.promotions-carousel.tapCTAButton
+    flow:
+      - click: 
+          identifier: mx.mappings.home.promotions-carousel.ctaButton
+      - log:
+          message: "End function: mx.functions.home.promotions-carousel.tapCTAButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function clicks on the Play/Pause button inside of the promotions banner into the promotions 
+  #              carousel also known as "Hero POV".
+  # AUTHOR: Osmar Juárez (vn56dce) 
+  - name: mx.functions.home.promotions-carousel.tapPlayPauseButton
+    flow:
+      - click: 
+          identifier: mx.mappings.home.promotions-carousel.playPauseButton
+      - log:
+          message: "End function: mx.functions.home.promotions-carousel.tapPlayPauseButton"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: This function return only a boolean flag if l1/l2 department or SLP is displayed after a promotion carousel is opened from home
+  # RETURN: ${isPlpDisplayed}  Boolean flag [true|false] if page is disyplayed 
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.plp.isDisplayed
+    flow:
+      - if:
+         identifier:
+            present:
+              - identifier: //*[contains(@resource-id,"nav_pill_view") or contains(@resource-id,"id/category_recycler_view") or contains(@resource-id,"item_carousel_view") or contains(@resource-id,"product_tile_list_view")] | //*[@name="Home.CarouselItem_0" or @name="GlassProductTile.mainStackView" or @name="NavPillTextView.titleLabel" or @name="Home.HeroPovItem_0"]
+              # verify if any of the identifiers from dl1-dl2 or slp is displayed to assert if some PLP is present
+         then:
+            - storeIn:
+                key: isPlpDisplayed
+                value: true
+         else:
+            - storeIn:
+                key: isPlpDisplayed
+                value: false
+      - log:
+          message: "RETURN: [isPlpDisplayed] = ['${isPlpDisplayed}']"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: mx.functions.home.plp.isDisplayed"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: This function assert if l1/l2 department or SLP is displayed after category (Hubspok view) is opened from home
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.plp.assertPageDisplayed
+    flow:
+      - executeFunction:
+          name: mx.functions.home.plp.isDisplayed # RETURN --${isPlpDisplayed}--
+      - if:
+         condition: ${isPlpDisplayed} == true
+         then:
+            - log:
+                message: "Assertion succeeded. PLP is displayed"
+                color: GREEN_BOLD      
+         else:
+            - failTest:
+                message: "[ERROR] PLP is NOT displayed" 
+      - log:
+          message: "End function: mx.functions.home.plp.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM: ${categoryIndex} [Mandatory] index element of the category to open. Default index as '0'
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.tapCategoryHubspokeByIndex
+    flow:
+      - log:
+          message: "Category Hubspoke Index to tap: '${categoryIndex}'"
+          color: CYAN
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - click:
+                identifier: mx.mappings.home.categoryHubspokeView
+                index: ${categoryIndex}
+          else:
+            - click:
+                identifier: mx.mappings.home.categoryHubspokeView # PARAM: --${categoryIndex}-- >> Only for iOS
+      
+      - log:
+          message: "End function: mx.functions.home.tapCategoryHubspokeByIndex"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: Function to scroll to the bottom of home screen and validate if "Marquee Display Ad Component" is present
+  # RETURN: ${isMarqueeDisplayAdPresent} Boolean flag if marquee display ad is present or not [true|false]
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.scrollUntilMarqueeDisplayAdIsPresent
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.home.adsMarqueeView
+          position: bottom
+          scrollLimit: 30
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.home.adsMarqueeView
+          then:
+            - storeIn:
+                key: isMarqueeDisplayAdPresent
+                value: true
+          else:
+            - storeIn:
+                key: isMarqueeDisplayAdPresent
+                value: false
+      - log:
+          message: "End function: mx.functions.home.scrollUntilMarqueeDisplayAdIsPresent"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: Function to tap the "Marquee Display Ad Component" which is module that encapsulates a Display Ad at the bottom of home.
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.openBottomDisplayAd
+    flow:
+      - click:
+          identifier: mx.mappings.home.adsMarqueeView
+      - log:
+          message: "End function: mx.functions.home.openBottomDisplayAd"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: Function to scroll until some "Ajustable Banner" component is displayed. Max scroll to 7
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.scrollDownUntilSomeAdjustableBanner
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.home.adjustableBannerView
+          then:
+            - log:
+                message: "No Adjustable Banner is displayed in current view. proceed to scroll down 7 times until found"
+                color: YELLOW
+            - scroll:
+                direction: down
+                withinIdentifier: mx.mappings.home.pageContainer
+                untilIdentifier: mx.mappings.home.adjustableBannerView
+                position: center
+                scrollLimit: 7
+                wait: 1000
+      - verifyIdentifier:
+         present:
+           - identifier: mx.mappings.home.adjustableBannerView
+      - log:
+          message: "End function: mx.functions.home.scrollDownUntilSomeAdjustableBanner"
+          color: BLUE
+          
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: this function scrolls in home until find some carousel centered at home screen. Scroll limit is 7.
+  # PARAMS: ${carouselName} [Mandatory] carousel name in which product is present
+  #         ${productName}  [Mandatory] product name to add
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.carousel.addProductToCartInCarouselNoScrolls
+    flow:
+      - click:
+          identifier: mx.mappings.home.carousel.addToCartButtonByCarouselAndProductName #--PARAMS--${carouselName}--${productName}
+      - log:
+          message: "End function: mx.functions.home.carousel.addProductToCartInCarouselNoScrolls"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.shopping-experience-popup.acceptExperienceIfDisplayed
+    flow:
+      - if:
+          identifier:
+            displayed:
+              - identifier: mx.mappings.home.shopping-experience-popup.titleTextView
+                value: "true"
+            timeout: 25000
+          then:
+            - click:
+                identifier: mx.mappings.home.shopping-experience-popup.allowButton
+      - log:
+          message: "End function: mx.functions.home.shopping-experience-popup.acceptExperienceIfDisplayed"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function scrolls down or up to a specific section of the home page.
+  # PARAMS:       ${mapping}    [Mandatory]  Mapping of the section to scroll into.
+  #               ${direction}  [Mandatory]  Which direction to scroll. [ 'up' | 'down' ]
+  - name: mx.functions.home.scrollToSectionByMapping
+    flow:
+      - log:
+          message: "Element to scroll into: '${mapping}'"
+          color: CYAN
+      - log:
+          message: "Direction: '${direction}'"
+          color: CYAN
+
+      # This scroll is needed for better performance...
+      - if:
+          condition: ${direction} == 'up'
+          then:
+            - scroll:
+                direction: down
+                scrollLimit: 1
+                wait: 1000
+          else:
+            - scroll:
+                direction: up
+                scrollLimit: 1
+                wait: 1000
+
+      # Performing scroll...
+      - scroll:
+          direction: ${direction}
+          scrollLimit: 12
+          wait: 2000
+          position: center
+          untilIdentifier: ${mapping}
+      - verifyIdentifier:
+          visible:
+            - identifier: ${mapping}
+              value: 'true'
+      - log:
+          message: "End function: mx.functions.home.scrollToSectionByMapping"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Scrolls into the desired Sponsored Carousel. This function doesn't work for other type of carousels.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.sponsored-carousel.scrollDownUntilFindCarousel
+    flow:
+      - scroll:
+          direction: down
+          withinIdentifier: mx.mappings.home.pageContainer
+          untilIdentifier: mx.mappings.home.sponsored-carousel.carouselNameLabel
+          position: center
+          scrollLimit: 40
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.home.sponsored-carousel.carouselSponsoredTagLabel
+      - log:
+          message: "End function: home.sponsored-carousel.scrollDownUntilFindCarousel"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Aadd to cart a product in Sponsored Carousel returning product name added.
+  # PARAMS: ${productIndex}        Product index of item to add.
+  # RETURN: ${productAddedToCart}  Name of the product added to cart.
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.home.sponsored-carousel.clickAddToCartProductByIndex
+    flow:
+      - click:
+          identifier: mx.mappings.home.sponsored-carousel.anyProductAddToCartButton
+          index: ${productIndex}
+      - getString:
+          identifier: mx.mappings.home.sponsored-carousel.productNameLabelInCarousel
+          storeIn: productAddedToCart
+          index: ${productIndex}
+      - log:
+          message: "Product name added to cart: ${productAddedToCart}"
+          color: GREEN
+      - log:
+          message: "End function: home.sponsored-carousel.clickAddToCartProductByIndex"
+          color: BLUE
+  

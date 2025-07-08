@@ -1,0 +1,228 @@
+general:
+  tags: C2662526, flow061, p1-ecomm-prod-e2e, unified-prod-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2662526
+  metadata:
+    - name: scenarioId
+      string: 63, EC025
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.prod.flow061.android.email
+            - name: android.password
+              string: us.data.prod.flow061.android.password
+            - name: ios.email
+              string: us.data.prod.flow061.ios.email
+            - name: ios.password
+              string: us.data.prod.flow061.ios.password
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+      
+      # After Sign in Navigate to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 94588
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: page
+              string: home
+            - name: tab
+              string: pickup
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop
+
+      # Add SC item to cart 
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: pen
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          # params:
+          #   - name: noAds
+          #     string: true
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # Add Alcohol item to cart 
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: light craft beer
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+     # Navigate to Cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Verify Alcohol restriction on weekday and save the slot
+      - executeFunction:
+          name: unified.us.functions.cart.AlcoholRestrictionOnWeekday
+      
+      # Reserve Alcohol restricted slot on weekday
+      - executeFunction:
+          name: unified.us.functions.cart.AlcoholRestrictionReserveSlot
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToHomeFromTabBar
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Pickup
+
+      # Add Alcohol item again to cart 
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: light craft beer
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+         name: unified.us.functions.item.addItemToCart
+
+      # Navigate to Cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Verify Alcohol restriction on both Saturday or Sunday and save Alcohol restricted slot
+      - executeFunction:
+          name: unified.us.functions.cart.AlcoholRestrictionOnSundayOrSaturday
+          params:
+            - name: day
+              string: Sat
+            - name: altDay
+              string: Sun
+
+      # Reserve Non Alcohol Restricted slot
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: page
+              string: cart
+            - name: tab
+              string: pickup
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      # Add Alcohol item again to cart 
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: light craft beer
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+         name: unified.us.functions.item.addItemToCart
+
+       # Navigate to Cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Verify Alcohol Disclaimer in Checkout
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyAlcoholDisclaimer
+              
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

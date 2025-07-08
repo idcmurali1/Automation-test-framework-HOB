@@ -1,0 +1,187 @@
+general:
+  platform: android
+  tags: C2711834 #, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2711834
+ #care source funcationality is terminated not rolled out to prod
+  # metadata:
+  #   - name: scenarioId
+  #     string: 
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # - executeFunction:
+      #     name: us.functions.utils.astro.clearCart
+      #     params:
+      #       - name: custEmail
+      #         string: us.data.bulkEnrollment.myitempage.android.email
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.C2673753.android.email
+            - name: password
+              string: us.data.C2673753.android.password
+              
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.selectPaymentType
+          params:
+            - name: walletPage
+              string: true
+            - name: type
+              string: benefitCard
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addBenefitCardFromBenefitCardProgram
+          params:
+            - name: benefitCardNumber
+              string: us.data.flow.caresource.benefitCard.number
+            - name: securityCode
+              string: us.data.flow.caresource.benefitCard.securitycode
+            - name: dob
+              string: us.data.flow.caresource.benefitCard.dob
+            - name: zipcode
+              string: us.data.flow.caresource.benefitCard.zipcode
+
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToAccountFromWallet
+
+      # - executeFunction:
+      #     name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter                    
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping 
+
+      - executeFunction:
+          name: us.functions.item.deepLink.checkItemAvailable
+          params:
+            - name: itemArray
+              string: caresourceeligibxleitems
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+       # Go to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      # - executeFunction:
+      #     name: us.functions.cart.checkoutWithSlotBooking
+      #     params:
+      #       - name: tab
+      #         string: delivery
+      #       - name: page
+      #         string: cart
+      #       - name: slotDay
+      #         string: tomorrow
+      #       - name: slotIndex
+      #         string: 3
+
+    
+      - executeFunction:
+          name: us.functions.reviewOrder.verifySkyBenefitCard
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.oderDetailPage.verifySkyBenefitCard
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+       #Amend order by adding quantity
+      - executeFunction:
+          name: ca.test.functions.amendOrder.increaseQty
+
+      #Amend order by adding quantity
+      - executeFunction:
+          name: us.functions.amend.addQuantityFromOrderDetailsPage
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.purchaseHistory.orderDetails.assertOrderId              
+
+  # Includes steps of scrolling to the end of the screen to Cancel Order option, tapping on it, selecting the reason and then tapping on Request Cancel order button
+      - executeFunction:
+          name: us.functions.cancel.order 
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.verifyBenefitCardRefund
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.removeBenefitCard
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+

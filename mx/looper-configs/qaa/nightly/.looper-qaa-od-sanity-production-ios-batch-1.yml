@@ -1,0 +1,63 @@
+inherit: 'job:///glass-mobile-app-automation/mx/qaa/base-job/global-base:mx/looper-configs/qaa/base/.looper-base.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    triggers:
+      - push: disabled
+      - pr: disabled
+
+      - cron:
+          spec: "5 2 * * *"
+          timezone: America/Mexico_City
+          call: build
+
+      - manual:
+          name: '[[ Run iOS Test Suite ]]'
+          call: build
+
+  - spec: mx/MXMOB*
+    triggers:
+      - push: disabled
+      - pr: disabled
+      
+      - manual:
+          name: '[!] [[ Run iOS Test Suite ]]'
+          call: build
+
+envs:
+  global:
+    variables:
+      APP_PLATFORM: ios
+      SAUCELABS_IOS_FILENAME: ''
+      SAUCELABS_IOS_VERSION: ''
+      SAUCELABS_IOS_BUILD_NUMBER: ''
+      BUNDLE_ID: com.walmartmexico.WalmartMG.qa
+      GLASS_ENV: production
+      TEST_SUITE: batch-1-qaa-od-sanity
+      PARALLEL_EXECUTION: true
+      OVERWRITE_TC_SELECTION: false
+      TC_IDS: ''
+      EXECUTION_NAME: ''
+      REMOTE_DEVICE_NAME_IOS: '^(?!.iPhone\WSE).*' # This Selects any available device except any iPhone's SE which is excluded.
+      REMOTE_PLATFORM_VERSION_IOS: 16.*
+      STOP_JIRA_REPORTING: false
+      TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT: false
+
+rules:
+  before:
+    group (name 'Set Global Vars'):
+      - exposeVars(mx/looper-configs/qaa/nightly/nightly_vars.properties)
+      - var(SAUCELABS_IOS_FILENAME):
+          shell (name SAUCELABS_IOS_FILENAME):
+            echo '${nightlyVars.saucelabs.ios.appFilename}'
+      - var(SAUCELABS_IOS_VERSION):
+          shell (name SAUCELABS_IOS_VERSION):
+            echo '${nightlyVars.saucelabs.ios.appVersion}'
+      - var(SAUCELABS_IOS_BUILD_NUMBER):
+          shell (name SAUCELABS_IOS_BUILD_NUMBER):
+            echo '${nightlyVars.saucelabs.ios.appBuildNumber}'
+      - var(EXECUTION_NAME):
+          shell (name EXECUTION_NAME):
+            echo 'Nightly Run - ${TEST_SUITE}-${GLASS_ENV}-${APP_PLATFORM} - v${SAUCELABS_IOS_VERSION} (${SAUCELABS_IOS_BUILD_NUMBER})'

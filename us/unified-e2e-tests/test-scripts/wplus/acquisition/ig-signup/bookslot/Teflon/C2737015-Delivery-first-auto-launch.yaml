@@ -1,0 +1,184 @@
+general:
+  tags: us-golden-flows-wplus, unified-p1-wplus-teflon-e2e, C2737015
+  testCaseId: C2737015
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: WP057
+            
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo    
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      # Create Account using astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createTrialAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+    
+    # Cancel membership to make it churned account
+      - executeFunction:
+          name: unified.us.functions.utils.astro.cancelPaidMembership
+    
+    # Add commitment model score to the account
+      - executeFunction:
+          name: unified.us.functions.utils.astro.updateCommitmentModelScore
+          params:
+            - name: commitmentModelscore
+              string: 0.9
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+      # navigate to Home Screen  
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      #Close W+ bottomsheet on home page
+      - executeFunction:
+          name: unified.us.test.functions.utils.closeWplusPrompt.homeScreen
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+      
+
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: backupItem
+              string: 204121657
+            - name: skipForNext
+              string: true
+            - name: storeId
+              string: 32144
+            - name: itemFilter
+              string: greaterthan35
+
+      - storeIn:
+          key: item1
+          value: $itemFetched 
+
+      # Add SC item to cart using deeplink
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string:  walmart://item/$item1   
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+      
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.test.functions.utils.relaunchApp
+      
+      - executeFunction:
+          name: unified.us.functions.wplus.reserveSlotfromSplashPage
+
+      # Go to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+          params:
+            - name: doNotCloseWplusPopup
+              string: true
+      
+      - sleep:
+          duration: 5000
+
+      # Sign up for annual trial membership from the bottom sheet
+      - executeFunction:
+          name: unified.us.functions.revieworder.wplus.confirmWalmartPlusPlan
+          params:
+            - name: planType
+              string: annual
+      
+      # Verify the Annual Memebership details in review screen
+      - executeFunction:
+          name: unified.us.functions.revieworder.wplus.verifyMembership
+          params:
+            - name: planType
+              string: annual
+
+      # verify zero delivery fee
+      - executeFunction:
+          name: us.functions.wplus.reviewOrder.verifyDeliveryFeesWaivedOff
+      
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: reviewOrder
+              string: true
+            - name: listOfExpectedFulfilment
+              string: us.data.fulfillment.delivery
+
+      # Confirm CVV and place order
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      # Verify W+ signup thank you page
+      - executeFunction:
+          name: unified.us.functions.revieworder.wplus.wplusSignupThankYouPageValidation
+           
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

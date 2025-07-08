@@ -1,0 +1,443 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Javier Ramírez Hernández (vn53vq4)
+#  CREATED: Feb/09/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method scrolls up to the specified Section on param.
+  # Param        ${sectionName} [Mandatory]  Name of section to scroll into (as displayed on page)
+  #              (i.e. [ Envío a domicilio | Pickup | Pago | Total ] ) etc.
+  - name: mx.functions.review-order.scrollUpToSection
+    platform: android
+    flow:
+      - log:
+          message: "Section Name: ${sectionName}"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.review-order.sectionContainerByName
+          then:
+            - scroll:
+                direction: up
+                scrollLimit: 12
+                wait: 1000
+                position: center
+                untilIdentifier: mx.mappings.review-order.sectionContainerByName
+          else:
+            - scroll:
+                direction: down
+                scrollLimit: 2
+                wait: 1000
+            - scroll:
+                direction: up
+                scrollLimit: 12
+                position: center
+                wait: 1000
+                untilIdentifier: mx.mappings.review-order.sectionContainerByName
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.review-order.sectionContainerByName
+          then:
+            - log:
+                message: "End function: review-order.scrollUpToSection"
+                color: BLUE
+          else:
+            - failTest:
+                message: "Fail: Section not found ('${sectionName}')."
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Asserts the displayed store name is correct.
+  # PARAM: ${expectedStoreName}  [Mandatory]  Expected store name to assert for.
+  - name: mx.functions.review-order.assertStoreName
+    platform: android
+    flow:
+      - log:
+          message: "Expected Store Name: ${expectedStoreName}"
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.review-order.addressName
+              equals: ${expectedStoreName}
+      - log:
+          message: "End function review-order.assertStoreName (Success: Displayed Store Name is '${expectedStoreName}')"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Asserts the displayed store address is correct.
+  # PARAM:  ${expectedStoreAddress}  [Mandatory]  Expected store address to assert for.
+  - name: mx.functions.review-order.assertStoreAddress
+    platform: android
+    flow:
+      - log:
+          message: "Expected Store Address: ${expectedStoreAddress}"
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.review-order.deliveryAddress
+              equals: ${expectedStoreAddress}
+      - log:
+          message: "Displayed Store Address: ${expectedStoreAddress})"
+          color: BLUE
+      - log:
+          message: "End function: review-order.assertStoreAddress (Success)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the displayed home delivery address.
+  # Param ${expectedUserAddress}  [Mandatory]  Expected user address.
+  - name: mx.functions.review-order.closeRequestIssuesPopupIfDisplayed
+    platform: android
+    flow:
+    - if:
+        identifier:
+          present:
+            - identifier: mx.mappings.review-order.requestIssuesPopupContainer
+        then:
+          - log:
+              message: "Closing popup..."
+              color: CYAN
+          - click:
+              identifier: mx.mappings.review-order.requestIssuesPopupOkButton
+    - log:
+        message: "End function: review-order.closeRequestIssuesPopupIfDisplayed"
+        color: BLUE
+
+            
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method selects the MSI promotion
+  # Param ${msiPromotionOption} [Mandatory] MSI promotion of your choice 
+  # (Eg. "Pagar en una sola exhibición", 3 pagos, 9 pagos, 12 pagos, 24 pagos)
+  # NOTE: For iOS test data may differ 
+  - name: mx.functions.review-order.payment-section.selectMSIPromotion
+    platform: android
+    flow:
+    - log:
+        message: Selecting x MSI promotion...
+        color: CYAN
+    - scroll:
+        direction: down
+        position: center
+        scrollLimit: 1
+        untilIdentifier: mx.mappings.review-order.msiPromotionBannerDisplayed
+    - if:
+        identifier:
+          present:
+            - identifier: mx.mappings.review-order.msiPromotionBannerDisplayed
+        then:
+          - click:
+              identifier: mx.mappings.review-order.expandCollapseMSIPromotionsButton
+          - click:
+              identifier: mx.mappings.review-order.msiPromotionOption
+        else:
+          - failTest:
+              message: "MSI promotion is not available."
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method selects the MSI promotion
+  # Param ${msiPromotionOption} [Mandatory] MSI promotion of your choice
+  # (Eg. "Pagar en una sola exhibición", 3 pagos, 9 pagos, 12 pagos, 24 pagos)
+  # NOTE: For iOS test data may differ
+  - name: mx.functions.review-order.payment-section.selectMSIPromotionEA
+    platform: android
+    flow:
+      - log:
+          message: Selecting x MSI promotion...
+          color: CYAN
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.review-order.msiPromotionOption
+      - click:
+          identifier: mx.mappings.review-order.msiPromotionOption
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the MSI promotion was applied successfully.
+  # Param ${msiPromotionOption} [Mandatory] MSI promotion of your choice 
+  # (Eg. "Pagar en una sola exhibición", 3 pagos, 9 pagos, 12 pagos, 24 pagos)
+  - name: mx.functions.review-order.payment-section.assertMSIPromotionIsApplied
+    platform: android
+    flow:
+    - log:
+        message: Validating MSI promotion was applied successfully...
+        color: CYAN
+    - if:
+        identifier:
+          text:
+            - identifier: mx.mappings.review-order.msiPromotionApplied
+              contains: ${msiPromotionOption}
+        then:
+            - log:
+                message: "Promotion of ${msiPromotionOption} was applied successfully."
+                color: CYAN
+        else:
+          - failTest:
+              message: "MSI promotion is not available."
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function returns the estimated total price from wallet section.
+  - name: mx.functions.review-order.payment-section.getEstimatedTotal
+    platform: android
+    flow:
+    - log:
+        message: Getting the estimated total...
+        color: CYAN
+    - getString:
+        identifier:  mx.mappings.review-order.estimatedTotalPrice
+        attribute: text
+        storeIn: estimatedTotalPrice
+    - executeNode:
+        file: mx/test/helpers/utils/getNumberFromPriceString.js
+        args:
+          - value: ${estimatedTotalPrice}
+        getResponse:
+          storeIn: returnedEstimatedTotalPrice
+    - storeIn:
+        key: estimatedTotalFromPayment
+        value: ${returnedEstimatedTotalPrice}
+    - log:
+        message: "The estimated total is: $${returnedEstimatedTotalPrice} "
+        color: CYAN
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method returns user's home delivery address.
+  - name: mx.functions.review-order.almost-done-popup.getHomeDeliveryAddress
+    platform: android
+    flow:
+    - log:
+        message: Getting Home delivery Address...
+        color: CYAN
+    - getString:
+        identifier: mx.mappings.review-order.deliveryAddress
+        attribute: text
+        storeIn: returnedDeliveryAddress
+    - log: 
+        message: "End function: The returned addres is: ${returnedDeliveryAddress}"
+        color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method returns user's home delivery slot.
+  - name: mx.functions.review-order.getDeliverySlot
+    platform: android
+    flow:
+    - log:
+        message: Getting Pickup delivery Slot...
+        color: CYAN
+    - getString:
+        identifier: mx.mappings.review-order.deliverySlot
+        attribute: text
+        storeIn: returnedDeliverySlot
+    - log: 
+        message: "End function: review-order.getDeliverySlot (returned slot is: ${returnedDeliverySlot})"
+        color: BLUE
+ 
+  #--------------------------------------------------------------------------------------------------------------------
+
+  - name: mx.functions.review-order.payment-section.selectPayAtDeliveryCashOption
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.payment.payAtDeliveryCashOption
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: review-order.payment-section.selectPayAtDeliveryCashOption (Success)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts whether the displayed subtotal equals the given expected subtotal.
+  #                 If there are discounts, assertion will run on subtotal BEFORE discounts.
+  #
+  # NOTE:         This function will even work when there are discounts present, for discount assertions refer to the next functions/flows:
+  #                 mx.flows.od.review-order.assertTotalsInformation
+  #                 mx.functions.review-order.assertSubtotalAfterDiscount
+  #                 mx.flows.od.review-order.assertSubtotalsIfThereAreDiscounts
+  # PARAM:
+  #   ${subtotal} [Mandatory] Expected subtotal to assert. This is the value of the full subtotal without discounts.
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.review-order.assertSubtotal
+    platform: android
+    flow:
+      - log:
+          message: "Expected subtotal: '${subtotal}'"
+          color: CYAN
+      # Get displayed Subtotal.
+      - getString:
+          # This mapping gets the Subtotal value when discounts are NOT present.
+          identifier: mx.mappings.review-order.subtotalValue
+          attribute: text
+          storeIn: displayedSubtotal
+      # Clean the subtotal obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+           args:
+             - value: ${displayedSubtotal}
+           getResponse:
+               storeIn: displayedSubtotal
+      - log:
+          message: "Displayed Subtotal: '${displayedSubtotal}'"
+          color: CYAN
+      # Assert expected vs displayed...
+      - if:
+          condition: ${subtotal} == ${displayedSubtotal}
+          then:
+            - log:
+                message: "Successful Assertion: Displayed Subtotal is correct"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: Displayed Subtotal is incorrect"
+      - log:
+          message: "End function: review-order.assertSubtotal"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts estimated total at the bottom of the page.
+  # Param ${estimatedTotalFromBottom} [Mandatory] Estimated Total to assert.
+  - name: mx.functions.review-order.assertEstimatedTotal
+    platform: android
+    flow:
+      - log:
+          message: "Expected Estimated Total: '${estimatedTotalFromBottom}'"
+          color: CYAN
+      - verifyIdentifier:
+            present:
+              - identifier: mx.mappings.review-order.estimatedTotalPriceFromBottomLabel
+      - log:
+          message: "Successful Assertion: Estimated Total from bottom is correct!"
+          color: CYAN
+      - log:
+          message: "End function: review-order.assertEstimatedTotal (Success: estimated total correct)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+ 
+  # Description:
+  #   This method retrieves the discount value below Subtotal BEFORE discount, returns -0.00 if there is no discount.
+  # RETURNS:
+  #   ${returnedDiscount}  Final discount (negative) value below Subtotal BEFORE discount (if available, else this equals '-0.00').
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.review-order.getDiscountValueInTotalsSection
+    platform: android
+    flow:
+      - log:
+          message: Retrieving displayed discount value...
+          color: CYAN
+      - try:
+          flow:
+            - getString:
+                identifier: mx.mappings.review-order.discountValue
+                storeIn: returnedDiscount
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+                args:
+                  - value: ${returnedDiscount}
+                getResponse:
+                  storeIn: returnedDiscount
+            # On Android a special character is being used in order to represent the minus sign.
+            - storeIn:
+                key: returnedDiscount
+                value: "-${returnedDiscount}"
+          catch:
+            flow:
+              - storeIn:
+                  key: returnedDiscount
+                  value: "-0.00"
+      - log:
+          message: "Cart Discount got: '${returnedDiscount}'"
+          color: CYAN
+      - log:
+          message: "End function: review-order.getDiscountValueInTotalsSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+ 
+  # Description:
+  #   This method asserts substitutions are not selected for any product in Review Order page.
+  # NOTE:
+  #   This assertion is NOT performed in substitutions popup.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.review-order.assertNoSubstitutionsSelected
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.review-order.substitutesDisclaimer
+              equals: "No se ofrecerán sustitutos para este pedido."
+      - log:
+          message: "Assertion Succeeded: No substitutions will be offered for this order."
+          color: CYAN
+      - log:
+          message: "End function: review-order.assertNoSubstitutionsSelected"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.review-order.uncheckUpdatesByPhoneCheckbox
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.review-order.updatesByPhoneCheckbox
+          attribute: checked
+          storeIn: isChecked
+      - if:
+          condition: ${isChecked} == false
+          then:
+            - log:
+                message: "Updates by Phone is already unchecked."
+                color: CYAN
+          else:
+            - click:
+                identifier: mx.mappings.review-order.updatesByPhoneCheckbox
+            - log:
+                message: "Updates by Phone has been unchecked successfully."
+                color: CYAN
+      - log:
+          message: "End function: review-order.uncheckUpdatesByPhoneCheckbox"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${expectedState}  [Mandatory]  Expected state to assert the checkbox is in.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.review-order.assertUpdatesByPhoneCheckboxState
+    platform: android
+    flow:
+      - log:
+          message: "Expected State: '${expectedState}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.review-order.updatesByPhoneCheckbox
+          attribute: checked
+          storeIn: currentState
+      - log:
+          message: "Current State: '${currentState}'"
+          color: CYAN
+      - if:
+          condition: ${currentState} == ${expectedState}
+          then:
+            - log:
+                message: "Successful Assertion: expected and current states are the same."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: expected and current state are not the same."
+      - log:
+          message: "End function: review-order.uncheckUpdatesByPhoneCheckbox"
+          color: BLUE
+ 

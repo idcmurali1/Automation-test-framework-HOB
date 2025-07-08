@@ -1,0 +1,192 @@
+
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - OPIF-179473
+#       Flow - Place and fulfill an order with 2P item from DSV (Unscheduled delivery)
+#    
+#
+#   CONFLUENCE OPIF TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179473
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-64
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-63
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-64
+  tags: INEP-64, OPIF-179473, p1-mh-opif-teflon-d-feb, INEP-63, p1-mh-opif-teflon, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "Place and fulfill an order with 2P item from DSV (Unscheduled delivery)"
+    flow:
+
+      # Onboard and log in to application..
+      - log:
+          message: "Onboard and log in to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail}, ${password}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      # Add 2P Item.
+      - log:
+          message: "Add 2P Item."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.globalShared_2PRegularItems # TODO: Replace with 2P DSV items when data is available
+
+      # Validate 2P item is added in unscheduled slot in cart page
+      - log:
+          message: "Validate 2P item is added in unscheduled slot in cart page"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      # TODO: Add validation for unscheduled slots
+      - executeFunction:
+          name: functions.global.tapBackBtn
+
+      # Create 2P Unscheduled Delivery order using astro api.
+      - log:
+          message: "Create 2P Unscheduled Delivery order using astro api."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createOrder # RETURNS --> ${returnedOrderNumber}
+          params:
+            - name: payload
+              string: data.mh.inep-64.createOrderPayload # Param -> ${userEmail}
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+
+      #Validate it is displayed correctly in Purchase history
+      - log:
+          message: "Validate it is displayed correctly in Purchase history."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderHistoryPage.validateOrderCardBasedOnOrderId
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+
+      #Validate order details
+      - log:
+          message: "Validate order details."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+
+      - executeFunction:
+          name: functions.orderDetailPage.verifySectionDisplayed
+
+      #Move order with astro, validate it is displayed as Delivered
+      - log:
+          message: "Move order with astro, validate it is displayed as Delivered."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.fcDelivery # TODO: Update order type once unscheduled pickup is available
+
+      - executeFunction:
+          name: functions.global.tapBackBtn
+
+      - executeFunction:
+          name: functions.orderHistoryPage.verifyOrderStatus
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: orderStatus
+              string: data.orderTracker.status.delivered
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+
+    flow:
+      - log: "AFTER SCENARIO"
+
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+
+      - log: "AFTER SCENARIO ENDED"

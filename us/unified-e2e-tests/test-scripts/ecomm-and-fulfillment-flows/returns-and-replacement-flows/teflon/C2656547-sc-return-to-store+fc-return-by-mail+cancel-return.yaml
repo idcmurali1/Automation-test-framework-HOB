@@ -1,0 +1,232 @@
+general:
+  tags: C2656547, unified-p1-ecomm-teflon-e2e, unified-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2656547
+  metadata:
+    - name: scenarioId
+      string: RT005
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo   
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: ios.email
+              string: us.data.e2e.teflon.C2656547.email
+            - name: ios.password
+              string: us.data.flow009.password
+            - name: android.email
+              string: us.data.flow037a.email
+            - name: android.password
+              string: us.data.driverReturn.android.password
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: storeId
+              string: 32144
+          
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem # Temp function to test out new API
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+           
+      - storeIn:
+          key: item2
+          value: $itemFetched
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.C2656547.createOrderPayload
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setMultilineOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType1
+              string: FC_DELIVERY
+            - name: status1
+              string: Shipped
+            - name: orderType2
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status2
+              string: PO Out for Delivery
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setMultilineOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType1
+              string: FC_DELIVERY
+            - name: status1
+              string: Delivered
+            - name: orderType2
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status2
+              string: Delivered
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.returns.goToStartReturn
+
+      - executeFunction:
+          name: unified.us.functions.returns.verifyStartReturnScreen
+
+      - executeFunction:
+          name: unified.us.functions.returns.itemReturn
+          params:
+            - name: itemIndex
+              string: 1
+            - name: returnReason
+              string: us.data.text.poor
+            - name: returnMethod
+              string: us.data.flow.replacement.walmart
+            - name: itemType
+              string: sc
+
+      - sleep:
+          duration: 80000
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.utils.getStoreInAttribute
+
+      - executeFunction:
+          name: unified.us.functions.returns.returnODPValidation
+          params:
+            - name: attribute
+              string: ${attribute}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.returns.goToStartReturn
+
+      - executeFunction:
+          name: unified.us.functions.returns.verifyStartReturnScreen
+
+      - executeFunction:
+          name: unified.us.functions.returns.itemReturn
+          params:
+            - name: itemIndex
+              string: 1
+            - name: returnReason
+              string: us.data.text.itemDamaged
+            - name: returnMethod
+              string: us.data.odp.returnReviewText.returnByMail
+            - name: itemType
+              string: fc
+
+      - sleep:
+          duration: 60000
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.returns.returnODPValidation
+          params:
+            - name: attribute
+              string: ${attribute}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.returns.cancelReturn
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.returns.validateReturnCancellation
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

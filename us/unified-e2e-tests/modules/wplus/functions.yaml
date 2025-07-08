@@ -1,0 +1,643 @@
+functions:  
+# Verify the 'Last Step' screen when no phonenumber on account
+    - name: unified.us.functions.wplus.aquisition.lastStepNoPhoneNumberOnAccount
+      flow:   
+        - if:
+            identifier:
+              present:
+                - identifier: us.maappings.wplus.lastStepBottomSheet.header  
+            then:
+              - log: "Last Step bottomsheet is displayed"
+              - verifyIdentifier:
+                  present:
+                   - identifier: us.maappings.wplus.lastStepBottomSheet.subText
+                   - identifier: us.maappings.wplus.lastStepBottomSheet.sendCodeCTA
+                   - identifier: us.maappings.wplus.lastStepBottomSheet.cancelLink
+              - click:
+                  identifier: us.maappings.wplus.lastStepBottomSheet.sendCodeCTA
+
+# Enter Phone number and validate OTP on the 'Last Step' screen 
+    - name: unified.us.functions.wplus.aquisition.lastStepEnterPhoneNumber
+      flow:
+        - verifyIdentifier:
+            present:
+              - identifier: us.maappings.wplus.lastStepBottomSheet.phoneNumberTextField
+        - enterText:
+            identifier: us.maappings.wplus.lastStepBottomSheet.phoneNumberTextField
+            string: ${astroPhoneNumber} 
+        - click:
+            identifier: us.maappings.wplus.lastStepBottomSheet.sendCodeCTA   
+
+# Function to verify the phone with OTP
+    - name: unified.us.functions.wplus.phoneVerificationPage
+      flow:
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wplus.VerificationcodeScreen
+            then:
+              - executeFunction:
+                  name: us.functions.utils.astro.fetchPasscode.latestPhoneOTP
+              - log: "The OTP generated is: "
+              - log: ${otpFromPhone}
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.wplus.OTPFromPhone
+              - enterText:
+                  identifier: us.mappings.wplus.OTPFromPhone
+                  string: $otpFromPhone  
+              - log: "Entered OTP from Phone"
+              - click:
+                  wait: 3000
+                  identifier: us.mappings.wplus.VerifyNumberButton
+              - log: "Click on Verify Number button"
+            else:
+              - log: "Enter Verification code page is NOT displayed"
+
+    - name: unified.us.functions.wplus.cart.chargeWaiveOffValidation
+      flow:
+        # Case where already an existing SC order is available in user's account and cart shows amend option. 
+        # Waive off text should not be displayed in cart for any case then in below section
+        - executeFunction:
+            name: unified.us.functions.cart.scrollToTopOfCart
+        - if: 
+            identifier:
+              present:
+                - identifier: us.mappings.cart.amend.banner
+            then:
+              - log: Skipping validation as Subtotal and waiveOff details are not displayed if amend timer is visible
+            else:
+              # Pre-requisite to set the cart display properly
+              # Section to identify what type of items are in the cart
+              - if:
+                  condition: ${cartType} == null
+                  then:
+                    - log: Fetching details about type of items in cart
+                    # TODO
+              - if:
+                  condition: ${storeOrderType} == null
+                  then:
+                    - log: Fetching details if store order type is 'Pickup' or 'Delivery from store'
+                    # TODO
+                    # For timebeing, making Pickup as default value
+                    - storeIn:
+                        key: storeOrderType
+                        value: none
+              - if:
+                  condition: ${minFeeWaived} == null
+                  then:
+                    - storeIn:
+                        key: minFeeWaived
+                        value: notWaived
+              - if:
+                  condition: ${platform} == 'iOS'
+                  then:                        
+                    - executeFunction:
+                        name: unified.us.functions.utils.scrollIfNotVisible
+                        params:
+                          - name: identifier
+                            string: us.mappings.cart.subTotalEffectiveAmount
+                          - name: direction
+                            string: down
+                          - name: scrollPosition
+                            string: center                        
+              - if:
+                  condition: ${platform} == 'Android'
+                  then:
+                    - executeFunction:
+                        name: unified.us.functions.utils.scrollIfNotVisible
+                        params:
+                          - name: identifier
+                            string: us.mappings.cart.estimatedTotalAmount
+                          - name: direction
+                            string: down
+                          - name: scrollPosition
+                            string: center
+                    # End of pre-requisite section
+              - executeFunction:
+                  name: unified.us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.cart.subTotalEffectiveAmount
+                    - name: direction
+                      string: down
+                    - name: scrollPosition
+                      string: center
+              # Section to get subtotal of the cart using js function
+              - executeFunction:
+                  name: unified.us.functions.utils.fetchAmountDisplayed
+                  params:
+                    - name: identifier
+                      string: us.mappings.cart.subTotalEffectiveAmount
+                    - name: delimeter
+                      string: '$'
+
+              - log: Cart total - ${amountValue}
+              - log: Cart type - ${cartType}
+              - if:
+                  condition: ${platform} == 'Android'
+                  then:
+                    # If cart subtotal is > 35$
+                    - if:
+                        condition: ${amountValue} > 35.00
+                        then:
+                          - log: (Amount > 35-00) For Wplus user, waiveOff text should not be displayed
+                          - verifyIdentifier:
+                              notPresent:
+                                - identifier: us.mappings.wplus.cart.pos.freeshippingText
+                                - identifier: us.mappings.cart.thresholdText
+                          - if:
+                              condition: ${storeOrderType} != 'delivery'
+                              then:
+                                - verifyIdentifier:
+                                    notPresent:
+                                      - identifier: us.mappings.wplus.cart.pos.wplusIcon
+
+                    # If cart subtotal is < 35$
+                    - if:
+                        condition: ${amountValue} < 35.00
+                        then:
+                          - if:
+                              condition: ${cartType} == 'fcOnly'
+                              then:
+                                - log: (Amount < 35-00)(FC item only) For Wplus user, waiveOff text should be displayed
+                                - verifyIdentifier:
+                                    present:
+                                      - identifier: us.mappings.wplus.cart.pos.wplusIcon
+                                      - identifier: us.mappings.wplus.cart.pos.freeshippingText
+                                      - identifier: us.mappings.wplus.cart.pos.shippingCost
+                                    notPresent:
+                                      - identifier: us.mappings.cart.thresholdText
+                              else:
+                                - log: (Amount < 35-00)(With SC pickup/delivery item) For Wplus user, waiveOff text should be/not be displayed
+                                - if:
+                                    condition: ${minFeeWaived} == 'waived'
+                                    then:
+                                      - verifyIdentifier:
+                                          present:
+                                            - identifier: us.mappings.wplus.cart.pos.wplusIcon
+                                            - identifier: us.mappings.wplus.cart.pos.freeshippingText
+                                            - identifier: us.mappings.wplus.cart.pos.shippingCost
+                                          notPresent:
+                                            - identifier: us.mappings.cart.thresholdText
+                                    else:
+                                      - verifyIdentifier:
+                                          notPresent:
+                                            - identifier: us.mappings.wplus.cart.pos.freeshippingText
+                                          present:
+                                            - identifier: us.mappings.cart.thresholdText
+                    # Validations based on if SC delivery item is available or not
+                    - if:
+                        condition: ${storeOrderType} == 'delivery'
+                        then:
+                          - log: (Amount > or < 35-00)(With SC delivery item) For Wplus user, delivery waiveOff text should be displayed
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+                                - identifier: us.mappings.wplus.cart.pos.wplusIcon
+                              text:
+                                - identifier: us.mappings.wplus.cart.pos.shippingCost
+                                  contains: $0
+                        else:
+                          - verifyIdentifier:
+                              notPresent:
+                                - identifier: us.mappings.wplus.cart.pos.freeDeliveryFromStoreText
+              - if:
+                  condition: ${platform} == 'iOS'
+                  then:
+                    - if:
+                        condition: ${amountValue} > 35.00
+                        then:
+                          # If cart subtotal is > 35$
+                          - log: (Amount > 35-00) For Wplus user, waiveOff text should not be displayed
+                          - verifyIdentifier:
+                              notPresent:
+                                - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                                - identifier: us.mappings.reviewOrder.thresholdText
+                          
+                    - if:
+                        condition: ${amountValue} < 35.00
+                        then:
+                          - if:
+                              condition: ${basketType} == 'fcOnly'
+                              then:
+                                - log: (Amount < 35-00)(FC item only) For Wplus user, waiveOff text should be displayed
+                                - verifyIdentifier:
+                                    present:
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                                    notPresent:
+                                      - identifier: us.mappings.reviewOrder.thresholdText
+                              else:
+                                - log: (Amount < 35-00)(With SC pickup/delivery item) For Wplus user, waiveOff text should be/not be displayed
+                                - if:
+                                    condition: ${minFeeWaived} == 'waived'
+                                    then:
+                                      - verifyIdentifier:
+                                          present:
+                                            - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                                            - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                                          notPresent:
+                                            - identifier: us.mappings.reviewOrder.thresholdText
+                                    else:
+                                      - verifyIdentifier:
+                                          notPresent:
+                                            - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                                          present:
+                                            - identifier: us.mappings.reviewOrder.thresholdText
+                    - if:
+                        condition: ${storeOrderType} == 'delivery'
+                        then:
+                          - log: (Amount > or < 35-00)(With SC delivery item) For Wplus user, delivery waiveOff text should be displayed
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.leftLabel
+                                - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                        else:
+                          - verifyIdentifier:
+                              notPresent:
+                                - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.leftLabel
+
+              - storeIn:
+                  key: minFeeWaived
+                  value: 'null'
+              - storeIn:
+                  key: storeOrderType
+                  value: 'null'
+
+    - name: unified.us.functions.wplus.orderConfirmation.chargeWaiveOffValidation
+      flow:
+        - if:
+            condition: ${platform} == 'Android'
+            then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.orderConfirmation.orderNumber
+                    - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+              - if:
+                  identifier:
+                    present:
+                        - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsIcon
+                  then:
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsTitle
+                          - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsDescription
+
+              # ${amountValue} is saved from 'us.functions.wplus.reviewOrder.chargeWaiveOffValidation'
+              - if:
+                  condition: ${amountValue} > 35.00
+                  then:
+                    - if:
+                        condition: ${basketType} == 'fcOnly' || ${storeOrderType} == 'pickup'
+                        then:
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+                                  contains: Now kick back and relax, we'll take care of the rest!
+                        else:
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+                                  contains: You saved
+                                - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+                                  contains: W+ helps your savings #as a Walmart+ member!
+                  else:
+                    - if:
+                        condition: ${storeOrderType} == 'pickup'
+                        then:
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+                                  contains: Thank you for your order
+                        else:
+                          - verifyIdentifier:
+                              text:
+                                - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+                                  contains: You saved
+                                - identifier: us.mappings.wplus.orderConfirmation.pos.benefitsHeader
+                                  contains: W+ helps your savings #as a Walmart+ member!
+        - if:
+            condition: ${platform} == 'iOS'
+            then:   
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.orderConfirmation.orderNumber
+                    - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+
+              # ${amountValue} is saved from 'us.functions.wplus.reviewOrder.chargeWaiveOffValidation'
+              - if:
+                  condition: ${amountValue} > 35.00
+                  then:
+                    - if:
+                        condition: ${basketType} == 'fcOnly' || ${storeOrderType} == 'pickup'
+                        then:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+                                  contains: Now kick back and relax, we'll take care of the rest!
+                        else:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+                                  contains: You saved
+                                - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+                                  contains: W+ helps your savings
+                  else:
+                    - if:
+                        condition: ${storeOrderType} == 'pickup'
+                        then:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+                                  contains: Now kick back and relax, we'll take care of the rest!
+                        else:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+                                  contains: You saved
+                                - identifier: us.mappings.wplus.orderConfirmation.walmartPlusHeaderLabel
+                                  contains: W+ helps your savings
+
+    - name: unified.us.functions.wplus.reviewOrder.chargeWaiveOffValidation
+      flow:
+        # Pre-requisite to set the cart display properly
+        # Section to identify what type of items are in the cart
+        - if:
+            condition: ${basketType} == null
+            then:
+              - log: Fetching details about type of items in cart
+              # TODO
+        - if:
+            condition: ${storeOrderType} == null
+            then:
+              - log: Fetching details if store order type is 'Pickup' or 'Delivery from store'
+              # TODO
+              - storeIn:
+                  key: storeOrderType
+                  value: none
+
+        - if:
+            condition: ${minFeeWaived} == null
+            then:
+              - storeIn:
+                  key: minFeeWaived
+                  value: notWaived
+        - if:
+            condition: ${platform} == 'Android'
+            then:   
+              - executeFunction:
+                  name: unified.us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.reviewOrder.subTotalEffectiveAmount
+                    - name: direction
+                      string: down
+                    - name: scrollPosition
+                      string: center
+              # End of pre-requisite section
+        # Section to get subtotal of the cart using js function
+        - executeFunction:
+            name: unified.us.functions.utils.fetchAmountDisplayed
+            params:
+              - name: identifier
+                string: us.mappings.reviewOrder.subTotalEffectiveAmount
+              - name: attribute
+                string: content-desc
+              - name: delimeter
+                string: '$'
+
+        - log: Checkout total - ${amountValue}
+        - log: Checkout basket type - ${basketType}
+        - if:
+            condition: ${platform} == 'Android'
+            then:
+              - if:
+                  condition: ${amountValue} > 35.00
+                  then:
+                    # If cart subtotal is > 35$
+                    - log: (Amount > 35-00) For Wplus user, waiveOff text should not be displayed
+                    - verifyIdentifier:
+                        notPresent:
+                          - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                          - identifier: us.mappings.wplus.reviewOrder.pos.oldThresholdValue
+                          - identifier: us.mappings.wplus.reviewOrder.pos.thresholdValue
+                    - if:
+                        condition: ${storeOrderType} != 'delivery'
+                        then:
+                          - verifyIdentifier:
+                              notPresent:
+                                - identifier: us.mappings.wplus.reviewOrder.pos.wplusIcon
+                    
+              - if:
+                  condition: ${amountValue} < 35.00
+                  then:
+                    - if:
+                        condition: ${basketType} == 'fcOnly'
+                        then:
+                          - log: (Amount < 35-00)(FC item only) For Wplus user, waiveOff text should be displayed
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.wplus.reviewOrder.pos.wplusIcon
+                                - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                                - identifier: us.mappings.wplus.reviewOrder.pos.oldThresholdValue
+                                - identifier: us.mappings.wplus.reviewOrder.pos.thresholdValue
+                              notPresent:
+                                - identifier: us.mappings.reviewOrder.POS.threshold
+                                - identifier: us.mappings.reviewOrder.POS.thresholdAmount
+                        else:
+                          - log: (Amount < 35-00)(With SC pickup/delivery item) For Wplus user, waiveOff text should be/not be displayed
+                          - if:
+                              condition: ${minFeeWaived} == 'waived'
+                              then:
+                                - verifyIdentifier:
+                                    present:
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.wplusIcon
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                                    notPresent:
+                                      - identifier: us.mappings.reviewOrder.POS.threshold
+                                      - identifier: us.mappings.reviewOrder.POS.thresholdAmount
+                              else:
+                                - verifyIdentifier:
+                                    notPresent:
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.freeshippingText
+                                    present:
+                                      - identifier: us.mappings.reviewOrder.POS.threshold
+                                      - identifier: us.mappings.reviewOrder.POS.thresholdAmount
+
+              - if:
+                  condition: ${storeOrderType} == 'delivery'
+                  then:
+                    - log: (Amount > or < 35-00)(With SC delivery item) For Wplus user, delivery waiveOff text should be displayed
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.wplus.reviewOrder.pos.freeDeliveryFromStoreText
+                          - identifier: us.mappings.wplus.reviewOrder.pos.scDelivery.wplusIcon
+                  else:
+                    - verifyIdentifier:
+                        notPresent:
+                          - identifier: us.mappings.wplus.reviewOrder.pos.freeDeliveryFromStoreText           
+        - if:
+            condition: ${platform} == 'iOS'
+            then:
+              - if:
+                  condition: ${amountValue} > 35.00
+                  then:
+                    # If cart subtotal is > 35$
+                    - log: (Amount > 35-00) For Wplus user, waiveOff text should not be displayed
+                    - verifyIdentifier:
+                        notPresent:
+                          - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                          - identifier: us.mappings.reviewOrder.thresholdText
+                    
+              - if:
+                  condition: ${amountValue} < 35.00
+                  then:
+                    - if:
+                        condition: ${basketType} == 'fcOnly'
+                        then:
+                          - log: (Amount < 35-00)(FC item only) For Wplus user, waiveOff text should be displayed
+                          - verifyIdentifier:
+                              present:
+                                - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                              notPresent:
+                                - identifier: us.mappings.reviewOrder.thresholdText
+                        else:
+                          - log: (Amount < 35-00)(With SC pickup/delivery item) For Wplus user, waiveOff text should be/not be displayed
+                          - if:
+                              condition: ${minFeeWaived} == 'waived'
+                              then:
+                                - verifyIdentifier:
+                                    present:
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                                    notPresent:
+                                      - identifier: us.mappings.reviewOrder.thresholdText
+                              else:
+                                - verifyIdentifier:
+                                    notPresent:
+                                      - identifier: us.mappings.wplus.reviewOrder.pos.noOrderMinimumCharges.leftLabel
+                                    present:
+                                      - identifier: us.mappings.reviewOrder.thresholdText
+              - if:
+                  condition: ${storeOrderType} == 'delivery'
+                  then:
+                    - log: (Amount > or < 35-00)(With SC delivery item) For Wplus user, delivery waiveOff text should be displayed
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.leftLabel
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.rightLabel
+                  else:
+                    - verifyIdentifier:
+                        notPresent:
+                          - identifier: us.mappings.wplus.reviewOrder.pos.deliveryFromStoreCharges.leftLabel
+        - storeIn:
+            key: minFeeWaived
+            value: 'null'
+        - storeIn:
+            key: storeOrderType
+            value: 'null'
+
+    #   This function automates the process of placing a refill request for a prescription
+    #   and verifies the presence of Walmart+ (W+) banners at various stages.
+    - name: unified.us.functions.wplus.services.pharmacy.placeRefillRequestAndVerifyWplusBanners
+      flow:
+        # navigates to my prescriptions
+        - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.popularServices.pharmacy.myPrescriptions
+              - name: direction
+                string: down
+
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+        - click:
+            identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+
+        # selects a precription to refill and verfies W+ banner
+        - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.wplus.services.pharmacy.refillAvailItem
+              - name: direction
+                string: down
+
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.wplus.services.pharmacy.refillAvailItem
+        - click:
+            identifier: us.mappings.wplus.services.pharmacy.refillAvailItem
+        - click:
+            identifier: us.mappings.popularServices.pharmacy.prescriptions.refill.continue
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.wplus.services.pharmacy.wplusBannerOnReviewRefillsPage
+              - identifier: us.mappings.wplus.services.pharmacy.wPlusLogo
+
+        #clicks on Request Refill
+        - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+            - name: identifier
+              string: us.mappings.wplus.services.pharmacy.placeRefillRequest
+            - name: direction
+              string: down
+
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.wplus.services.pharmacy.placeRefillRequest
+        - click:
+            identifier: us.mappings.wplus.services.pharmacy.placeRefillRequest
+        - verifyIdentifier:
+            present:
+              - identifier: us.mappings.wplus.services.pharmacy.wplusBannerOnRefillRequestPlacedPage
+              - identifier: us.mappings.wplus.services.pharmacy.wPlusLogoRequestPlacedPage
+
+#   This function verifies the presence of specific W+ text and elements on the "Learn More" splash screen.
+    - name: unified.us.functions.wplus.services.pharmacy.verifyWplusTextOnLearnMoreSplash
+      flow:
+        - click:
+            identifier: us.mappings.wplus.services.pharmacy.infoButton
+        - verifyIdentifier:
+            present: 
+              - identifier: us.mappings.wplus.services.pharmacy.learnMoreSplashDeliveryHeader
+              - identifier: us.mappings.wplus.services.pharmacy.learnMoreSplashWPlusText
+              - identifier: us.mappings.wplus.services.pharmacy.learnMoreSplashWPlusTextSubline
+              - identifier: us.mappings.wplus.services.pharmacy.learnMoreSplashSignupForWplusLink
+
+ #   This function navigates to the Pharmacy section from the Prescription Refill page.
+    - name: unified.us.functions.wplus.services.pharmacy.navigateToPharmacyFromPrescriptionRefillPage
+      flow:
+        - terminateApp: true
+        - executeFunction:
+            name: unified.us.functions.global.navigation.goToDeepLink
+            params:
+              - name: deepLinkUrl
+                string: us.data.teflon.home.deeplinkurl
+        - executeFunction:
+            name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+        # Navigate to Services
+        - executeFunction:
+            name: unified.us.functions.global.navigation.goToServicesFromTabBar
+
+        # Navigate to Pharmacy
+        - executeFunction:
+            name: unified.us.functions.services.naviagteToServices
+            params:
+              - name: servicesName
+                string: Pharmacy
+
+        # Enter Pharmacy Pin
+        - executeFunction:
+            name: unified.us.functions.services.pharmacy.enterPin
+
+    ######################################Single Step Function########################################
+    - name: unified.functions.wplus.reserveSlot.optInWplus
+      flow:
+        - click:
+            identifier: us.mapppings.reserveslot.tryW+Button
+  

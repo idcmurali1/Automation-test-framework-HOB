@@ -1,0 +1,160 @@
+#======================================================================================================================
+#    AUTHOR: Isis Tolentino (vn53dge)
+#   CREATED: May/9/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-postpurchase-od-sanity-production-ios-2082, qaa-postpurchase-od-sanity-production-ios
+  testCaseId: MMPP-2137
+
+scenarios:
+#######################################################################################################################
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Sanity+-+Production+-+iOS
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMPP-2137
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMPP-2082
+#
+#######################################################################################################################
+
+  
+  # BEFORE SCENARIO ###################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_OD_Sanity_PROD_PostPurchase_iOS_2082
+
+      - storeIn:
+          key: MMPP_2082_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN SCENARIO #####################################################################################################
+  - name: Main
+    platform: ios
+    flow:
+      - log: "TEST START: GMX_OD_Sanity_PROD_PostPurchase_iOS_2082"
+
+      # STEP 1: Navigate through Onboarding and select OD Banner ------------------------------------------------------
+      - log:
+         message: "STEPS 1: Navigate through Onboarding and select OD Banner."
+         color: YELLOW
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.sanity.od.postpurchase-2082.zipCode
+            - name: banner
+              string: "OD"
+
+      # STEP 2-3: Login from Profile ----------------------------------------------------------------------------------
+      - log:
+         message: "STEP 2-3: Login from Profile."
+         color: YELLOW
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.sanity.od.postpurchase-2082.userEmail
+            - name: userPassword
+              string: mx.data.qaa.sanity.od.postpurchase-2082.userPassword
+            - name: userName
+              string: mx.data.qaa.sanity.od.postpurchase-2082.userFirstName
+
+    # STEP 4: Select Pedidos option. ----------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: Select Pedidos option."
+         color: YELLOW
+
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+
+      # STEP 5: Validate order history list. --------------------------------------------------------------------------
+      - log:
+         message: "STEP 5: Validate order history list."
+         color: YELLOW
+      
+      - executeFunction:
+          name: mx.functions.orders-history.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.orders-history.assertOrdersHistoryListDisplayed
+      - executeFunction:
+          name: mx.functions.orders-history.assertCancelledOrderDisplayed
+
+      # STEP 6: Validate order in orders details displays cancelled status. -------------------------------------------
+      - log:
+         message: "STEP 6: Validate order in orders history displays cancelled status."
+         color: YELLOW
+      
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: position
+              string: '1'
+      - executeFunction:
+          name: mx.functions.order-details.assertCancelledOrderDisplayed
+
+      # STEP 7: Logout ------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 7: Validate cancelled from 'Order details' and 'Order history' list."
+         color: YELLOW
+
+      - executeFunction:
+          name: mx.functions.order-details.tapBack
+      - executeFunction:
+          name: mx.functions.orders-history.tapBack
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.tapLogout
+      - executeFunction:
+          name: mx.functions.account.assertUserNotLogged
+
+      # End main ------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMPP_2082_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: GMX_OD_Sanity_PROD_PostPurchase_iOS_2082"
+
+  # AFTER SCENARIO ####################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..."
+      
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${MMPP_2082_SUCCESSFUL_EXECUTION} 
+
+      - if:
+          condition: ${MMPP_2082_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. No need to reset data."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"
+  

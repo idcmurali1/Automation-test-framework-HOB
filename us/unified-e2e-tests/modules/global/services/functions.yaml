@@ -1,0 +1,717 @@
+functions:
+  - name: unified.us.functions.services.goWalmartLive
+    flow:
+      - log: Go to Walmart Live
+      # Work around for entry point bug - CEPG-291681 disable this workaround and uncomment once the bug is resolved
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://live
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.Services.walmartLiveLink
+      #     scrollLimit: 20
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.services.seeAllServices
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.services.seeAllServices
+      #       - scroll:
+      #           direction: down
+      #           untilIdentifier: us.mappings.Services.walmartLiveLink
+      # - try:
+      #     flow:
+      #       - verifyIdentifier: 
+      #           present:
+      #             - identifier: us.mappings.Services.getInspiredHeader
+      #             - identifier: us.mappings.Services.walmartLiveLink
+      #     catch:
+      #       flow:
+      #         - failTest:
+      #             message: "ENV_FAILURE - ${env} - Walmart live option missing in new services page layout - CEPG-291681"
+      # - click:
+      #     identifier: us.mappings.Services.walmartLiveLink
+
+  - name: unified.us.functions.services.acc.schedulingService.selectVehicle
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.vehicleSelection.stepper
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.vechileHeading
+            - identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      - sleep:
+          duration: 2000       
+      - click: 
+          identifier: us.mappings.returns.continueButton
+
+  - name: unified.us.functions.services.acc.schedulingService.selectService
+    flow:
+    - if:
+        identifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.selectServiceHeading
+        then:
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.services.acc.scheduleService.verifyFeePayableMessage
+                - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+                - identifier: us.mappings.services.acc.scheduleService.serviceOption
+                - identifier: us.mappings.services.acc.scheduleService.oilChangePrice
+                - identifier: us.mappings.services.acc.scheduleService.tireInstallationPrice
+                - identifier: us.mappings.services.acc.scheduleService.oilChangeDuration
+                - identifier: us.mappings.services.acc.scheduleService.tireInstallationDuration
+          - click: 
+              identifier: us.mappings.services.acc.scheduleService.oilChangeServiceSelectionRadiobutton
+          - sleep:
+              duration: 2000
+          - click: 
+              identifier: us.mappings.returns.continueButton 
+
+  - name: unified.us.functions.services.acc.scheduleAutoService
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduler.schedulerScreenTitle
+            - identifier: us.mappings.services.acc.scheduleService.scheduleSlot.stepper 
+      - sleep:
+          duration: 7000
+      - executeFunction:
+          name: us.functions.slotDataSetUp
+      - sleep:
+          duration: 3000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mappings.services.acc.selectStoreHeader
+              then:
+                - click:
+                    identifier: us.mappings.services.acc.selectStoreButton
+                - enterText:
+                    identifier: us.mappings.cart.ACC.zipcodetextField
+                    string: ${zipcode}
+                    clearField: true
+                    pressEnter: true
+                - if:
+                    identifier:
+                      present:
+                          - identifier: us.mappings.cart.ACC.storeAddress 
+                    then:
+                      - click:
+                          identifier: us.mappings.cart.ACC.storeAddress  
+                    else:
+                      - scroll: 
+                          direction: down
+                          untilIdentifier: us.mappings.cart.ACC.storeAddress 
+                      - click:
+                          identifier: us.mappings.cart.ACC.storeAddress  
+                - click:
+                    identifier: us.mappings.cart.ACC.saveButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mappings.reviewOrder.accNearByStore
+              then:
+                - log: There are no upcoming appointments available at store.
+                - click:
+                    identifier: us.mappings.reserveSlot.pickup.changeStoreLink
+                - sleep:
+                    duration: 3000
+                - click:
+                    identifier: us.mappings.reserveSlot.selectStore.secondAddress
+                - click:
+                    identifier: us.mappings.reserveSlot.selectStore.saveButton
+                - sleep:
+                    duration: 3000       
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.reserveSlot.timeSlot
+          then:
+            - executeFunction:
+                name: us.functions.selectDayForSlotDisplay
+                params:
+                - name: slotDay
+                  string: 'tomorrow'
+      - click:
+          identifier: us.mappings.reserveSlot.timeSlot
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.continueButton
+          then:
+              - click:
+                  identifier: us.mappings.reserveSlot.continueButton
+
+  - name: unified.us.functions.services.acc.schedulingService.reviewConfirmation
+    flow:
+      - verifyIdentifier:
+          timeout: 60000
+          present:
+            - identifier: us.mappings.services.acc.scheduleServiceReview.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.review.stepper
+            - identifier: us.mappings.services.acc.scheduleService.vehicleDetails
+            - identifier: us.mappings.services.acc.scheduleService.appointmentDetails
+            - identifier: us.mappings.services.acc.scheduleService.servicesDetailsOilChange
+            - identifier: us.mappings.services.acc.scheduleService.dateAndTime
+            - identifier: us.mappings.services.acc.scheduleService.location
+            - identifier: us.mappings.services.acc.scheduleService.contactInformation  
+
+  - name: unified.us.functions.services.acc.virtualGarageRemoveVehicle
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.acc.virtualgarage
+            - name: direction
+              string: up
+      - click:
+          identifier: us.mappings.services.acc.virtualgarage
+      - sleep:
+          duration : 2000
+      - executeFunction:
+          name: unified.us.functions.scanner.allowLocation
+      - if:
+          identifier:
+            notPresent:
+                - identifier: us.mappings.services.acc.virtualgarage.addAVehicleButton
+          then:
+            - log: "Already Car is Added, Removing the Car"
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetailsButton
+            - sleep:
+                duration : 5000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.titleName
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.editVehicleInformation
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.editVehicleInformation
+            - sleep:
+                duration : 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicle
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicle
+            - sleep:
+                duration: 2000    
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicleButton
+            - click:
+                identifier: us.mappings.services.acc.virtualgarageToACC              
+          else:
+            - log: "No car is added" 
+            - click:
+                identifier: us.mappings.services.acc.virtualgarageToACC
+
+  - name: unified.us.functions.services.acc.schedulingService
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService      
+
+  - name: unified.us.functions.services.acc.schedulingService.serviceselection
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+            - identifier: us.mappings.services.acc.serviceselection.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.serviceOption
+            - identifier: us.mappings.services.acc.scheduleService.verifyFeePayableMessage
+            - identifier: us.mappings.services.acc.scheduleService.oilChangePrice
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationPrice
+            - identifier: us.mappings.services.acc.scheduleService.oilChangeDuration
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationDuration
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.serviceOption
+      - click: 
+          identifier: us.mappings.returns.continueButton               
+
+  - name: unified.us.functions.services.acc.schedulingService.tireInstallationOption
+    flow:
+    - if:
+        identifier:
+          present:
+            - identifier: us.mappings.services.acc.tireInstallationOption.additionalVehicleInformationPopUp 
+        then:
+          - if:
+              condition: ${platform} == 'iOS'
+              then:
+                - click:
+                    identifier: us.mappings.search.fitment.selectSubmodeldropdown
+                - click:
+                    identifier: Done
+                - click:
+                    identifier: us.mappings.search.fitment.selectTireSizedropdown
+                - click:
+                    identifier: Done
+                - click:
+                    identifier: us.mappings.search.fitment.autoCareCenterAdditionalInfoContinueButton
+          - if:
+              condition: ${platform} == 'Android'
+              then:
+                - click:
+                    identifier: us.mappings.search.fitment.selectSubmodeldropdown
+                - click:
+                    identifier: us.mappings.search.fitment.submodel
+                - click:
+                    identifier: us.mappings.search.fitment.selectTireSizedropdown
+                - click:
+                    identifier: us.mappings.search.fitment.tireSize  
+                - click:
+                    identifier: us.mappings.search.fitment.viewResultButton
+    - verifyIdentifier:
+        present: 
+          - identifier: us.mappings.services.acc.tireInstallationOption.pageTitle   
+          - identifier: us.mappings.global.navigateBackArrow 
+    - click: 
+        identifier: us.mappings.global.navigateBackArrow
+    - sleep:
+        duration: 3000       
+    - verifyIdentifier:
+        present: 
+          - identifier: us.mappings.services.acc.serviceselection.pageTitle 
+          - identifier: us.mappings.services.acc.scheduleService.selectServiceHeading
+          - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper     
+    - click: 
+        identifier: us.mappings.services.acc.scheduleService.serviceOption
+    - sleep:
+        duration: 3000    
+    - click: 
+        identifier: us.mappings.returns.continueButton   
+    - sleep:
+        duration: 3000
+    - verifyIdentifier:
+        present: 
+          - identifier: us.mappings.services.acc.tireInstallationOption.pageTitle   
+          - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+          - identifier: us.mappings.services.acc.tireInstallationOption.pageSubTitle  
+          - identifier: us.mappings.services.acc.tireInstallationOption.noIHaveTiresOption
+          - identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+    - click:
+        identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+    - click: 
+        identifier: us.mappings.returns.continueButton    
+    - sleep:
+        duration: 3000
+
+  - name: unified.us.functions.services.acc.virtualGarageAddVehicle
+    flow:
+      - click:
+          identifier: us.mappings.services.acc.virtualgarage
+      - click:
+          identifier: us.mappings.services.virtualGarage.addVehicleButton         
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.fitment.addFitmentDetailsPageTitle
+      - if:
+          condition: ${platform} == 'iOS'
+          then:            
+            - click:
+                identifier: us.mappings.search.fitment.selectYeardropdown
+                wait: 3000
+            - enterText:
+                identifier: us.mappings.search.fitment.pickerWheel 
+                string: ${year}  
+            - click:
+                identifier: done
+            - click:
+                identifier: us.mappings.search.fitment.selectMakedropdown
+                wait: 3000
+            - enterText:
+                identifier: us.mappings.search.fitment.pickerWheel 
+                string: ${make}  
+            - click:
+                identifier: done
+            - click:
+                identifier: us.mappings.search.fitment.selectModeldropdown
+                wait: 3000
+            - enterText:
+                identifier: us.mappings.search.fitment.pickerWheel 
+                string: ${model}  
+            - click:
+                identifier: done
+            - click:
+                identifier: us.mappings.search.fitment.selectSubmodeldropdown
+                wait: 3000
+            - enterText:
+                identifier: us.mappings.search.fitment.pickerWheel 
+                string: ${submodel}  
+            - click:
+                identifier: done
+      - if:
+          condition: ${platform} == 'Android'
+          then:                 
+            - click:
+                identifier: us.mappings.search.fitment.selectYeardropdown
+                wait: 3000
+            - click:
+                identifier: us.mappings.search.fitment.year  
+            - click:
+                identifier: us.mappings.search.fitment.selectMakedropdown
+                wait: 3000
+            - click:
+                identifier: us.mappings.search.fitment.make
+            - click:
+                identifier: us.mappings.search.fitment.selectModeldropdown
+                wait: 3000
+            - click:
+                identifier: us.mappings.search.fitment.model  
+            - click:
+                identifier: us.mappings.search.fitment.selectSubmodeldropdown
+                wait: 3000
+            - click:
+                identifier: us.mappings.search.fitment.submodel                        
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.fitment.viewResultButton
+            - name: direction
+              string: down
+      - click:
+          identifier:  us.mappings.search.fitment.viewResultButton
+      - sleep:
+          duration: 5000 
+      - if:
+          identifier:
+            present:
+                - identifier: us.mappings.services.acc.virtualgarage.successMessage
+          then:
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.successMessageGotItButton
+      - click: 
+          identifier: us.mappings.services.navigateBackArrowToAcc
+
+  - name: unified.us.function.services.pharmacy.verifyPin
+    flow:
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.popularServices.pharmacy.pin
+          then:
+            - loop:
+                begin: 1
+                end: 5
+                flow:
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.pin
+            - log: "Pharmacy PIN Code entered"
+            - sleep:
+                duration: 4000
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics # us.mappings.popularServices.pharmacy.verifyPinCta
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics # us.mappings.popularServices.pharmacy.verifyPinCta
+
+  - name: unified.us.functions.services.pharmacy.page
+    flow:
+      - sleep:
+          duration: 2000 
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.popularServices.pharmacy.transferPrescriptions 
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center          
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+            - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+            - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions              
+      - scroll:
+          direction: down
+      - sleep:
+          duration: 2000
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.services.pharmacy.prescriptionsHistory
+            - identifier: us.mappings.popularServices.pharmacy.managefamilymembers
+      - sleep:
+          duration: 2000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.digitalvaccinerecord
+          position: center
+          scrollLimit: 3
+      - verifyIdentifier:
+          present:    
+            - identifier: us.mappings.popularServices.pharmacy.digitalvaccinerecord
+            - identifier: us.mappings.popularServices.pharmacy.lowCostPrescriptions
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.identifytest
+      - verifyIdentifier: 
+          present:              
+            - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+            - identifier: us.mappings.popularServices.pharmacy.identifytest
+
+  - name: unified.us.functions.services.pharmacy.enterPin
+    flow:
+    - storeIn:
+          key: executionStage
+          value: Pre-transactions
+    - executeFunction:
+        name: unified.us.functions.services.handleJoinOnePopup
+    - if:
+        condition: ${platform} == 'iOS'
+        then:
+          - if: 
+              identifier:
+                present: 
+                  - identifier: us.mappings.pharmacy.verifyPinPage
+              then:
+                - enterText:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pinField1
+                    string: '1'
+                    clickFirst: true
+                - enterText:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pinField2
+                    string: '2'
+                    clickFirst: true
+                - enterText:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pinField3
+                    string: '3'
+                    clickFirst: true
+                - enterText:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pinField4
+                    string: '4'
+                    clickFirst: true
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.enterPin.verifyPin
+    - if:
+        condition: ${platform} == 'Android'
+        then:
+          - if: 
+              identifier:
+                present: 
+                  - identifier: us.mappings.pharmacy.verifyPinPage
+              then:
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pin1
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pin2
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pin3
+                    wait: 3000
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.enter.pin4
+                    wait: 5000
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mappings.pharmacy.biometrics.noThanksButton
+              then:
+                - click:
+                    identifier: us.mappings.pharmacy.biometrics.noThanksButton
+          - if: 
+              identifier:
+                present: 
+                - identifier: us.mappings.pharmacy.biometrics.closebtn
+              then:
+                - click:
+                    identifier: us.mappings.pharmacy.biometrics.closebtn
+                    wait: 2000 
+    - if: 
+        identifier:
+          present: 
+            - identifier: us.mappings.pharmacy.onebanner
+        then:
+          - click:
+              identifier: us.mappings.pharmacy.onebanner.closebtn
+              wait: 2000             
+    - if: 
+        identifier:
+          present: 
+            - identifier: us.mappings.pharmacy.howItWorks.closebtn
+        then:
+          - click:
+              identifier: us.mappings.pharmacy.howItWorks.closebtn
+              wait: 2000
+
+  - name: unified.us.functions.services.handleJoinOnePopup
+    flow:
+      - if:
+          identifier:
+            timeout: 40000
+            present:
+              - identifier: us.mappings.services.joinOnePopup
+          then:
+            - click:
+                identifier: us.mappings.services.closeButton
+                wait: 5000
+
+  - name: unified.us.functions.services.pharmacy.verify.consent.delivery.info
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if: 
+                identifier:
+                  present: 
+                    - identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics
+                then:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics
+                      wait: 5000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if: 
+                identifier:
+                  present: 
+                    - identifier: us.mappings.popularServices.pharmacy.prescription.delivery.available.close.btn
+                then:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.prescription.delivery.available.close.btn
+                      wait: 5000
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+          - if: 
+              identifier:
+                present: 
+                  - identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+              then:
+                - click:
+                    identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+                    wait: 5000
+      
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.services.pharmacy.ack.digitalPharmacy.consent
+          then:
+            - click:
+                identifier: us.mappings.services.pharmacy.ack.digitalPharmacy.consent
+                wait: 5000
+
+  - name: unified.us.functions.services.pharmacy.scheduledDeliveryPageValidation
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.prescriptionAvailable.popup.title
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescriptionAvailable.popup.closeBtn
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.scheduledDelivery.banner
+          then:
+            - log: "Pharmacy Schedule delivery page displayed correctly"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.scheduledDelivery.header
+                  - identifier: us.mappings.popularServices.pharmacy.drug.name
+                  - identifier: us.mappings.popularServices.pharmacy.customer.name
+                  - identifier: us.mappings.popularServices.pharmacy.insurance.text
+                  - identifier: us.mappings.popularServices.pharmacy.seeDetails.btn
+                  - identifier: us.mappings.popularServices.pharmacy.patient.due.amt
+                  - identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Pharmacy page not displayed as expected"
+
+  - name: unified.us.functions.services.pharmacy.addToCart
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+                wait: 10000
+
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.popularServices.pharmacy.reviewTerms.btn
+
+                then:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.reviewTerms.btn
+                      wait: 2000
+
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                      - name: identifier
+                        string: us.mappings.popularServices.pharmacy.disclaimer.divider
+                      - name: direction
+                        string: down
+
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+                      wait: 2000
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.addToCart.stepper.btn
+          then:
+            - log: "Pharmacy item added to cart"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.addToCart.stepper.btn
+
+  - name:  unified.us.functions.search.groceryItem.usingDeeplink
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - loop:
+          each: ${groceryItem}
+          storeElement: items
+          storeIndex: itemIndex
+          flow:
+              - executeFunction:
+                  name: unified.us.functions.global.navigation.goToDeepLink
+                  params:
+                    - name: deepLinkUrl
+                      string: walmart://ip/$items                      
+              - sleep: 
+                  duration: 5000                       
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.item.addToCartButton             
+                  then:
+                    - log: groceryItem is in stock
+                    - break: true

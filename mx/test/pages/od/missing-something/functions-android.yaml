@@ -1,0 +1,910 @@
+#======================================================================================================================
+#  AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#  CREATED: Dic/15/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method switch to pieces in UOM selector
+  # Params: ${missingProduct} [Mandatory] Missing product
+  - name: mx.functions.missing-something.switchProductToPieces
+    platform: android
+    flow: 
+      - log:  
+          message: Changing ${missingProduct} to pieces
+          color: CYAN
+      - click: 
+          identifier: mx.mappings.missing-something.countView
+      - if:
+          identifier:
+            present: 
+              - identifier: mx.mappings.missing-something.productUOMSelector
+          then:
+            - log:  
+                message: ${missingProduct} is dual product
+                color: CYAN
+          else: 
+            - failTest:
+                message: ${missingProduct} is not a dual product
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.productUOMSelectorPiecesActive
+          then:
+            - log: 
+                message: Product is already set in pieces
+                color: CYAN
+          else:
+            - click:
+                identifier: mx.mappings.missing-something.piecesOption
+      - verifyIdentifier: 
+          present:
+            - identifier: mx.mappings.missing-something.productUOMSelectorPiecesActive
+  
+  # -------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method decreases the quantity n number
+  # Params:   ${missingProduct}  Product name
+  #           ${quantity}        Quantity
+  - name: mx.functions.missing-something.decreaseProductQuantityBy
+    platform: android
+    flow: 
+      - log:
+          message: Deleting ${quantity} items to ${missingProduct}
+          color: CYAN
+      - click:
+          identifier: mx.mappings.missing-something.countView      
+      - loop:
+          begin: 0
+          end: ${quantity}
+          flow:
+            - click:
+                identifier: mx.mappings.missing-something.decreaseButton
+
+  # -------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method taps the close button
+  - name: mx.functions.missing-something.tapClose
+    platform: android
+    flow: 
+      - log:
+          message: Closing missing something pop up
+          color: CYAN
+      - click:
+          identifier: mx.mappings.missing-something.closeButton
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function increases the quantity of a product on Missing-Something defined on param
+  # Param: ${quantity}    [Mandatory]  Number of times to increment the product quantity.
+  # Param: ${productName} [Mandatory]  Name of the product to be increased.
+  # EDITORS: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.increaseProductQuantityBy
+    platform: android
+    flow:
+      - log:
+          message: "Increase quantity: ${quantity}"
+          color: CYAN
+      - log:
+          message: "Product Name: ${productName}"
+          color: CYAN
+      # this click keeps the main button expanded.
+      - click:
+          identifier: mx.mappings.missing-something.mainButtonByProductName # <--PARAM--${productName}
+      - click:
+          identifier: mx.mappings.missing-something.increaseButton # <--PARAM--${productName}
+          numberOfClicks: ${quantity}
+          waitBetweenClicks: 0250
+      - log:
+          message: "End function: missing-something.increaseProductQuantityBy"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method gets the product name by position
+  # Params:   ${position}  Product position
+  - name: mx.functions.missing-something.getProductNameByPosition
+    platform: android
+    flow: 
+      - getString:
+          identifier: mx.mappings.missing-something.productByPositionDescription
+          attribute: content-desc
+          storeIn: missingProduct
+      - log:  
+          message: "Extracted name: ${missingProduct}"
+          color: CYAN
+          
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method adds the product to cart by position
+  # Params:   ${position}       [Mandatory] Position
+  - name: mx.functions.missing-something.addProductToCartByPosition
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.missing-something.getProductNameByPosition
+      - executeFunction:
+          name: mx.functions.missing-something.addProductToCart
+
+  # -------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method switch to weight in UOM selector
+  # Params: ${missingProduct} [Mandatory] Missing product
+  - name: mx.functions.missing-something.switchProductToWeight
+    platform: android
+    flow: 
+      - log:  
+          message: Changing ${missingProduct} to weight
+          color: CYAN
+      - click: 
+          identifier: mx.mappings.missing-something.countView
+      - if:
+          identifier:
+            present: 
+              - identifier: mx.mappings.missing-something.productUOMSelector
+          then:
+            - log:  
+                message: ${missingProduct} is dual product
+                color: CYAN
+          else: 
+            - failTest:
+                message: ${missingProduct} is not a dual product
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.productUOMSelectorWeightActive
+          then:
+            - log: 
+                message: Product is already set in weight
+                color: CYAN
+          else:
+            - click:
+                identifier: mx.mappings.missing-something.weightOption
+      - verifyIdentifier: 
+          present:
+            - identifier: mx.mappings.missing-something.productUOMSelectorWeightActive
+
+  # ------------------------------------------------------------------------------------------------------------------
+  
+  # PARAM:
+  #   ${productName}  [Mandatory]   Product name.
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.addProductToCart
+    platform: android
+    flow:
+      - log:
+          message: "Product Name to Add: ${productName}"
+          color: CYAN
+      - if: 
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.addToCartButtonByProductName # <--PARAM--${productName}
+          then: 
+            - click:
+                identifier: mx.mappings.missing-something.addToCartButtonByProductName # <--PARAM--${productName}
+          else:
+            - failTest:
+                message: Product was already added to cart.
+      - log:
+          message: "End function: missing-something.addProductToCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # PARAMS:
+  #   ${productName}  [Mandatory]   Name of the Product to get its Quantity as pieces.
+  # RETURNS:
+  #   ${returnedProductQuantityAsPieces}  The returned product quantity as pieces.
+  # AUTHOR: ???
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.getProductQuantityAsPieces
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.missing-something.quantityLabelContracted
+          attribute: text
+          storeIn: returnedProductQuantityAsPieces
+      - log:
+          message: "Quantity got: '${returnedProductQuantityAsPieces}'"
+          color: CYAN
+      - log:
+          message: "End function: missing-something.getProductQuantityAsPieces"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+  
+  # PARAMS:
+  #   ${productName}  [Mandatory]   Name of the Product to get its Price.
+  # RETURNS:
+  #   ${returnedProductUnitPrice}       The Price of the given product.
+  # AUTHOR: ???
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.getProductPrice
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.missing-something.productPriceByProductName
+          storeIn: returnedProductUnitPrice
+      - executeNode:
+          file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+          args:
+            - value: ${returnedProductUnitPrice}
+          getResponse:
+            storeIn: returnedProductUnitPrice
+      - log:
+          message: "Price got: '${returnedProductUnitPrice}'"
+          color: CYAN
+      - log:
+          message: "End function: missing-something.getProductPrice"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Gets the Product Type of the given product based on the analysis of the price(s) label(s).
+  # NOTE:   It will click the main button to expand it and check if the UOM Selector is displayed.
+  # PARAMS:   ${productName}  [Mandatory]  Name of the Product to get its Type.
+  # RETURNS:  ${returnedProductType}  The Type of the given product.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.getProductType
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      # Check if product has Price Label to scroll into it, else fail function...
+      - try:
+          flow:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.missing-something.productPrice # <--PARAM--${productName}
+                  timeout: 2000
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: mx.mappings.missing-something.productPrice # <--PARAM--${productName}
+                      position: center
+                      scrollLimit: 1
+          catch:
+            flow:
+              - failTest:
+                  message: "Function Failed: Product does not have Price Label from which to analyze Product Type"
+      # Default Product Type...
+      - storeIn:
+          key: returnedProductType
+          value: 'null'
+      - click:
+          identifier: mx.mappings.missing-something.quantityLabelContracted # <--PARAM--${productName}
+      # Check if product is Dual...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.unitOfMeasureSelectorByProductName # <--PARAM--${productName}
+            timeout: 2000
+          then:
+            - log:
+                message: Product Type is Dual
+                color: GREEN
+            - storeIn:
+                key: returnedProductType
+                value: Dual # --RETURNS--${returnedProductType}-->
+          else:
+            - log:
+                message: Product Type is not Dual
+                color: GREEN
+      # Check if product is Weighable...
+      - if:
+          condition: ${returnedProductType} == null
+          then:
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: mx.mappings.missing-something.productPrice # <--PARAM--${productName}
+                          contains: /kg
+                  - log:
+                      message: Product Type is Weighable
+                      color: GREEN
+                  - storeIn:
+                      key: returnedProductType
+                      value: Weighable # --RETURNS--${returnedProductType}-->
+                catch:
+                  flow:
+                    - log:
+                        message: Product Type is not Weighable
+                        color: GREEN
+      # Check if product is Pieces...
+      - if:
+          condition: ${returnedProductType} == null
+          then:
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: mx.mappings.missing-something.productPrice # <--PARAM--${productName}
+                          notContains: /kg
+                  - log:
+                      message: Product Type is Pieces
+                      color: GREEN
+                  - storeIn:
+                      key: returnedProductType
+                      value: Pieces # --RETURNS--${returnedProductType}-->
+                catch:
+                  flow:
+                    - log:
+                        message: Product Type is not Pieces
+                        color: GREEN
+      # Check correct product type was found...
+      - if:
+          condition: ${returnedProductType} == null
+          then:
+            - failTest:
+                message: "Function Failed: Product Type was not able to be calculated"
+      - log:
+          message: "Product Type: '${returnedProductType}'"
+          color: CYAN
+      - log:
+          message: "End function: mx.functions.missing-something.getProductType"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method opens the PDP of certain missing product
+  # Param  ${missingProduct} [Mandatory] Product to find    
+  #        ${direction}      [Mandatory] Direction to scroll
+  - name: mx.functions.missing-something.openPDP
+    platform: android
+    flow: 
+      - log:
+          message: Opening ${missingProduct} PDP
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params: 
+            - name: elementToFind
+              string: mx.mappings.missing-something.missingProductIcon
+      - click:
+          identifier: mx.mappings.missing-something.missingProductIcon
+      - log:  
+          message: Opening PDP
+          color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method change to weight option in BYG for a dual product
+  # Param  ${missingProduct} [Mandatory] Product to find    
+  #        ${direction}      [Mandatory] Direction to scroll
+  - name: mx.functions.missing-something.getProductQuantityAsWeight
+    platform: android
+    flow: 
+      - executeFunction:
+          name: mx.functions.missing-something.switchProductToWeight
+      - getString:
+          identifier: mx.mappings.missing-something.countView
+          attribute: text
+          storeIn: productQuantity
+      - log:  
+          message: "Extracted quantity: ${productQuantity}"
+          color: CYAN
+
+  # ------------------------------------------------------------------------------------------------------------------
+  
+  # RETURNS:  ${returnedIsPageDisplayed}  Whether or not the page was displayed.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.missing-something.isPageDisplayed
+    platform: android
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.missing-something.pageTitle
+                  - identifier: mx.mappings.missing-something.closeButton
+                  - identifier: mx.mappings.missing-something.continueButton
+            - storeIn:
+                key: returnedIsPageDisplayed
+                value: true
+            - log:
+                message: "Missing Something Page displayed successfully!"
+                color: CYAN
+          catch:
+            flow:
+              - storeIn:
+                  key: returnedIsPageDisplayed
+                  value: false
+              - log:
+                  message: "Missing Something Page not displayed properly!"
+                  color: CYAN
+      - log:
+          message: "End function: mx.functions.missing-something.isPageDisplayed"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the estimated total
+  # Params:   ${expectedEstimatedTotal}  Expected total
+  - name: mx.functions.missing-something.assertEstimatedTotal
+    platform: android
+    flow: 
+      - log: 
+          message: Checking if ${expectedEstimatedTotal} is the same as in cart
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.missing-something.estimatedTotal
+              equals: $${expectedEstimatedTotal}
+      - log:
+          message: Estimated total is correct
+          color: CYAN
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedAreThereAvailableProducts}  Whether there are available Products to be added to Cart or not.
+  #           ${returnedAvailableProductsCount}     How many available products there are.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.missing-something.areThereAvailableProducts
+    platform: android
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.missing-something.anyAddToCartButton
+                timeout: 5000
+            - storeIn:
+                key: returnedAreThereAvailableProducts
+                value: true
+            - numberOfChildElements:
+                identifier: mx.mappings.missing-something.productsContainer
+                filterBy: mx.mappings.missing-something.anyAddToCartButton
+                storeIn: returnedAvailableProductsCount
+          catch:
+            flow:
+              - storeIn:
+                  key: returnedAreThereAvailableProducts
+                  value: false
+              - storeIn:
+                  key: returnedAvailableProductsCount
+                  value: 0
+      - log:
+          message: "There are '${returnedAvailableProductsCount}' available products!"
+          color: CYAN
+      - log:
+          message: "End function: mx.functions.missing-something.areThereAvailableProducts"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${productName}  [Mandatory]  Product Name to be asserted.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.missing-something.assertProductAddedToCart
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.quantityLabelContracted # <--PARAM--${productName}--
+          then:
+            - log:
+                message: "Assertion Successful: Product is added to Cart."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Assertion Failed: Product is not added to Cart (Product Name: '${productName}')"
+      - log:
+          message: "End function: mx.functions.missing-something.assertProductAddedToCart"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${productName}  [Mandatory]  Product Name to be asserted.
+  # RETURNS:
+  #   ${returnedProductHasDiscountFlag}  Flag to determine whether or not the Product added to Cart had a discount. Values: [ true | false ]
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.missing-something.checkIfProductHasDiscount
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.missing-something.productOriginalPrice
+                timeout: 3000
+            - storeIn:
+                key: returnedProductHasDiscountFlag
+                value: true # --RETURNS--${returnedProductHasDiscountFlag}-->
+            - log:
+                message: "Product has discount!"
+                color: CYAN
+          catch:
+            flow:
+              - storeIn:
+                  key: returnedProductHasDiscountFlag
+                  value: false # --RETURNS--${returnedProductHasDiscountFlag}-->
+              - log:
+                  message: "Product doesn't have discount!"
+                  color: CYAN
+      - log:
+          message: "End function: mx.functions.missing-something.checkIfProductHasDiscount"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Adds the first available product in case there is any and returns the whole set of information of the
+  #   added product (described by the returned values below). This function only checks for available products within
+  #   the ones displayed initially in the page, it won't scroll down to load additional products. When there are no
+  #   available products, the function will not add any and will return all values as 'null'.
+  #
+  # RETURNS:
+  #   ${returnedProductAddedFlag}
+  #       Flag to determine whether or not a Product was able to be added to Cart. Values: [ true | false ]
+  #       If a Product was not able to be added to Cart, all of the other return values below will be returned as 'null'.
+  #
+  #   ${returnedProductName}
+  #       Name of the Product added to Cart.
+  #
+  #   ${returnedProductHasDiscountFlag}
+  #       Flag to determine whether or not the Product added to Cart had a discount. Values: [ true | false ]
+  #
+  #   ${returnedProductOriginalPrice}
+  #       Original Price of the Product added to Cart.
+  #       If the product has discount, this value is the original Price Before Discount. If it doesn't, it is the Regular Price.
+  #
+  #   ${returnedProductUnitPrice}
+  #       Unit Price of the Product added to Cart.
+  #       If the Product has a discount, this value is the final Price After Discount. If it doesn't, it is the Regular Price.
+  #
+  #   ${returnedProductType}
+  #       Type of the Product added to Cart. Values: [ Pieces | Dual | Weighable ]
+  #
+  #   ${returnedProductQuantityAsPieces}
+  #       Quantity in Pieces of the Product added to Cart.
+  #       If the Product was a Weighable Product, the quantity will be the same as the grams quantity.
+  #
+  #   ${returnedProductQuantityAsWeight}
+  #       Quantity in Grams of the Product added to Cart.
+  #       If the Product was a Pieces Product, the quantity will be the same as the pieces quantity.
+  #
+  #   ${returnedProductWeightConversionRate}
+  #       Weight Conversion Rate equivalent to 1 unit of the Product added to Cart.
+  #       If the Product was a Pieces Product, the rate will be 1.
+  #
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.addFirstAvailableProductIfAny
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.missing-something.areThereAvailableProducts
+      - if:
+          condition: ${returnedAreThereAvailableProducts}
+          then:
+            - log:
+                message: "Adding first available Product to Cart..."
+                color: CYAN
+            - storeIn:
+                key: position
+                value: 1
+            - getString:
+                identifier: mx.mappings.missing-something.availableProductNameLabelByPosition # <--VAR--${position}
+                storeIn: productName
+            - click:
+                identifier: mx.mappings.missing-something.addToCartButton # <--VAR--${productName}
+            - sleep:
+                duration: 3000
+            - executeFunction:
+                name: mx.functions.missing-something.assertProductAddedToCart # <--VAR--${productName}
+
+            # Info about a Product was able to be added...
+            - storeIn:
+                key: returnedProductAddedFlag
+                value: true
+                # --RETURNS--${returnedProductAddedFlag}-->
+
+            # Name of the added Product...
+            - storeIn:
+                key: returnedProductName
+                value: ${productName}
+                # --RETURNS--${returnedProductName}-->
+
+            # Type of the added Product...
+            - executeFunction:
+                name: mx.functions.missing-something.getProductType # <--VAR--${productName}
+            - storeIn:
+                key: returnedProductType
+                value: ${returnedProductType}
+                # --RETURNS--${returnedProductType}-->
+
+            # Whether the product had a discount or not...
+            - executeFunction:
+                name: mx.functions.missing-something.checkIfProductHasDiscount # <--VAR--${productName}
+            - storeIn:
+                key: returnedProductHasDiscountFlag
+                value: ${returnedProductHasDiscountFlag}
+                # --RETURNS--${returnedProductHasDiscountFlag}-->
+
+            # Original Price & Unit Price, based on the Product Type and whether or not it has discount...
+            - if:
+                condition: ${returnedProductType} == 'Pieces' || ${returnedProductType} == 'Weighable'
+                then:
+                  - if:
+                      condition: ${returnedProductHasDiscountFlag}
+                      then:
+                        - getString:
+                            identifier: mx.mappings.missing-something.productOriginalPrice # <--VAR--${productName}
+                            storeIn: returnedProductOriginalPrice
+                      else:
+                        - getString:
+                            identifier: mx.mappings.missing-something.productPrice # <--VAR--${productName}
+                            storeIn: returnedProductOriginalPrice
+                  - getString:
+                      identifier: mx.mappings.missing-something.productPrice # <--VAR--${productName}
+                      storeIn: returnedProductUnitPrice
+                else:
+                  - if:
+                      condition: ${returnedProductHasDiscountFlag}
+                      then:
+                        - getString: # TODO: use the proper mapping here for Dual products with discount once it can be discovered...
+                            identifier: mx.mappings.missing-something.dualProductPricePerKilogram # <--VAR--${productName}
+                            storeIn: returnedProductOriginalPrice
+                      else:
+                        - getString:
+                            identifier: mx.mappings.missing-something.dualProductPricePerKilogram # <--VAR--${productName}
+                            storeIn: returnedProductOriginalPrice
+                  - getString:
+                      identifier: mx.mappings.missing-something.dualProductPricePerKilogram # <--VAR--${productName}
+                      storeIn: returnedProductUnitPrice
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+                args:
+                  - value: ${returnedProductOriginalPrice}
+                getResponse:
+                  storeIn: returnedProductOriginalPrice
+                  # --RETURNS--${returnedProductOriginalPrice}-->
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+                args:
+                  - value: ${returnedProductUnitPrice}
+                getResponse:
+                  storeIn: returnedProductUnitPrice
+                  # --RETURNS--${returnedProductUnitPrice}-->
+
+            # Product Quantities as Pieces and Weight & Weight Conversion Rate based on the Product Type...
+            - if:
+                condition: ${returnedProductType} == 'Pieces'
+                then:
+                  - getString:
+                      identifier: mx.mappings.missing-something.quantityLabelContracted # <--VAR--${productName}
+                      storeIn: returnedProductQuantityAsPieces
+                  - executeNode:
+                      file: mx/test/helpers/utils/sanitizeQuantity.js
+                      args:
+                        - value: ${returnedProductQuantityAsPieces}
+                      getResponse:
+                        storeIn: returnedProductQuantityAsPieces
+                        # --RETURNS--${returnedProductQuantityAsPieces}-->
+                  - storeIn:
+                      key: returnedProductQuantityAsWeight
+                      value: ${returnedProductQuantityAsPieces}
+                      # --RETURNS--${returnedProductQuantityAsWeight}-->
+                  - storeIn:
+                      key: returnedProductWeightConversionRate
+                      value: 1
+                      # --RETURNS--${returnedProductWeightConversionRate}-->
+            - if:
+                condition: ${returnedProductType} == 'Weighable'
+                then:
+                  - getString:
+                      identifier: mx.mappings.missing-something.quantityLabelContracted  # <--VAR--${productName}
+                      storeIn: returnedProductQuantityAsWeight
+                  - executeNode:
+                      file: mx/test/helpers/utils/sanitizeQuantity.js
+                      args:
+                        - value: ${returnedProductQuantityAsWeight}
+                      getResponse:
+                        storeIn: returnedProductQuantityAsWeight
+                        # --RETURNS--${returnedProductQuantityAsWeight}-->
+                  - storeIn:
+                      key: returnedProductQuantityAsPieces
+                      value: 1
+                      # --RETURNS--${returnedProductQuantityAsPieces}-->
+                  - storeIn:
+                      key: returnedProductWeightConversionRate
+                      value: ${returnedProductQuantityAsWeight}
+                      # --RETURNS--${returnedProductWeightConversionRate}-->
+            - if:
+                condition: ${returnedProductType} == 'Dual'
+                then:
+                  - click:
+                      identifier: mx.mappings.missing-something.quantityLabelContracted # <--VAR--${productName}
+                  - click:
+                      identifier: mx.mappings.missing-something.piecesOption # <--VAR--${productName}
+                  - getString:
+                      identifier: mx.mappings.missing-something.productUOMSelectorPiecesActive # <--VAR--${productName}
+                      storeIn: returnedProductQuantityAsPieces
+                  - executeNode:
+                      file: mx/test/helpers/utils/sanitizeQuantity.js
+                      args:
+                        - value: ${returnedProductQuantityAsPieces}
+                      getResponse:
+                        storeIn: returnedProductQuantityAsPieces
+                        # --RETURNS--${returnedProductQuantityAsPieces}-->
+                  - click:
+                      identifier: mx.mappings.missing-something.weightOption # <--VAR--${productName}
+                  - getString:
+                      identifier: mx.mappings.missing-something.productUOMSelectorWeightActive # <--VAR--${productName}
+                      storeIn: returnedProductQuantityAsWeight
+                  - executeNode:
+                      file: mx/test/helpers/utils/sanitizeQuantity.js
+                      args:
+                        - value: ${returnedProductQuantityAsWeight}
+                      getResponse:
+                        storeIn: returnedProductQuantityAsWeight
+                        # --RETURNS--${returnedProductQuantityAsWeight}-->
+                  - arithmetic:
+                      expression: ${returnedProductQuantityAsWeight} / ${returnedProductQuantityAsPieces}
+                      storeIn: returnedProductWeightConversionRate
+                      # --RETURNS--${returnedProductWeightConversionRate}-->
+            - log:
+                message: "Product added to Cart successfully (Product Name: '${returnedProductName}')"
+                color: CYAN
+          else:
+            - storeIn:
+                key: returnedProductAddedFlag
+                value: false # --RETURNS--${returnedProductAddedFlag}-->
+            - storeIn:
+                key: returnedProductName
+                value: 'null' # --RETURNS--${returnedProductName}-->
+            - storeIn:
+                key: returnedProductHasDiscountFlag
+                value: 'null' # --RETURNS--${returnedProductHasDiscountFlag}-->
+            - storeIn:
+                key: returnedProductOriginalPrice
+                value: 'null' # --RETURNS--${returnedProductOriginalPrice}-->
+            - storeIn:
+                key: returnedProductUnitPrice
+                value: 'null' # --RETURNS--${returnedProductUnitPrice}-->
+            - storeIn:
+                key: returnedProductType
+                value: 'null' # --RETURNS--${returnedProductType}-->
+            - storeIn:
+                key: returnedProductQuantityAsPieces
+                value: 'null' # --RETURNS--${returnedProductQuantityAsPieces}-->
+            - storeIn:
+                key: returnedProductQuantityAsWeight
+                value: 'null' # --RETURNS--${returnedProductQuantityAsWeight}-->
+            - storeIn:
+                key: returnedProductWeightConversionRate
+                value: 'null' # --RETURNS--${returnedProductWeightConversionRate}-->
+            - log:
+                message: "There were no available Products able to be added to Cart. The process will continue without adding any."
+                color: CYAN
+      - log:
+          message: "End function: mx.functions.missing-something.addFirstAvailableProductIfAny"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Adds the first available product with multi-savings promotion in case there is any and returns the
+  #   whole set of information of the added product (described by the returned values below). This function only
+  #   checks for available products within the ones displayed initially in the page, it won't scroll down to load
+  #   additional products. When there are no available products, the function will not add any and will return all
+  #   values as 'null'.
+  #
+  # RETURNS:
+  #   ${returnedProductAddedFlag}
+  #       Flag to determine whether or not a Product with Multi-Savings was able to be added to Cart. Values: [ true | false ]
+  #       If a Product was not able to be added to Cart, all of the other return values below will be returned as 'null'.
+  #
+  #   ${returnedProductName}
+  #       Name of the Product added to Cart.
+  #
+  #   ${returnedProductUnitPrice}
+  #       Unit Price of the Product added to Cart.
+  #       If the Product has a discount, this value is the final Price After Discount. If it doesn't, it is the Regular Price.
+  #
+  #   ${returnedProductType}
+  #       Type of the Product added to Cart. Values: [ Pieces | Dual | Weighable ]
+  #
+  #   ${returnedProductQuantityAsPieces}
+  #       Quantity in Pieces of the Product added to Cart.
+  #       If the Product was a Weighable Product, the quantity will be the same as the grams quantity.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.addFirstAvailableProductWithMultiSavingsIfAny
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.missing-something.isThereProductWithMultiSavings
+      - if:
+          condition: ${returnedIsThereProductWithMultiSavings}
+          then:
+            - log:
+                message: "Getting the name of the first available Product with Multi-Savings Promotion..."
+                color: CYAN
+            - getString:
+                identifier: mx.mappings.missing-something.productNameWithMultiSavingsBadge
+                storeIn: productWithMultiSavingsName
+            - executeFunction:
+                name: mx.functions.missing-something.addProductToCart
+                params:
+                  - name: productName
+                    string: ${productWithMultiSavingsName}
+            - sleep:
+                duration: 3000
+            - executeFunction:
+                name: mx.functions.missing-something.assertProductAddedToCart # <--VAR--${productName}
+
+            # Info of the added Product...
+            - storeIn:
+                key: returnedProductAddedFlag
+                value: true
+                # --RETURNS--${returnedProductAddedFlag}-->
+
+            # Name of the added Product...
+            - storeIn:
+                key: returnedProductName
+                value: ${productWithMultiSavingsName}
+                # --RETURNS--${returnedProductName}-->
+
+            # Type of the added Product...
+            - executeFunction:
+                name: mx.functions.missing-something.getProductType # <--VAR--${productName}
+                # --RETURNS--${returnedProductType}-->
+            - if:
+                condition: ${returnedProductType} != 'Pieces'
+                then:
+                  - failTest:
+                      message: "Error: By business rule only Products sold by Pieces can have Multi-Savings Promotion"
+
+            # Unit Price...
+            - executeFunction:
+                name: mx.functions.missing-something.getProductPrice # <--VAR--${productName}
+                # --RETURNS--${returnedProductUnitPrice}-->
+
+            # Product Quantity...
+            - executeFunction:
+                name: mx.functions.missing-something.getProductQuantityAsPieces
+                # --RETURNS--${returnedProductQuantityAsPieces}-->
+            - log:
+                message: "Product added to Cart successfully (Product Name: '${returnedProductName}')"
+                color: CYAN
+          else:
+            - storeIn:
+                key: returnedProductAddedFlag
+                value: false # --RETURNS--${returnedProductAddedFlag}-->
+            - storeIn:
+                key: returnedProductName
+                value: 'null' # --RETURNS--${returnedProductName}-->
+            - storeIn:
+                key: returnedProductUnitPrice
+                value: 'null' # --RETURNS--${returnedProductUnitPrice}-->
+            - storeIn:
+                key: returnedProductType
+                value: 'null' # --RETURNS--${returnedProductType}-->
+            - storeIn:
+                key: returnedProductQuantityAsPieces
+                value: 'null' # --RETURNS--${returnedProductQuantityAsPieces}-->
+            - log:
+                message: "There were no available Products with Multi-Savings promotion able to be added to Cart. The process will continue without adding any."
+                color: CYAN
+      - log:
+          message: "End function: mx.functions.missing-something.addFirstAvailableProductWithMultiSavingsIfAny"
+          color: BLUE

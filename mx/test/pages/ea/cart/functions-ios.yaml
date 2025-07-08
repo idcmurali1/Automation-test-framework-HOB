@@ -1,0 +1,1255 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#  CREATED: Feb/20/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertPageDisplayed
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.backButton
+              - identifier: mx.mappings.ea.cart.pageTitle
+              - identifier: mx.mappings.ea.cart.genericPageContainer
+          then:
+            - log:
+                message: "Assertion Succeeded: Cart is displayed."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Cart is not displayed."
+      - log:
+          message: "End function: cart.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   This flow selects the desired Delivery Method based on the parameter 'deliveryMethod'.
+  # PARAMS:
+  #   ${deliveryMethod}   [Mandatory]   Delivery Method to select. Options: [ HomeDelivery | PickupDelivery ]
+  #                                       - If 'HomeDelivery', function verifies if it's already selected, if not,
+  #                                           it clicks the switch button and confirms the selection.
+  #                                       - If 'PickupDelivery', function verifies if it's already selected, if not,
+  #                                           it clicks the switch button and selects a store, and then it confirms the selection.
+  #
+  #   ${zipCode}          [Optional]   Desired zip code to enter when opening the store selector popup (only for 'PickupDelivery').
+  #   ${storeName}        [Optional]   Name of the store you want to switch to (only for 'PickupDelivery').
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.selectDeliveryMethod
+    platform: ios
+    flow:
+      - log:
+          message: "Delivery Method to Select: '${deliveryMethod}'"
+          color: CYAN
+      - if:
+          condition: ${deliveryMethod} != 'HomeDelivery' && ${deliveryMethod} != 'PickupDelivery'
+          then:
+            - failTest:
+                message: "Invalid Delivery Method Option provided: '${deliveryMethod}'"
+      - scroll:
+          direction: up
+          scrollLimit: 2
+          wait: 1000
+
+      # Home Delivery...
+      - if:
+          condition: ${deliveryMethod} == 'HomeDelivery'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.ea.cart.homeDeliveryIsSelected
+                then:
+                  - log:
+                      message: "Home Delivery Method is already selected."
+                      color: GREEN_BOLD
+                else:
+                  - log:
+                      message: "Home Delivery Method is not selected, switching to Home Delivery..."
+                      color: GREEN_BOLD
+                  - executeFunction:
+                      name: mx.functions.ea.cart.tapSwitchToHomeDeliveryButton
+                  - sleep:
+                      duration: 5000
+                  - executeFunction:
+                      name: mx.functions.ea.cart.assertHomeDeliveryIsSelected
+
+      # Pickup Delivery...
+      - if:
+          condition: ${deliveryMethod} == 'PickupDelivery'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.ea.cart.pickupDeliveryIsSelected
+                then:
+                  - log:
+                      message: "Pickup Delivery Method is already selected."
+                      color: GREEN_BOLD
+                else:
+                  - executeFunction:
+                      name: mx.functions.ea.cart.tapSwitchToPickupDeliveryButton
+                  - executeFunction:
+                      name: mx.functions.ea.store-selector-popup.assertPopupDisplayed
+                  - executeFunction:
+                      name: mx.flows.ea.store-selector-popup.quickChangeStoreFromPopup
+                      params:
+                        - name: zipCode
+                          string: ${zipCode}
+                        - name: storeName
+                          string: ${storeName}
+                  - sleep:
+                      duration: 3000
+                  - executeFunction:
+                      name: mx.functions.ea.cart.assertPickupDeliveryIsSelected
+      - log:
+          message: "End function: cart.selectDeliveryMethod"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.tapBack
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.cart.backButton
+      - log:
+          message: "End function: cart.tapBack"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertHomeDeliveryIsSelected
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.homeDeliveryIsSelected
+          then:
+            - log:
+                message: "Assertion Succeeded: Home Delivery is Selected."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Home Delivery is not Selected."
+      - log:
+          message: "End function: cart.assertHomeDeliveryIsSelected"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertPickupDeliveryIsSelected
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.pickupDeliveryIsSelected
+          then:
+            - log:
+                message: "Assertion Succeeded: Pickup Delivery is Selected."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Pickup Delivery is not Selected."
+      - log:
+          message: "End function: cart.assertPickupDeliveryIsSelected"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.tapSwitchToHomeDeliveryButton
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.cart.switchToHomeDeliveryButton
+      - log:
+          message: "End function: cart.tapSwitchToHomeDeliveryButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.tapSwitchToPickupDeliveryButton
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.cart.switchToPickupDeliveryButton
+      - log:
+          message: "End function: cart.tapSwitchToPickupDeliveryButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.openAddressSelector
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.cart.selectedHomeOrStoreAddress
+      - log:
+          message: "End function: cart.openAddressSelector"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.openStoreSelector
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.cart.selectedHomeOrStoreAddress
+      - log:
+          message: "End function: cart.openStoreSelector"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.tapContinue
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.cart.continueButton
+      - log:
+          message: "End function: ea.cart.tapContinue"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the products count next to the subtotal label below the products section in cart.
+  # PARAMS:       ${expectedProductsCount}  [Mandatory]  Product Count expected to be displayed.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductsCountInSubtotalLabel
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Product Count: '${expectedProductsCount}'"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.cart.subtotalLabel
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.ea.cart.subtotalLabel
+                position: center
+                scrollLimit: 5
+      - getString:
+          identifier: mx.mappings.ea.cart.subtotalLabel
+          storeIn: displayedCountInSubtotalLabel
+      - log:
+          message: "Displayed Product Count: '${displayedCountInSubtotalLabel}'"
+          color: GREEN_BOLD
+      - verifyIdentifier:
+          value:
+            - identifier: mx.mappings.ea.cart.subtotalLabel
+              contains: "Subtotal (${expectedProductsCount} artículo"
+      - log:
+          message: "Assertion Succeeded: Products Count is correct"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertProductsCountInSubtotalLabel"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method expands the product list in case it is not expanded already.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.expandProductListIfNotExpanded
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.collapsedProductList
+          then:
+            - log:
+                message: "Expanding Product List..."
+                color: GREEN_BOLD
+            - click:
+                identifier: mx.mappings.ea.cart.collapsedProductList
+          else:
+            - log:
+                message: "Product List is already expanded."
+                color: GREEN_BOLD
+      - log:
+          message: "End function: cart.expandProductListIfNotExpanded"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts if a product is present in cart.
+  # PARAMS:       ${productName}  [Mandatory]  Name of the certain product.
+  #               ${direction}    [Optional]   Direction where to scroll to try to find the element.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductListed
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage # <--PARAM--${direction}
+          params:
+            - name: elementToFind
+              string: mx.mappings.ea.cart.productByName # <--PARAM--${productName}
+      - log:
+          message: "Assertion Succeeded: Product is Listed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertProductListed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:   ${productName}  [Mandatory]  Name of the product to assert for.
+  #           ${expectedQuantity}  [Mandatory]  Expected quantity to assert to be displayed.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductQuantity
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Quantity: '${expectedQuantity}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.ea.cart.getProductQuantity # <--PARAM--${productName} | RETURNS--${returnedProductQuantity}-->
+      - log:
+          message: "Displayed Quantity: '${returnedProductQuantity}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${returnedProductQuantity} == ${expectedQuantity}
+          then:
+            - log:
+                message: "Successful Assertion: Displayed Quantity is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Displayed Quantity != Expected Quantity."
+      - log:
+          message: "End function: cart.assertProductQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:   ${productName}  [Mandatory]  Product name to get its quantity from.
+  # RETURNS:  ${returnedProductQuantity}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.getProductQuantity
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.cart.productQuantityByProductName # <--PARAM--${productName}
+          extractNumbers: true
+          storeIn: returnedProductQuantity
+      - log:
+          message: "Quantity Got: '${returnedProductQuantity}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.getProductQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts the displayed product's unit price for the given product name.
+  # PARAMS:       ${productName}        [Mandatory]   Product name to assert for.
+  #               ${expectedUnitPrice}  [Mandatory]   Expected unit price.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductUnitPrice
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Unit Price: '${expectedUnitPrice}'"
+          color: CYAN
+
+      # Adding comma to expected value for correct validation...
+      - executeNode:
+          file: mx/test/helpers/utils/numberToNumberWithComa.js
+          args:
+            - value: ${expectedUnitPrice}
+          getResponse:
+            storeIn: expectedUnitPrice
+
+      # Getting Product Label to validate...
+      - log:
+          message: Getting Product Label to validate...
+          color: GREEN_BOLD
+      - getString:
+          identifier: mx.mappings.ea.cart.productNameLabelByProductName # <--PARAM--${productName}
+          storeIn: productNameFullLabel
+      - log:
+          message: 'Product Label: "${productNameFullLabel}"'
+          color: GREEN_BOLD
+
+      # Calculating possible values to verify...
+      - log:
+          message: Calculating possible values to verify...
+          color: GREEN_BOLD
+      - executeNode:
+          file: mx/test/helpers/utils/stringContains.js
+          args:
+            - value: ${productNameFullLabel}
+            - value: Pieza(s) 1
+          getResponse:
+            storeIn: isOnePiece
+      - if:
+          condition: ${isOnePiece} == true
+          then:
+            - storeIn:
+                key: possibleValuesToVerify
+                value: 'Costo: $${expectedUnitPrice} | Costo: ${expectedUnitPrice}'
+          else:
+            - storeIn:
+                key: possibleValuesToVerify
+                value: '$${expectedUnitPrice} | ${expectedUnitPrice}'
+
+      # Verifying possible values are contained within the Product Label...
+      - log:
+          message: 'Verifying possible values are contained within the Product Label...'
+          color: GREEN_BOLD
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAny.js
+          args:
+            - value: ${productNameFullLabel}
+            - value: ${possibleValuesToVerify}
+          getResponse:
+            storeIn: containsExpectedUnitPrice
+
+      # Final assertion...
+      - if:
+          condition: ${containsExpectedUnitPrice} == false
+          then:
+            - failTest:
+                message: "Product Unit Price is Not Correct: Displayed Unit Price doesn't look like the Expected Unit Price."
+      - log:
+          message: Product Unit Price is Correct.
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertProductUnitPrice"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts the displayed product's original price for the given product name.
+  # NOTE:         This function assumes the original price for the product is displayed, if it is not, function fails.
+  # PARAMS:       ${productName}            [Mandatory]   Product name to assert for.
+  #               ${expectedOriginalPrice}  [Mandatory]   Expected original price.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductOriginalPrice
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Original Price: '${expectedOriginalPrice}'"
+          color: CYAN
+
+      # Adding comma to expected value for correct validation...
+      - executeNode:
+           file: mx/test/helpers/utils/numberToNumberWithComa.js
+           args:
+             - value: ${expectedOriginalPrice}
+           getResponse:
+               storeIn: expectedOriginalPrice
+
+      # Getting Product Label to validate...
+      - getString:
+          identifier: mx.mappings.ea.cart.productNameLabelByProductName # <--PARAM--${productName}
+          storeIn: productNameFullLabel
+      - log:
+          message: 'Displayed Label: "${productNameFullLabel}"'
+          color: GREEN_BOLD
+
+      # Calculating values to verify...
+      - storeIn:
+          key: possibleValuesToAssert
+          value: 'Precio anterior $${expectedOriginalPrice} | Precio anterior ${expectedOriginalPrice}'
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAny.js
+          args:
+            - value: ${productNameFullLabel}
+            - value: ${possibleValuesToAssert}
+          getResponse:
+            storeIn: expectedOriginalPriceIsContained
+      # Final assertion...
+      - if:
+          condition: ${expectedOriginalPriceIsContained} == false
+          then:
+            - failTest:
+                message: 'FAILED ASSERTION: Product Original Price is not correct.'
+      - log:
+          message: 'SUCCESSFUL ASSERTION: Product Original Price is correct.'
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertProductOriginalPrice"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts the expected product's subtotal.
+  # PARAMS:       ${productName}       [Mandatory]  Product name to assert for.
+  #               ${expectedSubtotal}  [Mandatory]  Expected subtotal.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductSubtotal
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Subtotal: '${expectedSubtotal}'"
+          color: CYAN
+
+      # Adding comma to expected value for correct validation...
+      - executeNode:
+           file: mx/test/helpers/utils/numberToNumberWithComa.js
+           args:
+             - value: ${expectedSubtotal}
+           getResponse:
+               storeIn: expectedSubtotal
+
+      # Getting Product Label to validate...
+      - getString:
+          identifier: mx.mappings.ea.cart.productNameLabelByProductName # <--PARAM--${productName}
+          storeIn: productNameFullLabel
+      - log:
+          message: 'Displayed Label: "${productNameFullLabel}"'
+          color: GREEN_BOLD
+
+      # Calculating values to verify...
+      - storeIn:
+          key: possibleValuesToAssert
+          value: 'Costo: $${expectedSubtotal} | Costo: ${expectedSubtotal}'
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAny.js
+          args:
+            - value: ${productNameFullLabel}
+            - value: ${possibleValuesToAssert}
+          getResponse:
+            storeIn: expectedSubtotalIsContained
+
+      # Final assertion...
+      - if:
+          condition: ${expectedSubtotalIsContained} == false
+          then:
+            - failTest:
+                message: 'FAILED ASSERTION: Product Subtotal is not correct.'
+      - log:
+          message: 'SUCCESSFUL ASSERTION: Product Subtotal is correct.'
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertProductSubtotal"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function retrieves the label with the delivery fee and gets the value cleaned with a numeric format.
+  # RETURNS:      ${returnedDeliveryFee}  Delivery fee value displayed in label.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.getDisplayedDeliveryFee
+    platform: ios
+    flow:
+      - log:
+          message: "Getting displayed delivery fee..."
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.deliveryFeeNotChargedLabel
+          then:
+            - log:
+                message: "Delivery Fee is not being charged for this purchase, returning '0.00'..."
+                color: GREEN_BOLD
+            - storeIn:
+                key: returnedDeliveryFee
+                value: 0.00
+          else:
+            - getString:
+                identifier: mx.mappings.ea.cart.deliveryFeeValue
+                storeIn: returnedDeliveryFee
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceString.js
+                args:
+                  - value: ${returnedDeliveryFee}
+                getResponse:
+                    storeIn: returnedDeliveryFee
+      - log:
+          message: "Displayed Delivery Fee: '${returnedDeliveryFee}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: ea.cart.getDisplayedDeliveryFee"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertDeliveryFeeNotCharged
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.deliveryFeeNotChargedLabel
+          then:
+            - log:
+                message: "Assertion Succeeded: Delivery Fee is not charged."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Delivery Fee is being charged or label is not visible/displayed."
+      - log:
+          message: "End function: cart.assertDeliveryFeeNotCharged"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the correct subtotal. If there are discounts in the cart, the mapping will
+  #                 point to the subtotal AFTER discounts.
+  # PARAM:        ${expectedSubtotal}   [Mandatory]   Expected subtotal to assert.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertSubtotal
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Subtotal: '${expectedSubtotal}'"
+          color: CYAN
+
+      # Get displayed Subtotal.
+      - getString:
+          identifier: mx.mappings.ea.cart.subtotalValue
+          storeIn: displayedSubtotal
+
+      # Clean the subtotal obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedSubtotal}
+           getResponse:
+               storeIn: displayedSubtotal
+      - log:
+          message: "Displayed Subtotal: '${displayedSubtotal}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedSubtotal} == ${expectedSubtotal}
+          then:
+            - log:
+                message: "Successful Assertion: Subtotal is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Subtotal is incorrect."
+      - log:
+          message: "End function: cart.assertSubtotal"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts the correct original subtotal BEFORE discounts. This element appears if there's
+  #                 at least one product with discount in the cart.
+  # PARAM:        ${expectedOriginalSubtotal}   [Mandatory]   Expected original subtotal to assert.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertSubtotalBeforeDiscounts
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Subtotal before discounts: '${expectedOriginalSubtotal}'"
+          color: CYAN
+
+      # Get displayed Subtotal before discounts.
+      - getString:
+          identifier: mx.mappings.ea.cart.subtotalValueBeforeDiscount
+          storeIn: displayedOriginalSubtotal
+
+      # Clean the subtotal obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedOriginalSubtotal}
+           getResponse:
+               storeIn: displayedOriginalSubtotal
+      - log:
+          message: "Displayed Subtotal before discounts: '${displayedOriginalSubtotal}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedOriginalSubtotal} == ${expectedOriginalSubtotal}
+          then:
+            - log:
+                message: "Successful Assertion: Subtotal is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Subtotal is incorrect."
+      - log:
+          message: "End function: cart.assertSubtotalBeforeDiscounts"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function asserts savings amount for purchasing discounted products (green label next to 'Ahorras').
+  #                 Only when there's at least one product with discount in the cart.
+  # PARAM:        ${expectedSavingsAmount}   [Mandatory]   Expected Savings amount to be displayed.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertSavingsAmount
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Savings Amount: '${expectedSavingsAmount}'"
+          color: CYAN
+
+      # Get displayed Savings Amount before discounts.
+      - getString:
+          identifier: mx.mappings.ea.cart.savingsAmountValue
+          storeIn: displayedSavingsAmount
+
+      # Clean the Savings Amount obtained and log it...
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedSavingsAmount}
+           getResponse:
+               storeIn: displayedSavingsAmount
+      - log:
+          message: "Displayed Savings Amount: '${displayedSavingsAmount}'"
+          color: GREEN_BOLD
+
+      # Assert displayed vs expected...
+      - if:
+          condition: ${displayedSavingsAmount} == ${expectedSavingsAmount}
+          then:
+            - log:
+                message: "Successful Assertion: Savings Amount is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Savings Amount is incorrect."
+      - log:
+          message: "End function: cart.assertSavingsAmount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts whether the displayed estimated total in the Details section is equal to the given estimated total.
+  # PARAM:        ${expectedEstimatedTotal}  [Mandatory]  Estimated total to assert against.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertEstimatedTotalFromDetailsSection
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Estimated Total: '${expectedEstimatedTotal}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.cart.estimatedTotalInDetailsSection
+          storeIn: displayedEstimatedTotal
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedEstimatedTotal}
+           getResponse:
+               storeIn: displayedEstimatedTotal
+      - log:
+          message: "Displayed Estimated Total: '${displayedEstimatedTotal}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${displayedEstimatedTotal} == ${expectedEstimatedTotal}
+          then:
+            - log:
+                message: "Successful Assertion: Estimated Total from details section is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Estimated Total from details section is incorrect."
+      - log:
+          message: "End function: cart.assertEstimatedTotalFromDetailsSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  Asserts whether the displayed estimated total inside the Continue button section isß equal to the given estimated total.
+  # PARAM:        ${expectedEstimatedTotal}  [Mandatory]  Estimated total to assert against.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertEstimatedTotalFromButton
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Estimated Total: '${expectedEstimatedTotal}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.cart.estimatedTotalInsideButtonSection
+          storeIn: displayedEstimatedTotal
+      - executeNode:
+           file: mx/test/helpers/utils/cleanPriceString.js
+           args:
+             - value: ${displayedEstimatedTotal}
+           getResponse:
+               storeIn: displayedEstimatedTotal
+      - log:
+          message: "Displayed Estimated Total: '${displayedEstimatedTotal}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${displayedEstimatedTotal} == ${expectedEstimatedTotal}
+          then:
+            - log:
+                message: "Successful Assertion: Estimated Total from button section is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed Assertion: Estimated Total from button section is incorrect."
+      - log:
+          message: "End function: cart.assertEstimatedTotalFromButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedDeliveryDate} This is the displayed delivery date located under the selected Delivery Method.
+  # NOTE:     This function is ONLY for orders without multiple delivery sections.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.getSingleDeliveryDate
+    platform: ios
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.cart.deliveryDate
+          storeIn: returnedDeliveryDate
+      - executeNode:
+           file: mx/test/helpers/utils/getDeliveryDateEA.js
+           args:
+             - value: ${returnedDeliveryDate}
+           getResponse:
+               storeIn: returnedDeliveryDate
+      - log:
+          message: "Returned Delivery Date: '${returnedDeliveryDate}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.getSingleDeliveryDate"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertCartIsEmpty
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.emptyView
+              - identifier: mx.mappings.ea.cart.startBuyingButton
+          then:
+            - log:
+                message: "Assertion Succeeded: Cart is empty."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Cart is not empty."
+      - log:
+          message: "End function: cart.assertCartIsEmpty"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.cart.assertCartNotEmpty
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.cart.continueButton
+            - identifier: mx.mappings.ea.cart.pageTitle
+            - identifier: mx.mappings.ea.cart.selectedHomeOrStoreAddress
+      - log:
+          message: "Assertion Succeeded: Cart is not empty."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertCartNotEmpty"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedIsCartEmpty}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.isCartEmpty
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.cart.emptyView
+              - identifier: mx.mappings.ea.cart.startBuyingButton
+          then:
+            - storeIn:
+                key: returnedIsCartEmpty
+                value: true
+          else:
+            - storeIn:
+                key: returnedIsCartEmpty
+                value: false
+      - log:
+          message: "End function: cart.isCartEmpty (${returnedIsCartEmpty})"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.emptyCart
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.ea.cart.isCartEmpty
+      - if:
+          condition: ${returnedIsCartEmpty} == true
+          then:
+            - log:
+                message: "Cart is empty already."
+                color: GREEN_BOLD
+          else:
+            - log:
+                message: "Cart is not empty. Emptying cart..."
+                color: GREEN_BOLD
+            - loop:
+                begin: 1
+                end: 50
+                storeIndex: lapCount
+                flow:
+                  - log:
+                      message: "Lap: ${lapCount}"
+                      color: GREEN
+                  - if:
+                      identifier:
+                        notPresent:
+                          - identifier: mx.mappings.ea.cart.startBuyingButton
+                      then:
+                        - click:
+                            identifier: mx.mappings.ea.cart.deleteProductButtonGeneral
+                        - sleep:
+                            duration: 1000
+                      else:
+                        - log:
+                            message: "Cart is now empty."
+                            color: GREEN_BOLD
+                        - break: true
+      - log:
+          message: "End function: cart.emptyCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Increases the actual quantity of a product by the desired amount of increments. i.e. for a product which
+  #     its current quantity is 12, if the desired amount of increments is 5, the final quantity will be 17 (assuming
+  #     there was enough stock to supply the demand, otherwise, the app will cap the quantity to the max available stock).
+  #
+  # PARAMS:
+  #     ${productName}  [Mandatory]
+  #         Name of the product to increase its quantity.
+  #
+  #     ${quantity}  [Mandatory]
+  #         Amount of increments to to the actual quantity.
+  #
+  #     ${ignoreClickException}  [Optional]
+  #         Flag to tell the clicking action (to perform the quantity increments) to ignore the exception in case the click
+  #         cannot be done. This scenario mostly happens when the product reaches the Max Quantity Limit; the increase
+  #         button becomes not clickable and so and exception (and a failure) will be thrown. Use this flag only when
+  #         necessary.
+  #         Options: [ true | false | null ]
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.increaseProductQuantityBy
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Increments: '${quantity}'"
+          color: CYAN
+      - log:
+          message: "Ignore Click Exception: '${ignoreClickException}'"
+          color: CYAN
+      - try:
+          flow:
+            - click:
+                identifier: mx.mappings.ea.cart.increaseButtonByProductName # <---PARAMS---${productName}
+                numberOfClicks: ${quantity}
+                waitBetweenClicks: 1
+          catch:
+            flow:
+              - if:
+                  condition: ${ignoreClickException} == true
+                  then:
+                    - log:
+                        message: "Increment Quantity Button not clickable, process will continue..."
+                        color: GREEN_BOLD
+                  else:
+                    - failTest:
+                        message: "Increment Quantity Button not clickable, quantity cannot be incremented."
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: mx.functions.cart.increaseProductQuantityBy"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Decreases the actual quantity of a product by the desired amount of decrements. i.e. for a product which
+  #     its current quantity is 12, if the desired amount of decrements is 5, the final quantity will be 7.
+  #
+  # PARAMS:
+  #     ${productName}  [Mandatory]
+  #         Name of the product to decrease its quantity.
+  #
+  #     ${quantity}  [Mandatory]
+  #         Amount of decrements to to the actual quantity.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.decreaseProductQuantityBy
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Decrements: '${quantity}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.cart.decreaseButtonByProductName # <---PARAMS---${productName}
+          numberOfClicks: ${quantity}
+          waitBetweenClicks: 1
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: mx.functions.cart.decreaseProductQuantityBy"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:   ${productName}  [Mandatory]   Name of the product to delete.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.deleteProductByName
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name to Delete: '${productName}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.cart.deleteButtonByProductName # <---PARAMS---${productName}
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: mx.functions.cart.deleteProductByName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts that a product is not present in cart.
+  # PARAMS:       ${productName}  [Mandatory]  Name of the certain product.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.cart.assertProductNotListed
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - verifyIdentifier:
+          notPresent:
+            - identifier: mx.mappings.ea.cart.productByName # <--PARAM--${productName}
+      - log:
+          message: "Assertion Succeeded: Product is not Listed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cart.assertProductNotListed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method verifies the selected user address inside the selected Home slot by full string.
+  # NOTE:         Home Delivery must be selected in order to perform assertion correctly.
+  # PARAMS:       ${addressFullString}  [Mandatory]  Full string containing the address to be validated.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertHomeAddressByFullString
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Address Full String: '${addressFullString}'"
+          color: CYAN
+
+      # Retrieving displayed Address...
+      - getString:
+          identifier: mx.mappings.ea.cart.selectedHomeOrStoreAddress
+          storeIn: displayedAddress
+      - log:
+          message: "Displayed Address: '${displayedAddress}'"
+          color: CYAN
+
+      # Assertion by Full String...
+      - if:
+          identifier:
+            text:
+              - identifier: mx.mappings.ea.cart.selectedHomeOrStoreAddress
+                contains: ${addressFullString}
+          then:
+            - log:
+                message: "Assertion Succeeded: Address by Full String is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Address by Full String is not correct."
+      - log:
+          message: "End function: cart.assertHomeAddressByFullString"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method verifies the selected user address inside the selected Home slot by its individual values.
+  # NOTE:         Home Delivery must be selected in order to perform assertion correctly.
+  # PARAMS:
+  #               ${streetName}       [Mandatory]  Name of the street to be validated.
+  #               ${exteriorNumber}   [Mandatory]  Exterior number to be validated.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.cart.assertHomeAddressByIndividualValues
+    platform: ios
+    flow:
+      - log:
+          message: "Expected Street Name: '${streetName}'"
+          color: CYAN
+      - log:
+          message: "Expected Exterior Number: '${exteriorNumber}'"
+          color: CYAN
+
+      # Retrieving displayed Address...
+      - getString:
+          identifier: mx.mappings.ea.cart.selectedHomeOrStoreAddress
+          storeIn: displayedAddress
+      - log:
+          message: "Displayed Address: '${displayedAddress}'"
+          color: CYAN
+
+      # Assertion by Individual Values...
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAll.js
+          args:
+            - value: ${displayedAddress}
+            - value: ${streetName}, ${exteriorNumber}
+          getResponse:
+            storeIn: isAddressCorrect
+      - if:
+          condition: ${isAddressCorrect} == true
+          then:
+            - log:
+                message: "Address by individual values is correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "'${streetName}, ${exteriorNumber}' not contained in: '${displayedAddress}'"
+      - log:
+          message: "End function: cart.assertHomeAddressByIndividualValues"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.cart.assertDeliverySpeedMessage
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.cart.deliverySpeedMessage
+      - log:
+          message: "End function: ea.cart.assertDeliverySpeedMessage"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.cart.assertOOSSectionIsDisplayed
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.cart.productIsNotAvailableSection
+      - log:
+          message: "End function: ea.cart.assertOOSSectionIsDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.cart.assertOOSMessage
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.cart.oosMessageBox
+      - log:
+          message: "End function: ea.cart.assertOOSMessage"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # DESCRIPTION: Asserts OOS label by product name.
+  # PARAMS:  ${productName}  [Mandatory]  Name of the product to assert for.
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.cart.assertOOSProductLabel
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.cart.oosProductLabelByProductName
+      - log:
+          message: "End function: ea.cart.assertOOSProductLabel"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:   ${productName}  [Mandatory]   Name of the product to delete.
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.cart.deleteProductFromSavedForLaterByName
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name to Delete: '${productName}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.cart.deleteButtonFromSavedForLaterContainerByProductName # <---PARAMS---${productName}
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End function: mx.functions.cart.deleteProductByName"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.mappings.ea.cart.assertCorrectCanceledCashiPaymentMessage
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.cart.correctCanceledCashiPaymentMessage
+      - log:
+          message: "End function: ea.cart.assertCorrectCanceledCashiPaymentMessage"
+          color: BLUE

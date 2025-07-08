@@ -1,0 +1,271 @@
+#======================================================================================================================
+#    AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#   CREATED: Jun/26/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+                 
+  # Description: This functions extracts the name of a random visible item in Departments L1-L2
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+  # RETURNS: ${returnedRandomProductName}
+  - name: mx.functions.department-l1-l2.getRandomVisibleProductName
+    flow: 
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.department-l1-l2.section-carousel.favoriteHeart
+            - name: direction
+              string: down
+      - numberOfChildElements:
+          identifier: mx.mappings.department-l1-l2.rootCarouselContainer
+          storeIn: heartCounter
+          filterBy: mx.mappings.department-l1-l2.section-carousel.favoriteHeart
+      - executeNode:
+          file: mx/test/helpers/utils/getRandomInt.js
+          args:
+            - value: 1
+            - value: ${heartCounter}
+          getResponse:
+            storeIn: heartIndex
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.department-l1-l2.productNameByHeartIndex
+          position: top
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.department-l1-l2.productNameByHeartIndex
+      - getString:
+          identifier: mx.mappings.department-l1-l2.productNameByHeartIndex
+          storeIn: returnedRandomProductName
+      - log:
+          message: "End function: department-l1-l2.getRandomVisibleProductName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This functions extracts the name of a random product with no favorite mark
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+  - name: mx.functions.department-l1-l2.section-carousel.getNotFavoriteProductName
+    flow:
+      - arithmetic:
+          expression: ${heartCounter} + 1
+          storeIn: rightBound
+      - loop:
+          begin: 1
+          end: ${rightBound}
+          storeIndex: indice
+          flow:
+            - if:
+                condition: ${indice} != ${heartIndex}
+                then:
+                  - storeIn:
+                      key: heartIndex
+                      value: ${indice}
+                  - break: true
+      - getString:
+          identifier: mx.mappings.department-l1-l2.productNameByHeartIndex
+          storeIn: returnedRandomProductName
+      - log:
+          message: Extracted name - ${returnedRandomProductName}
+          color: CYAN
+      - log:
+          message: "End function: department-l1-l2.section-carousel.getNotFavoriteProductName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This functions opens the PDP using the products name
+  # Params: ${productName} [Mandatory] Product name
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+  - name: mx.functions.department-l1-l2.section-carousel.openPDPBYName
+    flow:
+      - log:
+          message: Opening PDP for - ${productName}
+          color: CYAN
+      - click:
+          identifier: mx.mappings.department-l1-l2.section-carousel.iconByName
+      - log:
+          message: "End function: department-l1-l2.section-carousel.openPDPBYName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This functions extracts the unit price from desired product
+  # Params: ${productName} [Mandatory] Product name
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+  - name: mx.functions.department-l1-l2.getUnitProductPrice
+    flow:
+      - storeIn:
+          key: returnedPrice
+          value: "null"
+      - log:
+          message: Extracting unit price from ${productName}
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.department-l1-l2.section-carousel.unitPriceByProductName
+          storeIn: productPrice
+      - executeNode:
+          file: mx/test/helpers/department-l1-l2/getKGFlag.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: kgFlag
+      - if:
+          condition: ${kgFlag}
+          then:
+            - executeFunction:
+                name: mx.functions.department-l1-l2.section-carousel.addProductToCart
+            - sleep:
+                duration: 1000
+            - executeFunction:
+                name: mx.functions.department-l1-l2.section-carousel.switchProductToWeight
+            - executeFunction:
+                name: mx.functions.department-l1-l2.section-carousel.getProductQuantityAsWeight
+            - executeFunction:
+                name: mx.functions.department-l1-l2.section-carousel.decreaseProductQuantityBy
+                params:
+                  - name: quantity
+                    string: 1
+      - executeNode:
+          file: mx/test/helpers/slp/sanitizePrice.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: returnedPrice
+      - if:
+          condition: ${kgFlag}
+          then:
+            - storeIn:
+                key: returnedPricePerKG
+                value: ${returnedPrice}
+            - arithmetic:
+               expression: ${returnedPrice} / 1000 * ${returnedParsedProductWeight}
+               numberOfDecimalPlaces: 2
+               storeIn: returnedPrice
+      - log:
+          message: Extracted price - ${returnedPrice}
+          color: CYAN
+      - log:
+          message: "End function: department-l1-l2.getUnitProductPrice"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts navpills are present for l1 or l2 department page along with back button to return previous view
+  - name: mx.functions.department-l1-l2.assertPageDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.department-l1-l2.backButton
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.department-l1-l2.categoryContainer
+          timeout: 15000
+      - log:
+          message: "End function: department-l1-l2.assertPageDisplayed (page displayed)"
+          color: BLUE
+
+ #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Asserts the Cart Button Quantity Counter Badge equals the given expected quantity.
+  # Param: ${expectedQuantity} [Mandatory] Expected quantity of the Quantity Counter Badge.
+  - name: mx.functions.top-menu.assertCartQuantity
+    flow:
+      - log:
+          message: "Expected Quantity: ${expectedQuantity}"
+          color: CYAN
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - if:
+                condition: ${expectedQuantity} == 0
+                then:
+                  - if:
+                      identifier:
+                        text:
+                          - identifier: mx.mappings.top-menu.cartBadgeCounter
+                            equals: "0"
+                      then:
+                        - log:
+                            message: "Success: Cart is Empty."
+                            color: CYAN
+                      else:
+                        - failTest:
+                            message: "Cart is not Empty."
+                else:
+                  - if:
+                      identifier:
+                        text:
+                          - identifier: mx.mappings.top-menu.cartBadgeCounter
+                            equals: ${expectedQuantity}
+                      then:
+                        - log:
+                            message: "Success: Correct Cart icon quantity."
+                            color: CYAN
+                      else:
+                        - getString:
+                            identifier: mx.mappings.top-menu.cartBadgeCounter
+                            attribute: text
+                            storeIn: displayedCartBadgeQuantity
+                        - failTest:
+                            message: "Expected quantity: ${expectedQuantity}, did not match displayed quantity: ${displayedCartBadgeQuantity}."
+          else:
+            - if:
+                condition: ${expectedQuantity} == 0
+                then:
+                  - if:
+                      identifier:
+                        label:
+                          - identifier: mx.mappings.top-menu.cartBadgeCounter
+                            equals: "0"
+                      then:
+                        - log:
+                            message: "Success: Cart is Empty."
+                            color: CYAN
+                      else:
+                        - failTest:
+                            message: "Cart is not Empty."
+                else:
+                  - if:
+                      identifier:
+                        label:
+                          - identifier: mx.mappings.top-menu.cartBadgeCounter
+                            equals: ${expectedQuantity}
+                      then:
+                        - log:
+                            message: "Success: Correct Cart icon quantity."
+                            color: CYAN
+                      else:
+                        - getString:
+                            identifier: mx.mappings.top-menu.cartBadgeCounter
+                            attribute: label
+                            storeIn: displayedCartBadgeQuantity
+                        - failTest:
+                            message: "Expected quantity: ${expectedQuantity}, did not match displayed quantity: ${displayedCartBadgeQuantity}."
+      - log:
+          message: "End function: top-menu.assertCartQuantity"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Get product name of the first product
+  # No Params
+  # AUTHOR: Fernanda Peruyero (vn54e7a)
+  - name: mx.functions.department-l1-l2.getFirstProductName
+    flow:
+      - getString:
+          identifier: mx.mapping.department-l1-l2.firstProductName
+          storeIn: productName
+          attribute: text
+      - log: 
+          message: "Product name added to cart: ${productName}"
+          color: CYAN
+      - log:
+          message: "End Functions:  mx.functions.department-l1-l2.getProductName"
+          color: BLUE

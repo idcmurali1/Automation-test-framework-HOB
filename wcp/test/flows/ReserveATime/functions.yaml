@@ -1,0 +1,142 @@
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow books standard pickup or delivery from store/delivery to store slot.
+  # Param  ${fufillment}  [Mandatory] To select the type of fulfillment. {Delivery, Pickup, Express Delivery, Express Pickup, Unschedule Pickup}
+  - name: functions.reserveATime.bookSlot
+    flow:
+      - if:
+          condition: ${fufillment} == 'Pickup' || ${fufillment} == 'Unschedule Pickup'
+          then:
+            - executeFunction:
+                name: functions.reserveATime.tapPickupBtn
+          else:
+            - executeFunction:
+                name: functions.reserveATime.tapDeliveryFromStoreBtn
+            - executeFunction:
+                name: functions.reserveATime.addAddressDisplayed
+            - if:
+                condition: ${returnedIsDisplayed}
+                then:
+                  - executeFunction:
+                      name: functions.reserveATime.tapAddAddress
+                  - executeFunction:
+                      name: function.reserveATime.validateSelectAddressSheet
+                  - executeFunction:
+                      name: functions.reserveATime.selectFirstAddress
+                  - executeFunction:
+                      name: functions.reserveATime.tapSaveAddress 
+      - if:
+          condition: ${slotType} == 'Standard'
+          then:          
+            - if: 
+                condition: ${fufillment} == 'Unschedule Pickup' && ${market} == 'US'
+                then:
+                  - executeFunction:
+                      name: functions.reserveATime.tapUnschedulePickupBtn
+                else:
+                  - loop:
+                      begin: 1
+                      end: 7
+                      storeIndex: index
+                      mode: increment
+                      flow:
+                        - executeFunction:
+                            name: functions.reserveATime.tapBookSlotDateBtn
+                        - executeFunction:
+                            name: functions.reserveATime.checkSlotAvailability
+                        - if: 
+                              condition: ${slotDay} == 'tomorrow'
+                              then: 
+                                  - executeFunction:
+                                      name: functions.reserveADay.selectDay.tomorrow
+                        - if: 
+                              condition: ${isSlotAvailable}
+                              then: 
+                                  - executeFunction:
+                                      name: functions.reserveATime.tapSlotBtn
+                                  - break: true
+      - if:
+          condition: ${slotType} == 'Express'
+          then:
+            - executeFunction:
+                name: functions.reserveATime.checkExpressSlotAvaliabilty
+            - if:
+                condition: ${isExpressSlotAvailable} 
+                then:        
+                  - if:
+                      condition: ${ExpressSlotType} == 'insta'
+                      then:
+                        - executeFunction:
+                            name: functions.reserveATime.checkInstaSlotAvaliabilty
+                      else:
+                        - loop:
+                            begin: 1
+                            end: 3
+                            storeIndex: index
+                            mode: increment
+                            flow:
+                              - executeFunction:
+                                    name: functions.reserveATime.checkStandardExpressSlot
+                              - if:
+                                  condition: ${isStandardExpressSlotAvailable}
+                                  then: 
+                                    - break: true
+                        - executeFunction:
+                              name: function.reserveATime.validateInstaCartMsgIsNotDisplayed
+                else:
+                  - failTest:
+                        message: 'No Express Slot available'
+      - executeFunction:
+          name: functions.reserveATime.tapReserveBtn 
+      - log: 
+          message: "End function: reserveATime.bookSlot"
+          color: BLUE
+
+# Description: This function handle select address Popup
+  # Param [Madantory] colonia name
+  - name: functions.addAddressBottomSheet.handleSelectAddressPopUpReserveATime
+    flow:
+      - if:
+          condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+          then: 
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                    present:
+                    - identifier: reserveATime.addAddressTitle  
+                then:
+                   - click:
+                       identifier: reserveATime.addAddressButton                
+            - if:
+                identifier:
+                    present:
+                    - identifier: selectAddressPage.title
+                then:
+                    - if:
+                        identifier:
+                            present:
+                            - identifier: selectAddressPage.saveAndEditAddressAgainMessage
+                        then:
+                            - executeFunction:
+                                name: functions.addAddressBottomSheet.tapOnEditLink
+                            - executeFunction:
+                                name: functions.utils.hideKeyboard
+                            - executeFunction:
+                                name: functions.addAddressPage.scrollDownToColonia
+                            - executeFunction:
+                                name: functions.invoicePage.selectColonia
+                            - executeFunction:
+                                name: functions.checkout.hideKeyboard
+                            - executeFunction:
+                                name: functions.addAddressPage.scrollDownToSaveButton
+                            - executeFunction:
+                                name: functions.addAddressPage.preferredAddressCheckbox
+                            - executeFunction:
+                                name: functions.addAddressPage.tapSaveButton
+                            - executeFunction:
+                                name: functions.addAddressPage.confirmExactLocationOnMap 
+                            - executeFunction:
+                                name: functions.cartPage.dismissAddressSelectorPage 

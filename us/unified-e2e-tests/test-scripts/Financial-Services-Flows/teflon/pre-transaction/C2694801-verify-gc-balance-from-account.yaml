@@ -1,0 +1,100 @@
+general:
+  tags: C2694801, unified-teflon-e2e, unified-p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2694801
+  metadata:
+    - name: scenarioId
+      string: EC001
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+    #  Astro clear cart
+      - if: 
+          condition: ${platform} == 'Android'
+          then:        
+            - executeFunction:
+                name: unified.us.functions.utils.astro.clearCart
+                params:
+                  - name: email
+                    string: us.data.android.addskybenefitcard.email
+
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:        
+            - executeFunction:
+                name: unified.us.functions.utils.astro.clearCart
+                params:
+                  - name: email
+                    string: us.data.ios.giftcard.email
+
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.android.giftcard.email
+            - name: android.password
+              string: us.data.android.giftcard.password
+            - name: ios.email
+              string: us.data.android.giftcard.email
+            - name: ios.password
+              string: us.data.android.giftcard.password
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://wallet
+
+      - executeFunction:
+          name: unified.us.functions.account.paymentMethod.verifyGiftCardHistory
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

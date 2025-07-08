@@ -1,0 +1,115 @@
+#======================================================================================================================
+#    AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#   CREATED: Feb/13/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  - name: mx.functions.substitutes-preferences.assertPageDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.substitutes-preferences.substitutesTitle
+            - identifier: mx.mappings.substitutes-preferences.allSubstitutesCheckBox
+            - identifier: mx.mappings.substitutes-preferences.substitutesContainer
+            - identifier: mx.mappings.substitutes-preferences.detailsDoneButton
+      - log:
+          message: "End function: substitutes-preferences.assertPageDisplayed"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${productName}  [Mandatory]   Product name
+  # AUTHOR: ???
+  # EDITOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.substitutes-preferences.assertProductListed
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.substitutes-preferences.checkBoxByName
+          then:
+            - log:
+                message: Product is displayed.
+                color: CYAN
+          else:
+            - failTest:
+                message: Product is not present on the Substitutes list.
+      - log:
+          message: "End function: substitutes-preferences.assertProductListed"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------
+
+  - name: mx.functions.substitutes-preferences.tapUnderstood
+    flow:
+      - click:
+          identifier: mx.mappings.substitutes-preferences.detailsDoneButton
+      - log:
+          message: "End function: substitutes-preferences.tapUnderstood"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Asserts whether all individual checkboxes, where each one belongs to a single product, are checked or
+  #   unchecked.
+  # PARAM:  ${expectedStatus}  [Mandatory]  Expected status to assert. Values: [ checked | unchecked ]
+  - name: mx.functions.substitutes-preferences.assertAllIndividualSubstitutesCheckboxStatus
+    flow:
+      - log:
+          message: "Expected Status: ${expectedStatus}"
+          color: CYAN
+      - if:
+          condition: ${expectedStatus} != 'checked' && ${expectedStatus} != 'unchecked'
+          then:
+            - failTest:
+                message: "Fail: expected status option not valid (${expectedStatus})"
+      - loop:
+          begin: 1
+          end: 5
+          flow:
+            - numberOfChildElements:
+                identifier: mx.mappings.substitutes-preferences.allIndividualCheckBoxesContainer
+                filterBy: mx.mappings.substitutes-preferences.allIndividualCheckBoxes
+                storeIn: totalCheckBoxes
+            - arithmetic:
+                expression: ${totalCheckBoxes} + 1
+                storeIn: totalCheckBoxes
+            - loop:
+                begin: 1
+                end: ${totalCheckBoxes}
+                storeIndex: index
+                flow:
+                  - getString:
+                      identifier: mx.mappings.substitutes-preferences.individualCheckBoxByIndex
+                      attribute: checked
+                      storeIn: checkedFlag
+                  - if:
+                      condition: ${expectedStatus} == 'checked'
+                      then:
+                        - if:
+                            condition: ${checkedFlag} != true
+                            then:
+                              - failTest:
+                                  message: "Fail: Found 1 check box which Actual Status is 'unchecked'"
+                      else:
+                        - if:
+                            condition: ${checkedFlag} != false
+                            then:
+                              - failTest:
+                                  message: "Fail: Found 1 check box which Actual Status is 'checked'"
+            - scroll:
+                direction: down
+                scrollLimit: 1
+      - log:
+          message: "Success: all check boxes shown Actual Status as '${expectedStatus}'"
+          color: CYAN
+      - log:
+          message: "End function: substitutes-preferences.assertAllIndividualSubstitutesCheckboxStatus"
+          color: BLUE

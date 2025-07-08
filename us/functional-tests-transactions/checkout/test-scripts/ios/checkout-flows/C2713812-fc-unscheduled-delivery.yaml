@@ -1,0 +1,174 @@
+# Verifying FC unscheduled delivery checkout flow
+general:
+  platform: ios
+  tags: C2713812, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2713812
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Verifying FC unscheduled delivery checkout flow
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Verifying FC unscheduled delivery checkout flow"
+
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.fc.ios.email
+            - name: password
+              string: us.data.prod.checkout.fc.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      #Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      # Adding items to cart
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.checkout.fc.item
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: noAds
+              string: "true"
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.paymentsCloseTray
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateFCCard
+          params:
+            - name: fulfillmentText
+              string: Shipping
+            - name: altFulfillmentText
+              string: shipping
+            - name: fulfillmentItemCount
+              string: 1
+            - name: fulfillmentType
+              string: FC_DELIVERY
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.itemDetailsSection.itemImages
+              occurrences: 1
+
+      - executeNode:
+          file: us/functional-tests-transactions/helpers/getRandomNumber
+          getResponse:
+            storeIn: randomGateOrCallCode
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fc.updateDeliveryInstructions
+          params:
+            - name: propertyType
+              string: House
+            - name: gateOrCallCode
+              string: ${randomGateOrCallCode}
+            - name: fulfillmentDeliveryNotes
+              string: Test delivery notes
+            - name: dropOffLocation
+              string: Back door
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fc.validateDeliveryInstructionsModule
+          params:
+            - name: fulfillmentDeliveryInstructions
+              string: House, ${randomGateOrCallCode}, Back door, Test delivery notes
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePosTotals
+          params:
+            - name: itemCount
+              string: 1
+
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: Order number ${orderNo}
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

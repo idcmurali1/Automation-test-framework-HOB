@@ -1,0 +1,230 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco (vn53p0i)
+#  CREATED: Dec/08/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.department-l3.assertPageDisplayed
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.department-l3.resultsText
+          then:
+              - executeFunction:
+                  name: mx.functions.utils.scrollToTop
+                  params:
+                    - name: elementAtTheTop
+                      string: mx.mappings.ea.department-l3.resultsText
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.department-l3.resultsText
+            - identifier: mx.mappings.ea.department-l3.resultsSection
+            - identifier: mx.mappings.ea.department-l3.backButton
+      - log:
+          message: "Assertion Succeeded: Page is displayed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: department-l3.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function opens the first PDP available, it works better if this function runs right after
+  #                 opening department-l3. It ignores if product has any type of promotion or not. It also retrieves the
+  #                 name of the selected product.
+  # RETURNS: ${returnedProductName}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.department-l3.openFirstAvailablePDP
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.department-l3.firstAvailableProductContainer
+          attribute: content-desc
+          storeIn: productName
+      - click:
+          identifier: mx.mappings.ea.department-l3.productContainerByName # <--VAR--${productName}
+      - storeIn:
+          key: returnedProductName
+          value: ${productName}
+      - log:
+          message: "Returned Product Name: '${returnedProductName}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: department-l3.openFirstAvailablePDP"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function gets the name of the first Product available, it works better if this function runs at
+  #                 the top of the page. It ignores if product has any type of promotion or not.
+  # RETURNS: ${returnedProductName}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.department-l3.getFirstAvailableProductName
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.ea.department-l3.firstAvailableProductContainer
+          attribute: content-desc
+          storeIn: returnedProductName
+      - log:
+          message: "Returned Product Name: '${returnedProductName}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: department-l3.getFirstAvailableProductName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function taps the Add to cart button specified on Param.
+  # NOTE:         Product must be already centered on screen in order to work properly.
+  # PARAM:        ${productName}  [Mandatory]   Product name to add to cart.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.department-l3.addProductToCart
+    platform: android
+    flow:
+      - log:
+          message: "Product to add to cart: '${productName}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.department-l3.addToCartButtonByProductName # <--PARAM--${productName}
+      - log:
+          message: "End function: department-l3.addProductToCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Params:   ${productName}  [Mandatory]  Name of the Product to return its Price.
+  # RETURNS:  ${returnedQuantity}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.department-l3.getProductQuantity
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.department-l3.productQuantityByProductName #<--PARAM--${productName}
+          attribute: text
+          storeIn: returnedQuantity
+      - log:
+          message: "Quantity got: '${returnedQuantity}'"
+          color: CYAN
+      - log:
+          message: "End function: department-l3.getProductQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Verifies if the product has discount or not and returns the result in a boolean value.
+  # PARAM:    ${productName}  [Mandatory]
+  # RETURNS:  ${returnedHasDiscount}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.department-l3.checkIfProductHasDiscount
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.department-l3.savingsBadgeByProductName # <--PARAM--${productName}
+          then:
+            - storeIn:
+                key: returnedHasDiscount
+                value: true
+          else:
+            - storeIn:
+                key: returnedHasDiscount
+                value: false
+      - log:
+          message: "Returned Result: 'returnedHasDiscount' = '${returnedHasDiscount}'"
+          color: CYAN
+      - log:
+          message: "End function: department-l3.checkIfProductHasDiscount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   Gets the price of the given product. It returns only the number, without '$' symbol or text at the end
+  #     (like '/kg', '/pza', etc.).
+  # PARAMS:
+  #   ${productName}  [Mandatory]  Name of the product.
+  # RETURNS:
+  #   ${returnedPrice}
+  #   ${returnedOriginalPrice} If available, if not, the same value as '${returnedPrice}' will be returned.
+  #   ${returnedDiscountAmount} This is the amount that the user will save by purchasing the product. Only if product has discount.
+  # AUTHOR:
+  #   Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.department-l3.getProductPrice
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: ${productName}"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.department-l3.productPriceByProductName # <--VARIABLE--${productName}
+          storeIn: productPrice
+      - executeNode:
+          file: mx/test/helpers/utils/getNumberFromPriceString.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: returnedPrice
+      # Verifying if product has a discount...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.department-l3.productOriginalPriceByProductName # <--VARIABLE--${productName}
+          then:
+            # Extraction of the Original Price...
+            - log:
+                message: "Discount found, extracting Original Price value..."
+                color: GREEN_BOLD
+            - getString:
+                identifier: mx.mappings.ea.department-l3.productOriginalPriceByProductName # <--VARIABLE--${productName}
+                attribute: text
+                storeIn: originalPrice
+            - executeNode:
+                file: mx/test/helpers/utils/getNumberFromPriceString.js
+                args:
+                  - value: ${originalPrice}
+                getResponse:
+                  storeIn: returnedOriginalPrice
+            # Extraction of the Discount Amount (used later for Order Details)...
+            - getString:
+                identifier: mx.mappings.ea.department-l3.savingsBadgeByProductName # <--VARIABLE--${productName}
+                attribute: text
+                storeIn: returnedDiscountAmount
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceString.js
+                args:
+                  - value: ${returnedDiscountAmount}
+                getResponse:
+                  storeIn: returnedDiscountAmount
+          else:
+            - log:
+                message: "Discount not found, returning Current Price..."
+                color: GREEN_BOLD
+            - storeIn:
+                key: returnedOriginalPrice
+                value: ${returnedPrice}
+            - storeIn:
+                key: returnedDiscountAmount
+                value: '0.00'
+      - log:
+          message: "Price Got: '${returnedPrice}'"
+          color: GREEN_BOLD
+      - log:
+          message: "Original Price Got: '${returnedOriginalPrice}'"
+          color: GREEN_BOLD
+      - log:
+          message: "Discount Amount Got: '${returnedDiscountAmount}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: department-l3.getProductPrice"
+          color: BLUE

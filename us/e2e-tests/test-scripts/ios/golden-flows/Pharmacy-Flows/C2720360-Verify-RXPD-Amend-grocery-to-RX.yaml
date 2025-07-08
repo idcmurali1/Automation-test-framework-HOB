@@ -1,0 +1,199 @@
+general:
+  platform: ios
+  tags: C2720360 , us-golden-flows, p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2720360
+  metadata:
+    - name: scenarioId
+      string: EC146
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - executeFunction:
+              name: us.functions.utils.astro.rxpd.create.rx
+              params:
+                - name: patientId
+                  string: 121181         
+                - name: siteId
+                  string: 5522
+                - name: ndc
+                  string: 00093505698
+                - name: moveTo
+                  string: ReadyForPickup
+
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.teflon.rxpd.ios.email
+              
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with RXPD account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.teflon.rxpd.ios.email
+            - name: password
+              string: us.data.teflon.rxpd.password
+
+      - executeFunction: #EXPO LINK
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.teflon.rxpd.ios.expo
+
+      # Navigate to Services
+      - executeFunction:
+          name: us.functions.global.navigation.goToServicesFromTabBar
+
+      # Navigate to Pharmacy
+      - executeFunction:
+          name: us.functions.services.naviagteToServices
+          params:
+            - name: servicesName
+              string: Pharmacy
+
+      # Enter Pharmacy Pin
+      - executeFunction:
+          name: us.functions.services.pharmacy.enterPin
+
+      # Accept Consent forms when available
+      - executeFunction:
+          name: us.functions.services.pharmacy.verify.consent.delivery.info
+
+      # Pharmacy Page validations
+      - executeFunction:
+          name: us.functions.services.pharmacy.scheduledDeliveryPageValidation
+
+      # Add to Cart
+      - executeFunction:
+          name: us.functions.services.pharmacy.addToCart
+
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - sleep:
+          duration: 1000
+
+       # Validate RXPD informations on Cart
+      - executeFunction:
+          name: us.functions.cart.validate.rxpd.item
+
+      # # Select Booking Slot
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: timeSlot
+              string: generic
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 10
+
+      # Proceed to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery 
+
+      # Validate RXPD informations on Review Order
+      - executeFunction:
+          name: us.functions.reviewOrder.rxpd.item.validations
+
+      - sleep:
+          duration: 1000
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      - executeFunction:
+            name: us.functions.global.navigation.goToDeepLink
+            params:
+              - name: deepLinkUrl
+                string: walmart://orders/$orderNo
+
+      # Validate RXPD informations on Order Details page
+      - executeFunction:
+          name: us.functions.orderDetails.rxpd.item.validations
+
+      - executeFunction:
+          name: us.functions.orderDetails.verifyAmendsBanner
+
+      - click:
+          identifier: us.mappings.orderconfirmation.addItems
+
+      # #Add a grocery item
+      - executeFunction:
+          name: us.functions.search.groceryItem.usingDeeplink
+          params:
+            - name: groceryItem
+              string: groceryItemArray
+
+      #Add grocery item to cart
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      #Navigate to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      # Go to Home add item to cart Amend order.
+      - executeFunction:
+          name: us.functions.cart.amendGroceryToRxItem
+
+      - executeFunction:
+          name: us.functions.amend.verify.itemAddedToOrder
+
+      # After amending Cancelling the order .
+      - executeFunction:
+          name: us.functions.cancel.orderItems
+          params:
+            - name: cancelOrder
+              string: true
+            - name: reasonIndex
+              string: 2
+      
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

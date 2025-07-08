@@ -1,0 +1,223 @@
+# Validate scheduled delivery checkout flow - updated delivery instructions - pos module - thank you page
+
+general:
+  tags: C2714068, unified-prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714068
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # Set environment
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+      # Set platform
+      - executeFunction:
+          name: functions.utils.setPlatformInfo   
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate scheduled delivery checkout flow - updated delivery instructions - pos module - thank you page
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate scheduled delivery checkout flow - updated delivery instructions - pos module - thank you page"
+
+      #Onboarding Steps
+      - executeFunction:
+          name: unified.us.functions.transactions.onboarding.navigateOnboardingToHome
+
+      #Navigate to Signin
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      #Signin to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.coreCheckout.scd.android.email
+            - name: android.password
+              string: us.data.prod.coreCheckout.scd.android.pwd
+            - name: ios.email
+              string: us.data.prod.checkout.template.ios.email
+            - name: ios.password
+              string: us.data.prod.checkout.template.ios.password
+    
+      # Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      #Navigate to Home tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Select Delivery intent from GIC
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery
+      - executeFunction:
+          name: unified.us.functions.functional.gic.module.selectAddress
+          params:
+            - name: address
+              string: us.data.checkout.gic.deliveryFromStore.sanjose.address
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.functional.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.prod.scd.item
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.item.postAddToCartSteps
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.functional.bookslot.changeOrReserve
+
+      - executeFunction:
+          name: unified.us.functions.functional.bookslot.reserveASlot
+          params:
+            - name: tab
+              string: delivery
+            - name: slotDay
+              string: 3
+            - name: slotIndex
+              string: 2
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.paymentsCloseTray
+
+      # Validate review order page is loaded
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateIsReviewOrderView
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateDeliveryFromStoreFulfillmentCard
+          params:
+            - name: fulfillmentText
+              string: delivery
+            - name: fulfillmentItemCount
+              string: 1
+            - name: fulfillmentType
+              string: SC_DELIVERY
+
+      # Validate POS details
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateScheduledDeliveryPOS
+          params:
+            - name: isBelowThreshold
+              string: true
+
+      # Update and validate delivery instructions
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.deliveryInstructions.title
+          position: center
+      
+      - executeNode:
+          file: us/functional-tests-transactions/helpers/getRandomNumber
+          getResponse:
+            storeIn: randomGateOrCallCode
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.deliveryModule.updateDeliveryInstructions
+          params:
+            - name: propertyType
+              string: House
+            - name: gateOrCallCode
+              string: ${randomGateOrCallCode}
+            - name: fulfillmentDeliveryNotes
+              string: Test delivery instructions.
+            - name: dropOffLocation
+              string: Back door
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.deliveryModule.validateDeliveryInstructionsModule
+          params:
+            - name: fulfillmentDeliveryInstructions
+              string: House, ${randomGateOrCallCode}, Back door, Test delivery instructions.
+
+      # Increase item quantity and validate no below threshold charge
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.itemDetails.incrementItemQuantity
+          params:
+            - name: numIncrements
+              string: 4
+            - name: itemIndex
+              string: 1
+
+      # TODO add validatons for Item details in future PRS
+      # - executeFunction:
+      #     name: us.functions.functional.checkout.reviewOrder.fulfillment.validateItemDetails
+      #     params:
+      #       - name: fulfillmentItemCount
+      #         string: 10
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateScheduledDeliveryPOS
+          params:
+            - name: isBelowThreshold
+              string: false
+
+      # Opt out of text message updates
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.getTextInfo
+          position: center
+
+      - executeFunction:
+          name: us.functions.functional.utils.optOutTextMessage
+
+     # Place order
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+         name: us.functions.functional.checkout.placeOrder
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.paymentsCloseTray
+
+      - executeFunction:
+          name: us.functions.functional.checkout.thankyou.orderConfirmation.getOrderNumber  
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

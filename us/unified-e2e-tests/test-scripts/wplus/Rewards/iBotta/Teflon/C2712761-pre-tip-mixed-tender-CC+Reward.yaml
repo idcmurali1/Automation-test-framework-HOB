@@ -1,0 +1,305 @@
+general:
+  tags: C2712761, unified-teflon-e2e, unified-p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2712761
+  metadata:
+    - name: scenarioId
+      string: EC129
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo    
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start main
+
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.tipVerifyAddRewardsWallet.android.email
+            - name: android.password
+              string: us.data.teflon.password
+            - name: ios.email
+              string:  us.data.tipVerifyAddRewardsWallet.ios.email
+            - name: ios.password
+              string: us.data.teflon.password
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: email
+              string: ${email}
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome 
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn 
+
+       # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.rateDriverPopup
+
+      # Add Reward amount to existing Wplus user
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.astro.addRewardAmount 
+                params:
+                  - name: payload
+                    string: us.data.addReward.wallet.ios.payload
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.astro.addRewardAmount 
+                params:
+                  - name: payload
+                    string: us.data.addRewardWallet.amount.android.payload 
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment 
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: backupItem
+              string: 2931930047  
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/$item1      
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # Go to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: pickup
+
+      # Select delivery time slot with address addition
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot 
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 4
+
+      # Verify cart
+      - executeFunction: 
+          name: unified.us.functions.cart.verifyCardDetails 
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      # Continue to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout 
+
+      - executeFunction:
+          name: unified.us.functions.tippingAndFeedback.driverTipAmountVerification.on.orderReviewPage
+          params:
+            - name: custTip
+              string: true
+            - name: custTipAmount
+              string: 5
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.applyWalmartCash.wallet 
+
+      # Place order
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder 
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber 
+      - log: ${orderNo}
+
+      # Verify order confirmation page 
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink 
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo 
+      - sleep:
+          duration: 3000
+      
+      # Verify order status in order details page
+      - executeFunction:
+          name: unified.us.functions.orderDetails.ost.scheduledDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Delivery from store
+            - name: orderStatus
+              string: Placed
+
+      # Move to PO Acknowledged
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus 
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Acknowledged
+
+      # Validate Driver Tip when the Order is in PO Acknowledged status
+      - executeFunction:
+          name: unified.us.functions.utils.astro.validateDriverTip 
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Acknowledged
+            - name: driverTipAmt
+              string: ${custTipAmount}
+            - name: tipType
+              string: PostTip
+
+      # Move to Delivered
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus 
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: Delivered
+
+      # Deeplink into order details page 
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink 
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+      - sleep:
+          duration: 5000
+     
+      # Verify payment clarity screen to ensure the tip is shown as $5
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.paymentClarity 
+          params:
+            - name: orderStatus
+              string: Delivered
+
+      - executeFunction:
+          name: unified.us.functions.purchaseOrderPage.VerifyCustomDriverTip 
+          params:
+            - name: custTipAmount
+              string: 5
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink 
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+       
+      # update the tip to $10 
+      - executeFunction:
+          name: unified.us.functions.orderDetails.editTip.OnTheWayStatus 
+          params:
+            - name: custTipAmount
+              string: 10
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink 
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+     
+      # Verify ODP to ensure the tip is shown as $10
+      - executeFunction:
+          name: unified.us.functions.purchaseOrderPage.VerifyCustomDriverTip 
+          params:
+            - name: custTipAmount
+              string: 10
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps
+          

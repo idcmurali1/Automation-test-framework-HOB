@@ -1,0 +1,287 @@
+functions:
+
+  ###########################################################################################
+  # Description : Function to select the first wfs item from the list                       #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]  ${validateData}   - true/false [Default false].                             #
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.selectFirstWFSItem
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.firstWFSItemCard
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${validateData}
+          then:
+            - storeIn:
+                key: index
+                value: 1
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.wfsInventory.nthWFSItemAvailableTitle
+                  - identifier: sc.mappings.wfsInventory.nthWFSItemAvailableValue
+                  - identifier: sc.mappings.wfsInventory.nthWFSItemInboundTitle
+                  - identifier: sc.mappings.wfsInventory.nthWFSItemInboundValue
+      - click:
+          identifier: sc.mappings.wfsInventory.firstWFSItemCard
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.wfsItemDetails.header
+      - storeIn:
+          key: validateData
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to verify if the searched item is displayed or not               #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]  ${validateData}   - true/false [Default false].                             #
+  #                                 If true, wfsItemSKU & wfsItemId are mandatory.          #
+  # [optional]  ${wfsItemSKU}     - [Earlier fetched wfs item Id to be validated against]   #
+  # [optional]  ${wfsItemId}      - [Earlier fetched wfs item SKU to be validated against]  #
+  # [optional]  ${wfsItemGTIN}    - [Earlier fetched wfs item GTIN to be validated against] #
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.verifyWFSItem
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.wfsItemDetails.header
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.wfsItemDetails.wfsItemTitle
+      - executeFunction:
+          name: sc.functions.wfsInventory.verifyWFSItemDetailsPage
+
+  ###########################################################################################
+  # Description : Function to verify wfs item details page display of a specifc wfs item    #
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.verifyWFSItemDetailsPage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.wfsItemDetails.wfsItemId
+            - identifier: sc.mappings.wfsInventory.wfsItemDetails.sku
+      - if:
+          condition: ${quickFilter} != null
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.wfsInventory.wfsItemDetails.status
+      - if:
+          condition: ${validateData}
+          then:
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: sc.mappings.wfsInventory.wfsItemDetails.wfsItemId
+                          equals: ${wfsItemId}
+                        - identifier: sc.mappings.wfsInventory.wfsItemDetails.sku
+                          equals: ${wfsItemSKU}
+                        - identifier: sc.mappings.wfsInventory.wfsItemDetails.gtin
+                          equals: ${wfsItemGTIN}
+                else:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: sc.mappings.wfsInventory.wfsItemDetails.wfsItemId
+                          equals: ${wfsItemId}
+                        - identifier: sc.mappings.wfsInventory.wfsItemDetails.sku
+                          equals: ${wfsItemSKU}
+                        - identifier: sc.mappings.wfsInventory.wfsItemDetails.gtin
+                          equals: ${wfsItemGTIN}
+      - storeIn:
+          key: validateData
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to select quick filter                                           #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${quickFilter}       - All / In stock / At risk / Out of stock             #
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.quickFilterWFSItems
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.quickFilterSection
+      - if:
+          identifier:
+            notPresent:
+              - identifier: sc.mappings.wfsInventory.quickFilters
+          then:
+            - scroll:
+                direction: left
+                withinIdentifier: sc.mappings.wfsInventory.quickFilterSection
+            - sleep:
+                duration: 1000
+      - click:
+          identifier: sc.mappings.wfsInventory.quickFilters
+      - sleep:
+          duration: 10000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.firstWFSItemCardOrNoResult
+            - identifier: sc.mappings.wfsInventory.selectedQuickFilter
+
+  ###########################################################################################
+  # Description : Function to verify if quick filter selection is proper                    #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]   ${quickFilter}            - All / In stock / At risk / Out of stock       #
+  # [optional]    ${validateWFSItem}        - true/false [default false]                    #
+  #                                           [If true, validates the item status as well]  #
+  # [optional]    ${validateWFSItemIndexes} - [default 1] Indexes of items to be verified   # 
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.verifyQuickFilters
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.selectedQuickFilter
+      - if:
+          condition: ${validateWFSItem}
+          then:
+            - if:
+                condition: ${validateWFSItemIndexes} == null
+                then:
+                  - storeIn:
+                      key: validateWFSItemIndexes
+                      value: 1
+            - executeNode:
+                file: sellerCenter/e2e-tests/helpers/generateR2Array.js
+                args:
+                  - value: ${validateWFSItemIndexes}
+                getResponse:
+                  storeIn: indexesToBeValidated
+            - loop:
+                each: ${indexesToBeValidated}
+                storeElement: index
+                flow:                
+                  - executeFunction:
+                      name: sc.functions.wfsInventory.fetchWFSItemStatus
+                  - if:
+                      condition: ${wfsItemStatus} != 'NA'
+                      then:
+                        - executeFunction:
+                            name: sc.functions.wfsInventory.verifySingleWFSItemStatus
+                            params:
+                              - name: wfsItemStatus
+                                string: ${wfsItemStatus}
+                              - name: quickFilter
+                                string: ${quickFilter}
+      - storeIn:
+          key: validateWFSItem
+          value: false
+
+  ###########################################################################################
+  # Description : Function to verify item status of an item                                 #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${quickFilter}           - All / In stock / At risk / Out of stock         #
+  # [mandatory]  ${wfsItemStatus}         - Fetched item status of a wfs item               #
+  ###########################################################################################  
+  - name: sc.functions.wfsInventory.verifySingleWFSItemStatus
+    flow:
+      - storeIn:
+          key: expectedStatus
+          value: 'null'
+      - if:
+          condition: ${quickFilter} != 'All'
+          then:
+            - if:
+                condition: ${wfsItemStatus} == ${quickFilter}
+                then:
+                  - log: WFS item status is proper. It is in status '${wfsItemStatus}'.
+                else:
+                  - storeIn:
+                      key: expectedStatus
+                      value: ${quickFilter}
+      - if:
+          condition: ${expectedStatus} != null
+          then:
+            - failTest:
+                message: WFS item status supposed to be in status ${expectedStatus} but in status '${wfsItemStatus}'
+
+  ###########################################################################################
+  # Description : Function to fetch status of an Item. By default will fetch for 1st item   #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]    ${index}                - [ Default 1 ] (WFS item index to fetch status)  #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in WFS item list page with search or quickFilter results      #
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.fetchWFSItemStatus
+    flow:
+      - if:
+          condition: ${index} == null
+          then:
+            - storeIn:
+                key: index
+                value: 1
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.wfsInventory.noItemsMessage
+          then:
+            - storeIn:
+                key: wfsItemStatus
+                value: NA
+          else:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: sc.mappings.wfsInventory.wfsItemCard
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: sc.mappings.wfsInventory.wfsItemCard
+                      scrollLimit: 10
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemCard
+                storeIn: wfsItemStatus
+      - log: ${wfsItemStatus}
+      - storeIn:
+          key: index
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to fetch item details data and store it from details page        #
+  #               To be used for any search or filter validations as required               #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in wfs item details page of an item                           #
+  ###########################################################################################
+  - name: sc.functions.wfsInventory.wfsItemDetails.fetchWFSItemData
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.wfsInventory.wfsItemDetails.header
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemDetails.wfsItemId
+                attribute: text
+                storeIn: wfsItemId
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemDetails.sku
+                attribute: text
+                storeIn: wfsItemSKU
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemDetails.gtin
+                attribute: text
+                storeIn: wfsItemGTIN
+          else:
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemDetails.wfsItemId
+                attribute: label
+                storeIn: wfsItemId
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemDetails.sku
+                attribute: label
+                storeIn: wfsItemSKU
+            - getString:
+                identifier: sc.mappings.wfsInventory.wfsItemDetails.gtin
+                attribute: label
+                storeIn: wfsItemGTIN
+      - log: WFS item id - ${wfsItemId} / WFS item SKU - ${wfsItemSKU} / WFS item GTIN - ${wfsItemGTIN}

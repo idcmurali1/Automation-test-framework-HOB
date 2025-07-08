@@ -1,0 +1,584 @@
+functions:
+  # Description: This method signs users in
+  # Params: email, password
+  - name: unified.us.functions.global.authentication.signInAccount
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.ios.authentication.dismiss
+                then:
+                  - click:
+                      identifier: us.mappings.global.ios.authentication.dismiss
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.onboarding.smartLock.DismissNoneOfTheAbove
+            - if:
+                condition: ${validateSignInPage} #to validate the sign in page
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.home.signPageGraphic
+                        - identifier: us.mappings.home.signViewLabel
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.home.signViewLabel
+                          contains: us.data.signinText
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.authentication.signIn.anotherWayText
+                then:
+                  - log: "The Sign-in another way pop-up is displayed, dismissing it."
+                  - click:
+                      identifier: us.mappings.authentication.signIn.anotherWayPopUp.dismiss
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.global.authentication.emailField
+      - enterText:
+          identifier: us.mappings.global.authentication.emailField
+          string: ${email}
+          clickFirst: true
+      - click:
+          identifier: us.mappings.global.authentication.signIn.continueButton
+          wait: 3000
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.signIn.passwordPageTitle
+          then:
+            - log: Entered Email Successfully
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - SIGN-IN ERROR"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.signIn.verificationPasswordRadioButton
+          then:
+            - click:
+                identifier: us.mappings.global.authentication.signIn.verificationPasswordRadioButton
+            - log: "Selected Password Option to Login"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.global.authentication.passwordField
+      - enterText:
+          identifier: us.mappings.global.authentication.passwordField
+          string: ${password}
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+               name: unified.us.functions.utils.dismissKeyboard
+      - click:
+          identifier: us.mappings.global.authentication.signInButton
+          wait: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.somethingWentWrongError
+          then:
+            - click:
+                identifier: us.mappings.global.authentication.signInButton
+            - sleep:
+                duration: 3000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.somethingWentWrongError
+                then:
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - SIGN-IN ERROR"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.quickSecurityCheck
+          then:
+            - if:
+                condition: ${env} == 'production' 
+                then:
+                  - log: "Starts Production the sign-in with Email Verification Code flow"
+                  - executeFunction:
+                      name: us.functions.global.authentication.stepUpOTP.flow
+                      params:
+                        - name: email
+                          string: $email
+                else:
+                  - if:
+                      condition: ${env} == 'teflon' 
+                      then:
+                        - log: "Starts Teflon the sign-in with Verification Code flow"
+                        - executeFunction:
+                            name: unified.us.functions.global.authentication.stepUpOTP.flow.teflon
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - sleep:
+                duration: 2000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.passwordKeyChainAlertDon'tAllowButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.authentication.passwordKeyChainAlertDon'tAllowButton
+                      wait: 1000
+      - executeFunction:
+          name: unified.us.functions.utils.handleCartMergePopup
+      - executeFunction:
+          name: unified.us.functions.home.toolTip
+
+  # Description: This method only store users information 
+  # Params: email, password
+  - name: unified.us.functions.authentication.signInInfo
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: email
+                value: ${android.email}
+            - storeIn:
+                key: password
+                value: ${android.password}
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: email
+                value: ${ios.email}
+            - storeIn:
+                key: password
+                value: ${ios.password}
+
+  - name: unified.us.functions.global.authentication.signInAccountWithParams
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+   #--------------------------------------------------------------------------------------------------------------------
+   # Description:  This flow toggle on the skip otp from the debug panel
+   # No params
+  - name: unified.us.functions.authentication.skipAuthFromDebugPanel
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://debugPanel/authenticationSettings
+            - click:
+                identifier: us.mappings.debugPanel.skipStepUpToggle
+            - sleep:
+                duration: 2000
+            - goBack: true
+            - click:
+                identifier: Done
+      - if:
+          condition:  ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://debugPanel
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.debugPanel.identityAuth
+                position: center
+            - click:
+                identifier: us.mappings.debugPanel.identityAuth
+            - sleep:
+                duration: 2000
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.debugPanel.skipStepUpToggle
+            - click:
+                identifier: us.mappings.debugPanel.skipStepUpToggle
+            - click:
+               identifier: us.mappings.debugPanel.storeMode.clickToCloseDubugPanel
+               coordinates: 5% ,50%
+            - sleep:
+               duration: 3600
+
+   #--------------------------------------------------------------------------------------------------------------------
+   # Description:  This flow get otp for teflon env
+   # Requires Email
+  - name: unified.us.functions.global.authentication.stepUpOTP.flow.teflon
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.forgotPassword.emailMe.verificationCode
+          then:
+            - log: Trying to Fetch OTP from Email
+            - storeIn:
+                key: emailOtp
+                value: true
+         #Select Email Radio Button
+            - click:
+                identifier: us.mappings.global.authentication.forgotPassword.emailMe.verificationCode
+          else:
+            - storeIn:
+                key: phone
+                value: true
+            - log: Trying to Fetch OTP from Phone
+    #Click Send Code Button
+      - click:
+         identifier: us.mappings.global.authentication.quickSecurityCheck
+      - if:
+          condition: ${emailOtp}
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.astro.fetchPasscode.emailOTP
+      - if:
+          condition: ${phone}
+          then:
+            - executeFunction:
+                name: unified.us.functions.utils.astro.fetchPasscode.phoneOTP
+      - if:
+          condition: ${astroOtpFailed}
+          then:
+            - log: Astro OTP flow Failed using debug panel skip otp Screen
+            - click:
+                identifier: us.mappings.global.closeButton
+            - executeFunction:
+                name: unified.us.functions.authentication.skipAuthFromDebugPanel
+            - click:
+                identifier: us.mappings.account.signInButton
+                wait: 2000
+            - enterText:
+                identifier: us.mappings.global.authentication.emailField
+                string: ${email}
+                clickFirst: true
+            - click:
+                identifier: us.mappings.global.authentication.signIn.continueButton
+            - sleep:
+                duration: 2000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.signIn.verificationPasswordRadioButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.authentication.signIn.verificationPasswordRadioButton
+                  - log: "Selected Password Option to Login"
+            - enterText:
+                identifier: us.mappings.global.authentication.passwordField
+                string: ${password}
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.dismissKeyboard
+            - click:
+                identifier: us.mappings.global.authentication.signInButton
+
+   #--------------------------------------------------------------------------------------------------------------------
+   # Description: Fetch otp from phone number from astro
+   # params : email
+  - name: unified.us.functions.utils.astro.fetchPasscode.phoneOTP
+    flow:      
+      - try:
+          flow:        
+        # Call to fetch the OTP from customer's Phone.
+            - executeFunction:
+                name: unified.us.functions.utils.astro.fetchCustomerPhoneNumber
+                params:
+                  - name: custEmail
+                    string: $email
+            - executeFunction:
+                name: unified.us.functions.authentication.verifyPhoneOTP
+                params:
+                  - name: customerEmail
+                    string: $email
+            - log: "The OTP generated is: "
+            - log: ${otpFromPhone}
+          catch:
+            flow:
+              - storeIn:
+                  key: astroOtpFailed
+                  value: true
+
+   #--------------------------------------------------------------------------------------------------------------------
+   # Description: Fetch OTP  email from astro
+   # params : email
+  - name: unified.us.functions.utils.astro.fetchPasscode.emailOTP
+    flow:      
+      - try:
+          flow:
+        # Call to fetch the OTP from customer's email.
+            - executeFunction:
+                name: us.functions.utils.astro.fetchPasscode.emailOTP
+                params:
+                    - name: email
+                      string: ${email}
+            - log: "The OTP generated is: "
+            - log: ${otpFromEmail}
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+            - enterText:
+                identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+                string: ${otpFromEmail}
+            - log: "Entered the OTP form Customer's email"
+            - click:
+                identifier: us.mappings.global.authentication.signInButton
+          catch:
+            flow:
+              - storeIn:
+                  key: astroOtpFailed
+                  value: true
+
+   #--------------------------------------------------------------------------------------------------------------------
+   # Description: Fetch customer phone number from astro
+   # params : custEmail
+  - name: unified.us.functions.utils.astro.fetchCustomerPhoneNumber
+    flow:
+      - log: Fetches the Phone number using the customer email
+      - log: $custEmail
+      - callAPI:
+          url: http://astro.walmart.com/api/v2/teflon/customer/$custEmail
+          requestMethod: GET
+          wait: 5000
+          verifyResponseCode: 200
+          header:
+            - key: segment
+              value: oaoh
+            - key: Content-Type
+              value: application/json
+            - key: tenant-id
+              value: elh9ie
+            - key: temp
+              value: true
+          readTimeout: 30000
+          retriesOnFail: 5
+          verifyResponseCode: 200
+          verifyResponseBodyContains:
+            - '"SUCCESS"'
+          getValue:
+            - key: astroStatus
+              storeIn: customerIdStatus
+            - key: astroDetails.customerDetails.customerAccountDetails.account.phoneNumber
+              storeIn: astroPhoneNumber
+      - log: Phone number for the account is ${astroPhoneNumber}
+
+  # Verify Phone OTP
+  - name: unified.us.functions.authentication.verifyPhoneOTP
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.astro.fetchPasscode.latestPhoneOTP
+          params:
+            - name: customerEmail
+              string: $email
+            - name: astroPhoneNumber
+              string: $astroPhoneNumber
+      - loop:
+          begin: 1
+          end: 3
+          storeIndex: tryCount
+          mode: increment
+          flow:
+            - log: Fetch passcode try count - ${tryCount}
+      - log: "The OTP generated for PHONE is: "
+      - log: ${otpFromPhone}
+      - click:
+          identifier: us.mappings.authentication.signIn.textBoxForOTP
+      - enterText:
+          identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+          string: ${otpFromPhone}
+      - click:
+          identifier: us.mappings.global.authentication.signInButton
+
+  # Verify Email OTP
+  - name: unified.us.functions.authentication.verifyEmailOTP
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.astro.fetchPasscode.latestEmailOTP
+          params:
+            - name: customerEmail
+              string: $email
+      - loop:
+          begin: 1
+          end: 3
+          storeIndex: tryCount
+          mode: increment
+          flow:
+            - log: Fetch passcode try count - ${tryCount}
+      - log: "The OTP generated for EMAIL is: "
+      - log: ${otpFromEmail}
+      - click:
+          identifier: us.mappings.authentication.signIn.textBoxForOTP
+      - enterText:
+          identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+          string: ${otpFromEmail}
+      - click:
+          identifier: us.mappings.global.authentication.signInButton
+
+  - name: unified.us.functions.global.authentication.createAccountFromSignInScreen
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: astroEmail # remove afrer mobile verification issue get resolved 
+                value: "identity-testuser${timestamp}@cloudtest.org"
+            - storeIn:
+                key: astroPhoneNumber 
+                value: 1${__randomUSPhone}
+            - enterText:
+                identifier: us.mappings.global.authentication.emailField
+                string: ${astroEmail}
+            - click:
+                identifier: us.mappings.global.authentication.signIn.continueButton
+            - sleep:
+                duration: 5000
+            - verifyPresent:
+                identifier: us.mappings.account.createAccount.firstNameTextField
+            - enterText:
+                identifier: us.mappings.account.createAccount.firstNameTextField
+                string: TestFirst
+                pressEnter: true
+            - enterText:
+                identifier: us.mappings.account.createAccount.lastNameTextField
+                string: TestLast
+                pressEnter: true
+            # mandateOTP flow check
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.createAccount.phoneNumberField
+                then:
+                  - if:
+                      condition: "!${skipPhoneNumber}"
+                      then:
+                        - log: "Inside the Enter phoneNumber condition"
+                        - enterText:
+                            identifier: us.mappings.account.createAccount.phoneNumberField
+                            string: $astroPhoneNumber
+                            pressEnter: true
+                        - click:
+                            identifier: us.mappings.global.authentication.signIn.and.enterNewPassword
+                        - sleep:
+                            duration : 2000
+                        - enterText:
+                            identifier: us.mappings.global.authentication.signIn.and.enterNewPassword
+                            string: ${password} #E2epassword$
+                      # pressEnter: true
+                        # - hideKeyboard: true
+                        - scroll:
+                            direction: down
+                            scrollLimit: 1
+                        - click:
+                            identifier: us.mappings.global.authentication.createAccountButton
+                        - sleep:
+                            duration: 5000
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.global.authentication.accountVerificationEmail.text
+                            then:
+                              - executeFunction:
+                                  name : us.functions.utils.astro.fetchPasscode.emailOTP      
+                                  params:
+                                    - name: email
+                                      string: ${astroEmail}
+                              - log: "The OTP generated is: "
+                              - log: ${otpFromEmail}
+                              - log: "The Request Verification Code button is clicked"
+                              - verifyIdentifier:
+                                      present:
+                                      - identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+                              - enterText:
+                                      identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+                                      string: ${otpFromEmail}
+                              - log: "Entered the OTP form Customer's email"
+                              - click:
+                                      identifier: us.mappings.global.authentication.signInButton
+                              - sleep:
+                                      duration: 5000
+                        # Call to fetch the OTP from customer's Phone.
+                        - executeFunction:
+                            name: us.functions.authentication.verifyPhoneOTP
+                            params:
+                              - name: email
+                                string: ${astroEmail}
+                              - name: phone
+                                string: ${astroPhoneNumber}
+                      else:
+                        - log: "Skipping to Enter the Phone Number"
+                        - click:
+                            identifier: us.mappings.global.authentication.signIn.and.enterNewPassword
+                        - sleep:
+                            duration: 2000
+                        - enterText:
+                            identifier: us.mappings.global.authentication.signIn.and.enterNewPassword
+                            string: ${password} #E2epassword$
+                        #      pressEnter: true
+                        # - hideKeyboard: true
+                        - scroll:
+                            direction: down
+                            scrollLimit: 1
+                        - click:
+                            identifier: us.mappings.global.authentication.createAccountButton
+                        - sleep:
+                            duration: 5000
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.authentication.signIn.phoneNumberEmpty.ErrorMessage
+                            then:
+                              - click:
+                                  identifier: us.mappings.global.closeButton
+                else:
+                  - click:
+                      identifier: us.mappings.global.authentication.signIn.and.enterNewPassword
+                  - sleep:
+                      duration: 2000
+                  - enterText:
+                      identifier: us.mappings.global.authentication.signIn.and.enterNewPassword
+                      string: ${password} #E2epassword$
+                  #      pressEnter: true
+                  # - hideKeyboard: true
+                  - scroll:
+                      direction: down
+                      scrollLimit: 1
+                  - click:
+                      identifier: us.mappings.global.authentication.createAccountButton
+            - sleep:
+                duration: 6000
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.global.authentication.createAccountButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.passwordKeyChainAlertDon'tAllowButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.authentication.passwordKeyChainAlertDon'tAllowButton
+                  - executeFunction:
+                      name: us.functions.utils.handleCartMergePopup
+            - storeIn:
+                key: email
+                value: ${email1}

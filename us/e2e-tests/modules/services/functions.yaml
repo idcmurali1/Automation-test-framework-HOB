@@ -1,0 +1,3778 @@
+functions:
+
+#********************************************************** iOS ************************************************************
+
+#Navigate to scanner and allow Would you like to access your camera request
+  - name: us.functions.services.naviagteToWeeklyAd
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.weeklyAd
+      - click:
+          identifier: us.mappings.services.weeklyAd
+          wait: 1000
+      - sleep:
+          duration: 10000
+
+  - name: us.functions.services.naviagteToWeeklyAd
+    platform: android
+    flow:
+      - sleep:
+          duration: 10000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.weeklyAd
+      - click:
+          identifier: us.mappings.services.weeklyAd
+          wait: 1000
+      - sleep:
+          duration: 10000
+
+  - name: us.functions.services.verifyWeeklyAdPage
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.weeklyAd.image
+          then:
+            - log: "Weekly ad page displayed properly"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Image should have been displayed but was not"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.weeklyAd.backButton
+            - identifier: us.mappings.home.searchBar
+            # - identifier: us.mappings.home.Scannerbutton
+            - identifier: us.mappings.navBar.cartIcon
+
+
+  - name: us.functions.services.weeklyAd.search
+    platform: ios
+    flow:
+
+      - click:
+          identifier: us.mappings.home.searchBar
+          wait: 3000
+      #- verifyIdentifier:
+          #present:
+            #- identifier: us.mappings.home.searchBarSelected
+      - enterText:
+          identifier: us.mappings.home.searchBar     #us.mappings.home.searchBarSelected
+          string: ${searchTerm}
+          pressEnter: true
+      - executeFunction:
+          name: us.functions.search.closeHowDoYouWantYourOrderBottomTray
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.clearAllFilters
+          then:
+              - click:
+                  identifier: us.mappings.search.clearAllFilters
+                  wait: 3000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.home.searchBarSelected
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.search.firstProductNameTitle
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.search.firstItem
+            - identifier: us.mappings.search.firstProductNameTitle
+
+  - name: us.functions.verificationPopularServices
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.servicePopularServices    #Due to AB testing..putting this under if condition
+          then:             
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.servicePopularServices
+                  - identifier: us.mappings.servicePopularServicesPharmacy
+                  - identifier: us.mappings.servicePopularServicesAutoCareCenter         
+                  - identifier: us.mappings.servicePopularServicesCustomCakes
+
+  - name: us.functions.services.naviagteToServices 
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.global.navigation.goToServicesFromTabBar 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.storeToolsName
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center         
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.storeToolsName
+          then:
+            - click:
+                identifier: us.mappings.services.storeToolsName
+            - sleep:
+                duration: 3000
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.onboarding.technicalError
+                then:
+                  - failTest:
+                      message: ENV_FAILURE - ${env} - Service page - ${servicesName} did not load
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Store Tool Service ${servicesName} is not available
+
+  - name: us.functions.services.walmartPay.validateWalmartPayBottomSheet
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.walmartPay.walmartPayBottomSheetHeader
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.walmartPay.addPaymentMethodButton  
+      - sleep:                    
+          duration: 10000
+
+  - name: us.functions.services.cancelOrValidateScanAndGo
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.cancelAndExitScanAngGO
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.cancelAndExitScanAngGO
+            - click: 
+                identifier: us.mappings.services.cancelAndExitScanAngGO
+      - if: 
+          identifier: 
+            present: 
+              - identifier: us.mappings.global.onboarding.allowLocationModalHeaderText
+          then: 
+            - click: 
+                identifier: us.mappings.global.onboarding.allowLocation            
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.wplus.walmartPlusLogo
+
+  - name: us.function.pharmacy.dashboardvalidation
+    platform: ios
+    flow:
+      - if:
+          condition: ${account} == 'Guest'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.popularServices.pharmacy.pharmacyServices
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                  # - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                  - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+                  - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+
+      - if:
+          condition: ${account} == 'Existing user'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+                  # - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  # - identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  - identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.popularServices.pharmacy.pharmacyServices
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                 present:
+                   - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                  #  - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                   - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+                   - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+
+  - name: us.functions.services.acc.virtualGarageAddVehicle
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.services.acc.virtualgarage
+      - click:
+          identifier: us.mappings.services.virtualGarage.addVehicleButton         
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.fitment.addFitmentDetailsPageTitle
+      - click:
+          identifier:  us.mappings.search.fitment.selectYeardropdown
+      - sleep:  
+          duration: 2000
+      - enterText:
+          identifier: us.mappings.search.fitment.pickerWheel 
+          string: ${year}  
+      - click:
+          identifier: done  
+      - click:
+          identifier:  us.mappings.search.fitment.selectMakedropdown
+          wait: 3000
+      - enterText:
+          identifier: us.mappings.search.fitment.pickerWheel 
+          string: ${make}
+      - click:
+          identifier: done 
+      - click:
+          identifier:  us.mappings.search.fitment.selectModeldropdown
+      - enterText:
+          identifier: us.mappings.search.fitment.pickerWheel 
+          string: ${model} 
+      - click:
+          identifier: done 
+      - click:
+          identifier:  us.mappings.search.fitment.selectSubmodeldropdown
+      - enterText:
+          identifier: us.mappings.search.fitment.pickerWheel 
+          string: ${submodel} 
+      - click:
+          identifier: done
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.fitment.viewResultButton
+            - name: direction
+              string: down
+      - click:
+           identifier:  us.mappings.search.fitment.viewResultButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.acc.virtualgarage.successMessage
+          then:
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.successMessageGotItButton
+      - click: 
+          identifier: us.mappings.services.navigateBackArrowToAcc 
+
+  - name: us.functions.services.acc.schedulingService
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService
+
+  - name: us.functions.services.acc.schedulingService.selectVehicle
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier: 
+            present:
+              - identifier: us.mappings.services.acc.scheduleService.closePopup
+          then:
+            - click:
+                identifier: us.mappings.services.acc.scheduleService.cancelButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.vehicleSelection.stepper
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      - click: 
+          identifier: us.mappings.returns.continueButton
+
+  - name: us.functions.services.acc.schedulingService.serviceselection
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+            - identifier: us.mappings.services.acc.serviceselection.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.serviceOption
+            - identifier: us.mappings.services.acc.scheduleService.serviceText
+            - identifier: us.mappings.services.acc.scheduleService.oilChangePrice
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationPrice
+            - identifier: us.mappings.services.acc.scheduleService.oilChangeDuration
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationDuration
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.serviceOption
+      - click: 
+          identifier: us.mappings.returns.continueButton   
+
+  - name: us.functions.services.acc.schedulingService.tireInstallationOption
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.services.acc.tireInstallationOption.pageTitle   
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+            - identifier: us.mappings.global.navigateBackArrow 
+      - click: 
+          identifier: us.mappings.global.navigateBackArrow
+      - sleep:
+          duration: 3000       
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.services.acc.serviceselection.pageTitle    
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper     
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.serviceOption
+      - sleep:
+          duration: 3000    
+      - click: 
+          identifier: us.mappings.returns.continueButton   
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier:  us.mappings.search.fitment.selectSubmodeldropdown
+          then:
+            - click:
+                identifier:  us.mappings.search.fitment.selectSubmodeldropdown
+            - click:
+                identifier: done
+            - click:
+                identifier:  us.mappings.search.fitment.selectTireSizedropdown
+            - click:
+                identifier: done
+            - sleep:
+                duration: 2000 
+            - click:
+                identifier: us.mappings.search.fitment.autoCareCenterAdditionalInfoContinueButton    
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.services.acc.tireInstallationOption.pageTitle   
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+            - identifier: us.mappings.services.acc.tireInstallationOption.pageSubTitle  
+            - identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+            - identifier: us.mappings.services.acc.tireInstallationOption.noIHaveTiresOption
+      - click:
+          identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+      - click: 
+          identifier: us.mappings.returns.continueButton    
+      - sleep:
+          duration: 3000
+
+  - name: us.functions.services.acc.schedulingService.clickOnScheduleAppoinment
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.acc.selectVehicle.scheduleAppoinment
+            - name: direction
+              string: down
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.selectVehicle.scheduleAppoinment
+          catch:
+            flow:
+              - failTest:
+                  message: "ENV_FAILURE - ${env} - Schedule Appoinment button missing"
+      - sleep:
+          duration: 5000
+      - click: 
+          identifier: us.mappings.services.acc.selectVehicle.scheduleAppoinment
+
+  - name: us.functions.services.acc.scheduleAutoService
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduler.schedulerScreenTitle
+            - identifier: us.mappings.services.acc.scheduleService.scheduleSlot.stepper
+      - sleep:
+          duration: 7000
+      - executeFunction:
+          name: us.functions.slotDataSetUp
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.acc.selectStoreHeader
+          then:
+            - click:
+                identifier: us.mappings.services.acc.selectStoreButton
+            - enterText:
+                identifier: us.mappings.cart.ACC.zipcodetextField
+                string: ${zipcode}
+                clearField: true
+                pressEnter: true
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.ACC.storeAddress 
+                then:
+                  - click:
+                      identifier: us.mappings.cart.ACC.storeAddress  
+                else:
+                  - scroll: 
+                      direction: down
+                      untilIdentifier: us.mappings.cart.ACC.storeAddress 
+                  - click:
+                      identifier: us.mappings.cart.ACC.storeAddress  
+            - click:
+                identifier: us.mappings.cart.ACC.saveButton
+      - sleep:
+         duration: 5000
+
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.reserveSlot.timeSlot
+          then:
+            - executeFunction:
+                name: us.functions.selectDayForSlotDisplay
+                params:
+                  - name: slotDay
+                    string: 'tomorrow'
+      - click:
+          identifier: us.mappings.reserveSlot.timeSlot
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.continueButton
+          then:
+            - click:
+                identifier: us.mappings.reserveSlot.continueButton
+          
+  - name: us.functions.services.acc.schedulingService.reviewConfirmation
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          timeout: 60000
+          present:
+            - identifier: us.mappings.services.acc.scheduleServiceReview.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.review.stepper
+            - identifier: us.mappings.services.acc.scheduleService.vehicleDetails
+            - identifier: us.mappings.services.acc.scheduleService.appointmentDetails
+            - identifier: us.mappings.services.acc.scheduleService.servicesDetailsOilChange
+            - identifier: us.mappings.services.acc.scheduleService.dateAndTime
+            - identifier: us.mappings.services.acc.scheduleService.location
+            - identifier: us.mappings.services.acc.scheduleService.contactInformation
+# should be commented in prod
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.services.acc.confirmAppoinment
+      #       - name: direction
+      #         string: down
+      #       - name: scrollPosition
+      #         string: center
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.services.acc.confirmAppoinment     
+      # - click:
+      #     identifier: us.mappings.services.acc.confirmAppoinment
+
+  - name: us.functions.services.acc.schedulingService.confirmationAppoinment      
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.services.acc.scheduleService.review.stepper
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleServiceConfirmAppointment.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.vehicleDetails
+            - identifier: us.mappings.services.acc.scheduleService.appointmentDetails
+            - identifier: us.mappings.services.acc.scheduleService.servicesDetailsOilChange
+            - identifier: us.mappings.services.acc.scheduleService.dateAndTime
+            - identifier: us.mappings.services.acc.scheduleService.location
+            - identifier: us.mappings.services.acc.scheduleService.contactInformation
+            - identifier: us.mappings.services.acc.scheduleService.serviceInstructions
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.services.acc.scheduleService.backToAutoCareCenterButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.backToAutoCareCenterButton  
+      - click:
+          identifier: us.mappings.services.acc.scheduleService.backToAutoCareCenterButton
+      - sleep:
+         duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.pageTitle
+      - log: Redirected to Auto Care Center page
+
+  - name: us.functions.services.acc.schedulingService.oilChangeServiceSelectionVerification
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+            - identifier: us.mappings.services.acc.serviceselection.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.serviceOption
+            - identifier: us.mappings.services.acc.scheduleService.serviceText
+            - identifier: us.mappings.services.acc.scheduleService.oilChangePrice
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationPrice
+            - identifier: us.mappings.services.acc.scheduleService.oilChangeDuration
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationDuration
+      # - verifyIdentifier:
+      #     value:
+      #       - identifier: us.mappings.services.acc.scheduleService.oilChangeServiceSelectionRadiobutton
+      #         equals: 1
+      # - log: oil change service is preselected
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.oilChangeServiceSelectionRadiobutton
+      - click: 
+          identifier: us.mappings.returns.continueButton   
+          
+
+  #*********************************************************** Android *************************************************
+  
+  - name: us.functions.services.verifyWeeklyAdPage
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.weeklyAd.image
+          then:
+            - log: "Weekly ad page displayed properly"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Image should have been displayed but was not"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.backButton      
+            - identifier: us.mappings.home.searchBarSelected
+            - identifier: us.mappings.navBar.cartIcon
+
+  - name: us.functions.services.weeklyAd.search
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.home.searchBarSelected
+          wait: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.searchBarSelected
+      - enterText:
+          identifier: us.mappings.home.searchBarSelected
+          string: ${searchTerm}
+          pressEnter: true
+      #- hideKeyboard: true
+      - executeFunction:
+          name: us.functions.search.closeHowDoYouWantYourOrderBottomTray
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.search.firstItem
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.firstItem
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.search.firstItem
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.search.firstItem
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.search.firstItem
+
+  - name: us.functions.verificationPopularServices
+    platform: android
+    flow:
+      - loop:
+         begin: 1
+         end: 3
+         flow:    
+           - executeFunction:
+               name: us.functions.utils.scrollIfNotVisible
+               params:
+                 - name: identifier
+                   string: us.mappings.popularServices.pharmacy.PharmacyHeader
+                 - name: direction
+                   string: down
+                 - name: scrollPosition
+                   string: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.servicePopularServices    #Due to AB testing..putting this under if condition
+          then:             
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.servicePopularServices
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.services.autoCareCenterHeader    
+                  - identifier: us.mappings.servicePopularServicesCustomCakes
+
+  - name: us.functions.services.naviagteToServices
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.services.storeToolsName
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.services.storeToolsName
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+      - try:
+          flow:
+            - if:
+                condition: ${scrollNotRequired} == false
+                then:
+                  - scroll:
+                      direction: down
+            - sleep:
+                duration: 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.storeToolsName
+            - click:
+                identifier: us.mappings.services.storeToolsName
+          catch:
+            flow:
+              - failTest:
+                  message: FAILURE - ${env} - Store Tool Service - ${servicesName} is not displayed 
+      - sleep:
+          duration: 5000      
+  - name: us.function.servicesCustomCakes.continueOnWebsitePopup
+    platform: android
+    flow:
+      - sleep:
+          duration: 500
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.services.continueOnWebsiteButton
+          then:
+            - click:
+                identifier: us.mappings.services.continueOnWebsiteButton
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.popularServices.customcakesHeader
+          then:
+            - click:
+                identifier: us.mappings.popularServices.customcakesHeader
+                wait: 500
+      - goBack: true
+      - sleep:
+          duration: 2000
+
+  - name: us.functions.services.clickAllowButton
+    platform: android
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.services.allowButton
+          then:
+            - click: 
+                identifier: us.mappings.services.allowButton
+                wait: 5000 
+
+  - name: us.functions.services.verifyWalmartPayPage
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.walmartPay.header
+            - identifier: us.mappings.services.walmartPay.instructions      
+            - identifier: us.mappings.services.walmartPay.addPaymentButton
+
+  - name: us.functions.services.walmartPay.closeAddPaymentPage
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.walmartPay.closeButton
+          then:
+            - log: "Close button present as expected. Clicking on the close button"
+            - click:
+                identifier: us.mappings.services.walmartPay.closeButton
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Close button should be present but is not"
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.services.verifyCheckAPricePage
+    platform: android
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.scanner.shareYourlocationInStorePrice
+          then:
+            - click:
+                identifier: us.mappings.scanner.shareYourlocationInStorePrice
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.checkAPrice.atTheStoreText
+          then:
+            - verifyIdentifier: 
+                present:
+                  - identifier: us.mappings.services.checkAPrice.noIAmNotButton
+            - click:
+                identifier: us.mappings.services.checkAPrice.noIAmNotButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.checkAPrice.getAccuratePricesText
+          then:
+            - verifyIdentifier: 
+                present:
+                  - identifier: us.mappings.services.checkAPrice.noThanksButton
+            - click:
+                identifier: us.mappings.services.checkAPrice.noThanksButton  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.checkAPrice.shopSmartWithScannerText
+          then:              
+            - verifyIdentifier: 
+                present:
+                  - identifier: us.mappings.services.checkAPrice.gotItButton
+            - click:
+                identifier: us.mappings.services.checkAPrice.gotItButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.scanner.shareYourlocation
+          then:
+            - click:
+                identifier: us.mappings.selectAddress.shareYourLocation.cancelButton
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.services.checkAPriceHeader
+
+  - name: us.functions.services.clickCloseButton
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.closeButton
+          then:
+            - log: "Close button present as expected. Clicking on the close button"
+            - click:
+                identifier: us.mappings.services.closeButton
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Close button should be present but is not"
+
+  - name: us.function.services.pharmacy.dashboardvalidation
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${account} == 'Guest'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.Pharmacy.Cart
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                  # - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                  # - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine   
+            - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+                  position: center
+            - verifyIdentifier:
+                present:   
+                  - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+                  - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+
+            - sleep:
+                duration: 2000    
+            - scroll:
+                  direction: up
+                  untilIdentifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                  position: center  
+          else:     
+            - if:
+                condition: ${account} == 'Existing user'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                        - identifier: us.mappings.popularServices.pharmacy.Pharmacy.Cart
+                        - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                        - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+                        - identifier: us.mappings.popularServices.pharmacy.Dismiss
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.Dismiss
+                  - scroll:
+                        direction: down
+                        untilIdentifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                        position: center
+                  - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.popularServices.pharmacy.pharmacyServices     
+                          # - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                          - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+                          - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+
+  - name: us.function.services.pharmacy.verifyPin
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.otpField
+      - loop:
+          begin: 1
+          end: 5
+          flow:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pin
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics # us.mappings.popularServices.pharmacy.verifyPinCta
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics # us.mappings.popularServices.pharmacy.verifyPinCta
+
+
+
+  - name: us.function.services.pharmacy.myPrescriptions
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+          catch:
+            flow:
+              - log: "Need to scroll down to end of page as myPrescriptions is not visible due to pending orders"
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.popularServices.pharmacy.myPrescriptions
+          # Adding scroll if not visible as the above scoll has a limit of 15 scrolls 
+              - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.popularServices.pharmacy.myPrescriptions
+                    - name: direction
+                      string: down
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+              - click:
+                  identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+      - sleep:
+          duration: 6000
+
+  - name: us.functions.services.pharmacy.pharmacyPageTopValidation
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.pharmacyIcon
+          then:
+            - log: "Pharmacy page displayed correctly"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.visionCenterIcon
+                  - identifier: us.mappings.popularServices.pharmacy.insuranceServicesIcon
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Pharmacy page not displayed as expected"
+
+  - name: us.function.services.pharmacy.verifyPin
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.pin
+          then:
+            - loop:
+                begin: 1
+                end: 5
+                flow:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.pin
+            - log: "Pharmacy PIN Code entered"
+            - sleep:
+                duration: 4000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics
+
+  - name: us.function.services.pharmacy.myPrescriptions
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+          catch:
+            flow:
+              - log: "Need to scroll down to end of page as myPrescriptions is not visible due to pending orders"
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.popularServices.pharmacy.myPrescriptions
+          # Adding scroll if not visible as the above scoll has a limit of 15 scrolls 
+              - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.popularServices.pharmacy.myPrescriptions
+                    - name: direction
+                      string: down
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+              - click:
+                  identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+      - sleep:
+          duration: 10000
+
+  - name: us.functions.services.pharmacy.pharmacyPageTopValidation
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.pharmacyIcon
+          then:
+            - log: "Pharmacy page displayed correctly"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.visionCenterIcon
+                  # - identifier: us.mappings.popularServices.pharmacy.healthCenterIcon
+                  - identifier: us.mappings.popularServices.pharmacy.insuranceServicesIcon
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Pharmacy page not displayed as expected"
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.popularServices.pharmacy.healthyLivingIcon
+      #       - name: direction
+      #         string: left
+      #       - name: identifierScope
+      #         string: us.mappings.popularServices.pharmacy.Pharmacy.scrollView
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.popularServices.pharmacy.healthyLivingIcon 
+
+  - name: us.function.services.pharmacy.myPrescriptions.refill
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - sleep:
+          duration: 7000
+      - loop:
+         begin: 0
+         end: 3
+         storeIndex: i
+         flow:
+           - log: $i
+           - if:
+                identifier:
+                  present: 
+                    - identifier: us.mappings.global.onboarding.technicalError
+                then:
+                  - click:
+                      identifier: us.mappings.error.dismissButton
+                else:
+                  - break: true
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.popularServices.pharmacy.prescriptions.refill
+          then:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.popularServices.pharmacy.prescriptions.refill
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescriptions.refill
+          else:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescriptions.refill
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.refill.continue
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder
+
+  - name: us.functions.services.pharmacy.reviewOrderPageValidation
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - scroll:
+          direction: up
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.medications
+          then:
+            - log: "Pharmacy reviewOrder screen displayed correctly"
+            - verifyIdentifier:
+                timeout: 15000
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.estimatedTotal
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.payment
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.pharmacyPickup
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.storeName
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethod
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.address
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.placeOrderBtn
+            - scroll:
+                direction: down
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.editPayment
+                 
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Review order page for pharmacy not displayed as expected"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.signature
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.signature
+                  - identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureDetails
+
+  - name: us.function.services.pharmacy.changeDeliveryStore
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethod
+            - name: direction
+              string: up 
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethod
+          wait: 5000
+      - sleep:
+          duration: 2000             
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeStore
+          then:
+            - click:
+                identifier:  us.mappings.popularServices.pharmacy.reviewOrder.changeStore
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.storeTextField         
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.storeTextField
+          string: $zipCode
+          pressEnter: true
+      - sleep:
+          duration: 2000           
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.selectStore.storeAddress 
+          then:
+            - click:
+                identifier: us.mappings.reserveSlot.selectStore.storeAddress 
+          else:
+            - scroll: 
+                direction: down
+                untilIdentifier: us.mappings.reserveSlot.selectStore.storeAddress 
+            - click:
+                identifier: us.mappings.reserveSlot.selectStore.storeAddress 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserveSlot.selectStore.saveButton
+      - click:
+          identifier: us.mappings.reserveSlot.selectStore.saveButton
+      - sleep:
+          duration: 5000          
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethodSaveButton
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethodSaveButton       
+      - sleep:
+          duration: 5000
+
+  - name: us.function.services.pharmacy.signatureCheckAndPlaceOrder
+    platform: android
+    flow: 
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      # - executeFunction:
+      #     name: us.function.services.pharmacy.changeDeliveryStore
+      #     params:
+      #       - name: zipCode
+      #         string: 72719
+      #       - name: address
+      #         string: 310 Napoli Ln
+      - scroll:
+          direction: down
+          scrollLimit: 1
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.placeOrderBtn
+      - verifyIdentifier:
+          timeout: 30000
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.confirmation
+
+  - name: us.functions.services.pharmacy.orderConfirmationPageValidation
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyOrderconfirmationTxt
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.medications
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.estimatedTotal
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.estimatedTotalAmount
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.payment
+      - scroll: 
+         direction: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyPickup
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.giveFeedback
+          then:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.popularServices.pharmacy.orderConfirmation.giveFeedback
+          else:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.popularServices.pharmacy.orderConfirmation.giveFeedback
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.googleMap
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyStoreNumber
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyOpenHours
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.done
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.orderConfirmation.done
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.close
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.orderConfirmation.close
+
+  - name: us.function.services.pharmacy.prescriptionsHistory
+    platform: android
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.services.pharmacy.prescriptionsHistory
+          then:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.services.pharmacy.prescriptionsHistory
+          else:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.services.pharmacy.prescriptionsHistory
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory
+      - sleep:
+          duration: 10000                
+
+  - name: us.function.services.pharmacy.rHistoryPrescriptionsDisplay
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.services.pharmacy.prescriptionsHistory.firstPrescriptionsDetails
+          then:
+                    
+            - click:
+                identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectDateButton
+            - sleep:
+                duration: 3000
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectyearButton
+                then:
+                  - click:
+                      identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectDateButton          
+                  - click:
+                      identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectyearButton
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectNexyear
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectNextMonth
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectDay
+                  - sleep:
+                      duration: 3000                                                         
+                  - click:
+                      identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectOkbutton
+                  - sleep:
+                      duration: 10000
+                
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.downloadPrescriptionHistory 
+          wait: 15000
+      - log: Medical Expense Report
+      - sleep:
+          duration: 15000          
+      - click:
+          identifier: us.mappings.backButton
+          wait: 5000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.pharmacy.prescriptionsHistory.prescriptionsDetails
+            - name: direction
+              string: down
+      - sleep:
+          duration: 3000                      
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.prescriptionsDetails
+      - sleep:
+          duration: 3000
+      - log: Prescriptions Details                
+
+###########################################IOS######################################
+
+  - name: us.function.services.pharmacy.myPrescriptions.refill
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - sleep:
+          duration: 5000
+#Workaround to handle appium inspector not loading in refill page due to too many elements in screen
+#coordinates is to click on sort and filter and select active prescription 
+      # - click:
+      #     coordinates: 90, 170
+      # - log: "clicked on sort and filter"
+      # - click:
+      #     coordinates: 90, 337
+      # - log: "clicked on Active prescription"
+      # - click:
+      #     coordinates: 190, 730
+      # - log: "clicked on save"
+      # - sleep:
+      #     duration: 5000
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.sortAndFilter
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.activePrescriptionRadioButton
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.filterApplyButton
+      - sleep:
+          duration: 5000 
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.refill     
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.refill.continue
+
+  - name: us.functions.services.pharmacy.reviewOrderPageValidation
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - sleep:
+          duration: 7000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder
+            # - identifier: us.mappings.popularServices.pharmacy.reviewOrder.orderSummary
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.estimatedTotal
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.payment
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.pharmacyPickup
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.storeName
+            # - identifier: us.mappings.popularServices.pharmacy.reviewOrder.address
+            # - identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureDetails
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.placeOrderBtn
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.editPayment
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethod
+
+      - click:
+           identifier: us.mappings.popularServices.pharmacy.reviewOrder.editPayment
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.paymentMethodTitle
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.paymentMethodScreenClose
+      - log: Able to edit payment 
+      - sleep:
+          duration: 3000 
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.payAtStore
+      # - click:
+      #     identifier: us.mappings.popularServices.pharmacy.reviewOrder.addPaymenToOrder       
+
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethod
+      - log: Able to edit pharmacy pickup
+      - sleep:
+          duration: 3000   
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.closeCTAPharmacyPickup
+      - sleep:
+          duration: 5000
+
+  - name: us.function.services.pharmacy.changeDeliveryStore
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.popularServices.pharmacy.reviewOrder.pharmacyPickup
+            - name: direction
+              string: up 
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.pharmacyPickup
+          wait: 5000
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeStore
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.storeTextField         
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.storeTextField
+          string: $zipCode
+          pressEnter: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.ACC.storeAddress 
+          then:
+            - click:
+                identifier: us.mappings.cart.ACC.storeAddress 
+          else:
+            - scroll: 
+                direction: down
+                untilIdentifier: us.mappings.cart.ACC.storeAddress 
+            - click:
+                identifier: us.mappings.cart.ACC.storeAddress 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethodStoreSaveButton
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethodStoreSaveButton
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.changeDeliveryMethodSaveButton
+          wait: 5000
+      - sleep:
+          duration: 5000
+
+  - name: us.function.services.pharmacy.signatureCheckAndPlaceOrder
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      # - executeFunction:
+      #     name: us.function.services.pharmacy.changeDeliveryStore
+      #     params:
+      #       - name: zipCode
+      #         string: 20151
+      #       - name: address
+      #         string: 4368 Chantilly Shopping 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.placeOrderBtn
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.prescriptionExpirayMessage
+          then:
+            - failTest:
+                message: "DATA_FAILURE - The Prescription has Expired Cannot filled online"
+      - sleep:
+          duration: 2000      
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.morePrescriptionNeedsToBeFilledMessage
+          then:
+            - failTest:
+                message: "DATA_FAILURE - Other Prescriptions also need to fill to complete order "
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.confirmation
+
+  - name: us.functions.services.pharmacy.orderConfirmationPageValidation
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyOrderconfirmationTxt
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.estimatedTotal
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.estimatedTotalAmount
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.payment
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyPickup
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.giveFeedback
+          then:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.popularServices.pharmacy.orderConfirmation.giveFeedback
+          else:
+            - scroll:
+                direction: down
+                position: center
+                untilIdentifier: us.mappings.popularServices.pharmacy.orderConfirmation.giveFeedback
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.googleMap
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyStoreNumber
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.pharmacyOpenHours
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.done
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.orderConfirmation.done
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.orderConfirmation.close
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.orderConfirmation.close
+
+  - name: us.functions.services.pharmacy.enterAndVerifyPin
+    platform: ios
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.enterPin
+          then:
+            - click:
+                identifier: us.mappings.pharmacy.enterPin
+                wait: 2000
+      - loop:
+          begin: 1
+          end: 5
+          flow:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pin
+                wait: 12000
+
+  - name: us.functions.services.pharmacy.verifyOrderDetails
+    platform: ios
+    flow:
+      - sleep:
+          duration: 7000 
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.pharmacy.orderDetailsCta
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.pharmacy.orderDetailsCta
+                  - name: direction
+                    string: up
+                  - name: scrollPosition
+                    string: center    
+      - sleep:
+          duration: 20000 
+      # - if:
+      #     identifier:
+      #       notPresent:
+      #         - identifier: us.mappings.pharmacy.callPharmacyCta
+      #     then: 
+      #       - executeFunction:
+      #           name: us.functions.utils.scrollIfNotVisible
+      #           params:
+      #             - name: identifier
+      #               string: us.mappings.pharmacy.callPharmacyCta
+      #             - name: direction
+      #               string: down
+      #             - name: scrollPosition
+      #               string: center
+      # - verifyIdentifier: 
+      #     present:
+      #       - identifier: us.mappings.pharmacy.callPharmacyCta              
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.pharmacy.orderDetailsCta
+      - click:
+          identifier: us.mappings.pharmacy.orderDetailsCta
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.verifyPin
+          then:
+            - loop:
+                begin: 1
+                end: 5
+                flow:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.pin
+                      wait: 2000
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.pharmacy.orderDetails.deliveryTitle
+            - identifier: us.mappings.pharmacy.orderDetails.deliveryMessageLabel
+            - identifier: us.mappings.pharmacy.orderDetails.progressLine
+            # - identifier: us.mappings.pharmacy.orderDetails.medConfirmation
+            - identifier: us.mappings.pharmacy.orderDetails.mapView
+      - click:
+          identifier: us.mappings.pharmacy.closeOrderDetailScreen
+
+  - name: us.functions.services.pharmacy.verifyOrderDetails
+    platform: android
+    flow:
+      - sleep:
+          duration: 7000 
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.pharmacy.orderDetailsCta
+          then:
+            - scroll:
+                direction: up
+      - sleep:
+          duration: 40000 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.pharmacy.orderDetailsCta
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center    
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.pharmacy.orderDetailsCta
+      - click:
+          identifier: us.mappings.pharmacy.orderDetailsCta
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.pharmacy.orderDetails.deliveryTitle
+            - identifier: us.mappings.pharmacy.orderDetails.deliveryMessageLabel
+            - identifier: us.mappings.pharmacy.orderDetails.progressLine
+            - identifier: us.mappings.pharmacy.orderDetails.medConfirmation
+            - identifier: us.mappings.pharmacy.orderDetails.mapView
+      - click:
+          identifier: us.mappings.orderDetails.backButton
+
+  - name: us.function.services.pharmacy.prescriptionsHistory
+    platform: ios
+    flow:
+      - sleep:
+          duration: 7000
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.pharmacy.prescriptionsHistory
+            - click:
+                identifier: us.mappings.services.pharmacy.prescriptionsHistory
+          catch:
+            flow:
+              - log: "Need to scroll down to end of page as prescriptionsHistory is not visible due to pending orders"
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.services.pharmacy.prescriptionsHistory
+          # Adding scroll if not visible as the above scoll has a limit of 15 scrolls 
+              - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.services.pharmacy.prescriptionsHistory
+                    - name: direction
+                      string: down
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.services.pharmacy.prescriptionsHistory
+              - click:
+                  identifier: us.mappings.services.pharmacy.prescriptionsHistory
+      - sleep:
+          duration: 10000
+
+  - name: us.function.services.pharmacy.rHistoryPrescriptionsDisplay
+    platform: ios
+    flow:
+      # - verifyIdentifier:
+      #    timeout: 150000
+      #    present:
+      #      - identifier: us.mappings.services.pharmacy.prescriptionsHistory.userOne
+      # - click:
+      #     identifier: us.mappings.services.pharmacy.prescriptionsHistory.userOne
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectDateButton
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectNextMonth
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectDay
+                
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.selectyearButton
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.expiry.pickerWheelYear
+          string: ${year}
+          clearField: false
+          clickFirst: false                                                        
+      - click:
+          identifier: us.mappings.flex.doneButton
+      - sleep:
+         duration: 5000
+      - verifyIdentifier:
+          timeout: 150000
+          notPresent:
+            - identifier: us.mappings.services.pharmacy.prescriptionsHistory.loadingScreen
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.downloadPrescriptionHistory
+      - log: Medical Expense Report
+      - verifyIdentifier:
+         timeout: 150000
+         present:
+           - identifier: us.mappings.services.pharmacy.prescriptionsHistory.prescriptionHistoryReportTitle
+      - verifyIdentifier:
+         timeout: 150000
+         present:
+           - identifier: us.mappings.orderHistory.backButton    
+      - click:
+          identifier: us.mappings.orderHistory.backButton
+      - sleep:
+          duration: 5000                     
+      - verifyIdentifier:
+         timeout: 150000
+         present:
+           - identifier: us.mappings.services.pharmacy.prescriptionsHistory.prescriptionsDetails
+      - click:
+          identifier: us.mappings.services.pharmacy.prescriptionsHistory.prescriptionsDetails
+      - sleep:
+          duration: 3000
+      - log: Prescriptions Details 
+
+  - name: us.functions.pharmacy.pureGuestCardValidation
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptionServiceHeader
+            - identifier: us.mappings.popularServices.pharmacy.scanToRefill      
+            - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions   
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.pharmacyHelpCenter 
+      - verifyIdentifier: 
+          present:   
+            - identifier: us.mappings.popularServices.pharmacy.pharmacyHelpCenter
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+      - sleep:
+          duration: 5000  
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.continueOnWebsite
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.continueOnWebsite
+      - sleep:
+          duration: 5000
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.vaccineWebSite  
+
+  - name: us.functions.services.verifyPureGuestCard 
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+            - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+      - sleep:
+          duration: 3000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.pharmacyHelpCenter
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.pharmacyHelpCenter
+      # Schedule a Vaccine
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+          position: center
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+      - sleep:
+          duration: 1000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.continueOnWebsite
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.continueOnWebsite
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.vaccineAds       
+
+  - name: us.function.services.pharmacy.scanToRefill 
+    platform: ios
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.scanToRefill
+          catch:
+            flow:
+              - log: "Need to scroll down to end of page as scanToRefill is not visible due to pending orders"
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.popularServices.pharmacy.prescriptionServiceHeader
+          # Adding scroll if not visible as the above scoll has a limit of 15 scrolls 
+              - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.popularServices.pharmacy.scanToRefill
+                    - name: direction
+                      string: down
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+              - click:
+                  identifier: us.mappings.popularServices.pharmacy.scanToRefill
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.scanner.enterManually
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.scanner.enterManually
+      - sleep:
+          duration: 3000
+
+  - name: us.function.services.pharmacy.addPrescriptionDetails
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptionDetails
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.prescriptionNumber
+          string: us.data.scanToRefill.prescriptionNumber
+          clearField: true
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.storeNumber
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.storeNumber
+          string: us.data.scanToRefill.storeNumber
+          clearField: true
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.dateOfBirth
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.dateOfBirth
+          string: us.data.scanToRefill.dateofBirth
+          clearField: true
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.continue
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.continue
+
+  - name: us.function.services.pharmacy.reviewOrderPayment.payAtStore 
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.verifyRefillingSomeone
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescriptions.continue
+
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.continue
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.reviewOrder.paymentMethod
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.reviewOrder.payAtStore
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.payAtStore
+          else:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.editPayment
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.payAtStore
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewOrder.addPaymenToOrder
+
+  - name: us.function.services.pharmacy.scanToRefill
+    platform: android
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.scanToRefill
+          catch:
+            flow:
+              - log: "Need to scroll down to end of page as scanToRefill is not visible due to pending orders"
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.popularServices.pharmacy.scanToRefill
+          # Adding scroll if not visible as the above scoll has a limit of 15 scrolls 
+              - executeFunction:
+                  name: us.functions.utils.scrollIfNotVisible
+                  params:
+                    - name: identifier
+                      string: us.mappings.popularServices.pharmacy.scanToRefill
+                    - name: direction
+                      string: down
+              - click:
+                  identifier: us.mappings.popularServices.pharmacy.scanToRefill
+      - sleep:
+          duration: 3000
+      - click: 
+          identifier: us.mappings.popularServices.pharmacy.allowCameraAccess
+      - sleep:
+          duration: 6000
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.enterManually
+      - sleep:
+          duration: 7000
+      
+  - name: us.functions.services.enterPrescriptionDetails
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptionNumber
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.prescriptionNumber
+          string: us.data.scanToRefill.prescriptionNumber
+          clearField: true
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.storeNumber
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.storeNumber
+          string: us.data.scanToRefill.storeNumber
+          clearField: true
+          pressEnter: true
+      - scroll: 
+          direction: down
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.dateOfBirth
+      - enterText:
+          identifier: us.mappings.popularServices.pharmacy.dateOfBirth
+          string: us.data.scanToRefill.dateofBirth
+          clearField: true
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+      - sleep:
+          duration: 6000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.continueBtn
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.continueBtn
+      
+  - name: us.function.services.pharmacy.payAtStore 
+    platform: android
+    flow:
+      - sleep:
+          duration: 8000
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.popularServices.refillingRxPopup
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.continueButton
+                wait: 2000 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.prescriptionsHeader                  
+          else:             
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.continueButton
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.continueButton
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.popularServices.pharmacy.prescriptionsHeader                
+            - sleep:
+                duration: 3000
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.continueButton
+          wait: 2000            
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.popularServices.pharmacy.payAtStoret
+            - name: direction
+              string: down        
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.payAtStore
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.placeOrder
+      - sleep:
+          duration: 7000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.morePrescriptionNeedsToBeFilledMessage
+          then:
+            - failTest:
+                message: "DATA_FAILURE - Other Prescriptions also need to fill to complete order "
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.prescriptionExpirayMessage
+          then:
+            - failTest:
+                message: "DATA_FAILURE - The Prescription is Expired and cannot refill online "                
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.orderConfirmatiion
+
+  - name: us.function.services.pharmacy.myPrescriptions.details
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.details
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.prescriptionsText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.prescribedByText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.patientText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.prescribedOnText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.fillsLeftText
+            # - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.lastFilledText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.expirationText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.pharmacyText
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.prescriptions.details.pharmacyPhoneText
+          position: center
+          scrollLimit: 1
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.pharmacyPhoneText
+
+  - name: us.functions.services.benefitProgram.addSkyBenefitCard
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - add Benefit program Card field not available"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitProgram.verifyTitle
+            - identifier: us.mappings.services.benefitProgram.addBenefitprogramCard            
+      - click:
+          identifier: us.mappings.services.benefitProgram.addBenefitprogramCard
+      - sleep:
+          duration: 6000
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addBenefitCardFromBenefitCardProgram
+      - sleep:
+          duration: 10000
+      - scroll:
+          direction: up
+          scrollLimit: 3
+      - if:
+          identifier:
+            timeout: 5000
+            notPresent:
+              - identifier: us.mappings.services.benefitProgram.verifyBenefitTraker
+          then:
+            - log: "Refreshing page required"
+            - click:
+                identifier: us.mappings.backButton
+            - executeFunction:
+                name: us.functions.global.navigation.accountToHome
+            - executeFunction:
+                name: us.functions.global.navigation.goToServicesFromTabBar
+            - executeFunction:
+                name: us.functions.services.naviagteToServices
+                params:
+                  - name: servicesName
+                    string: BCBSA
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.benefitProgram.verifyBenefitTraker
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.benefitProgram.verifyBenefitTraker
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.services.benefitProgram.verifyGiveFeedback
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitProgram.verifyGiveFeedback
+      - sleep:
+          duration: 3000            
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.services.benefitProgram.verifyBenefitTraker
+      - sleep:
+          duration: 5000
+  
+  - name: us.functions.services.navigateToBenefitsPrograms
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.benefitPrograms
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.benefitProgramsBcbsa
+      - click:
+          identifier: us.mappings.popularServices.benefitProgramsBcbsa
+          wait: 1000
+      - sleep:
+          duration: 2000 
+
+  - name: us.functions.services.benefitsPrograms.addBenefitProgramCard
+    platform: ios
+    flow:
+      - sleep:
+          duration: 2000 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.addBenefitProgramCard
+      - click:
+          identifier: us.mappings.popularServices.addBenefitProgramCard
+          wait: 5000
+      
+  # Add Benefit Program card from Services
+  - name: us.functions.services.benefitsPrograms.addingBenefitProgramCard
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.addYourBenefitCardTitle
+      - click: 
+          identifier: us.mappings.paymentMethod.benefitCardNumber
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCardNumber
+          string: ${benefitCardNumber}
+      - click: 
+          identifier: us.mappings.paymentMethod.giftbenefitCardPin
+      - enterText:
+          identifier: us.mappings.paymentMethod.giftbenefitCardPin
+          string: ${benefitCardPin}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+      - click:
+          identifier: us.mappings.paymentMethod.giftbenefitCard.dobField
+          wait: 2000
+      - enterText:
+          identifier: us.mappings.paymentMethod.dobYear
+          string: ${year}
+      - enterText:
+          identifier: us.mappings.paymentMethod.dobMonth
+          string: ${month}
+      - enterText:
+          identifier: us.mappings.paymentMethod.dobDate
+          string: ${date}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+          wait: 2000
+      - click: 
+          identifier: us.mappings.paymentMethod.benefitCardZipcode
+      - enterText:
+          identifier: us.mappings.paymentMethod.benefitCardZipcode
+          string: ${zipcode}
+      - click:
+          identifier: us.mappings.default.keyboardDoneButton
+          wait: 2000
+      - click:
+          identifier: us.mappings.paymentMethod.benefitCard.saveButton
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.paymentMethod.benefitCard.addCardConfirmation
+      - sleep:
+          duration: 10000
+      
+  - name: us.functions.services.benefitsPrograms.benefitProgramCardConfirmation
+    platform: ios
+    flow:
+      - scroll:
+          direction: up
+          scrollLimit: 3
+      - sleep:
+          duration: 4000
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.popularServices.benefitCardAddedConfirmation
+            - identifier: us.mappings.popularServices.benefitCardText
+            - identifier: us.mappings.popularServices.benefitCardAmount
+            - identifier: us.mappings.popularServices.viewBenefitTrackerLink
+      
+  - name: us.functions.services.benefitsPrograms.benefitProgramCardTracker
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.popularServices.viewBenefitTrackerLink
+          wait: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.viewBenefitTrackerTitle
+            - identifier: us.mappings.popularServices.viewBenefitTrackerTotalBalace
+            - identifier: us.mappings.popularServices.viewBenefitTrackerLeftToSpend
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.orderConfirmation.close
+          wait: 5000
+
+  - name: us.function.services.Bcbsa.ValidateSkyBenefitCard
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.bcbsa.welcomeLabel   
+            - identifier: us.mappings.services.bcbsa.totalBalance
+            - identifier: us.mappings.services.bcbsa.benefitTrackerCTA
+      - log: Benefit Tracker is present
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.services.bcbsa.benefitTrackerItemCarouselText
+      # - log: Item carousel is present 
+      - sleep:
+          duration: 3000              
+      - click:
+          identifier: us.mappings.services.bcbsa.benefitTrackerCTA
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.services.benefitCenter.verifyBnftTrackrCTA
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.bcbsa.welcomeLabel   
+            - identifier: us.mappings.services.bcbsa.totalBalance
+            - identifier: us.mappings.services.bcbsa.benefitTrackerCTA 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.bcbsa.benefitMadeEasyText
+            - name: direction
+              string: down        
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.bcbsa.benefitMadeEasyText
+            - identifier: us.mappings.services.bcbsa.shopAsUsualText
+            - identifier: us.mappings.services.bcbsa.searchForAnythingText
+            - identifier: us.mappings.services.bcbsa.knowYourBalanceText      
+
+  - name: us.functions.services.benefitCenter.verifyBnftTrackrCTA
+    platform: ios
+    flow:      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.bcbsa.benefitTrackerHeaderText 
+            - identifier: us.mappings.services.bcbsa.benefitTrackerBalanceSummary
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerFoodLabel
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerFoodRemainingBalanceAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerFoodAppliedIncartAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerOtcLabel
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerOtcRemainingBalanceAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerOtcAppliedIncartAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerBenefitCardAppliedLabel
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerTotalBalance
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerLeftToSpend
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerShippingAllowanceLabel
+      - log: Shipping allowance is not present in benefit tracker
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerTotalBalance
+            - name: attribute
+              string: label
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: totalBalance
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerLeftToSpend
+            - name: attribute
+              string: label
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: leftToSpend
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerFoodRemainingBalanceAmount
+            - name: attribute
+              string: label
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: foodRemainingBalance
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerFoodAppliedIncartAmount
+            - name: attribute
+              string: label
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: foodAppliedIncart
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerOtcRemainingBalanceAmount
+            - name: attribute
+              string: label
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: otcRemainingBalance
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerOtcAppliedIncartAmount
+            - name: attribute
+              string: label
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: otcAppliedIncart
+          value: ${amountValue} 
+
+      - arithmetic:
+          expression: ${foodRemainingBalance} + ${foodAppliedIncart} + ${otcRemainingBalance} + ${otcAppliedIncart}
+          storeIn: sumTotal
+
+      - arithmetic:
+          expression: ${foodRemainingBalance} + ${otcRemainingBalance}
+          storeIn: sumBalance
+
+      - if:
+          condition: ${sumTotal} == ${totalBalance}
+          then:
+            - log: Total balance amounts do not include shipping purse
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Total balance amounts include shipping purse"  
+
+      - if:
+          condition: ${sumBalance} == ${leftToSpend}
+          then:
+            - log: Left to spend amounts do not include shipping purse
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Left to spend amounts include shipping purse"
+
+      - click:
+          identifier: us.mappings.services.bcbsa.benefitTrackerCloseButton         
+
+  - name: us.functions.services.goToBCBSA
+    platform: android
+    flow:
+       - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitPrograms.BCBSA
+       - click:
+          identifier: us.mappings.services.benefitPrograms.BCBSA
+
+  - name: us.functions.services.benefitCenter.validateBenefitCenterProgramPage
+    platform: android
+    flow:
+      - log: Before Verify
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.services.benefitCenter.benefitCenterWelcomeMessage
+           - identifier: us.mappings.services.benefitCenter.benefitCenterCheckyourCurntBlnceMsg
+           - identifier: us.mappings.services.benefitCenter.benefitCenterViewBnftTrackrBtn
+
+  - name: us.functions.services.benefitCenter.clickOnViewBnftTrackr
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitCenter.benefitCenterViewBnftTrackrBtn
+      - log: Before Click clickOnViewBnftTrackr
+      - click:
+          identifier: us.mappings.services.benefitCenter.benefitCenterViewBnftTrackrBtn
+
+  - name: us.functions.services.benefitCenter.verifyBnftTrackrCTA
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerHeadingOnBenefitTrackerCTA
+            - identifier: us.mappings.services.benefitCenter.okayBtnOnBenefitTrackerCTA
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerTotalBalance
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerLeftToSpend
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerFoodLabel
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerFoodRemainingBalanceAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerFoodAppliedIncartAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerOtcLabel
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerOtcRemainingBalanceAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerOtcAppliedIncartAmount
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerBenefitCardAppliedLabel
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.services.benefitCenter.benefitTrackerShippingAllowanceLabel
+      - log: Shipping allowance is not present in benefit tracker
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerTotalBalance
+            - name: attribute
+              string: content-desc
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: totalBalance
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerLeftToSpend
+            - name: attribute
+              string: content-desc
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: leftToSpend
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerFoodRemainingBalanceAmount
+            - name: attribute
+              string: content-desc
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: foodRemainingBalance
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerFoodAppliedIncartAmount
+            - name: attribute
+              string: content-desc
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: foodAppliedIncart
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerOtcRemainingBalanceAmount
+            - name: attribute
+              string: content-desc
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: otcRemainingBalance
+          value: ${amountValue} 
+
+      - executeFunction:
+          name: us.functions.utils.fetchAmountDisplayed
+          params:
+            - name: identifier
+              string: us.mappings.services.benefitCenter.benefitTrackerOtcAppliedIncartAmount
+            - name: attribute
+              string: content-desc
+            - name: delimeter
+              string: '$'    
+      - storeIn:
+          key: otcAppliedIncart
+          value: ${amountValue} 
+
+      - arithmetic:
+          expression: ${foodRemainingBalance} + ${foodAppliedIncart} + ${otcRemainingBalance} + ${otcAppliedIncart}
+          storeIn: sumTotal
+
+      - arithmetic:
+          expression: ${foodRemainingBalance} + ${otcRemainingBalance}
+          storeIn: sumBalance
+
+      - if:
+          condition: ${sumTotal} == ${totalBalance}
+          then:
+            - log: Total balance amounts do not include shipping purse
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Total balance amounts include shipping purse"  
+
+      - if:
+          condition: ${sumBalance} == ${leftToSpend}
+          then:
+            - log: Left to spend amounts do not include shipping purse
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Left to spend amounts include shipping purse"
+                
+      - log: Before Click clickOnViewBnftTrackrOK
+      - click:
+          identifier: us.mappings.services.benefitCenter.okayBtnOnBenefitTrackerCTA
+
+  - name: us.functions.services.benefitCenter.clickOnCarouselItemOnBenefitCenterProgramPage
+    platform: android
+    flow:
+      - loop:
+         begin: 1
+         end: 6
+         flow:    
+           - executeFunction:
+               name: us.functions.utils.scrollIfNotVisible
+               params:
+                 - name: identifier
+                   string: us.mappings.services.benefitCenter.bnftCntrProgrm.carouselItemTile1
+                 - name: direction
+                   string: down
+                 - name: scrollPosition
+                   string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitCenter.bnftCntrProgrm.carouselItemTile1
+      - click:
+          identifier: us.mappings.services.benefitCenter.bnftCntrProgrm.carouselItemTile1
+
+  - name: us.functions.services.verificationBenefitPrograms
+    platform: android
+    flow:
+      - loop:
+         begin: 1
+         end: 6
+         flow:    
+           - executeFunction:
+               name: us.functions.utils.scrollIfNotVisible
+               params:
+                 - name: identifier
+                   string: us.mappings.services.benefitPrograms
+                 - name: direction
+                   string: down
+                 - name: scrollPosition
+                   string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.benefitPrograms
+            - identifier: us.mappings.services.benefitPrograms.BCBSA
+
+  - name: us.function.services.pharmacy.globalScanToRefill
+    platform: ios
+    flow:       
+      - click:
+          identifier: us.mappings.services.pharmacy.globalScan
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.item.zeekit.chooseModelSeeStylesNoThanksButton
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.item.SubsGotitButton
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: RootView.container
+      - sleep:
+          duration : 8000
+      - click:
+          identifier: us.mappings.services.pharmacy.globalScan.manualEntry
+      - sleep:
+          duration : 3000
+      - click:
+          identifier: us.mappings.services.pharmacy.globalScan.manualEntryPrescription
+      - sleep:
+          duration : 2000
+      - enterText:
+          identifier: us.mappings.services.pharmacy.globalScan.manualEntryPrescription
+          string: ${prescription}
+      - sleep:
+          duration : 3000
+      - click:
+          identifier: us.mappings.services.pharmacy.globalScan.searchButton
+      - sleep:
+          duration : 3000          
+      - click:
+          identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+      - sleep:
+          duration : 3000
+      - click:
+          identifier: us.mappings.services.pharmacy.globalScan.dateOfBirth
+      - enterText:
+          identifier: us.mappings.services.pharmacy.globalScan.dateOfBirth
+          string: ${dob}
+      - sleep:
+          duration : 3000
+      - click:
+          identifier: us.mappings.paymentMethod.creditCard.deleteConfirmation
+      - sleep:
+          duration : 3000
+      - click:
+          identifier: us.mappings.checkin.selectAnOrder.continueButton
+      - sleep:
+          duration : 5000
+      - click:
+          identifier: us.mappings.services.pharmacy.payAtStore
+      - sleep:
+          duration : 3000          
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+          position: center
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.reviewOrder.signatureCheck
+      - sleep:
+          duration : 5000
+      - click:
+          identifier: us.mappings.services.pharmacy.placeOrder
+      - sleep:
+          duration : 8000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.pharmacy.verifyTextYourOrderHasBeenPlaced
+      - sleep:
+          duration : 5000   
+
+  - name: us.function.services.pharmacy.myPrescriptions.details
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details
+      - click:
+          identifier: us.mappings.popularServices.pharmacy.prescriptions.details
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.prescriptionsText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.prescribedByText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.patientText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.prescribedOnText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.fillsLeftText
+            # - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.lastFilledText
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.expirationText
+      - scroll:
+          direction: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.pharmacy.prescriptions.details.pharmacyPhoneText   
+
+
+  - name: us.functions.services.pharmacy.page
+    platform: android
+    flow:
+      - sleep:
+          duration: 2000 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.popularServices.pharmacy.transferPrescriptions 
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center          
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+              - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+              - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions              
+      - scroll:
+         direction: down
+      - sleep:
+          duration: 2000
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.services.pharmacy.prescriptionsHistory
+            - identifier: us.mappings.popularServices.pharmacy.managefamilymembers
+      # - scroll:
+      #    direction: down
+      #    untilIdentifier: us.mappings.popularServices.pharmacy.digitalvaccinerecord
+      - sleep:
+          duration: 2000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.popularServices.pharmacy.digitalvaccinerecord
+          position: center
+          scrollLimit: 3
+      - verifyIdentifier:
+          present:    
+            - identifier: us.mappings.popularServices.pharmacy.digitalvaccinerecord
+            - identifier: us.mappings.popularServices.pharmacy.lowCostPrescriptions
+      - scroll:
+         direction: down
+         untilIdentifier: us.mappings.popularServices.pharmacy.identifytest
+      - verifyIdentifier: 
+          present:              
+              - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+              - identifier: us.mappings.popularServices.pharmacy.identifytest
+
+  - name: us.functions.services.pharmacy.page
+    platform: ios
+    flow:
+      - sleep:
+          duration: 2000 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.popularServices.pharmacy.transferPrescriptions 
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.popularServices.pharmacy.myPrescriptions
+              - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+              - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions              
+      - scroll:
+         direction: down
+      - verifyIdentifier: 
+          present:
+            - identifier: us.mappings.services.pharmacy.prescriptionsHistory
+            - identifier: us.mappings.popularServices.pharmacy.managefamilymembers   
+      - scroll:
+         direction: down
+      - verifyIdentifier:
+          present:    
+            - identifier: us.mappings.popularServices.pharmacy.digitalvaccinerecord
+            - identifier: us.mappings.popularServices.pharmacy.lowCostPrescriptions
+      - scroll:
+         direction: down
+         untilIdentifier: us.mappings.popularServices.pharmacy.identifytest
+      - verifyIdentifier: 
+          present:              
+              - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+              - identifier: us.mappings.popularServices.pharmacy.identifytest
+
+  - name: us.functions.services.walmartLive
+    platform: ios
+    flow:
+      - sleep:
+          duration: 4000 
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.Services.getInspiredHeader
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.Services.getInspiredHeader
+              - identifier: us.mappings.Services.walmartLive
+      - click:
+          identifier: us.mappings.Services.walmartLive
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.Services.walmartLive.verifyLiveBlueButton
+          then:
+            - verifyIdentifier: 
+                present:
+                    - identifier: us.mappings.Services.walmartLive.verifyLiveBlueButton
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Walmart Live screen not loading"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.Services.walmartLive.doneButton
+          then:
+            - click:
+                identifier: us.mappings.Services.walmartLive.doneButton
+
+  - name: us.functions.services.walmartLiveClick
+    platform: ios
+    flow:
+      - sleep:
+          duration: 4000 
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.Services.getInspiredHeader
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.Services.getInspiredHeader
+              - identifier: us.mappings.Services.walmartLiveLink
+      - click:
+          identifier: us.mappings.Services.walmartLiveLink
+      - sleep:
+          duration : 5000
+          
+  - name: us.functions.services.walmartLive
+    platform: android
+    flow:
+      - sleep:
+          duration: 4000 
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.Services.walmartLive
+          position: center
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.Services.getInspiredHeader
+              - identifier: us.mappings.Services.walmartLive
+      - click:
+          identifier: us.mappings.Services.walmartLive
+      - sleep:
+          duration : 5000
+
+
+  - name: us.functions.services.goWalmartLive
+    platform: android
+    flow:
+      - sleep:
+          duration: 4000 
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.Services.walmartLiveLink
+          scrollLimit: 20
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.Services.getInspiredHeader
+              - identifier: us.mappings.Services.walmartLiveLink
+      - click:
+          identifier: us.mappings.Services.walmartLiveLink
+      - sleep:
+          duration : 5000
+
+  - name: us.functions.services.acc.virtualGarageAddVehicle
+    platform: android
+    flow:
+      - sleep:
+          duration : 2000
+      - click:
+          identifier: us.mappings.services.acc.virtualgarage
+      - sleep:
+          duration : 2000
+      - click:
+          identifier: us.mappings.services.virtualGarage.addVehicleButton         
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.services.fitment.addFitmentDetailsPageTitle
+      # - if:
+      #     identifier:
+      #       notPresent:
+      #         - identifier: us.mappings.search.fitment.selectYeardropdown
+      #     then:
+      #       - verifyIdentifier:
+      #           present:
+      #             - identifier: us.mappings.search.addVehicleButton
+      #       - click:
+      #           identifier: us.mappings.search.addVehicleButton
+      #       - executeFunction:
+      #           name: us.functions.utils.scrollIfNotVisible
+      #           params:
+      #             - name: identifier
+      #               string: us.mappings.search.fitment.addFitmentDetailsPage
+      #             - name: direction
+      #               string: up  
+      #     else:
+      #       - storeIn: 
+      #           key: scopeRequired
+      #           value: true
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.fitment.addFitmentDetailsPageTitle
+      - click:
+          identifier:  us.mappings.search.fitment.selectYeardropdown  
+      - click:
+          identifier:  us.mappings.search.fitment.year  
+      - click:
+          identifier:  us.mappings.search.fitment.selectMakedropdown
+          wait: 3000
+
+      - if:
+          condition: ${scopeRequired}
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.fitment.make
+                  - name: direction
+                    string: down  
+                  - name: identifierScope
+                    string: us.mappings.search.fitment.listView
+          else:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.fitment.make
+                  - name: direction
+                    string: down               
+      - click:
+          identifier:  us.mappings.search.fitment.make 
+      - click:
+          identifier:  us.mappings.search.fitment.selectModeldropdown 
+      - if:
+          condition: ${scopeRequired}
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.fitment.model
+                  - name: direction
+                    string: down  
+                  - name: identifierScope
+                    string: us.mappings.search.fitment.listView
+          else:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.fitment.model
+                  - name: direction
+                    string: down    
+      - click:
+          identifier:  us.mappings.search.fitment.model
+      - click:
+          identifier:  us.mappings.search.fitment.selectSubmodeldropdown  
+      - click:
+          identifier:  us.mappings.search.fitment.submodel
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.fitment.viewResultButton
+            - name: direction
+              string: down
+      - sleep:
+          duration: 5000 
+      - click:
+          identifier:  us.mappings.search.fitment.viewResultButton
+      - sleep:
+          duration: 5000 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.acc.virtualgarage.successMessage
+          then:
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.successMessageGotItButton
+      - click: 
+          identifier: us.mappings.backButton
+
+  - name: us.functions.services.acc.schedulingService
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService
+
+  - name: us.functions.services.acc.schedulingService.serviceselection
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.selectServiceHeading
+            - identifier: us.mappings.services.acc.scheduleService.serviceOption            
+            - identifier: us.mappings.services.acc.scheduleService.oilChangePrice
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationPrice
+            - identifier: us.mappings.services.acc.scheduleService.oilChangeDuration
+            - identifier: us.mappings.services.acc.scheduleService.tireInstallationDuration
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.serviceOption
+      - click: 
+          identifier: us.mappings.returns.continue
+
+  - name: us.functions.services.acc.schedulingService.clickOnScheduleAppoinment
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.acc.selectVehicle.scheduleAppoinment
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.selectVehicle.scheduleAppoinment
+      - sleep:
+          duration: 5000
+      - click: 
+          identifier: us.mappings.services.acc.selectVehicle.scheduleAppoinment
+      # - getString:
+      #     identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      #     attribute: text
+      #     storeIn: vehicleSelected
+      # - click: 
+      #     identifier: us.mappings.returns.continue
+
+  - name: us.functions.services.acc.schedulingService.selectVehicle
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.vehicleSelection.stepper
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+            - identifier: us.mappings.services.acc.scheduleService.vechileHeading
+            - identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      - click: 
+          identifier: us.mappings.services.acc.scheduleService.selectVehicle
+      - click: 
+          identifier: us.mappings.returns.continue
+
+  - name: us.functions.services.acc.schedulingService.selectService
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.acc.scheduleService.selectServiceHeading
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+                  - identifier: us.mappings.services.acc.scheduleService.selectServiceHeading
+                  - identifier: us.mappings.services.acc.scheduleService.verifyFeePayableMessage
+            - click: 
+                identifier: us.mappings.services.acc.scheduleService.selectServiceOilChange
+            
+            - click: 
+                identifier: us.mappings.returns.continue
+  
+
+  - name: us.functions.services.acc.schedulingService.tireInstallationOption
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+      - if:
+          condition: ${searchTerm} == 'oil change'
+          then:
+          - click:
+              identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+          else:
+            - click:
+                identifier: us.mappings.services.acc.tireInstallationOption.noIHaveTiresOption
+      - if:
+          condition: ${service} == 'TireInstallation'
+          then:
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.services.acc.tireInstallationOption.pageTitle   
+                  - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+                  - identifier: us.mappings.global.navigateBackArrow 
+            - click: 
+                identifier: us.mappings.global.navigateBackArrow
+            - sleep:
+                duration: 3000       
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+                  - identifier: us.mappings.services.acc.scheduleService.selectServiceHeading    
+                  - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper     
+            - click: 
+                identifier: us.mappings.services.acc.scheduleService.serviceOption
+            - click: 
+                identifier: us.mappings.returns.continue
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.services.acc.tireInstallationOption.pageTitle   
+                  - identifier: us.mappings.services.acc.scheduleService.serviceSelection.stepper
+                  - identifier: us.mappings.services.acc.tireInstallationOption.pageSubTitle  
+                  - identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+                  - identifier: us.mappings.services.acc.tireInstallationOption.noIHaveTiresOption
+            - click:
+                identifier: us.mappings.services.acc.tireInstallationOption.yesNeedToBuyTiresOption
+            - click: 
+                identifier: us.mappings.returns.continue
+            - sleep:
+                duration: 3000
+
+
+  
+  - name: us.functions.services.acc.schedulingService.additonalVehicleInfo
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.vehicleInfo.pageTitle
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.vehicleInfo.engineBase
+      
+  
+  - name: us.functions.services.acc.schedulingService.reviewConfirmation
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduleService.vehicleInfoText
+
+    # Should not confirm appoinment in prod
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.services.acc.confirmAppoinment
+      
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.services.acc.confirmAppoinment     
+      # - click:
+      #     identifier: us.mappings.services.acc.confirmAppoinment
+      
+  
+  - name: us.functions.services.acc.schedulingService.confirmationAppoinment
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.selectVehicle.pageTitle
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduler.confirmaAppoinmentMessage
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.services.acc.scheduler.confirmaAppoinmentMessage
+      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.scheduler.confirmaAppoinmentMessage
+      - click:
+          identifier: us.mappings.services.acc.scheduler.confirmaAppoinmentMessage
+  
+  # use this existing funcation if it works else update the identifier according to new changes
+  - name: us.functions.services.acc.scheduleAutoService
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.acc.scheduler.schedulerScreenTitle
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.scheduler.schedulerScreenTitle
+            - sleep:
+                duration: 7000
+            - executeFunction:
+                name: us.functions.slotDataSetUp
+            - sleep:
+                duration: 3000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reviewOrder.accNearByStore
+                then:
+                  - log: There are no upcoming appointments available at store.
+                  - click:
+                      identifier: us.mappings.reserveSlot.pickup.changeStoreLink
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: us.mappings.reserveSlot.selectStore.secondAddress
+                  - click:
+                      identifier: us.mappings.reserveSlot.selectStore.saveButton
+                  - sleep:
+                      duration: 3000
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.reserveSlot.timeSlot
+                then:
+                  - executeFunction:
+                      name: us.functions.selectDayForSlotDisplay
+                      params:
+                        - name: slotDay
+                          string: 'tomorrow'
+            - click:
+                identifier: us.mappings.reserveSlot.timeSlot
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reserveSlot.continueButton
+                then:
+                  - click:
+                      identifier: us.mappings.reserveSlot.continueButton
+
+
+  - name: us.functions.services.acc.virtualGarageRemoveVehicle
+    platform: android
+    flow:  
+      - click:
+          identifier: us.mappings.services.acc.virtualgarage
+      - sleep:
+          duration : 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.acc.virtualgarage.carAdded
+          then:
+            - log: "Already Car is Present Removing the Car"
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetailsButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.titleName
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.editVehicleInformation
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.editVehicleInformation
+            - sleep:
+                duration : 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicle
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicle
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicleButton
+          else:
+            - log: "No car is added, Adding car now"
+      - click:
+          identifier: us.mappings.backButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.virtualgarage
+
+
+  - name: us.functions.services.acc.virtualGarageRemoveVehicle
+    platform: ios
+    flow:  
+      - click:
+          identifier: us.mappings.services.acc.virtualgarage
+      - sleep:
+          duration : 2000
+      - executeFunction:
+          name: us.functions.services.handleJoinOnePopup
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.services.acc.virtualgarage.addAVehicleButton
+          then:
+            - log: "Already Car is Present Removing the Car"
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetailsButton
+                doubleClick: true
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.titleName
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.editVehicleInformation
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.editVehicleInformation
+            - sleep:
+                duration : 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicle
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicle
+            - sleep:
+                duration : 2000
+            - click:
+                identifier: us.mappings.services.acc.virtualgarage.vehicleDetails.removeVehicleButton
+            - click:
+                identifier: us.mappings.services.acc.virtualgarageToACC              
+          else:
+            - log: "No car is added, Adding car now" 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.acc.virtualgarage.title
+                  - identifier: us.mappings.services.acc.virtualgarage.addAVehicleButton
+            - click:
+                identifier: us.mappings.services.acc.virtualgarageToACC
+
+### RXPD Scheduled Delivery
+
+  - name: us.functions.services.pharmacy.enterPin
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.services.handleJoinOnePopup
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.verifyPinPage
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin1
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin2
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin3
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin4
+                wait: 5000
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.biometrics.closebtn
+          then:
+            - click:
+                identifier: us.mappings.pharmacy.biometrics.closebtn
+                wait: 2000 
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.onebanner
+          then:
+            - click:
+                identifier: us.mappings.pharmacy.onebanner.closebtn
+                wait: 2000             
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.howItWorks.closebtn
+          then:
+            - click:
+                identifier: us.mappings.pharmacy.howItWorks.closebtn
+                wait: 2000
+
+  - name: us.functions.services.pharmacy.enterPin
+    platform: ios
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.verifyPinPage
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin1
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin2
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin3
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.enter.pin4
+                wait: 5000
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.onebanner
+          then:
+            - click:
+                identifier: us.mappings.pharmacy.onebanner.closebtn
+                wait: 2000 
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.pharmacy.howItWorks.closebtn
+          then:
+            - click:
+                identifier: us.mappings.pharmacy.howItWorks.closebtn
+                wait: 2000
+
+  - name: us.functions.services.pharmacy.verify.consent.delivery.info
+    platform: android
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pin.allowBioMetrics
+                wait: 5000
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.popularServices.pharmacy.prescription.delivery.available.close.btn
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescription.delivery.available.close.btn
+                wait: 5000
+      
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.services.pharmacy.ack.digitalPharmacy.consent
+          then:
+            - click:
+                identifier: us.mappings.services.pharmacy.ack.digitalPharmacy.consent
+                wait: 5000
+
+  - name: us.functions.services.pharmacy.verify.consent.delivery.info
+    platform: ios
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+                wait: 5000
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.services.pharmacy.ack.digitalPharmacy.consent
+          then:
+            - click:
+                identifier: us.mappings.services.pharmacy.ack.digitalPharmacy.consent
+                wait: 5000
+      - sleep:
+          duration: 3000
+
+  - name: us.functions.services.pharmacy.scheduledDeliveryPageValidation
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.prescriptionAvailable.popup.title
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescriptionAvailable.popup.closeBtn
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.scheduledDelivery.banner
+          then:
+            - log: "Pharmacy Schedule delivery page displayed correctly"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.scheduledDelivery.header
+                  - identifier: us.mappings.popularServices.pharmacy.drug.name
+                  - identifier: us.mappings.popularServices.pharmacy.customer.name
+                  - identifier: us.mappings.popularServices.pharmacy.insurance.text
+                  - identifier: us.mappings.popularServices.pharmacy.seeDetails.btn
+                  - identifier: us.mappings.popularServices.pharmacy.patient.due.amt
+                  - identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Pharmacy page not displayed as expected"
+
+  - name: us.functions.services.pharmacy.scheduledDeliveryPageValidation
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.prescriptionAvailable.popup.title
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.prescriptionAvailable.popup.closeBtn
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.scheduledDelivery.banner
+          then:
+            - log: "Pharmacy Schedule delivery page displayed correctly"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.scheduledDelivery.header
+                  - identifier: us.mappings.popularServices.pharmacy.drug.name
+                  - identifier: us.mappings.popularServices.pharmacy.customer.name
+                  - identifier: us.mappings.popularServices.pharmacy.insurance.text
+                  - identifier: us.mappings.popularServices.pharmacy.seeDetails.btn
+                  - identifier: us.mappings.popularServices.pharmacy.patient.due.amt
+                  - identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Pharmacy page not displayed as expected"
+
+  - name: us.functions.services.pharmacy.addToCart
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+                wait: 10000
+
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.popularServices.pharmacy.reviewTerms.btn
+
+                then:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.reviewTerms.btn
+                      wait: 2000
+
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                      - name: identifier
+                        string: us.mappings.popularServices.pharmacy.disclaimer.divider
+                      - name: direction
+                        string: down
+
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+                      wait: 2000
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.addToCart.stepper.btn
+          then:
+            - log: "Pharmacy item added to cart"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.addToCart.stepper.btn
+
+  - name: us.functions.services.pharmacy.addToCart
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.addToCart.btn
+                wait: 10000
+
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.popularServices.pharmacy.reviewTerms.btn
+
+                then:
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.reviewTerms.btn
+                      wait: 2000
+
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                      - name: identifier
+                        string: us.mappings.popularServices.pharmacy.disclaimer.divider
+                      - name: direction
+                        string: down
+
+                  - click:
+                      identifier: us.mappings.popularServices.pharmacy.reviewTerms.accept.btn
+                      wait: 2000
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.addToCart.stepper.btn
+          then:
+            - log: "Pharmacy item added to cart"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.addToCart.stepper.btn
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Pharmacy item not added to cart"
+
+  - name:  us.functions.search.groceryItem.usingDeeplink
+    platform: ios
+    flow:
+      - loop:
+          each: ${groceryItem}
+          storeElement: items
+          storeIndex: itemIndex
+          flow:
+              - executeFunction:
+                  name: us.functions.global.navigation.goToDeepLink
+                  params:
+                    - name: deepLinkUrl
+                      string: walmart://ip/$items                 
+              - sleep: 
+                  duration: 5000                       
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.item.addToCartButton               
+                  then:
+                    - log: groceryItem is in stock
+                    - break: true
+
+  - name:  us.functions.search.groceryItem.usingDeeplink
+    platform: android
+    flow:
+      - loop:
+          each: ${groceryItem}
+          storeElement: items
+          storeIndex: itemIndex
+          flow:
+              - executeFunction:
+                  name: us.functions.global.navigation.goToDeepLink
+                  params:
+                    - name: deepLinkUrl
+                      string: walmart://ip/$items                      
+              - sleep: 
+                  duration: 5000                       
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.item.addToCartButton             
+                  then:
+                    - log: groceryItem is in stock
+                    - break: true
+
+  - name: us.function.services.pharmacy.acceptingPharmacyPrivacyPolicy
+    platform: android
+    flow:
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popularServices.pharmacy.pharmacyPrivacyPolicy
+          then:
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.pharmacyPrivacyPolicyAckButton
+            - sleep:
+                duration: 2000

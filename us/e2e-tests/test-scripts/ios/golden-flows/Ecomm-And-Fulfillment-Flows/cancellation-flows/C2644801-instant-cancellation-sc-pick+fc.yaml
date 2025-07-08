@@ -1,0 +1,137 @@
+# Non-amendable
+general:
+  platform: ios
+  tags: flow016, us-golden-flows, C2644801, C2644801-carta-teflon, teflon-e2e-sim-dct, p1-spanish-teflon-e2e, p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2644801
+  metadata:
+    - name: scenarioId
+      string: EC015
+
+scenarios:
+  # Glass Mixed Order Cancel e2e Tests for FC Delivery+UD+SC-Scheduled-pickup
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: testauto${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$  
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createAccountPayload.generic
+
+      - executeFunction:
+          name: us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: storeId
+              string: 32144
+            - name: action
+              string: FetchItem
+            - name: emailId
+              string: ${customerEmail}
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: itemFilter
+              string: buynow
+            - name: action
+              string: FetchItem
+            - name: emailId
+              string: ${customerEmail}
+
+      - storeIn:
+          key: item2
+          value: $itemFetched
+
+
+  - name: Main
+    testCaseId: C2126544
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home and log in
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: us.data.C2644801.password
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+     # Navigate to cart and clear it
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.cancel.ios.createOrderPayload
+            - name: skipOrderWait
+              string: true
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Includes steps of scrolling to the end of the screen to Cancel Order option, tapping on it, selecting the reason and then tapping on Request Cancel order button
+      - executeFunction:
+          name: us.functions.cancel.orderItems
+          params:
+            - name: cancelOrder
+              string: true
+            - name: reasonIndex
+              string: 2
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

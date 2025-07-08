@@ -1,0 +1,389 @@
+#======================================================================================================================
+#    AUTHOR: Sergio Fernandez (vn0t1qt)
+#   CREATED: Feb/13/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-e2e-regression-staging-006
+
+scenarios:
+
+  #--------------------------------------------------------------------------------------------------------------------
+  - name: Main
+    flow:
+      - log: "TEST START - E2E REGRESSION - OD-006"
+
+      - log: "STEP 1-2: Navigate through Onboarding and select OD Banner..."
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: banner
+              string: "OD"
+            - name: zipCode
+              string: "null"
+
+      - log: "STEP 3: Login from Profile..."
+      
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.e2e-regression.qaa.od006.email
+            - name: userPassword
+              string: mx.data.e2e-regression.qaa.od006.password
+            - name: userName
+              string: mx.data.e2e-regression.qaa.od006.userName
+
+      - log: "STEP 4: Search & Add Products to Cart (from: Home, SLP, PLP)..."
+
+      # Add Product 1 to Cart from Home...
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.home.assertPageLoaded
+      - executeFunction:
+          name: mx.functions.home.scrollToTop
+      - executeFunction:
+          name: mx.functions.home.carousel.addProductToCart
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.homeProductNameToAdd
+            - name: carouselName
+              string: mx.data.e2e-regression.qaa.od006.homeCarouselName
+      - executeFunction:
+          name: mx.functions.home.carousel.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.homeProductNameToAdd
+      - storeIn:
+          key: varTC_homeProduct_price # Price of Product 1
+          value: ${returnedPrice}
+      
+      # Add Product 2 to Cart from SLP...
+      
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.e2e-regression.qaa.od006.searchTerm
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInSLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.slpProductNameToAdd
+            - name: direction
+              string: "down"
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.slpProductNameToAdd
+      - storeIn:
+          key: varTC_slpProduct_price  # Price of Product 2
+          value: ${returnedPrice}
+      
+      # Add Product 3 to Cart from PLP...
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapDepartments
+      - executeFunction:
+          name: mx.flows.od.taxonomy.openDepartment
+          params:
+            - name: L1
+              string: mx.data.e2e-regression.qaa.od006.departmentL1
+            - name: L2
+              string: mx.data.e2e-regression.qaa.od006.departmentL2
+            - name: L3
+              string: mx.data.e2e-regression.qaa.od006.departmentL3
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInPLP
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.plpProductNameToAdd
+            - name: direction
+              string: "down"
+      - executeFunction:
+          name: mx.functions.department-l3.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.plpProductNameToAdd
+      - storeIn:
+          key: varTC_plpProduct_price # Price of Product 3
+          value: ${returnedPrice}
+
+      - log: "STEP 5: Perform Cart Validations..."
+      
+      # Cart Badge Quantity Validation...
+      
+      - storeIn:
+          key: varTC_homeProduct_quantity
+          value: mx.data.e2e-regression.qaa.od006.homeProductNameToAdd.initialQuantity
+      - storeIn:
+          key: varTC_slpProduct_quantity
+          value: mx.data.e2e-regression.qaa.od006.slpProductNameToAdd.initialQuantity
+      - storeIn:
+          key: varTC_plpProduct_quantity
+          value: mx.data.e2e-regression.qaa.od006.plpProductNameToAdd.initialQuantity
+      - arithmetic:
+          expression: ${varTC_homeProduct_quantity} + ${varTC_slpProduct_quantity} + ${varTC_plpProduct_quantity}
+          storeIn: varTC_cartBadge_expectedQuantity
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${varTC_cartBadge_expectedQuantity}
+      
+      # Initial Cart Validations (Cart Opened, Cart not empty)...
+      
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      
+      # Validations for Product 1 in Cart...
+
+      - storeIn:
+          key: varTC_homeProduct_weight
+          value: mx.data.e2e-regression.qaa.od006.homeProductNameToAdd.weightConversionRate
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_homeProduct_price}
+            - value: ${varTC_homeProduct_weight}
+            - value: "true"
+          getResponse:
+            storeIn: varTC_homeProduct_subtotal # Subtotal for Product 1
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.homeProductNameToAdd
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${varTC_homeProduct_quantity}
+            - name: expectedWeightQuantity
+              string: ${varTC_homeProduct_weight}
+            - name: expectedPrice
+              string: ${varTC_homeProduct_price}
+            - name: expectedSubtotal
+              string: ${varTC_homeProduct_subtotal}
+      
+      # Validations for Product 2 in Cart...
+
+      - storeIn:
+          key: varTC_slpProduct_weight
+          value: mx.data.e2e-regression.qaa.od006.slpProductNameToAdd.weightConversionRate
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_slpProduct_price}
+            - value: ${varTC_slpProduct_weight}
+            - value: "true"
+          getResponse:
+            storeIn: varTC_slpProduct_subtotal # Subtotal for Product 2
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.slpProductNameToAdd
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${varTC_slpProduct_quantity}
+            - name: expectedWeightQuantity
+              string: ${varTC_slpProduct_weight}
+            - name: expectedPrice
+              string: ${varTC_slpProduct_price}
+            - name: expectedSubtotal
+              string: ${varTC_slpProduct_subtotal}
+      
+      # Validations for Product 3 in Cart...
+
+      - storeIn:
+          key: varTC_plpProduct_quantity
+          value: mx.data.e2e-regression.qaa.od006.plpProductNameToAdd.initialQuantity
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_plpProduct_price}
+            - value: ${varTC_plpProduct_quantity}
+            - value: "false"
+          getResponse:
+            storeIn: varTC_plpProduct_subtotal # Subtotal for Product 3
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.plpProductNameToAdd
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${varTC_plpProduct_quantity}
+            - name: expectedWeightQuantity
+              string: ""
+            - name: expectedPrice
+              string: ${varTC_plpProduct_price}
+            - name: expectedSubtotal
+              string: ${varTC_plpProduct_subtotal}
+
+      # Cart Product Count in Subtotal Label Validation...
+
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotalProductCount
+          params:
+            - name: expectedProductCount
+              string: ${varTC_cartBadge_expectedQuantity}
+
+      # Cart Subtotal Validations...
+      
+      - executeFunction:
+          name: mx.functions.cart.getProductOriginalPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.homeProductNameToAdd
+      - storeIn:
+          key: varTC_homeProduct_originalPrice # Original price for Product 1
+          value: ${returnedOriginalPrice}
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_homeProduct_originalPrice}
+            - value: ${varTC_homeProduct_weight}
+            - value: "true"
+          getResponse:
+            storeIn: varTC_homeProduct_originalSubtotal # Original subtotal for Product 1
+
+      - executeFunction:
+          name: mx.functions.cart.getProductOriginalPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.slpProductNameToAdd
+      - storeIn:
+          key: varTC_slpProduct_originalPrice # Original price for Product 2
+          value: ${returnedOriginalPrice}
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_slpProduct_originalPrice}
+            - value: ${varTC_slpProduct_weight}
+            - value: "true"
+          getResponse:
+            storeIn: varTC_slpProduct_originalSubtotal # Original subtotal for Product 2
+
+      - executeFunction:
+          name: mx.functions.cart.getProductOriginalPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od006.plpProductNameToAdd
+      - storeIn:
+          key: varTC_plpProduct_originalPrice # Original price for Product 3
+          value: ${returnedOriginalPrice}
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_plpProduct_originalPrice}
+            - value: ${varTC_plpProduct_quantity}
+            - value: "false"
+          getResponse:
+            storeIn: varTC_plpProduct_originalSubtotal # Original subtotal for Product 3
+
+      - arithmetic:
+          expression: ${varTC_homeProduct_originalSubtotal} + ${varTC_slpProduct_originalSubtotal} + ${varTC_plpProduct_originalSubtotal}
+          storeIn: varTC_cart_subtotal
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${varTC_cart_subtotal}
+      
+      # Cart Estimated Total Validations...
+
+      - arithmetic:
+          expression: ${varTC_homeProduct_subtotal} + ${varTC_slpProduct_subtotal} + ${varTC_plpProduct_subtotal}
+          storeIn: varTC_cart_estimatedTotal
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${varTC_cart_estimatedTotal}
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromBottom
+          params:
+            - name: expectedEstimatedTotal
+              string: ${varTC_cart_estimatedTotal}
+
+      - log: "STEP 6-7: Reserve Slot..."
+
+      - executeFunction:
+          name: mx.flows.od.cart.reserveSlot
+          params:
+            - name: deliveryMethod
+              string: mx.data.e2e-regression.qaa.od006.delivery.method
+            - name: deliveryPlaceAction
+              string: mx.data.e2e-regression.qaa.od006.delivery.placeAction
+            - name: zipCode
+              string: mx.data.e2e-regression.qaa.od006.delivery.zipCode
+            - name: storeName
+              string: mx.data.e2e-regression.qaa.od006.delivery.storeName
+            - name: slotDate
+              string: mx.data.e2e-regression.qaa.od006.delivery.slotDateOption
+            - name: slotTime
+              string: mx.data.e2e-regression.qaa.od006.delivery.slotTimeOption
+      - storeIn:
+          key: varTC_selectedDaySlot
+          value: ${returnedSelectedDaySlot}
+      - storeIn:
+          key: varTC_selectedTimeSlot
+          value: ${returnedSelectedTimeSlot}
+
+      - log: "STEP 8: Continue to Checkout & Perform Order Review Validations..."
+
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+      - executeFunction:
+          name: mx.flows.od.review-order.assertDeliveryInformation
+          params:
+            - name: deliveryMethod
+              string: mx.data.e2e-regression.qaa.od006.delivery.method
+            - name: expectedDaySlot
+              string: ${varTC_selectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${varTC_selectedTimeSlot}
+            - name: expectedStoreOrHomeName
+              string: mx.data.e2e-regression.qaa.od006.delivery.storeName
+            - name: expectedStoreOrHomeAddress
+              string: mx.data.e2e-regression.qaa.od006.delivery.storeAddress
+      - executeFunction:
+          name: mx.flows.od.review-order.assertTotalsInformation
+          params:
+            - name: expectedSubtotalProductsCount
+              string: ${varTC_cartBadge_expectedQuantity}
+            - name: expectedSubtotal
+              string: ${varTC_cart_estimatedTotal}
+            - name: assertDeliveryFee
+              string: true
+            - name: expectedDeliveryFee
+              string: "0.00"
+
+      - log: "STEP 9: Disable Substitute Preferences for all products..."
+
+      - executeFunction:
+          name: mx.flows.od.review-order.disableSubstituePreferencesForAllProducts
+
+      - log: "TEST END - E2E REGRESSION - OD-006"

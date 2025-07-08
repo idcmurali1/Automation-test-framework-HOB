@@ -1,0 +1,144 @@
+general:
+  tags: # unified-prod-e2e, C2659247, p2-ecomm-prod-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  
+  testCaseId: C2659247
+  metadata:
+    - name: scenarioId
+      string: 346
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in Account modified for Optimization
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: ios.email
+              string: us.data.ios.flow174i.email
+            - name: ios.password
+              string: us.data.ios.flow174i.password
+            - name: android.email
+              string: us.data.android.flow174a.email
+            - name: android.password
+              string: us.data.android.flow174a.password     
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+  
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation 
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Pickup
+
+      # search for pure weighted item
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.prod.item.eachWeightItem
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: subFilter
+              string: cost by weight
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+       
+     # Navigate to cart and verify Items on Cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart            
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3   
+
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      # Continue to checkout
+      - executeFunction:
+         name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Review order details
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Pickup
+            - name: altFulfillmentText
+              string: pickup
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

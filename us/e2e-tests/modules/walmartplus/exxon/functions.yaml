@@ -1,0 +1,178 @@
+functions:
+# Deeplink to Exxon Flow
+- name: us.functions.wplus.exxon.deeplink
+  platform: ios
+  flow:
+    # Deeplink to exxon flow
+    - executeFunction:
+        name: us.functions.global.navigation.goToDeepLink
+        params:
+        - name: deepLinkUrl
+          string: us.data.exxon.deepLink
+
+    # on enter pump verifies station name and address and 
+    - verifyIdentifier:
+        timeout: 40000
+        present:
+          - identifier: us.mappings.wplus.exxon.stationNameLabel
+          - identifier: us.mappings.wplus.exxon.stationAddressLabel
+          - identifier: us.mappings.wplus.exxon.enterPumpNumberLabel
+
+# Enter pump number and select pump
+- name: us.functions.wplus.exxon.selectPumpNumber
+  platform: ios
+  flow:
+    # Enter pump number 
+    - enterText:
+          identifier: us.mapping.wplus.exxon.enterPumpTextField
+          string: ${pumpNumber}
+    
+    # Tap select pump CTA
+    - click: 
+        identifier: us.mappings.wplus.exxon.selectPumpButton
+
+# Continue with card
+# Try one more time if transaction fail Since API is unstable
+- name: us.functions.wplus.exxon.selectCard
+  platform: ios
+  flow:
+    - click:
+        wait: 10000
+        identifier: us.mappings.wplus.exxon.continueWithThisCardButton
+    - sleep:
+        duration: 10000
+    - if:
+        identifier:
+          present:
+            - identifier: us.mapping.wplus.exxon.tryAgainButton
+        then:
+          - click:
+              wait: 5000
+              identifier: us.mapping.wplus.exxon.tryAgainButton
+          - click:
+              wait: 5000
+              identifier: us.mappings.wplus.exxon.selectPumpButton
+          - click:
+              wait: 5000
+              identifier: us.mappings.wplus.exxon.continueWithThisCardButton
+    - sleep:
+        duration: 10000
+    - verifyIdentifier:
+        present:
+          - identifier: us.mapping.wplus.exxon.findFuelGradeLabel
+        
+        label:
+          - identifier: us.mapping.wplus.exxon.selectedPumpLabel
+            contains: Pump ${pumpNumber}
+
+# validate payment summary screen
+- name: us.functions.wplus.exxon.paymentSummaryValidations
+  platform: ios
+  flow:
+    - verifyIdentifier:
+        timeout: 20000
+        present:
+          - identifier: us.mapping.wplus.exxon.paymentCompleteTitleLable
+          
+    - verifyIdentifier:
+        present:
+          - identifier: us.mapping.wplus.exxon.paymentCompleteSubTitleLabel
+          - identifier: us.mapping.wplus.exxon.paymentCompleteBanner
+          - identifier: us.mapping.wplus.exxon.gradeLabel
+          - identifier: us.mapping.wplus.exxon.quantityLabel
+          - identifier: us.mapping.wplus.exxon.rateLabel
+          - identifier: us.mapping.wplus.exxon.cardLabel
+          - identifier: us.mapping.wplus.exxon.totalLabel
+          - identifier: us.mapping.wplus.exxon.transactionIdLabel
+          - identifier: us.mapping.wplus.exxon.feedbackLable
+          - identifier: us.mapping.wplus.exxon.giveFeedBackLinkButton
+
+# Deeplink to Exxon Flow
+- name: us.functions.wplus.exxon.deeplink
+  platform: android
+  flow:
+    - executeFunction:
+        name: us.functions.global.navigation.goToDeepLink
+        params:
+        - name: deepLinkUrl
+          string: us.data.exxon.deepLink  
+    - sleep:
+        duration: 6000                 
+    - verifyIdentifier:
+        present:
+          - identifier: us.mappings.wplus.exxon.stationNameLabel
+          - identifier: us.mappings.wplus.exxon.stationAddressLabel
+          - identifier: us.mappings.wplus.exxon.enterPumpNumberLabel        
+
+# Enter pump number and select pump
+- name: us.functions.wplus.exxon.selectPumpNumber
+  platform: android
+  flow:
+    - enterText:
+          identifier: us.mapping.wplus.exxon.enterPumpTextField
+          string: ${pumpNumber}
+    - click: 
+        identifier: us.mappings.wplus.exxon.selectPumpButton
+
+# Try maximum 5 times to do the payment
+- name: us.functions.wplus.exxon.selectCard
+  platform: android
+  flow:
+    - click:
+        wait: 5000
+        identifier: us.mappings.wplus.exxon.continueWithThisCardButton
+    - sleep:
+        duration: 10000
+    - loop:
+        begin: 2
+        end: 6
+        storeIndex: i
+        flow:
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mapping.wplus.exxon.tryAgainButton
+              then:
+                - click:
+                    wait: 5000
+                    identifier: us.mapping.wplus.exxon.tryAgainButton
+                - click:
+                    wait: 5000
+                    identifier: us.mappings.wplus.exxon.selectPumpButton
+                - click:
+                    wait: 5000
+                    identifier: us.mappings.wplus.exxon.continueWithThisCardButton
+                - sleep:
+                    duration: 10000
+          - if:
+              identifier:
+                present:
+                  - identifier: us.mapping.wplus.exxon.fuelingAnimation
+                  - identifier: us.mapping.wplus.exxon.selectedPumpLabel
+              then:
+                - log: Transaction succeed
+                - break: true
+              else:
+                - log: Payment failed ${i} times
+                - if:
+                    condition: ${i} == 5
+                    then:
+                      - failTest:
+                          message: "TEST_FAILURE - ${env} - fuel payment failed for 5 times"
+
+
+- name: us.functions.wplus.exxon.paymentSummaryValidations
+  platform: android
+  flow:
+    - verifyIdentifier:
+        timeout: 150000
+        present:
+          - identifier: us.mapping.wplus.exxon.paymentCompleteTitleLable
+          - identifier: us.mapping.wplus.exxon.gradeLabel
+          - identifier: us.mapping.wplus.exxon.quantityLabel
+          - identifier: us.mapping.wplus.exxon.rateLabel
+          - identifier: us.mapping.wplus.exxon.cardLabel
+          - identifier: us.mapping.wplus.exxon.totalLabel
+          - identifier: us.mapping.wplus.exxon.transactionIdLabel
+          - identifier: us.mapping.wplus.exxon.giveFeedBackLinkButton
+

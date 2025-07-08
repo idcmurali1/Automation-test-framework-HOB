@@ -1,0 +1,372 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Mar/08/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION:  This function creates and adds a new home delivery address from the add-address-form popup/page.
+  # PARAMS:       ${userFirstName}             [Mandatory]  User's name to enter (Required).
+  #               ${userLastName}              [Mandatory]  User's last name to enter (Required).
+  #               ${userStreet}                [Mandatory]  User's street to enter (Required).
+  #               ${userExteriorNumber}        [Mandatory]  User's exterior number (Required).
+  #               ${userInteriorNumber}        [Mandatory]  User's interior number, set to 'null' to skip this step.
+  #               ${userZipCode}               [Mandatory]  User's zip code to enter (Required).
+  #               ${userNeighborhood}          [Mandatory]  User's neighborhood to enter (Required).
+  #               ${expectedUserState}         [Mandatory]  User's state to assert.
+  #               ${expectedUserCity}          [Mandatory]  User's city to assert.
+  #               ${expectedUserMunicipality}  [Mandatory]  User's municipality to assert.
+  #               ${userPhoneNumber}           [Mandatory]  User's phone number to enter (Required).
+  #               ${markAsFavorite}            [Mandatory]  Set to 'true' if the 'favorite' checkbox should be marked, if not defined
+  #                                                           or set to null, flow skips this step.
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.flows.ea.addresses.addHomeDeliveryAddressFromPopup
+    platform: ios
+    flow:
+      # User First Name...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.enterName
+          params:
+            - name: userFirstName
+              string: ${userFirstName}
+
+      # User Last Name...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.enterLastName
+          params:
+            - name: userLastName
+              string: ${userLastName}
+
+      # Enter Street...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.enterStreet
+          params:
+            - name: userStreet
+              string: ${userStreet}
+
+      # Enter Exterior Number...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.enterExteriorNumber
+          params:
+            - name: userExteriorNumber
+              string: ${userExteriorNumber}
+
+      # Enter Interior Number...
+      - if:
+          condition: ${userInteriorNumber} == null
+          then:
+            - log:
+                message: "Interior Number not provided, flow will skip this field."
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.enterInteriorNumber
+                params:
+                  - name: userInteriorNumber
+                    string: ${userInteriorNumber}
+
+      # Enter Zip Code...
+      - click:
+          identifier: mx.mappings.ea.add-and-edit-address-form.zipCodeField
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.onboarding.location-popup.allowLocationPopup
+          then:
+            - executeFunction:
+                name: mx.functions.onboarding.location-popup.tapAllowWhileUsingApp
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.enterZipCode
+          params:
+            - name: userZipCode
+              string: ${userZipCode}
+
+      # Select Neighborhood...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.selectNeighborhood
+          params:
+            - name: userNeighborhood
+              string: ${userNeighborhood}
+
+      # Assert City...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.assertCity
+          params:
+            - name: expectedUserCity
+              string: ${expectedUserCity}
+
+      # Assert State...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.assertState
+          params:
+            - name: expectedUserState
+              string: ${expectedUserState}
+
+      # Assert Municipality...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.assertMunicipality
+          params:
+            - name: expectedUserMunicipality
+              string: ${expectedUserMunicipality}
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.utils.closeKeyboardButton
+          then:
+            - click:
+                identifier: mx.mappings.utils.closeKeyboardButton
+
+      # Scrolling down to the second section of the form...
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.ea.add-and-edit-address-form.favoriteAddressCheckbox
+          scrollLimit: 3
+          wait: 1000
+
+      # Enter Phone Number...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.enterPhoneNumber
+          params:
+            - name: userPhoneNumber
+              string: ${userPhoneNumber}
+
+      # Mark as favorite?
+      - if:
+          condition: ${markAsFavorite} != true && ${markAsFavorite} != false
+          then:
+            - failTest:
+                message: "Failed: 'markAsFavorite' Option not valid, value provided: '${markAsFavorite}'. All parameters are required for this flow."
+      - if:
+          condition: ${markAsFavorite} == true
+          then:
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.tapFavoriteAddressCheckbox
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.assertFavoriteAddressCheckboxState
+                params:
+                  - name: expectedCheckboxState
+                    string: ${markAsFavorite}
+      - if:
+          condition: ${markAsFavorite} == false
+          then:
+            - log:
+                message: "'markAsFavorite' set to 'false', Favorite Checkbox state will not be verified."
+                color: CYAN
+
+      # Proceeding to Confirmation Map...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.tapSave
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.assertErrorsNotDisplayed
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.confirmation-map.assertPageDisplayed
+
+      # Address Confirmation by Individual Values...
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.confirmation-map.assertAddressByIndividualValues
+          params:
+            - name: streetName
+              string: ${userStreet}
+            - name: exteriorNumber
+              string: ${userExteriorNumber}
+            - name: city
+              string: ${expectedUserCity}
+            - name: state
+              string: ${expectedUserState}
+            - name: zipCode
+              string: ${userZipCode}
+      # In case the Geo Pin does not load and confirm button does not appear, flow will re-open map only once.
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.add-and-edit-address-form.confirmation-map.geoPin
+          then:
+            - log:
+                message: "Geo Pin did not load correctly, reloading popup once..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.confirmation-map.tapBack
+            - executeFunction:
+                name: mx.functions.utils.tapCloseKeyboardButton
+            - scroll:
+                direction: down
+                scrollLimit: 2
+                wait: 1000
+            - sleep:
+                duration: 3000
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.tapSave
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.confirmation-map.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.confirmation-map.tapConfirm
+      - log:
+          message: "End flow: addresses.addHomeDeliveryAddressFromPopup"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function deletes an address and asserts it is not displayed afterwards.
+  # PARAMS:       ${addressName}  [Mandatory]  Address name to delete.
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.flows.ea.addresses.deleteAddressByName
+    platform: ios
+    flow:
+      - log:
+          message: "Name of the Address to delete: '${addressName}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.ea.addresses.assertAddressListedByName
+          params:
+            - name: addressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.addresses.tapDeleteAddress
+          params:
+            - name: addressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.addresses.delete-address-confirmation-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.ea.addresses.delete-address-confirmation-popup.tapDelete
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.ea.addresses.assertAddressNotListedByName
+          params:
+            - name: addressName
+              string: ${addressName}
+      - log:
+          message: "End flow: addresses.deleteAddressByName"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This flow edits the outdoor/exterior number in the form of an address already saved.
+  # PARAMS:
+  #               ${userStreet}                [Mandatory]  User's street to enter (Required).
+  #               ${oldUserExteriorNumber}     [Mandatory]  User's old exterior number (Required).
+  #               ${newUserExteriorNumber} [Mandatory]  User's new exterior number (Required).
+  #               ${userZipCode}               [Mandatory]  User's zip code to enter (Required).
+  #               ${expectedUserState}         [Mandatory]  User's state to assert.
+  #               ${expectedUserCity}          [Mandatory]  User's city to assert.
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.ea.addresses.editAddressByExteriorNumber
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.onboarding.location-popup.allowLocationPopup
+          then:
+            - executeFunction:
+                name: mx.functions.onboarding.location-popup.tapAllowWhileUsingApp
+      - executeFunction:
+           name: mx.functions.utils.tapCloseKeyboardButton
+      - executeFunction:
+           name: mx.functions.ea.add-and-edit-address-form.enterExteriorNumber
+           params:
+             - name: userExteriorNumber
+               string: ${newUserExteriorNumber}
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.ea.add-and-edit-address-form.favoriteAddressCheckbox
+          scrollLimit: 3
+          wait: 1000
+      - executeFunction:
+           name: mx.functions.ea.add-and-edit-address-form.tapSave
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.assertErrorsNotDisplayed
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.confirmation-map.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.confirmation-map.assertAddressBy
+          params:
+            - name: assertBy
+              string: 'Values'
+            - name: streetName
+              string: ${userStreet}
+            - name: exteriorNumber
+              string: ${newUserExteriorNumber}
+            - name: city
+              string: ${expectedUserCity}
+            - name: state
+              string: ${expectedUserState}
+            - name: zipCode
+              string: ${userZipCode}
+      # In case the Geo Pin does not load and confirm button does not appear, flow will re-open map only once.
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.add-and-edit-address-form.confirmation-map.geoPin
+          then:
+            - log:
+                message: "Geo Pin did not load correctly, reloading popup once..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.confirmation-map.tapBack
+            - executeFunction:
+                name: mx.functions.utils.tapCloseKeyboardButton
+            - scroll:
+                direction: down
+                scrollLimit: 2
+                wait: 1000
+            - sleep:
+                duration: 3000
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.tapSave
+            - executeFunction:
+                name: mx.functions.ea.add-and-edit-address-form.confirmation-map.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.add-and-edit-address-form.confirmation-map.tapConfirm
+      - log:
+          message: "End flow: addresses.editAddressByExteriorNumber"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function changes or selects the address from the address selector popup by its name.
+  #                 this flow will fail if there aren't any registered addresses in the account.
+  # PARAMS:
+  #   ${addressName}  [Mandatory]  Address name to select.
+  # RETURNS:
+  #   ${returnedSelectedAddress} Full String containing the selected address.
+  #   ${returnedStreetName}
+  #   ${returnedExteriorNumber}
+  #   ${returnedCity}
+  #   ${returnedState}
+  #   ${returnedZipCode}
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.flows.ea.addresses.selectAddressByNameFromSelector
+    platform: ios
+    flow:
+      - log:
+          message: "Name of the Address to select: '${addressName}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.selectAddressByName
+          params:
+            - name: homeAddressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.assertAddressIsSelectedByName
+          params:
+            - name: homeAddressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.getSelectedAddress #--RETURNS--${returnedStreetName}--${returnedExteriorNumber}--ETC-->
+          params:
+            - name: homeAddressName
+              string: ${addressName}
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.tapSave
+      - sleep:
+          duration: 5000
+      - log:
+          message: "End flow: addresses.selectAddressByNameFromSelector"
+          color: BLUE

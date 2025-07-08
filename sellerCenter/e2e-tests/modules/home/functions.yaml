@@ -1,0 +1,940 @@
+functions:
+
+  - name: sc.functions.navigation.toHome
+    flow:
+      - executeFunction:
+          name: sc.functions.navigation.toTab
+          params:
+            - name: tab
+              string: sc.tab.home.name
+      - executeFunction:
+          name: sc.functions.navigation.closePushNotifications
+  
+
+  ###########################################################################################
+  # Description : Function to navigate to any KPI link on home page                         #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${kpi}          - Today's Orders / Unshipped Orders ...                    #
+  ###########################################################################################
+  - name: sc.functions.home.navigation.toKPILink
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: sc.mappings.home.KPI.linkSection
+          then:
+            - scroll:
+                direction: up
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.KPI.linkSection
+      - click:
+          identifier: sc.mappings.home.KPI.link
+
+
+  ###########################################################################################
+  # Description : Function to navigate to any shortcut link on home page                    #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${shortcut}          - Response needed / Out of stock / Orders at risk ... #
+  ###########################################################################################
+  - name: sc.functions.home.navigation.toShortcut
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.shortcuts.title
+      - click:
+          identifier: sc.mappings.home.shortcuts.link
+      - sleep:
+          duration: 3000
+      - try:
+          flow:
+            - verifyIdentifier:
+                text:
+                  - identifier: sc.mappings.navigation.currentTabTitle
+                    contains: ${expectedTab}
+          catch:
+            flow:
+              # For IOS
+
+  ###########################################################################################
+  # Description : Function to verify details displayed on home page                         #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on home page                                                  #
+  ###########################################################################################
+  - name: sc.functions.home.verify.display
+    flow:
+      - log: Verify Home screen
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.welcomeText
+            - identifier: sc.mappings.home.userDetails
+            - identifier: sc.mappings.home.KPI.linkSection
+            - identifier: sc.mappings.home.KPI.todaysOrder.link
+            - identifier: sc.mappings.home.KPI.unshippedOrder.link
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.shortcuts.title
+            - identifier: sc.mappings.home.salesGraph.section
+      - if:
+          identifier:
+            notPresent:
+            - identifier: sc.mappings.home.ad.link
+          then:
+            - scroll:
+                direction: down
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.ad.link
+      - if:
+          identifier:
+            notPresent:
+              - identifier: sc.mappings.home.feedback.section
+          then:
+            - scroll:
+                direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.home.feedback.section
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.home.feedback.section
+                  - identifier: sc.mappings.home.feedback.submitButton
+
+
+  - name: sc.functions.home.pageLoaded
+    flow:
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: sc.mappings.home.userDetails
+
+
+ ###########################################################################################
+  # Description : Function to verify                                                        #
+  #               1. Display of KPI hyper link(Today's Orders)                              #
+  #               1. KPI(Today's Orders) navigation to Orders page                          #
+  #               2. Proper filter selection from filter page                               #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on home page                                                  #
+  ###########################################################################################
+  - name: sc.functions.home.verify.kpi.todaysOrder
+    flow:
+      - executeFunction:
+          name: sc.functions.home.navigation.toKPILink
+          params:
+            - name: kpi
+              string: Today's orders
+      - storeIn:
+          key: tabTitle
+          value: Orders
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: sc.mappings.navigation.currentTabTitleText
+      - storeIn:
+          key: tabTitle
+          value: Orders
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - verifyIdentifier:
+                contentDescription:
+                  - identifier: sc.mappings.orders.filterSelectedValue
+                    equals: 1
+          else:
+            - verifyIdentifier:
+                value:
+                  - identifier: sc.mappings.orders.filterSelectedValue
+                    equals: 1
+
+      - click:
+          identifier: sc.mappings.orders.filterButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.filters.filterTitle
+      - storeIn:
+          key: orderDate
+          value: Today
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - verifyIdentifier:
+                checked:
+                  - identifier: sc.mappings.orders.filters.orderDate
+                    value: true
+          else:
+            - verifyIdentifier:
+                value:
+                  - identifier: sc.mappings.orders.filters.orderDate
+                    equals: 1
+      - click:
+          identifier: sc.mappings.orders.filters.closeButton
+
+  ###########################################################################################
+  # Description : Function to verify                                                        #
+  #               1. Display of KPI hyper link(Unshipped Orders)                            #
+  #               1. KPI(Unshipped Orders) navigation to Orders page                        #
+  #               2. Proper quick filter selection                                          #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on home page                                                  #
+  ###########################################################################################
+  - name: sc.functions.home.verify.kpi.unshipped
+    flow:
+      - executeFunction:
+          name: sc.functions.home.navigation.toKPILink
+          params:
+            - name: kpi
+              string: Unshipped orders
+      - executeFunction:
+          name: sc.functions.orders.verifyQuickFilters
+          params:
+            - name: quickFilter
+              string: Unshipped
+      - verifyIdentifier:
+          notPresent:
+            - identifier: sc.mappings.orders.filterSelectedValue
+
+      - executeFunction:
+          name: sc.functions.orders.fetchOrderStatus
+      - if:
+          condition: ${orderStatus} != 'NA'
+          then:
+            - executeFunction:
+                name: sc.functions.orders.verifySingleOrderStatus
+                params:
+                  - name: orderStatus
+                    string: ${orderStatus}
+                  - name: quickFilter
+                    string: Unshipped
+
+  ###########################################################################################
+  # Description : Function to validate the KPI cards content                                #
+  # Notes: 
+  # 1. Locators in the function is being used as index basis to validate the order of elements
+  #    as well
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateKpiSection
+    flow:
+      - executeFunction:
+          name: sc.functions.resetFailedString
+    
+      - storeIn:
+          key: scrollTimes
+          value: 0
+
+      - loop:
+          begin: 1
+          end: 5
+          storeIndex: counter
+          mode: increment
+          flow:
+            - if:
+                condition: ${counter} == 3
+                then:
+                  - log: "scoll"
+                  - scroll:
+                      direction: left
+                      withinIdentifier: sc.mappings.home.KPI.linkSection
+                      scrollLimit: 1
+                  - if:
+                      condition: ${APP_PLATFORM} == 'ios'
+                      then:
+                        # increment the number of scrolling times
+                        - executeNode:
+                            file: sellerCenter/e2e-tests/helpers/math.js
+                            args:
+                              - value: ${scrollTimes}
+                              - value: increment
+                            getResponse:
+                              storeIn: scrollTimes
+            - if:
+                condition: ${APP_PLATFORM} == 'ios'
+                then:
+                   # effectively calculating the index based on number of scrolls
+                  - arithmetic:
+                      expression: ${counter} - ${scrollTimes}
+                      storeIn: index
+                else:
+                  - storeIn:
+                      key: index
+                      value: ${counter}
+
+            - log: ${index}
+
+            - executeNode:
+                file: sellerCenter/e2e-tests/helpers/homeContent.js
+                args:
+                  - value: kpi
+                  - value: ${counter}
+                getResponse:
+                  storeIn: kpiString
+
+            - log: "Validate ${kpiString} KPI"
+            - executeFunction:
+                name: sc.functions.validateText.equalsJS
+                params:
+                  - name: identifier
+                    string: sc.mappings.home.KPI.typeIndex
+                  - name: expectedValue
+                    string: ${kpiString}
+                  - name: identifierName
+                    string: ${kpiString}
+            - executeFunction:
+                name: sc.functions.checkIdentifier.isNotEmpty
+                params:
+                  - name: identifier
+                    string: sc.mappings.home.KPI.valueIndex
+                  - name: identifierName
+                    string: "${kpiString} Count"
+
+      - executeFunction:
+          name: sc.functions.validatedFailedString
+  
+
+  ###########################################################################################
+  # Description : Function to validate the shortcuts cards content                          #
+  # Notes: 
+  # 1. Locators in the function is being used as index basis to validate the order of elements
+  #    as well
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateShortcutSection
+    flow:
+      - executeFunction:
+          name: sc.functions.resetFailedString
+
+      - loop:
+          begin: 1
+          end: 5
+          storeIndex: index
+          mode: increment
+          flow:        
+            - log: ${index}
+
+            - executeNode:
+                file: sellerCenter/e2e-tests/helpers/homeContent.js
+                args:
+                  - value: shortcuts
+                  - value: ${index}
+                getResponse:
+                  storeIn: shortcutString
+
+            - log: "Validate ${shortcutString} shortcut"
+            - executeFunction:
+                name: sc.functions.validateText.equalsJS
+                params:
+                  - name: identifier
+                    string: sc.mappings.home.shortcut.typeIndex
+                  - name: expectedValue
+                    string: ${shortcutString}
+                  - name: identifierName
+                    string: ${shortcutString}
+            - if:
+                identifier:
+                  notPresent: 
+                    - identifier: sc.mappings.home.shortcut.imageIndex
+                then:
+                  - executeFunction:
+                      name: sc.functions.updateFailedString
+                      params:
+                        - name: contentString
+                          string: "${shortcutString} image is not present"
+
+      - executeFunction:
+          name: sc.functions.validatedFailedString
+  
+
+  ###########################################################################################
+  # Description : Function to validate the filters applied count and selected filters       #
+  ###########################################################################################
+  # [optional] ${orderDate}         - if sent, order date selection status is checked  #
+  # [optional] ${filterCount}       - if sent, filter count applied on the filter icon is checked  #
+  ###########################################################################################
+  - name: sc.functions.filter.options.validate
+    flow:
+      - log: --Validate the filter option selected--
+      - executeFunction:
+          name: sc.functions.resetFailedString
+
+      - if:
+          condition: ${filterCount} != null
+          then:
+            - log: Validate filter count
+            - if:
+                condition: ${filterCount} == 0
+                then:
+                  - verifyIdentifier:
+                      notPresent:
+                        - identifier: sc.mappings.orders.filterSelectedValue
+                else:
+                  - executeFunction:
+                      name: sc.functions.filter.iconContent
+                      params:
+                        - name: expectedValue
+                          string: "${filterCount}"
+
+      - log: --Selct the filter button--
+      - click:
+          identifier: sc.mappings.orders.filterButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.filters.filterTitle
+
+      - if:
+          condition: ${orderDate} != null
+          then:      
+            - log: --Validate filter date selected--
+            - executeFunction:
+                name: sc.functions.utils.isChecked
+                params:
+                  - name: identifier
+                    string: sc.mappings.filters.dateRadioButton
+
+      - executeFunction:
+          name: sc.functions.validatedFailedString
+      - goBack: true
+
+
+  ###########################################################################################
+  # Description : Function to validate all the navigations of the KPIs (Todays Orders, 
+  #               Unshipped Orders)                     
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateKPILinks
+    flow:
+      - scroll:
+          direction: right
+          withinIdentifier: sc.mappings.home.KPI.linkSection
+          scrollLimit: 2
+      - executeFunction:
+          name: sc.functions.home.dashboard.validateKPILink.todaysOrders
+          params:
+            - name: validateFiltered
+              string: true
+      - executeFunction:
+          name: sc.functions.navigation.toHome
+      - executeFunction:
+          name: sc.functions.home.dashboard.validateKPILink.unshippedOrders
+      - executeFunction:
+          name: sc.functions.navigation.toHome
+      # - executeFunction:
+      #     name: sc.functions.home.dashboard.validateKPILink.averageRating
+      # - executeFunction:
+      #     name: sc.functions.navigation.toHome
+      # - scroll:
+      #     direction: left
+      #     withinIdentifier: sc.mappings.home.KPI.linkSection
+      #     scrollLimit: 1
+
+
+  ###########################################################################################
+  # Description : Function to validate the filters applied count and selected filters for 
+  #               todays orders along with order view facets and content of todays orders
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateKPILink.todaysOrders
+    flow:
+      - log: Validate 'Todays Order' KPI flow
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/homeContent.js
+          args:
+            - value: kpi
+            - value: 1
+          getResponse:
+            storeIn: kpi
+      - executeFunction:
+          name: sc.functions.home.navigation.toKPILink
+      - executeFunction:
+          name: sc.functions.catalog.validateItemListPageDisplays
+          params:
+            - name: tabName
+              string: Orders
+            - name: facetName
+              string: All
+      - if:
+          condition: ${validateFiltered} != null && ${validateFiltered} == true
+          then:        
+            - executeFunction:
+                name: sc.functions.filter.options.validate
+                params:
+                  - name: orderDate
+                    string: Today
+                  - name: filterCount
+                    string: 1
+
+
+  ###########################################################################################
+  # Description : Function to validate the filters applied count and selected filters for 
+  #               unshiiped orders along with order view facets and content of unshipped orders
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateKPILink.unshippedOrders
+    flow:
+      - log: Validate 'Unshipped Order' KPI flow
+      - executeFunction:
+          name: sc.functions.home.navigation.toKPILink
+          params:
+            - name: kpi
+              string: Unshipped orders
+      - executeFunction:
+          name: sc.functions.catalog.validateItemListPageDisplays
+          params:
+            - name: tabName
+              string: Orders
+            - name: facetName
+              string: Unshipped
+      - executeFunction:
+          name: sc.functions.filter.options.validate
+          params:
+            - name: orderDate
+              string: "null"
+            - name: filterCount
+              string: 0
+      - executeFunction:
+          name: sc.functions.orders.verifySingleUnshippedOrderStatus
+
+ 
+  ###########################################################################################
+  # Description : Function to validate all the navigations of the schortcuts (Response needed, 
+  #               Out of stock, Orders at risk)                     
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateShortcutLinks
+    flow:
+      - scroll:
+          direction: down
+      - executeFunction:
+          name: sc.functions.home.dashboard.validateShortcutLink.responseNeeded
+      - executeFunction:
+          name: sc.functions.navigation.toHome
+      - executeFunction:
+          name: sc.functions.home.dashboard.validateShortcutLink.outOfStock
+      - executeFunction:
+          name: sc.functions.navigation.toHome
+      - executeFunction:
+          name: sc.functions.home.dashboard.validateShortcutLink.urgentOrders
+      - executeFunction:
+          name: sc.functions.navigation.toHome
+
+  
+  ###########################################################################################
+  # Description : Function to validate the page navigated to inbox section and its details 
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateShortcutLink.responseNeeded
+    flow:
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/homeContent.js
+          args:
+            - value: shortcut
+            - value: 2
+          getResponse:
+            storeIn: value
+      - click:
+          identifier: sc.mappings.home.shortcut.cardTypeValue
+      - executeFunction:
+          name: sc.functions.catalog.validateItemListPageDisplays
+          params:
+            - name: tabName
+              string: Inbox
+
+  ###########################################################################################
+  # Description : Function to validate the filters applied count and selected filters for 
+  #               unshiiped orders along with catalog view facets and content
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateShortcutLink.outOfStock
+    flow:
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/homeContent.js
+          args:
+            - value: shortcut
+            - value: 3
+          getResponse:
+            storeIn: value
+      - click:
+          identifier: sc.mappings.home.shortcut.cardTypeValue
+      - executeFunction:
+          name: sc.functions.catalog.validateItemListPageDisplays
+          params:
+            - name: tabName
+              string: Catalog
+            - name: facetName
+              string: All
+
+
+###########################################################################################
+  # Description : Function to validate the filters applied count and selected filters for 
+  #               unshiiped orders along with order view facets and content of orders at risk
+  ###########################################################################################
+  - name: sc.functions.home.dashboard.validateShortcutLink.urgentOrders
+    flow:
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/homeContent.js
+          args:
+            - value: shortcut
+            - value: 4
+          getResponse:
+            storeIn: value
+      - click:
+          identifier: sc.mappings.home.shortcut.cardTypeValue
+      - executeFunction:
+          name: sc.functions.catalog.validateItemListPageDisplays
+          params:
+            - name: tabName
+              string: Orders
+            - name: facetName
+              string: Unshipped
+
+  ###########################################################################################
+  # Description : Function to verify Footer Tab                                             #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on home page                                                  #
+  ###########################################################################################
+
+  # verify footer tab
+  - name: sc.functions.home.verify.toFooterTab
+    flow:
+      - log: Verify Footer Tab
+      - if:
+          identifier:
+            notPresent:
+              - identifier: sc.mappings.navigation.toFooterTab
+          then:
+            - scroll:
+                direction: up
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.footerTab.home
+            - identifier: sc.mappings.home.footerTab.inbox
+            - identifier: sc.mappings.home.footerTab.orders 
+            - identifier: sc.mappings.home.footerTab.catalog
+            - identifier: sc.mappings.home.footerTab.menu
+
+
+  ###########################################################################################
+  # Description : Function to verify Hamburger menu                                         #
+  #               1. Can tap the Hamburger menu                                             #
+  #               2. Assert the MP Seller Company Name shows the First Letter Capitalized   #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on home page                                                  #
+  ###########################################################################################
+  - name: sc.functions.home.verify.hamburger.display
+    flow:
+      - log: Verify Hamburger menu
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+            - identifier: sc.mappings.home.footerTab.menu
+      - click:
+          identifier: sc.mappings.home.footerTab.menu
+
+      - log: Assert the MP Seller Company Name shows the First Letter Capitalized
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+            - identifier: sc.mappings.home.menu.hamburgerTitle # sc.mappings.home.hamburger.menu.title
+
+
+  ###########################################################################################
+  # Description : Function to verify each option in the Hamburger menu                      #                  
+  #               1. can be select Tapped                                                   #
+  #               2. properly redirects to each corrensponding screen                       #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on Hamburger menu                                             #
+  ###########################################################################################
+  - name: sc.functions.home.verify.hamburger.menu.eachCategory
+    flow:
+      - log: Verify every option in the Hamburger menu can be select Tapped and properly redirects to each corrensponding screen
+      
+      - storeIn:
+          key: button
+          value: Returns, Button
+      - storeIn:
+          key: tab
+          value: Returns
+      - executeFunction:
+          name: sc.functions.home.navigation.toEachCategory
+
+      - storeIn:
+          key: button
+          value: WFS inventory, Button
+      - storeIn:
+          key: tab
+          value: WFS inventory
+      - executeFunction:
+          name: sc.functions.home.navigation.toEachCategory
+
+      - storeIn:
+          key: button
+          value: WFS shipments, Button
+      - storeIn:
+          key: tab
+          value: WFS shipments
+      - executeFunction:
+          name: sc.functions.home.navigation.toEachCategory
+
+      - storeIn:
+          key: button
+          value: Payments, Button
+      - storeIn:
+          key: tab
+          value: Payments
+      - executeFunction:
+          name: sc.functions.home.navigation.toEachCategory
+
+      - storeIn:
+          key: button
+          value: Help, Button
+      - storeIn:
+          key: tab
+          value: Help
+      - executeFunction:
+          name: sc.functions.home.navigation.toEachCategory
+
+      - storeIn:
+          key: button
+          value: Account, Button
+      - storeIn:
+          key: tab
+          value: Account
+      - executeFunction:
+          name: sc.functions.home.navigation.toEachCategory
+
+  ###########################################################################################
+  # Description : Function to verify each category details                                  #                 
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on landing on each category page                              #
+  ###########################################################################################
+
+  - name: sc.functions.home.navigation.toEachCategory
+    flow:
+      - log: Verify ${tab} can be select Tapped and redirects to each corrensponding screen
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.hamburger.menu.anyCategory
+      - click:
+          identifier: sc.mappings.home.hamburger.menu.anyCategory
+          wait: 3600
+      - log: Verify ${tab} page 
+      - executeFunction:
+          name: sc.functions.navigation.validateTabLoad
+      - executeFunction:
+          name: sc.functions.navigate.eachCategoriesDetailsPage
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: sc.mappings.navigation.backButton
+          wait: 3000
+
+
+  ###########################################################################################
+  # Description : Function to verify Sales Track Graph                                      #                 
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on landing on home page                                       #
+  ###########################################################################################
+  - name: sc.functions.home.salesTrack.verifyGraph
+    flow:
+      - log: Verify Sales Track Graph
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesTrack.graphMetrics
+            - identifier: sc.mappings.home.salesTrack.sellerSalesGraph
+            - identifier: sc.mappings.home.salesTrack.graphFootNote
+            - identifier: sc.mappings.home.salesTrack.graphDisclaimer
+            - identifier: sc.mappings.home.salesGraph.chart
+
+  ###########################################################################################
+  # Description : Function to verify each elements in Sales Track  Graph                    #                 
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on landing on home page                                       #
+  ###########################################################################################            
+
+  - name: sc.functions.home.salesTrack.verifyElements
+    flow:
+      - log: verify ${select} and ${date}
+      - click:
+          identifier: sc.mappings.home.salesGraph.selectElement
+      - click:
+          identifier: sc.mappings.home.salesGraph.elements
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: sc.mappings.home.salesGraph.selectDate
+      - click:
+          identifier: sc.mappings.home.salesGraph.date
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:          
+            - if: 
+                condition: ${select} == 'Units sold' || ${select} == 'Orders'
+                then:
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyUnits
+                      attribute: text
+                      storeIn: units
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyDate
+                      attribute: text
+                      storeIn: ${date}  
+                else:
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyValue
+                      attribute: text
+                      storeIn: USD
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyDate
+                      attribute: text
+                      storeIn: ${date}  
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:          
+            - if: 
+                condition: ${select} == 'Units sold' || ${select} == 'Orders'
+                then:
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyUnits
+                      attribute: label
+                      storeIn: units
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyDate
+                      attribute: label
+                      storeIn: ${date}  
+                else:
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyValue
+                      attribute: label
+                      storeIn: USD
+                  - getString:
+                      identifier: sc.mappings.home.salesGraph.verifyDate
+                      attribute: label
+                      storeIn: ${date}  
+
+  - name: sc.functions.home.dashboard.salesGraphValidations
+    flow: 
+      - log: Validating sales graph components
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.section
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown
+            - identifier: sc.mappings.home.salesGraph.timePeriodDropdown
+            - identifier: sc.mappings.home.salesGraph.lastUpdatedTime
+            - identifier: sc.mappings.home.salesGraph.infoIcon
+      - click:
+          identifier: sc.mappings.home.salesGraph.categoryDropdown
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.selectTitle
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.itemSales
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.unitsSold
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.orders
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.closeIcon
+      - click:
+          identifier: sc.mappings.home.salesGraph.categoryDropdown.closeIcon
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.selectTitle
+            - identifier: sc.mappings.home.salesGraph.timePeriodDropdown.today
+            - identifier: sc.mappings.home.salesGraph.timePeriodDropdown.yesterday
+            - identifier: sc.mappings.home.salesGraph.timePeriodDropdown.last7Days
+            - identifier: sc.mappings.home.salesGraph.timePeriodDropdown.last30Days
+            - identifier: sc.mappings.home.salesGraph.categoryDropdown.closeIcon
+      - click:
+          identifier: sc.mappings.home.salesGraph.categoryDropdown.closeIcon
+      - click:
+          identifier: sc.mappings.home.salesGraph.infoIcon
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.infoIcon.title
+            - identifier: sc.mappings.home.salesGraph.infoIcon.description
+            - identifier: sc.mappings.home.salesGraph.infoIcon.closeIcon
+      - click:
+          identifier: sc.mappings.home.salesGraph.infoIcon.closeIcon
+
+  - name: sc.functions.home.dashboard.salesGraph.dropdownSelection
+    flow:
+      - log: Validating sales graph dropdown selections
+      - click:
+          identifier: sc.mappings.home.salesGraph.categoryDropdown
+      - click:
+          identifier: sc.mappings.home.salesGraph.categoryDropdown.selectOption
+      - try:
+          flow:
+            - verifyIdentifier:
+                text:
+                  - identifier: sc.mappings.home.salesGraph.unitValue
+                    equals: ${unit}
+          catch:
+            flow:
+              - verifyIdentifier:
+                  label:
+                    - identifier: sc.mappings.home.salesGraph.unitValue
+                      equals: ${unit}
+      - executeFunction:
+          name: sc.functions.home.dashboard.salesGraph.timeSelectionValidations
+
+  - name: sc.functions.home.dashboard.salesGraph.timeSelectionValidations
+    flow:
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown.today
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.graphPeriodText.todayText
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown.yesterday
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.graphPeriodText.yesterdayText
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown.last7Days
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.graphPeriodText.last7DaysText
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown
+      - click:
+          identifier: sc.mappings.home.salesGraph.timePeriodDropdown.last30Days
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.home.salesGraph.graphPeriodText.last30DaysText
+
+
+  ###########################################################################################
+  # Description : Function to verify each category details page                             #                 
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be on landing on each category page                              #
+  ###########################################################################################
+  - name: sc.functions.navigate.eachCategoriesDetailsPage
+    flow:
+      - log: Verify ${tab} details page
+      - if:
+          condition: ${tab} == 'Returns' || ${tab} == 'WFS inventory' || ${tab} == 'WFS shipments'
+          then:
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: sc.mappings.clickFirstItem
+            - click:
+                identifier: sc.mappings.navigation.backButton
+          else:
+            - if:
+                condition: ${tab} == 'Account'
+                then:
+                  - sleep:
+                      duration: 3000
+                  - click:
+                      identifier: sc.mappings.accounts.personalInfo.settingsLink
+                  - click:
+                      identifier: sc.mappings.navigation.backButton
+                      wait: 3000
+                  - click:
+                      identifier: sc.mappings.accounts.notifications.settingsLink
+                  - click:
+                      identifier: sc.mappings.navigation.backButton

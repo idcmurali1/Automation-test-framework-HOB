@@ -1,0 +1,906 @@
+functions:
+#********************************************************** iOS ************************************************************
+# Navigate to video player page
+  - name: us.functions.walmartlive.goLiveVideoOnDiscoveryPage
+    platform: ios
+    flow:
+      - sleep:
+          duration: 4000 
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.walmartlive.verifyLiveLogo
+          timeout: 3000
+          present:
+            - identifier: us.mappings.walmartlive.verifyShareIcon
+      - if: 
+         identifier:
+           present:
+             - identifier: us.mapping.walmartlive.verifyAddToCalender
+         then:
+           - log:
+               message: Assrting verify Add To Calender 
+         else:
+           - log:
+               message: Assrting unable verify Add To Calender
+      - click:
+          identifier: us.mappings.walmartlive.navigateToVideoPlayerPage
+
+# Add an item from the carousal if available by clicking the '+ Add', otherwise, shows 'Unable to add a to cart' and then Clicks on 'Got it'
+  - name: us.functions.walmartLive.addToCartFromCarousel
+    platform: ios
+    flow: 
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.walmartLive.verifyShowsPage
+      - if:   
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.verifyAddAnItemToCartFromCarousel
+          then:
+            - log: 
+                  message: Verify increase and decrease button 
+            - click:
+                     identifier: us.mappings.walmartlive.navigateToCart  
+          else:
+            - click: 
+                  identifier: us.mappings.walmartlive.addAnItemToCartFromCarousel
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.walmartlive.addAnItemUnableToCart
+                then:
+                  - click:
+                      identifier: us.mappings.walmartlive.addAnItemUnableToCartClickGotIt
+                  - sleep:
+                      duration: 3000
+                  - log: 
+                      message: Verify increase and decrease button
+                  - click:
+                     identifier: us.mappings.walmartlive.navigateToCart   
+                else:
+                  - log: 
+                     message: Verify increase and decrease button
+                  - click:
+                      identifier: us.mappings.walmartlive.navigateToCart 
+                  ## No need to verify item in the item details page
+                  # - executeFunction: 
+                  #    name: us.functions.walmartLive.validateItems 
+                  - executeFunction:
+                      name: us.functions.walmartLive.validateItemsInCart
+                  - click:
+                     identifier: us.mappings.walmartlive.IncrementAnItemToCartFromCarousel       
+      - sleep:
+          duration: 4000
+
+  # Verify Item in the cart
+  - name: us.functions.walmartLive.validateItemsInCart
+    platform: ios
+    flow:
+      - log:
+          message: Verify Item in the cart
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapping.walmartlive.firstItemInCart
+      - scroll:
+          direction: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapping.walmartlive.secondItemInCart
+            - identifier: us.mapping.walmartlive.totalPriceInCart
+
+#---------------- The following function is deprecated becasue no need to verify items in the items page-------------
+# # Validations the item details, info and etc.
+#   - name: us.functions.walmartLive.validateItems
+#     platform: ios
+#     flow:
+#       - log: 
+#           message: Verify items details
+#       - verifyIdentifier:
+#           timeout: 3000
+#           present:
+#             - identifier: us.mappings.walmartlive.verifyItemsPrice
+#       - click:
+#           identifier: us.mappings.walmartlive.verifyItemsOpen
+#       - sleep:
+#           duration: 120000
+#       - verifyIdentifier:
+#           timeout: 5000
+#           present:
+#             - identifier: us.mappings.walmartlive.verifyIncrementIcon
+#             - identifier: us.mappings.walmartlive.verifyDecrementIcon
+#             - identifier: us.mappings.walmartlive.verifyItemsDescription
+#       - scroll:
+#           direction: down
+#           untilIdentifier: us.mappings.walmartlive.verifyItemsDetails
+#       - verifyIdentifier: 
+#           timeout: 3000
+#           present:
+#             - identifier: us.mappings.walmartlive.verifyItemsDetails
+#       - sleep:
+#           duration: 4000
+#       - click:
+#           identifier: us.mappings.walmartlive.verifyItemsClose
+          
+# Validations the shows page
+  - name: us.functions.walmartLive.verifyShowsPage
+    flow:
+      - log:
+          message: Verify Shows Page
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+          - identifier: us.mappings.walmartlive.verifySpinnerVideo 
+      
+      - log: verify unable to play veido in shows page or not 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.unbaleToplayVideo
+          then:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Unable to load page
+          else:
+            - log:
+                message: Able to load page
+     
+      - log: verify share icon in shows page
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.verifyShowsPageShareIcon
+          then:
+              - executeFunction:
+                  name: us.functions.walmartLive.verifyShareIcon
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Share Icon dose not exist at show page  
+     
+      - log: verify captions icon in shows page
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.verifyCaptionsIcon
+          then:
+              - executeFunction:
+                  name: us.functions.walmartLive.verifyCaptionsIcon
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Captions Icon dose not exist at show page  
+      
+      - log: verify brand button in show page
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.verifyShowsPageBrandButton
+          then:
+              - executeFunction:
+                  name: us.functions.walmartLive.verifyBrandButton
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Brand button dose not exist at show page  
+
+# verify share icon in shows page
+  - name: us.functions.walmartLive.verifyShareIcon
+    flow:
+      - log:
+          message: Share Icon exist at show page 
+      - click:
+          identifier: us.mappings.walmartlive.verifyShowsPageShareIcon
+          wait: 3000
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.shareIcon
+          then:
+            - log: Share is correct
+            - click:
+                identifier: us.mappings.walmartlive.close
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Share is incorrect
+
+# verify Captions icon in shows page
+  - name: us.functions.walmartLive.verifyCaptionsIcon
+    flow:
+      - log:
+            message: Captions exist at show page 
+      - click:
+            identifier: us.mappings.walmartlive.verifyCaptionsIcon
+            wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.captionsIcon
+          then:
+            - log:
+                  message: captions is correct
+            - click:
+                  identifier: us.mappings.walmartlive.close           
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - captions is incorrect
+
+# verify brand button icon in shows page
+  - name: us.functions.walmartLive.verifyBrandButton
+    flow:
+      - log:
+            message: Brand button exist at show page 
+      - click:
+            identifier: us.mappings.walmartlive.verifyShowsPageBrandButton
+            wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.BrandButton
+          then:
+            - log:
+                  message: Brand Button is correct
+            - click:
+                  identifier: us.mappings.walmartlive.close           
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Brand Button is incorrect
+
+# Navigate back to Discover page by clicking on the 'back arrow'.
+  - name: us.functions.walmartLive.navigateBackToDiscoverpage
+    platform: ios
+    flow:   
+      - sleep:
+          duration: 3000 
+      - click:
+          identifier: us.mappings.walmartlive.navigateBackToDiscoverpage
+          wait: 3000
+      # - click:
+      #     identifier: us.mappings.walmartlive.navigateBackToDiscoverpage
+      #     wait: 3000
+
+# Select the first video from the below any category
+  - name: us.functions.walmartlive.goLiveVideoForCategorizedItem 
+    platform: ios
+    flow:   
+      - sleep:
+          duration: 4000 
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.walmartlive.getViewAllHeader    
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.walmartlive.getViewAllHeader
+      - click:
+          identifier: us.mappings.walmartlive.selectFirstVideo
+      - sleep:
+          duration : 3000
+
+# User adds an item from the carousal and Click the Cart icon from View cart.
+  - name: us.function.walmartlive.findFirstItemUnderLiveVideoAndATC
+    platform: ios
+    flow:
+      - sleep:
+          duration: 6000
+      - executeFunction:
+          name: us.functions.walmartLive.verifyShowsPage
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.verifyAddAnItemToCartFromCarousel
+          then:
+              - log: 
+                  message: Verify increase and decrease button 
+            # - click:
+            #     identifier: us.mappings.walmartlive.navigateToCart
+          else:
+            - click: 
+                  identifier: us.mappings.walmartlive.addAnItemToCartFromCarousel
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.walmartlive.addAnItemUnableToCart
+                then:
+                  - click:
+                      identifier: us.mappings.walmartlive.addAnItemUnableToCartClickGotIt
+                  - sleep:
+                      duration: 3000
+                  # - click:
+                  #    identifier: us.mappings.walmartlive.navigateToCart  
+                  - log: 
+                      message: Verify increase and decrease button 
+                else:
+                  # - click:
+                  #     identifier: us.mappings.walmartlive.navigateToCart
+                  - log: 
+                      message: Verify increase and decrease button 
+
+      - sleep:
+          duration: 4000
+
+# Click 'Browse all'
+  - name: us.functions.walmartlive.browseAllFromRixbbonBar
+    platform: ios
+    flow:
+      - sleep:
+          duration: 4000 
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.walmartlive.verifyLiveLogo
+          timeout: 3000
+          present:
+            - identifier: us.mappings.walmartlive.verifyShareIcon
+      - scroll:
+          direction: left
+          untilIdentifier: us.mappings.walmartlive.clickBrowseAll
+          withinIdentifier:  us.mappings.wlive.discoverPageTopBanner 
+      - verifyIdentifier:
+          present:
+            - identifier:  us.mappings.wlive.discoverPageTopBanner 
+            - identifier: us.mappings.walmartlive.clickBrowseAll
+            # - identifier: us.mappings.walmartlive.verifyHorizontalScroll
+            # - identifier: us.mappings.walmartlive.verifyVerticalScroll
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.walmartlive.verifyHorizontalScroll
+              - identifier: us.mappings.walmartlive.verifyVerticalScroll
+          then:
+              - log: 
+                  message: Assrting verify Vertical Scroll and Horizontal Scroll
+          else:
+              - log: 
+                  message: Assrting unable verify Vertical Scroll or Horizontal Scroll
+      - click:
+          identifier: us.mappings.walmartlive.clickBrowseAll
+          wait: 3000 
+
+# Click on 'View All' in first category for 'Browse All'
+  - name: us.functions.walmartlive.selectViewAllForFirstCategorty 
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.walmartlive.verifyLiveLogo 
+          present:
+          - identifier: us.mappings.walmartlive.verifyBrowseAndCategory
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.walmartlive.clickViewAllForBrowseAll
+          wait: 3000 
+      - click:
+         identifier: us.mappings.walmartlive.clickFirstVideo
+         wait: 3000
+
+# Click on the 'second video'
+  - name: us.functions.walmartLive.clickSecondVideo
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.walmartlive.clickSecondVideo
+          wait: 3000 
+
+# Navigate to Electronics category and Select Electronics category from the ribbon bar
+  - name: us.functions.walmartlive.electronicsFromRixbbonBar 
+    flow:
+      - scroll:
+          timeout: 3000
+          direction: right
+          untilIdentifier: us.mappings.walmartlive.clickElectronics
+          withinIdentifier:  us.mappings.wlive.discoverPageTopBanner 
+      - verifyIdentifier:
+          present:
+            - identifier:  us.mappings.wlive.discoverPageTopBanner 
+            - identifier: us.mappings.walmartlive.clickElectronics
+      - click:
+          identifier: us.mappings.walmartlive.clickElectronics
+          wait: 3000 
+      - click:
+         identifier: us.mappings.walmartlive.clickFirstVideo
+         wait: 3000 
+
+#********************************************************** android ************************************************************
+# Verify the price and details information for a particular item.
+  - name: us.functions.walmartlive.verifyProductPriceAndDetails
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.wlive.liveVideoFirstItempPriceInfo
+            - name: direction
+              string: down
+            - name: position
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wlive.liveVideoFirstItempPriceInfo
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mapping.wlive.liveVideoFirstItemProductDetailsTitle
+            - name: direction
+              string: down
+            - name: position
+              string: center
+
+      #expand product details:(Only expand when product details is collpased)    
+      - if:
+          identifier:
+            notPresent:
+                - identifier: us.mappings.wlive.expandProductDetailsButton
+          then:
+            - log : Product details is expanded
+          else:
+            - click:
+                identifier: us.mappings.wlive.expandProductDetailsButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.wlive.liveVideoFirstItempProductDescription
+            - name: direction
+              string: down
+            - name: position
+              string: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.wlive.liveVideoFirstItempProductDescription
+
+#Increate an item by 1 from the carousal
+  - name: us.function.walmartlive.increateFirstItemFromCarousal   
+    platform: android
+    flow:
+        - log: Increate first item by 1 from the carousal              
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.itemAddedButton 
+        - click:
+            identifier: us.mappings.wlive.itemAddedButton 
+            coordinates: 50% , 50%
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wlive.increaseItemQuantityButton
+                - identifier: us.mappings.wlive.decreaseItemQuantityButton
+            then:
+              - click:
+                  identifier: us.mappings.wlive.increaseItemQuantityButton
+                  coordinates: 50%, 50%
+              - sleep:
+                  duration: 3000
+            else:
+              - log:
+                  message: ${env} - Can't increase the item quantity from the carousal
+
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.itemQuantityAfterIncreasement
+
+  #click on the first vide and ATC first item from carousel           
+  - name: us.function.walmartlive.findFirstItemUnderLiveVideoAndATC
+    platform: android
+    flow:
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.liveVideoView
+              - identifier: us.mappings.wlive.liveVideoFirstItem
+        
+        - executeFunction:
+            name: us.functions.walmartLive.verifyShowsPage
+
+        # No need to verify product details at this step
+        # - click:
+        #    identifier: us.mappings.wlive.liveVideoFirstItem
+        #    coordinates: 50%, 50 %
+        
+        # - executeFunction:
+        #     name: us.functions.walmartlive.verifyProductPriceAndDetails
+        
+        # - click:
+        #     identifier: us.mappings.wlive.closeButton
+        # Following scoll is only used to test for item that is not available
+        #------------------------------------------------------------
+        # - scroll:
+        #     direction: left
+        #     untilIdentifier: us.mappings.wlive.UnavailableItemTitle
+        #     withinIdentifier: us.mapping.wlive.LiveVideoCarousalItemRecycleView
+        #     scrollLimit: 20  
+        #------------------------------------------------------------ 
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wlive.addItemButton 
+            then:
+              - click:
+                  identifier: us.mappings.wlive.addItemButton
+                  coordinates: 50%, 50%
+              - sleep:
+                  duration: 5000
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.wlive.unableATCErrorTitle
+                  then:
+                    - log:
+                        message: Unable to add item to cart
+
+                    - verifyIdentifier:
+                        timeout: 3000
+                        present:
+                          - identifier: us.mappings.wlive.unableATCCloseButton
+                          
+                    - click:
+                        identifier: us.mappings.wlive.unableATCCloseButton
+                  else:
+                    - executeFunction:
+                        name: us.function.walmartlive.increateFirstItemFromCarousal      
+            else:
+            #If the item has already been added to the cart, verify it and go to the next step.
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.wlive.itemQuantityAfterIncreasement
+                  then:
+                    - log:
+                        message: Item has already been added to the cart in the previous step
+                  else:
+                    - failTest:
+                        message: ENV_FAILURE - ${env} - Can't add the item from the carousal - Can't find add button or item has not been added already
+
+  #click on the first vide and ATC first item from carousel           
+  - name: us.function.walmartlive.findFirstItemUnderLiveVideoAndATCWithoutVerifying
+    platform: android
+    flow:
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.liveVideoView
+              - identifier: us.mappings.wlive.liveVideoFirstItem
+
+        - click:
+           identifier: us.mappings.wlive.liveVideoFirstItem
+        
+        #Comment out because of crash, will try it out for the newest build
+        # - executeFunction:
+        #     name: us.functions.walmartlive.verifyProductPriceAndDetails
+        
+        - click:
+            identifier: us.mappings.wlive.closeButton
+        # Following scoll is only used to test for item that is not available
+        #------------------------------------------------------------
+        # - scroll:
+        #     direction: left
+        #     untilIdentifier: us.mappings.wlive.UnavailableItemTitle
+        #     withinIdentifier: us.mapping.wlive.LiveVideoCarousalItemRecycleView
+        #     scrollLimit: 20  
+        #------------------------------------------------------------ 
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.wlive.addItemButton
+            then:
+              - click:
+                  identifier: us.mappings.wlive.addItemButton
+              - sleep:
+                  duration: 5000
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.wlive.unableATCErrorTitle
+                  then:
+                    - log:
+                        message: Unable to add item to cart
+                  else:
+                    - executeFunction:
+                        name: us.function.walmartlive.increateFirstItemFromCarousal
+            else:
+              - failTest:
+                  message: ENV_FAILURE - ${env} - Can't add the item from the carousal
+
+  - name: us.functions.walmartlive.goLiveVideoOnDiscoveryPage
+    platform: android
+    flow:
+      - log: Start walmart Live Video flow
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+            - identifier: us.mappings.wlive.liveSteamLogo
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.wlive.liveImageView
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wlive.liveImageView
+          then:
+            - click:
+                identifier: us.mappings.wlive.liveImageView
+            - sleep:
+                duration: 3000
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Can't find walmart live video
+      
+  - name: us.functions.walmartlive.goLiveVideoForCategorizedItem
+    platform: android
+    flow:
+      - log: Start check live video for Categorized Item flow
+
+      # #Scroll Until the End:
+      # - loop:
+      #     begin: 0
+      #     end: 6
+      #     mode: increment
+      #     flow:
+      #       - scroll:
+      #           direction: down
+
+      #---------------- The following function is deprecated becasue of there is no more "View All" button-------------
+      # - if:
+      #     identifier:
+      #       present:
+      #         # - identifier: us.mappings.wlive.categorizedItemTextView
+      #         - identifier: us.mappings.wlive.viewAllButton
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.wlive.viewAllButton
+      #       - sleep:
+      #           duration: 3000
+      #     else:
+      #       - failTest:
+      #           message: ENV_FAILURE - ${env} - Can't find any Categorized item for live video
+      #     #click on the first vide and ATC first item from carousel
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.wlive.firstVideoInCategoryItemPage
+      #         - identifier: us.mappings.wlive.firstVideoTitleInCategoryItemPage
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.wlive.firstVideoInCategoryItemPage
+      #       - sleep:
+      #           duration: 3000
+      #     else:
+      #       - failTest:
+      #           message: ENV_FAILURE - ${env} - Can't find and click the live video for categorized items
+
+
+      #---------------- The following function clicks on the first video from the last or second last category instead of clicking on "View All" button ------------- 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.wlive.carouselImageFromCategory
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center   
+      - if:
+          identifier:
+            present:
+              # - identifier: us.mappings.wlive.categorizedItemTextView
+              - identifier: us.mappings.wlive.carouselImageFromCategory
+              - identifier: us.mappings.wlive.firstImageFromCategory
+          then:
+            - click:
+                identifier: us.mappings.wlive.firstImageFromCategory
+            - sleep:
+                duration: 3000
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Can't find any Categorized item for live video
+
+
+  - name: us.functions.walmartlive.browseAllFromRixbbonBar
+    platform: android
+    flow:
+        - log: click on browser all from top bar
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.discoverPageTopBanner
+              - identifier: us.mappings.wlive.liveSteamLogo
+              - identifier: us.mappings.wlive.shareButtonAtDiscoveryPage
+
+        - scroll:
+            direction: left
+            untilIdentifier: us.mappings.wlive.browseAllButton
+            withinIdentifier: us.mappings.wlive.discoverPageTopBanner
+            scrollLimit: 20  
+
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.browseAllButton
+
+        - click:
+            identifier: us.mappings.wlive.browseAllButton
+
+        #Validate the vertical scroll for Category page
+        - verifyIdentifier:
+            timeout: 3000
+            present:
+              - identifier: us.mappings.wlive.categoryVerticalScroll
+
+
+  - name: us.functions.walmartlive.selectViewAllForFirstCategorty
+    platform: android
+    flow:
+      - log: first view all
+      - click:
+          identifier: us.mappings.wlive.firstCategoryViewAllButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wlive.firstVideoInCategoryItemPage
+              - identifier: us.mappings.wlive.firstVideoTitleInCategoryItemPage
+          then:
+            - click:
+                identifier: us.mappings.wlive.firstVideoInCategoryItemPage
+            - sleep:
+                duration: 3000
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Can't find and click the live video for categorized items
+
+  - name: us.functions.walmartlive.selectViewAllForSecondCategorty
+    flow:
+      - log: seoncd view all
+      - click:
+          identifier: us.mappings.wlive.secondCategoryViewAllButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wlive.firstVideoInCategoryItemPage
+              - identifier: us.mappings.wlive.firstVideoTitleInCategoryItemPage
+          then:
+            - click:
+                identifier: us.mappings.wlive.firstVideoInCategoryItemPage
+            - sleep:
+                duration: 3000
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Can't find and click the live video for categorized items
+
+
+  #---------------- The following function is deprecated becasue of combined iOS and Android-------------
+  # # Validations the shows page
+  # - name: us.functions.walmartLive.verifyShowsPage
+  #   platform: android
+  #   flow:
+  #     - log:
+  #         message: Verify Shows Page
+  #     - verifyIdentifier:
+  #         timeout: 3000
+  #         present:
+  #         - identifier: us.mappings.walmartlive.verifySpinnerVideo 
+      
+  #     - log: verify unable to play veido in shows page or not 
+  #     - if:
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.unbaleToplayVideo
+  #         then:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - Unable to load page
+  #         else:
+  #           - log:
+  #               message: Able to load page
+     
+  #     - log: verify share icon in shows page
+  #     - if: 
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.verifyShowsPageShareIcon
+  #         then:
+  #             - executeFunction:
+  #                 name: us.functions.walmartLive.verifyShareIcon
+  #         else:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - Share Icon dose not exist at show page  
+     
+  #     - log: verify captions icon in shows page
+  #     - if: 
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.verifyCaptionsIcon
+  #         then:
+  #             - executeFunction:
+  #                 name: us.functions.walmartLive.verifyCaptionsIcon
+  #         else:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - Captions Icon dose not exist at show page  
+      
+  #     - log: verify brand button in show page
+  #     - if: 
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.verifyShowsPageBrandButton
+  #         then:
+  #             - executeFunction:
+  #                 name: us.functions.walmartLive.verifyBrandButton
+  #         else:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - Brand button dose not exist at show page  
+
+  # # verify share icon in shows page
+  # - name: us.functions.walmartLive.verifyShareIcon
+  #   platform: android
+  #   flow:
+  #     - log:
+  #         message: Share Icon exist at show page 
+  #     - sleep:
+  #         duration: 3500
+  #     - click:
+  #         identifier: us.mappings.walmartlive.verifyShowsPageShareIcon
+  #         wait: 3000
+  #     - if: 
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.shareIcon
+  #         then:
+  #           - log: Share is correct
+  #           - click:
+  #               identifier: us.mappings.walmartlive.close
+  #         else:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - Share is incorrect
+
+  # # verify Captions icon in shows page
+  # - name: us.functions.walmartLive.verifyCaptionsIcon
+  #   platform: android
+  #   flow:
+  #     - log:
+  #           message: Captions exist at show page 
+  #     - sleep:
+  #         duration: 3500
+  #     - click:
+  #           identifier: us.mappings.walmartlive.verifyCaptionsIcon
+  #           wait: 3000
+  #     - if:
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.captionsIcon
+  #         then:
+  #           - log:
+  #                 message: captions is correct
+  #           - click:
+  #                 identifier: us.mappings.walmartlive.close           
+  #         else:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - captions is incorrect
+
+  # # verify brand button icon in shows page
+  # - name: us.functions.walmartLive.verifyBrandButton
+  #   platform: android
+  #   flow:
+  #     - log:
+  #           message: Brand button exist at show page 
+  #     - sleep:
+  #         duration: 3500
+  #     - click:
+  #           identifier: us.mappings.walmartlive.verifyShowsPageBrandButton
+  #           wait: 3000
+  #     - if:
+  #         identifier:
+  #           present:
+  #             - identifier: us.mappings.walmartlive.BrandButton
+  #         then:
+  #           - log:
+  #                 message: Brand Button is correct
+  #           - click:
+  #                 identifier: us.mappings.walmartlive.close           
+  #         else:
+  #           - failTest:
+  #               message: ENV_FAILURE - ${env} - Brand Button is incorrect

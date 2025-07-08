@@ -1,0 +1,3939 @@
+functions:
+
+#************************************************* iOS ***************************************************** 
+
+  - name: us.functions.subs.verifySubscriptionDetailsInItemTile
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.ItemTileSubTotal
+          then:
+            - log: "Subscription details displayed properly in item tile"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Subscription details not shown in item tile"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.ItemTileEstTotal
+            - identifier: us.mappings.subs.ItemTileAssoDisc
+            - identifier: us.mappings.subs.ItemTileSavings
+
+      - getString:
+          identifier: us.mappings.subs.ItemTileSubTotal
+          attribute: value
+          storeIn: subtotal
+      - log: ${subtotal}
+
+  - name: us.functions.subs.verifyNonAssociateSubscriptionDetailsInItemTile
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.returns.orderDetails.itemsContainer.expandableButton
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.returns.orderDetails.itemsContainer.expandableButton        
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.ItemTileSubTotal
+            - identifier: us.mappings.subs.ItemTileEstTotal
+            - identifier: us.mappings.subs.ItemTileSavings
+
+      - getString:
+          identifier: us.mappings.subs.ItemTileSubTotal
+          attribute: value
+          storeIn: subtotal
+      - log: ${subtotal}
+
+
+############################## Android #######################################
+
+#after clicking on subscribe button,verifying apply and cancel subscription button and click on on cancel subscription
+  - name: us.functions.subs.cancelSubscription           
+    platform: android
+    flow:
+      - sleep:
+          duration: 10000
+      - click:
+          identifier: us.mappings.subscribe.subscribeButton
+      - if:
+          identifier:
+            present: 
+              - identifier: us.mappings.subscribe.cancelSubscriptionButton
+          then:
+            - log: "Cancel Subscription button present as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Cancel Subscription button should be present but is  not"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.applyButton
+      - click:
+          identifier: us.mappings.subscribe.cancelSubscriptionButton
+          wait: 10000 
+
+#select reason and confirm the cancellation
+  - name: us.functions.subs.selectReasonAndConfirm
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.subscribe.selectReason
+      - click:
+          identifier: us.mappings.subscribe.cancelMySubscriptionButton
+          wait: 5000 
+
+#Verify message that subscription is cancelled
+  - name:  us.functions.subs.verifyConfirmationScreen
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.verifyConfirmationMessage
+          text:
+            - identifier: us.mappings.subscribe.verifyConfirmationMessage
+              equals: ${confirmationmessage}
+      - click:
+          identifier: us.mappings.subscribe.gotItButton
+          wait: 5000 
+
+
+#Go back to Subscription and see item is eligible for subscription again by checking for subscribe now button
+  - name:  us.functions.subs.verifyItemEligibility
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.subscribe.subscribeButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.subscribeNowButton
+          then:
+            - log: "Item is eligible for subscription"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Subscribe now button should be present but is not"
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.subscribe.subscribeNowButton
+
+  - name: us.functions.subs.verifySubscriptionDetailsInItemTile
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.ItemTileSubTotal
+            - identifier: us.mappings.subs.ItemTileEstTotal
+            - identifier: us.mappings.subs.ItemTileAssoDisc
+          text:
+            - identifier: us.mappings.subs.ItemTileSavings
+              contains: from subscription savings
+
+      - getString:
+          identifier: us.mappings.subs.ItemTileSubTotal
+          attribute: text
+          storeIn: subtotal
+
+  - name: us.functions.subs.verifyNonAssociateSubscriptionDetailsInItemTile
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subs.ItemTileSubTotal
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center          
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.ItemTileSubTotal
+            - identifier: us.mappings.subs.ItemTileEstTotal
+          text:
+            - identifier: us.mappings.subs.ItemTileSavings
+              contains: from subscription savings
+
+      - getString:
+          identifier: us.mappings.subs.ItemTileSubTotal
+          attribute: text
+          storeIn: subtotal
+          
+  - name: us.functions.subs.verifySubscriptionDetailsInOrderSummary
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.totalField
+  
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderDetails.tax 
+            - identifier: us.mappings.orderDetails.belowOrderMinFeeText
+            - identifier: us.mappings.orderDetails.subtotal
+            - identifier: us.mappings.orderDetails.subscriptionSavings 
+            - identifier: us.mappings.orderDetails.associateDiscountPos
+     
+
+      - verifyIdentifier:
+          label: 
+            - identifier: us.mappings.orderDetails.subtotal
+              contains: ${subtotal}
+
+  - name: us.functions.subs.verifyNonAssociateSubscriptionDetailsInOrderSummary
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.totalField
+            - name: direction
+              string: down    
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.subscriptionSavings
+          then:
+            - log: "Savings details is shown in the order details page"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Savings details is not shown in the order details page"
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderDetails.tax 
+            - identifier: us.mappings.orderDetails.subtotal 
+     
+
+      # - verifyIdentifier:
+      #     label: 
+      #       - identifier: us.mappings.orderDetails.subtotal
+      #         contains: ${subtotal}
+
+  - name: us.functions.subs.verifySubscriptionDetailsInOrderSummary
+    platform: android
+    flow:
+
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.totalLabel
+  
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderDetails.taxLabel
+            - identifier: us.mappings.orderDetails.taxValue
+            - identifier: us.mappings.orderDetails.belowOrderMinFeeText
+            - identifier: us.mappings.orderDetails.belowOrderMinFeeValue
+            - identifier: us.mappings.orderDetails.subtotalLabel
+            - identifier: us.mappings.orderDetails.totalValue
+            - identifier: us.mappings.orderDetails.subscriptionSavings
+            - identifier: us.mappings.orderDetails.subscriptionSavingsvalue  
+            - identifier: us.mappings.orderDetails.associateDiscLabel
+        
+#verifying subtotal value in item tile is equal to that displayed in the order summary
+      - verifyIdentifier:
+          text: 
+            - identifier: us.mappings.orderDetails.subtotalValue
+              equals: ${subtotal}
+
+  - name: us.functions.subs.verifyNonAssociateSubscriptionDetailsInOrderSummary
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.orderDetails.totalLabel
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+  
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderDetails.taxLabel
+            - identifier: us.mappings.orderDetails.taxValue
+            - identifier: us.mappings.orderDetails.belowOrderMinFeeText
+            - identifier: us.mappings.orderDetails.belowOrderMinFeeValue
+            - identifier: us.mappings.orderDetails.subtotalLabel
+            - identifier: us.mappings.orderDetails.totalValue
+            - identifier: us.mappings.orderDetails.subscriptionSavings
+            - identifier: us.mappings.orderDetails.subscriptionSavingsvalue  
+        
+#verifying subtotal value in item tile is equal to that displayed in the order summary
+      - verifyIdentifier:
+          text: 
+            - identifier: us.mappings.orderDetails.subtotalValue
+              equals: ${subtotal}
+
+#Subscription on search page 
+  - name: us.functions.Subscription.Search
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.Subscription.pill
+          then:
+            - log: "Subscription filter is displayed"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.Subscription.Container
+            # - identifier: us.mappings.Subscription.Container.close
+
+ #Subscription selection on itempage 
+  - name: us.functions.subscription.shipping
+    platform: ios
+    flow: 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down 
+      - verifyIdentifier:
+          selected:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+          label:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              contains: One-time purchase              
+
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              contains: Subscribe
+
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.item.Subscribe.content
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.item.Subscribe.howItWorks            
+      - click: 
+          identifier: us.mappings.item.Subscribe.howItWorks
+          wait: 1000
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.Subscribe.howItWorks.module
+            - identifier: us.mappings.howItWorks.SubscribeToYourUsual
+            - identifier: us.mappings.howItWorks.choosedate
+            - identifier: us.mappings.howItWorks.offEveryday
+            - identifier: us.mappings.sub.termlink
+
+      - click: 
+          identifier: us.mappings.sub.howitworks.close
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.item.Subscribe.howItWorks
+
+  #Subscription for pickup intent  
+  - name: us.functions.subscription.pickup
+    platform: ios
+    flow: 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.acc.item.s2sLabel
+            - name: direction
+              string: down 
+      - click: 
+          identifier: us.mappings.acc.item.s2sLabel
+          wait: 1000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.global.change.address
+            - name: direction
+              string: up   
+      - click: 
+          identifier: us.mappings.global.change.address
+          wait: 1000     
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.add.title
+      - click: 
+          identifier: us.mappings.deliveryAddress.change.2
+      - click: 
+          identifier: us.mappings.item.SubsAddressEdit.continue
+          wait: 1000
+      - sleep:
+          duration: 5000   
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.subscribeRadiobutton
+            - name: direction
+              string: up 
+
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              contains: Subscribe
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: up  
+
+      - click: 
+          identifier: us.mappings.item.switching.fulfillment.pickupText
+          wait: 1000
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: up  
+
+      - verifyIdentifier:
+          selected:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+
+#Subscription for delivery intent  
+  - name: us.functions.subscription.delivery
+    platform: ios
+    flow:
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: up  
+
+      - click: 
+          identifier: us.mappings.item.switching.fulfillment.deliverystoreText
+          wait: 1000
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: up  
+
+      - verifyIdentifier:
+          selected:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true      
+
+      - click: 
+          identifier: us.mappings.item.closeItemDetailsPage     
+
+#Item is Subscription eligible, address is restricted
+  - name: us.functions.subscription.address.restriction
+    platform: ios
+    flow: 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.acc.item.s2sLabel
+            - name: direction
+              string: down   
+      - click: 
+          identifier: us.mappings.acc.item.s2sLabel
+          wait: 1000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.global.change.address
+            - name: direction
+              string: up   
+      - click: 
+          identifier: us.mappings.global.change.address
+          wait: 1000     
+      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.add.title
+      - click: 
+          identifier: us.mappings.deliveryAddress.change.2
+      - click: 
+          identifier: us.mappings.item.SubsAddressEdit.continue
+          wait: 1000
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.subscribeRadiobutton
+            - name: direction
+              string: up   
+                       
+      - verifyIdentifier:
+          selected:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              value: false  
+          label:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              contains: Subscribe
+
+#Intent set to pickup and delivery with ineligible address
+  - name: us.functions.subscription.addressRestriction.pickupAnddelivery
+    platform: ios
+    flow: 
+#For pickup
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.switching.fulfillment.pickupText
+            - name: direction
+              string: up   
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+      - click: 
+          identifier: us.mappings.item.switching.fulfillment.pickupText
+          wait: 1000
+          
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.subscribeRadiobutton
+            - name: direction
+              string: up   
+
+      - verifyIdentifier:
+          selected:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              value: false  
+          label:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              contains: Subscribe
+#For Delivery 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.switching.fulfillment.deliverystoreText
+            - name: direction
+              string: up   
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+      - click: 
+          identifier: us.mappings.item.switching.fulfillment.deliverystoreText
+          wait: 1000
+      - verifyIdentifier:
+          selected:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              value: false  
+          label:
+            - identifier: us.mappings.item.subscribeRadiobutton
+              contains: Subscribe
+
+#Subscription Regular Item
+  - name: us.functions.subs.SubscriptionItempage
+    platform: ios
+    flow: 
+      - sleep:
+          duration: 3000  
+      - sleep:
+          duration: 2000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.subscribeRadiobutton
+          position: center 
+          scrollLimit: 1
+      # - verifyIdentifier:
+      #     selected:
+      #       - identifier: us.mappings.item.oneTimeSubscribe
+      #         value: true 
+      #     label:
+      #       - identifier: us.mappings.item.oneTimeSubscribe
+      #         contains: One-time purchase                 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.subscribeRadiobutton     
+            - identifier: us.mappings.subs.normalPriceLabel
+            - identifier: us.mappings.subs.subscriptionPriceLabel
+      - sleep:
+          duration: 2000                
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+      - executeFunction:
+          name: us.functions.subs.validateThatSubscriptionPriceAndNormalPriceAreSame
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPageInWalmart
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subscribe.subscribeButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.subscribeButton
+      - click: 
+          identifier: us.mappings.subscribe.subscribeButton
+          wait: 10000 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscriptionSetupScreen.header
+
+  - name: us.functions.subs.SubscriptionItempage
+    platform: android
+    flow: 
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.getItEveryLabel
+          position: center       
+      # - verifyIdentifier:
+      #     selected:
+      #       - identifier: us.mappings.item.oneTimeSubscribe
+      #         value: true 
+      #     text:
+      #       - identifier: us.mappings.item.oneTimeSubscribe
+      #         contains: One-time purchase                 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.subscribeRadiobutton   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.oneTimeSubscribe  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.subscriptionPriceLabel   
+      - getString:
+          identifier: us.mappings.subs.subscriptionPriceLabel 
+          storeIn: subsPrice 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${subsPrice}
+          getResponse:
+            storeIn: subscriptionPriceAmount
+      - log: Subscribe to auto delivery amount - ${subscriptionPriceAmount}  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.normalPriceLabel 
+      - getString:
+          identifier: us.mappings.subs.normalPriceLabel 
+          storeIn: normalPrice 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${normalPrice}
+          getResponse:
+            storeIn: normalPriceAmount
+      - log: one time purchase amount - ${normalPriceAmount}            
+      - if: 
+          condition:  ${subscriptionPriceAmount} == ${normalPriceAmount}  
+          then:
+            - log:
+                message: "Both prices are same"
+                color: CYAN_BOLD
+      - sleep:
+          duration: 2000                
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+      # - executeFunction:
+      #     name: us.functions.subs.validateThatSubscriptionPriceAndNormalPriceAreSame
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPageInWalmart
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subscribe.subscribeButton
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.subscribeButton
+      - click: 
+          identifier: us.mappings.subscribe.subscribeButton
+      - sleep:
+          duration: 4000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.reorder.subscriptionFREQ
+            - identifier: us.mappings.ibottaRewards.subscriptionItems.quantity1
+            - identifier: us.mappings.item.subsriptionFrequency.mostCommon
+      - sleep:
+          duration: 2000
+      - if: 
+          condition: ${subsfrequency} != null
+          then:  
+            - scroll:
+                direction: right 
+                withinIdentifier: us.mappings.myItems.reorder.subscriptionFREQ
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.item.subsriptionFrequency
+                  - name: direction
+                    string: left     
+                  - name: identifierScope
+                    string: us.mappings.myItems.reorder.subscriptionFREQ
+            # - scroll:
+            #     direction: left
+            #     scrollLimit: 1                            
+            #     withinIdentifier: us.mappings.myItems.reorder.subscriptionFREQ
+            #     untilIdentifier: us.mappings.item.subsriptionFrequency
+            #     position: center  
+            - click:
+                identifier: us.mappings.item.subsriptionFrequency
+          else:
+            - click:
+                identifier: us.mappings.item.subsriptionFrequency.mostCommon
+      - click:
+          identifier: us.mappings.item.addSubscriptionToCart
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.petrx.autoship.subscription.count
+
+  - name: us.functions.subs.selectSubscription
+    platform: ios
+    flow:
+      - click: 
+          identifier: us.mappings.item.SubscribeButton
+          wait: 5000  
+
+  - name: us.functions.subs.selectSubscription
+    platform: android
+    flow:
+      - click: 
+          identifier: us.mappings.item.SubscribeButton
+          wait: 5000           
+                                                                   
+#Subscription Regular Item quantity update
+  - name: us.functions.subs.subscription.QuantiyUpdate
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000    
+      - if:
+          condition: ${verify} 
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.addToCartButton   
+                  - identifier: us.mappings.cart.itemAddedToCartCount
+          else:    
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.Quantityincrement
+            - click: 
+                identifier: us.mappings.item.Quantityincrement                                                                 
+                wait: 1000
+  
+   #Subscription Regular Item Edit Address 
+  - name: us.functions.subs.subscription.EditAddress
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddress
+      - click: 
+          identifier: us.mappings.item.SubsAddress                                                                
+          wait: 1000  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.buyNow.paymentMethods.editCard.editButton 
+      - click: 
+          identifier: us.mappings.buyNow.paymentMethods.editCard.editButton                                                              
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddressEdit.Firstname
+      - enterText:
+          identifier: us.mappings.item.SubsAddressEdit.Firstname
+          string: ${FirstName}
+          clearField: true     
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddressEdit.Lastname
+      - enterText:
+          identifier: us.mappings.item.SubsAddressEdit.Lastname
+          string: ${LastName}
+          clearField: true              
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton
+      - click: 
+          identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton                                                                   
+          wait: 1000
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddressEdit.continue
+      - click: 
+          identifier: us.mappings.item.SubsAddressEdit.continue                                                               
+          wait: 1000
+      - sleep:
+          duration: 10000
+
+  #Subscription Regular Item payment update 
+  - name: us.functions.subs.subscription.SubsPayment
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsPayment
+      - click: 
+          identifier: us.mappings.item.SubsPayment                                                                
+          wait: 1000
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.buyNow.paymentMethods.editCard.editButton 
+      # - click: 
+      #     identifier: us.mappings.buyNow.paymentMethods.editCard.editButton                                                               
+      #     wait: 1000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.buyNow.addCard.securityCodeField 
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.buyNow.addCard.securityCodeField 
+            - enterText:
+                identifier: us.mappings.buyNow.addCard.securityCodeField  
+                string: ${cvv} 
+            - click: 
+                identifier: us.mappings.default.keyboardDoneButton                                                          
+                wait: 1000         
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton 
+            # - click: 
+            #     identifier: us.mappings.paymentMethod.addPayment.overlay.saveButton                                                               
+            #     wait: 1000  
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.item.SubsPayment.Selectcard
+            # - click: 
+            #     identifier: us.mappings.item.SubsPayment.Selectcard                                                                
+            #     wait: 1000 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.ConfirmCvv
+            - click:
+                identifier: us.mappings.item.ConfirmCvv
+                wait: 1000
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.paymentMethodTitle
+            - click:
+                identifier: us.mappings.global.closeButton
+  #Subscription Regular Item Frequency Details
+  - name: us.functions.subs.subscription.Subsfrequency
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - scroll:
+         direction: down
+         untilIdentifier: us.mappings.item.itemPrice
+         position: center
+         scrollLimit: 3
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.item.itemPrice
+      #       - name: direction
+      #         string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsFrequency
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsFrequency
+            - click: 
+                identifier: us.mappings.item.SubsFrequency                                                                
+                wait: 1000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsFrequency.GetitEvery
+            - click: 
+                identifier: us.mappings.item.SubsFrequency.GetitEvery                                                               
+                wait: 1000
+            - if: 
+                condition: ${subsfrequency} != null
+                then:      
+                  - scroll:
+                      direction: right 
+                      withinIdentifier: us.mappings.item.subsriptionFrequency.section
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.item.subsriptionFrequency
+                        - name: direction
+                          string: left     
+                        - name: identifierScope
+                          string: us.mappings.item.subsriptionFrequency.section
+                  # - scroll:
+                  #     direction: left
+                  #     scrollLimit: 1                            
+                  #     withinIdentifier: us.mappings.item.subsriptionFrequency.section
+                  #     untilIdentifier: us.mappings.item.subsriptionFrequency.3month
+                  #     position: center  
+                  - click:
+                      identifier: us.mappings.item.subsriptionFrequency
+                else:
+                  - click:
+                      identifier: us.mappings.item.subsriptionFrequency.mostCommon
+            - click:
+                identifier: us.mappings.subscribe.subscribeButton
+                wait: 1000          
+  #Subscription Regular Item Estimated total
+  - name: us.functions.subs.subscription.EstdTotal
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsEstTotal
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsEstTotal
+            - click: 
+                identifier: us.mappings.item.SubsEstTotal                                                                
+                wait: 1000
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.item.SubsEstTotal.subtotal
+                    contains: Subtotal 
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.item.SubsEstTotal.EstTotal
+                    contains: Estimated total 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsEstTotal.closebutton
+            - click: 
+                identifier: us.mappings.item.SubsEstTotal.closebutton                                                                
+                wait: 1000 
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.subsriptionEstimatedPrice
+  #Subscription Regular Item confirmation page
+  - name: us.functions.subs.subscription.confirmation
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubscribeNow
+      - click: 
+          identifier: us.mappings.item.SubscribeNow                                                               
+          wait: 1000   
+      # - verifyIdentifier:
+      #     label:
+      #       - identifier: us.mappings.item.SubsConfirmation
+      #         contains: You're all set!
+      # - verifyIdentifier:
+      #     label:
+      #       - identifier: us.mappings.item.SubsGotitButton
+      #         contains: Got it
+      - sleep:
+          duration: 10000 
+      - verifyIdentifier:
+            label:
+              - identifier: us.mappings.subs.qtyStepperText
+                contains: 1 
+
+  #Subscription Regular Item manage subscription
+  - name: us.functions.subs.subscription.Managesubs
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions  
+            - identifier: us.mappings.global.editButton     
+            - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitleFrequency
+            - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitle.arrivesBy
+      - if: 
+          condition: ${subsfrequency} == '3 months'
+          then: 
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitleFrequency
+                    contains: Every 3 months
+      - click:
+          identifier: us.mappings.global.editButton 
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.frequencyValue
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.fourMonthfrequencyselected
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.fourMonthfrequencyselected
+      - sleep:
+          duration: 2000
+      - log: "Frequency changed for Subscription"
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.continueButtonFreqSelect               
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+                - identifier: us.mappings.checkout.verifySubscriptionTermsBottomSheet
+          then:
+            - executeFunction:
+                name: us.functions.checkout.placeOrderAndAcceptSubscriptionTerms 
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+                - identifier: us.mappings.subscribe.manageSubscription.continueButtonFreqSelect 
+          then:
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.continueButtonFreqSelect  
+            - sleep:
+               duration: 3000
+      # - click:
+      #     identifier: us.mappings.ibottaRewards.rewardsDetails.closeButton
+      - if:
+          identifier:
+            present:
+                - identifier: us.mappings.subscribe.manageSubscription.subscriptionUpdateMessage 
+          then:
+            - log: "Subscription Frequecny Updated"
+
+  #Subscription Regular Item cancelSubscription
+  - name: us.functions.subs.cancelSubscription
+    platform: ios
+    flow:
+      - sleep:
+          duration: 10000  
+      # - click: 
+      #     identifier: us.mappings.global.editButton                                                             
+      #     wait: 2000  
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.item.SubsManageSubscriptions.cancelSubs  
+      #     then:
+      #       - log: "Cancel subs button present"
+      #     else:
+      #       - failTest:
+      #           message: "ENV_FAILURE - ${env} - Cancel subscription button should be present but is nor"    
+      # - verifyIdentifier:
+      #     present:  
+      #       - identifier: us.mappings.item.SubsManageSubscriptions.Applybutton
+      # - click: 
+      #     identifier: us.mappings.item.SubsManageSubscriptions.cancelSubs         
+      - click: 
+          identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeButton   
+      - sleep:
+          duration: 2000 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeConfirmationPopup
+          then:
+            - click: 
+                identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeConfirmationbutton   
+      - sleep:
+          duration: 4000                                                
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.cancelsubs.cancelsubsreason
+          then:
+            - log: "Reason for cancelling the subscription is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Cancellation reason should be displayed but is not"         
+      - click: 
+          identifier: us.mappings.item.cancelsubs.cancelsubsreason                                                                 
+          wait: 1000  
+      - sleep:
+          duration: 4000          
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.cancelsubs.yesUnsubscribeButton
+      - click: 
+          identifier: us.mappings.item.cancelsubs.yesUnsubscribeButton                                                             
+          wait: 1000 
+      # - verifyIdentifier:
+      #     label:
+      #       - identifier: us.mappings.item.SubsConfirmation
+      #         contains: You're all set! 
+      # - click: 
+      #     identifier: us.mappings.item.SubsGotitButton                                                             
+      #     wait: 1000 
+      # - sleep:
+      #    duration: 3000
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier:  us.mappings.subscriptionScreenText
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.cancelsubs.browseSubscriptionButton
+          then:
+            - log: "Unsubscribed Subscription Successfully"
+
+            
+#Verify item is eligible for subscription 
+  - name: us.functions.subs.verifyItemEligibility
+    platform: ios
+    flow:  
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down                   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.subscribeRadiobutton
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton                                                             
+          wait: 1000 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubscribeButton
+      - click: 
+          identifier: us.mappings.item.SubscribeButton                                                             
+          wait: 1000 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.addSubscriptionToCart
+          then:
+            - log: "Subscribe Now button is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Subscribe now button should be visible but is not"
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.item.SubscribeNow
+
+  - name: us.functions.subs.validateSubsciptionPage
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsManageSubscriptions
+          then:
+            - log: "Manage Subscription page is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Manage Subscription page is not displayed as expected"
+
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.subs.deliveryDate
+      #       # - identifier: us.mappings.subs.fufilmentText
+
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.subs.deliveryDate
+      #       - identifier: us.mappings.subs.fufilmentText
+
+
+  - name: us.functions.subs.validateSubsciptionPage
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.account.subsManageSubscriptions
+          then:
+            - log: "Subscription page is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Subscription page is not displayed as expected"
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.subs.deliveryDate
+      #       - identifier: us.mappings.subs.fufilmentText
+
+  - name: us.functions.subs.subscription.apply
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubscribeNow
+          then:                 
+            - click: 
+                identifier: us.mappings.item.SubscribeNow   
+          else:
+            - loop:
+                begin: 1
+                end: 3
+                storeIndex: i
+                mode: increment
+                flow:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.item.SubsManageSubscriptions.Applybutton
+                      then:
+                        - click:
+                            identifier: us.mappings.item.SubsManageSubscriptions.Applybutton
+                        - sleep:
+                            duration: 5000
+                      else:
+                        - break: true
+        
+      # - verifyIdentifier:
+      #     label:
+      #       - identifier: us.mappings.item.SubsConfirmation
+      #         contains: You’re all set!
+      # - verifyIdentifier:
+      #     label:
+      #       - identifier: us.mappings.item.SubsGotitButton
+      #         contains: Got it
+      - sleep:
+          duration: 7000 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsGotitButton
+          then:
+            - click: 
+                identifier: us.mappings.item.SubsGotitButton
+      - sleep:
+          duration: 3000 
+      - click: 
+          identifier: us.mappings.item.closeItemDetailsPage
+          
+# Subscription Regular Item Try W+
+  - name: us.functions.subs.subscription.wplusValidation
+    platform: ios
+    flow: 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.tryWplusPlanLabel
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subs.tryWplusPlanLabel
+            - click: 
+                identifier: us.mappings.subs.tryWplusPlanLabel
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed                         
+#*********************************************** Android *******************************************************        
+# Subscription Regular Item Try W+          
+  - name: us.functions.subs.subscription.wplusValidation
+    platform: android
+    flow:          
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.subs.tryWplusPlanLabel
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subs.tryWplusPlanLabel
+            - click: 
+                identifier: us.mappings.subs.tryWplusPlanLabel
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed   
+                           
+  #Updating the quantity of item
+  - name: us.functions.subs.subscription.QuantiyUpdate
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000    
+      - if:
+          condition: ${verify} 
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.myItems.atcButton         
+          else:    
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.Quantityincrement
+            - click: 
+                identifier: us.mappings.item.Quantityincrement                                                                 
+                wait: 1000
+
+#Subscription Regular Item Edit Address
+  - name: us.functions.subs.subscription.EditAddress
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddress
+      - click:
+           identifier: us.mappings.item.SubsAddress
+           wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier:  us.mappings.item.SubsAddressEdit
+      - click:
+           identifier: us.mappings.item.SubsAddressEdit
+           wait: 1000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.deliveryAddress.add.sharePreciseLocation
+          then:
+            - click:
+                identifier: us.mappings.wplus.reserveSlot.deliveryFromStore.noThanksButton            
+      - verifyIdentifier:
+          present:
+            - identifier:  us.mappings.item.SubsAddressEdit.Firstname  
+      - enterText:
+           identifier: us.mappings.item.SubsAddressEdit.Firstname
+           string: ${FirstName}
+           clearField: true
+      - verifyIdentifier:
+          present:
+            - identifier:  us.mappings.item.SubsAddressEdit.Lastname 
+      - enterText:
+           identifier: us.mappings.item.SubsAddressEdit.Lastname
+           string: ${LastName}
+           clearField: true
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddressEdit.save
+      - click:
+           identifier: us.mappings.item.SubsAddressEdit.save
+           wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsAddressEdit.continue
+      - click:
+           identifier: us.mappings.item.SubsAddressEdit.continue
+           wait: 1000
+      - sleep:
+            duration: 5000
+#Subscription Regular Item Edit payment details
+  - name: us.functions.subs.subscription.SubsPayment
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsPayment
+      - click:
+           identifier: us.mappings.item.SubsPayment
+           wait: 1000
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.item.SubsPayment.Edit
+      # - click:
+      #      identifier: us.mappings.item.SubsPayment.Edit
+      #      wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsPayment.cvv #us.mappings.item.SubsPayment.cvv
+      - enterText:
+           identifier: us.mappings.item.SubsPayment.cvv #us.mappings.item.SubsPayment.cvv
+           string: ${cvv}
+           clearField: true
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.item.SubsPayment.save
+      # - click:
+      #      identifier: us.mappings.item.SubsPayment.save
+      #      wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.ConfirmCvv
+      - click:
+           identifier: us.mappings.item.ConfirmCvv
+           wait: 5000
+      # - if: 
+      #     identifier: 
+      #       present: 
+      #         - identifier: us.mappings.item.ConfirmSecurityTitle
+      #     then: 
+      #       - enterText: 
+      #            identifier: us.mappings.item.SubsPayment.cvv
+      #            string: ${cvv}
+      #       - click:
+      #           identifier: us.mappings.item.ConfirmCvv
+                # wait: 1000
+#Subscription Regular Item Edit frequency 
+  - name: us.functions.subs.subscription.Subsfrequency
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsFrequency
+          then: 
+            - click:
+                identifier: us.mappings.item.SubsFrequency
+                wait: 1000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsFrequency.GetitEvery
+            - click:
+                identifier: us.mappings.item.SubsFrequency.GetitEvery
+            - sleep:
+                duration: 3000            
+            - click:
+                identifier: us.mappings.item.SubsFrequency.frequencyList
+            - sleep:
+                duration: 3000                 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsFrequency.ArrivesBy
+            - click:
+                identifier:  us.mappings.item.SubsFrequency.ArrivesBy
+                wait: 1000           
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsFrequency.SaveFrequency
+            - click:
+                identifier: us.mappings.item.SubsFrequency.SaveFrequency
+                wait: 1000
+          else: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.subsriptionFrequency.getItEveryText
+            - click:
+                identifier: us.mappings.item.subsriptionFrequency.mostCommon
+
+# Verify subscription badge in search page
+  - name: us.functions.search.subscriptionBadge
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.search.subscribeBadge
+
+# Set up subscription from item page
+  - name: us.function.item.setUpsubscription
+    platform: android
+    flow:
+     - click:
+        identifier: us.mappings.search.subscribeBadge    
+     - verifyIdentifier:
+         present:
+           - identifier: us.mappings.item.setupSubscription
+     - click:
+        identifier: us.mappings.item.setupSubscription
+     - click:
+        identifier: us.mappings.item.setupSubscription.agreeCheckbox
+
+    # # Adding validation for FTC legal requorements initiative - will enable when the code is in teflon
+    #  - verifyIdentifier:
+    #     present:
+    #       - identifier: us.mappings.item.setupSubscription.greyAlertMessage
+    #       - identifier: us.mappings.item.setupsubscription.verifyIAgreeButton
+     - click:
+        identifier: us.mappings.reviewOrder.onepayContinue
+     - click:
+        identifier: us.mappings.item.setupSubscription.addSubcriptionToDelivery  
+     - click:
+        identifier: us.mappings.subscribe.gotItButton       
+     - click:
+        identifier: us.mappings.item.closeitemSubscriptionpage  
+
+#Subscription Regular Item Estimated total
+  - name: us.functions.subs.subscription.EstdTotal
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsEstTotal
+          then:
+            - click:
+                identifier: us.mappings.item.SubsEstTotal
+                wait: 1000
+            - verifyIdentifier:
+                text:  
+                  - identifier: us.mappings.item.SubsEstTotal.subtotal
+                    contains: Subtotal
+            - verifyIdentifier:
+                text:  
+                  - identifier: us.mappings.item.SubsEstTotal.EstTotal
+                    contains: Est. total
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.SubsEstTotal.closebutton
+            - click:
+                identifier: us.mappings.item.SubsEstTotal.closebutton
+                wait: 1000
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.subsriptionEstimatedPrice
+          
+           
+#Subscription Regular Item confirmation page
+  - name: us.functions.subs.subscription.confirmation
+    platform: android
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.item.SubscribeNow
+          then:      
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.item.SubscribeNow
+            - click:
+                identifier: us.mappings.item.SubscribeNow
+                wait: 5000
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.subscribe.gotItButton
+                    contains: Got it 
+          else: 
+            - sleep:
+                duration: 3000
+            - verifyIdentifier:
+                present:
+                - identifier: us.mappings.subscribe.applyButton
+            - click:
+                identifier: us.mappings.subscribe.applyButton
+            - sleep:
+                duration: 3000
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.subs.confirmationTile
+                    contains: You're all set!
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.subscribe.gotItButton
+                    contains: Got it
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.subscribe.gotItButton
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.closeButton
+          then:
+            - click:
+                identifier: us.mappings.item.closeButton
+            - sleep:
+                duration: 3000
+
+  - name: us.functions.subs.subscription.navigateToManagesubsPage
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present: 
+          - identifier: us.mappings.manageSubscription.subscriptionManagePageCTA
+      - click:
+          identifier: us.mappings.manageSubscription.subscriptionManagePageCTA
+      - sleep:
+          duration: 2000
+         
+#Subscription Regular Item manage subscription
+  - name: us.functions.subs.subscription.Managesubs
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.manageSubscription.mainPageTitle
+            - identifier: us.mappings.manageSubscriptionPage.productTitle.arrivesBy
+            - identifier: us.mappings.manageSubscriptionPage.productTitleFrequency
+      # - if:
+      #     identifier:
+      #       notPresent:
+      #         - identifier: us.mappings.item.SubsManageSubscriptions
+      #     then:
+      #         - verifyIdentifier:
+      #             present:
+      #               - identifier: us.mappings.item.SubsManageSubscriptions.navigatToSubscriptionDetailsBTN        
+      #         - click:
+      #             identifier: us.mappings.item.SubsManageSubscriptions.navigatToSubscriptionDetailsBTN 
+      - verifyIdentifier:
+          present:
+          - identifier: us.mappings.item.SubsManageSubscriptionsTitle
+          - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+          # - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitleFrequency
+          # - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitle
+          # - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitle.arrivesBy
+          - identifier: us.mappings.item.SubsManageSubscriptions.payment
+      - if: 
+          condition: ${subsfrequency} == '3 month'
+          then: 
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitleFrequency
+                    contains: Every 3 months
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+          wait: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.frequencyValue
+            - identifier: us.mappings.subscribe.manageSubscription.arrivingDateValue
+      - click:
+          identifier: us.mappings.subscriptionSetupScreen.closeButton
+          
+
+          # - identifier: us.mappings.item.SubsManageSubscriptions.Skip 
+      # - click:
+      #     identifier: us.mappings.subscribe.backButton            
+
+#Subscription Regular Item cancelSubscription
+  - name: us.functions.subs.cancelSubscriptions
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - click:
+          # identifier: us.mappings.item.SubsManageSubscriptions.Edit
+          identifier: us.mappings.item.SubsManageSubscriptions.unsubscribe
+          wait: 1000
+
+      # - verifyIdentifier:
+      #     present:
+      #      - identifier: us.mappings.subscribe.applyButton
+      #      - identifier: us.mappings.subscribe.cancelSubscriptionButton
+      # - click:
+      #     identifier: us.mappings.subscribe.cancelSubscriptionButton
+      #     wait: 1000
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.ibottaRewards.subscriptionConfirmationTitle
+          then:
+            - click: 
+                identifier: us.mappings.item.SubsGotitButton
+      - sleep:
+          duration: 10000
+
+
+#giving the reason for cancellation
+      - executeFunction:
+            name: us.functions.subs.selectReasonAndConfirm
+            params:
+                - name: reason
+                  string: This item is often out of stock.
+                  
+# #verifying cancellation confirmation screen
+#       - executeFunction:
+#             name: us.functions.subs.verifyConfirmationScreen
+#             params:
+#                 - name: confirmationmessage
+#                   string: Your subscription for this item has been canceled.
+      - sleep:
+          duration: 4000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitle
+      - log: Subscription cancelled
+
+#select reason and confirm the cancellation
+  - name: us.functions.subs.selectReasonAndConfirm
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.subscribe.selectReason
+      - click:
+          identifier: us.mappings.subscribe.cancelMySubscriptionButton
+          wait: 5000
+
+  - name: us.functions.subs.subscription.skipSubscription
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.item.SubsManageSubscriptions.selectedFerquency
+           - identifier: us.mappings.item.SubsManageSubscriptions.nextDeliveryInfo        
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.item.SubsManageSubscriptions.manageSubPageTitle
+           - identifier: us.mappings.item.SubsManageSubscriptions.currentFrequency
+           - identifier: us.mappings.item.SubsManageSubscriptions.nextDeliveryDate
+           - identifier: us.mappings.item.SubsManageSubscriptions.cardDetails
+           - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+           - identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+           - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemName
+           - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemQuantity
+           - identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeButton
+           - identifier: us.mappings.item.SubsManageSubscriptions.skipButton
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.skipButton
+          wait: 2000 
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.skipSubscriptionPopupYesSkipButton
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscribe.skipSubscriptionPopupTitle
+                  - identifier: us.mappings.subscribe.skipSubscriptionPopupNeverMindButton
+            - click:
+                identifier: us.mappings.subscribe.skipSubscriptionPopupYesSkipButton
+            - sleep:
+               duration: 3000  
+            - log: "Skipped Subscription"
+
+#Subscription frequency change function
+  - name: us.functions.subs.changeFrequencySubscription
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+          then:
+            - click:
+                identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+            - sleep:
+                duration: 2000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscribe.frequencyChangeWindowTitle
+                  - identifier: us.mappings.subs.addSubscriptionToCartButton
+            - click:
+                identifier: us.mappings.subscribe.threeWeekSubscription
+                wait: 1000
+            - click:
+                identifier: us.mappings.subs.addSubscriptionToCartButton
+                wait: 2000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.checkout.verifySubscriptionTermsBottomSheet # us.mappings.subscribe.manageSubscription.termsAndConditionsPopUP
+                then:
+                  - executeFunction:
+                      name: us.functions.subs.validateNewUISubscriptioTermsPageAndAccept            
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.subscribe.frequencyChangeSuccessMessage
+                then:
+                  - log: "Frequency Changed Successfully"  
+                else:
+                  - failTest:
+                      message: "ENV_FAILURE - Subscription Frequency not updated"                         
+
+#Subscription Item Quantity change function
+  - name: us.functions.subs.changeSubscriptionItemQuantity
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+          then:
+            - click:
+                identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+            - sleep:
+                duration: 4000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscribe.manageSubscription.editPageTitle
+                  - identifier: us.mappings.subscribe.manageSubscription.quantityIncreaseButton
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.quantityIncreaseButton
+                wait: 1000
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.updateSubscriptionButton
+                wait: 2000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.checkout.verifySubscriptionTermsBottomSheet # us.mappings.subscribe.manageSubscription.termsAndConditionsPopUP
+                then:
+                  - executeFunction:
+                      name: us.functions.subs.validateNewUISubscriptioTermsPageAndAccept            
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.subscribe.frequencyChangeSuccessMessage
+                then:
+                  - log: "Item Quantity Updated Successfully"  
+                else:
+                  - failTest:
+                      message: "ENV_FAILURE - Subscription Item Count not updated"  
+
+
+#Verify message that subscription is cancelled
+  - name: us.functions.subs.verifyConfirmationScreen
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.subscribe.verifyConfirmationMessage
+          text:
+            - identifier: us.mappings.subscribe.verifyConfirmationMessage
+              contains: ${confirmationmessage}
+      - click:
+          identifier: us.mappings.subscribe.gotItButton
+          wait: 5000
+
+  - name: us.functions.subs.verifyItemSubsEligibility
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down
+      - click:
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+      - click:
+          identifier: us.mappings.item.SubscribeButton 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.addSubscriptionToCart
+          then:
+            - log: "Subscribe now button is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Subscribe now button should be present but is not"
+      # - verifyIdentifier:
+      #     present:
+      #      - identifier: us.mappings.subscribe.subscribeNowButton
+
+    #Variant
+  - name: us.functions.subscription.VariantOOS
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.Subscription.Variant.oosTile
+          position: center      
+      - click: 
+          identifier: us.mappings.Subscription.Variant.oosTile                                                            
+          wait: 1000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.item.SubscribeButton                                     
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.item.oneTimeSubscribe     
+            - identifier: us.mappings.item.subscribeRadiobutton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.Subscription.Variant.instockTile
+      - click: 
+          identifier: us.mappings.Subscription.Variant.instockTile                                                             
+          wait: 1000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: up               
+        #Subscription Regular Item  
+      - executeFunction:
+          name: us.functions.subs.SubscriptionItempage
+        #Subscription Regular Item quantity update                             
+      - executeFunction:
+          name: us.functions.subs.subscription.QuantiyUpdate
+         #Subscription Regular Item Edit Address 
+      - executeFunction:
+          name: us.functions.subs.subscription.EditAddress
+          params:
+            - name: FirstName
+              string: teflon  
+            - name: LastName
+              string: flow
+        #Subscription Regular Item payment update 
+      - executeFunction:
+          name: us.functions.subs.subscription.SubsPayment
+          params:
+            - name: cvv
+              string: us.data.flow004.payment.cvv 
+       #Subscription Regular Item Frequency Details
+      - executeFunction:
+          name: us.functions.subs.subscription.Subsfrequency
+          params:
+            - name: Frequency
+              string: 1   
+            - name: Date
+              string: 2 
+      #Subscription Regular Item Estimated total
+      - executeFunction:
+          name: us.functions.subs.subscription.EstdTotal
+      #Subscription Regular Item confirmation page
+      - executeFunction:
+          name: us.functions.subs.subscription.confirmation
+      #Subscription Regular Item manage subscription
+      - executeFunction:
+          name: us.functions.subs.subscription.Managesubs
+      #Subscription Regular Item cancelSubscription
+      - executeFunction:
+          name: us.functions.subs.cancelSubscription
+          params:
+            - name: Feedback
+              string: Subscription     
+
+#varinat android
+  - name: us.functions.subscription.VariantOOS
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.Subscription.Variant.oosTile
+          position: center      
+      - click: 
+          identifier: us.mappings.Subscription.Variant.oosTile                                                            
+          wait: 1000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.item.SubscribeButton                                    
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.item.oneTimeSubscribe  
+            - identifier: us.mappings.item.subscribeRadiobutton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.Subscription.Variant.instockTile
+      - click: 
+          identifier: us.mappings.Subscription.Variant.instockTile                                                             
+          wait: 1000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: up               
+        #Subscription Regular Item  
+      - executeFunction:
+          name: us.functions.subs.SubscriptionItempage
+      - executeFunction:
+          name: us.functions.subs.subscription.Managesubs
+      #Subscription Regular Item cancelSubscription
+      - executeFunction:
+          name: us.functions.subs.cancelSubscriptions
+
+      #Subscription in scroll bar
+  - name: us.functions.search.scrollbar
+    platform: android
+    flow:
+      - scroll:
+          direction: left
+          scrollLimit: 2
+          withinIdentifier: us.mappings.subscribe.scrollbar
+          position: center
+      - click:
+          identifier: us.mappings.Subscription.pill      
+          
+          #Subscription Search 
+  - name: us.functions.subscription.search
+    platform: android
+    flow:
+      - scroll:
+          direction: left
+          scrollLimit: 2
+          withinIdentifier: us.mappings.subscribe.scrollbar
+          position: center    
+      - verifyIdentifier:
+          present:                             
+          - identifier: us.mappings.Subscription.pill
+          - identifier: us.mappings.subs.callout.container
+          # - identifier: us.mappings.subs.callout.container.close
+      - sleep:
+          duration: 2000
+
+  - name: us.functions.subs.verifySubscriptionDetailsInOrderSummary.forNonassosiate
+    platform: android
+    flow:
+
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.totalLabel
+  
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderDetails.taxLabel
+            - identifier: us.mappings.orderDetails.taxValue
+            - identifier: us.mappings.orderDetails.subtotalLabel
+            - identifier: us.mappings.orderDetails.totalValue
+            - identifier: us.mappings.orderDetails.subscriptionSavings
+            - identifier: us.mappings.orderDetails.subscriptionSavingsvalue  
+
+  - name: us.functions.subs.verifySubscriptionDetailsInOrderSummary.forNonassosiate
+    platform: ios
+    flow:
+
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.subs.totalLabel
+  
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.subs.totalLabel
+            - identifier: us.mappings.subs.taxLabel
+            - identifier: us.mappings.subs.subtotalLabel
+            - identifier: us.mappings.subs.subscriptionSavings
+            # - identifier: us.mappings.subs.subscriptionSavingsvalue
+
+      #Subscription selection on itempage 
+  - name: us.functions.subscription.shipping
+    platform: android
+    flow: 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down 
+      # - verifyIdentifier:
+      #     selected:
+      #       - identifier: us.mappings.item.oneTimeSubscribe
+      #         value: true            
+
+      - verifyIdentifier:
+          present:
+             - identifier: us.mappings.itempage.subscribeToSave
+
+      - verifyIdentifier:
+          present:
+             - identifier: us.mappings.item.Subscribe.content
+      - verifyIdentifier:
+          present:
+             - identifier: us.mappings.item.Subscribe.howItWorks          
+      - click: 
+          identifier: us.mappings.item.Subscribe.howItWorks
+          wait: 1000
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.howItWorks.SubscribeToYourUsual
+            - identifier: us.mappings.howItWorks.choosedate
+            - identifier: us.mappings.howItWorks.offEveryday
+            - identifier: us.mappings.sub.termlink
+
+      - click: 
+          identifier: us.mappings.sub.howitworks.close
+      - verifyIdentifier:
+          present:
+             - identifier: us.mappings.item.Subscribe.howItWorks
+
+  #Subscription for pickup intent  
+  - name: us.functions.subscription.pickup
+    platform: android
+    flow: 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down 
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+          text:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              contains: One-time purchase
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.filterfacet.pillShipping
+            - name: direction
+              string: up              
+      - click: 
+          identifier: us.mappings.search.filterfacet.pillShipping
+          wait: 1000  
+      - click: 
+          identifier: us.mappings.itempage.change.address
+          wait: 1000     
+      - verifyIdentifier:
+          present:
+            - identifier:  us.mappings.reserveslot.scheduledDelivery.addAddresslink
+      - click: 
+          identifier: us.mappings.deliveryAddress.selectAddress.secondAddress
+      - sleep:
+         duration: 2000
+      - click: 
+          identifier: us.mappings.selectAddress.continueButton
+      - sleep:
+         duration: 2000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down  
+            - name: scrollPosition
+              string: center
+      - click: 
+          identifier: us.mappings.itempage.subscribeToSave
+          wait: 1000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.itempage.pickup.pill
+            - name: direction
+              string: up 
+            - name: scrollPosition
+              string: center              
+      - click: 
+          identifier: us.mappings.itempage.pickup.pill
+
+
+#Subscription for delivery intent  
+  - name: us.functions.subscription.delivery
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.oneTimeSubscribe
+      - click: 
+          identifier: us.mappings.itempage.subscribeToSave
+          wait: 1000
+
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+          text:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              contains: One-time purchase  
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.itempage.delivery.pill
+            - name: direction
+              string: up 
+            - name: scrollPosition
+              string: center                  
+      - click: 
+          identifier: us.mappings.itempage.delivery.pill
+          wait: 1000   
+      - click: 
+          identifier: us.mappings.search.pdp.close
+
+#Item is Subscription eligible, address is restricted
+  - name: us.functions.subscription.address.restriction
+    platform: android
+    flow: 
+      - sleep:
+          duration: 6000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.oneTimeSubscribe  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.oneTimeSubscribe   
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.filterfacet.pillShipping
+            - name: direction
+              string: up 
+            - name: scrollPosition
+              string: center                              
+      - click: 
+          identifier: us.mappings.search.filterfacet.pillShipping
+          wait: 1000
+      - sleep:
+          duration: 5000 
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.itempage.change.address
+            - name: direction
+              string: down 
+            - name: scrollPosition
+              string: center                     
+      - click: 
+          identifier:  us.mappings.itempage.change.address
+          wait: 1000     
+      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reserveslot.scheduledDelivery.addAddresslink
+      - click: 
+          identifier: us.mappings.deliveryAddress.selectAddress.secondAddress
+      - sleep:
+         duration: 2000
+      - click: 
+          identifier: us.mappings.selectAddress.continueButton
+          wait: 1000
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.oneTimeSubscribe
+            - name: direction
+              string: down   
+
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+          text:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              contains: One-time purchase  
+
+#Intent set to pickup and delivery with ineligible address
+  - name: us.functions.subscription.addressRestriction.pickupAnddelivery
+    platform: android
+    flow: 
+#For pickup
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.itempage.pickup.pill
+            - name: direction
+              string: up 
+            - name: scrollPosition
+              string: center              
+      - click: 
+          identifier: us.mappings.itempage.pickup.pill
+          wait: 1000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.oneTimeSubscribe
+          position: center             
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+          text:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              contains: One-time purchase 
+
+#For Delivery
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.itempage.delivery.pill
+            - name: direction
+              string: up 
+            - name: scrollPosition
+              string: center   
+      - click: 
+          identifier: us.mappings.itempage.delivery.pill
+          wait: 1000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.item.oneTimeSubscribe
+          position: center
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              value: true 
+          text:
+            - identifier: us.mappings.item.oneTimeSubscribe
+              contains: One-time purchase 
+
+  - name: us.functions.subscriptions.editSubscriptions
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.global.editButton 
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions
+      - click:
+          identifier: us.mappings.amend.item.quanity.incrementButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.pause.resumedMembershipConfirmationMsg
+            - identifier: us.mappings.ibottaRewards.subscribeSheet.addressBar
+      - click:
+          identifier: us.mappings.ibottaRewards.subscribeSheet.addressBar
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.subs.manageSubscriptionBackButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ibottaRewards.subscribeSheet.paymentBar
+      - click:
+          identifier: us.mappings.ibottaRewards.subscribeSheet.paymentBar
+      - sleep:
+         duration: 2000
+      - click:
+          identifier: us.mappings.subs.manageSubscriptionBackButton
+      - click:
+          identifier: us.mappings.item.SubsFrequency
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: us.functions.subscription.editSubscriptionFrequency
+      - executeFunction:
+          name: us.functions.subscriptions.verifyEstimatedTotal
+
+  - name: us.functions.subscriptions.editSubscriptions
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitle.editButton
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPageInWalmart
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.deliveryAddress.add.title
+      - click:
+          identifier: us.mappings.amend.item.quanity.incrementButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.noSubsMessage
+            - identifier: us.mappings.ibottaRewards.subscribeSheet.addressBar
+      - click:
+          identifier: us.mappings.ibottaRewards.subscribeSheet.addressBar
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.item.backButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.ibottaRewards.subscribeSheet.paymentBar
+      - click:
+          identifier: us.mappings.ibottaRewards.subscribeSheet.paymentBar
+      - sleep:
+         duration: 2000
+      - click:
+          identifier: us.mappings.item.backButton
+      - click:
+          identifier: us.mappings.item.SubsFrequency
+      - sleep:
+         duration: 2000
+      - click:
+          identifier: us.mappings.item.backButton
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: us.functions.subscriptions.verifyEstimatedTotal
+      
+  - name: us.functions.subscription.editSubscriptionFrequency
+    platform: ios
+    flow:
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.item.SubsFrequency.GetitEvery
+      - enterText:
+          identifier: us.mappings.search.fitment.pickerWheel
+          string: "6 weeks"
+          clearField: false
+          clickFirst: false
+      - click:
+          identifier: us.mappings.flex.doneButton
+      - click:
+          identifier: us.mappings.item.SubsFrequency.ArrivesBy
+      - click:
+          identifier: us.mappings.flex.doneButton
+      - click:
+          identifier: us.mappings.item.SubsFrequency.SaveFrequency
+  
+  - name: us.functions.subscriptions.verifyEstimatedTotal
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsEstTotal
+      - click: 
+          identifier: us.mappings.item.SubsEstTotal
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.buynow.estTotal.pos.totalHeader
+      - click:
+          identifier: us.mappings.subs.manageSubscriptionBackButton
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.Applybutton
+
+  - name: us.functions.subscriptions.verifyEstimatedTotal
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsEstTotal
+      - click: 
+          identifier: us.mappings.item.SubsEstTotal
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.Subscribe.howItWorks.module
+      - click:
+          identifier: us.mappings.item.backButton
+      
+
+  - name: us.functions.subs.verifyGetAutoDeliveredLabel
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.firstItem
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.getAutoDeliveredText
+          then:
+            - log: "New subscription badge is displayed correctly as expected"
+          else:
+            - failTest: 
+                message: "ENV_FAILURE - ${env} - The new badge should be present but is not visible"
+
+  - name: us.functions.subs.verifyGetAutoDeliveredLabel
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.firstItem
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.getAutoDeliveredText
+          then:
+            - log: "New subscription badge is displayed correctly as expected"
+          else:
+            - failTest: 
+                message: "ENV_FAILURE - ${env} - The new badge should be present but is not visible"
+
+  - name: us.functions.subs.addSubscriptionToCart
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.setUpSubscriptionBottomsheetHeader
+          then:
+            - log: "Set Up Subscription bottomsheet displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The bottomsheet should be displayed but is not"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.productLabel
+            - identifier: us.mappings.subs.addSubscriptionToCartButton
+      - click:
+          identifier: us.mappings.subs.addSubscriptionToCartButton
+      - executeFunction:
+          name: us.functions.item.postAddToCartSteps
+
+  - name: us.functions.subs.addSubscriptionToCart
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.setUpSubscriptionBottomsheetHeader
+          then:
+            - log: "Set Up Subscription bottomsheet displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The bottomsheet should be displayed but is not"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.productLabel
+            - identifier: us.mappings.subs.addSubscriptionToCartButton
+      - sleep:
+          duration: 5000
+      - click:
+          identifier: us.mappings.subs.addSubscriptionToCartButton
+      - executeFunction:
+          name: us.functions.item.postAddToCartSteps
+
+  - name: us.functions.sub.validateTheSubscriptionFrequencyInCartPage
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subs.subscriptionFrequency
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionFrequency
+          then:
+            - log: "Selected frequency of subscription is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The subscription frequency should be shown but is not"
+
+  - name: us.functions.sub.validateTheSubscriptionFrequencyInCartPage
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.subs.subscriptionFrequency
+          position: center 
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionFrequency
+          then:
+            - log: "Selected frequency of subscription is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The subscription frequency should be shown but is not"
+
+  - name: us.functions.subs.validateSubscriptionInReviewOrderPage
+    platform: ios
+    flow:    
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapings.reviewOrder.subscriptionLabel
+            - identifier: us.mapings.reviewOrder.viewDetails
+      - click:
+         identifier: us.mapings.reviewOrder.viewDetails 
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.itemDetailsScreen.header
+            - identifier: us.mapings.itemDetails.subscriptionLabel
+            - identifier: us.mapings.itemDetails.subscriptionItemRecurrence 
+            - identifier: us.mappings.cart.missingAnything.closeButton
+      - if: 
+          condition: ${subsfrequency} == '3 month'
+          then:        
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.viewDetails.subscriptionWeeks 
+                    contains: 3 months
+      - click:
+                identifier: us.mappings.cart.missingAnything.closeButton        
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.subs.subscriptionTermsText
+      #     then:
+      #       - log: "The subscription text is present as expected"
+      #     else:
+      #       - failTest:
+      #           message: "ENV_FAILURE - ${env} - Subscription text should be displayed but is not"
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.subs.subscriptionTermsAlertMessage
+      #     then:
+      #       - log: "The LDA alert message is shown as expected"
+      #     else:
+      #       - failTest:
+      #           message: "The LDA alert message should be shown but is not"
+      # - loop:
+      #     begin: 0
+      #     end: 15
+      #     storeIndex: i
+      #     mode: increment
+      #     flow:
+      #       - if:
+      #           identifier:
+      #             present:
+      #               - identifier: us.mappings.subs.subscriptionCheckBox
+      #           then:
+      #             - log: "The  subscription checkbox is displayed as expected"
+      #             - break: true
+      #           else:
+      #             - scroll:
+      #                 direction: down
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.subs.subscriptionCheckBox
+      #     then:
+      #       - log: "Subscription checkbox is displayed as expected"
+      #     else:
+      #       - failTest:
+      #           message: "ENV_FAILURE - ${env} - The checkbox should be displayed but is not"
+      # - click:
+      #     identifier: us.mappings.subs.subscriptionCheckBox
+
+  - name: us.functions.subs.validateSubscriptionInReviewOrderPage
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapings.reviewOrder.subscriptionLabel
+            - identifier: us.mappings.reviewOrder.viewItemDetail
+      - click:
+          identifier: us.mappings.reviewOrder.viewItemDetail
+      - sleep:
+         duration: 4000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.viewDetails.subscriptionWeeks    
+      - click:
+          identifier: us.mappings.reviewOrder.mip.bottomSheet.closeButton.id
+      - log: Verifyied Subscription frequency      
+
+                   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionTermsAlertMessage
+          then:
+            - log: "The LDA alert message is shown as expected"
+          else:
+            - failTest:
+                message: "The LDA alert message should be shown but is not"
+
+      - loop:
+          begin: 0
+          end: 15
+          storeIndex: i
+          mode: increment
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.subs.subscriptionCheckBox
+                then:
+                  - log: "The  subscription checkbox is displayed as expected"
+                  - break: true
+                else:
+                  - scroll:
+                      direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionCheckBox
+          then:
+            - log: "Subscription checkbox is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The checkbox should be displayed but is not"
+      - click:
+          identifier: us.mappings.subs.subscriptionCheckBox
+
+  - name: us.functions.subs.validateThatSubscriptionPriceAndNormalPriceAreSame
+    platform: ios
+    flow:
+      - getString:
+          identifier: us.mappings.subs.normalPriceLabel
+          attribute: value
+          extractNumbers: true
+          storeIn: normalPrice
+      - log: ${normalPrice}
+      - getString:
+          identifier: us.mappings.subs.subscriptionPriceLabel
+          attribute: value
+          extractNumbers: true
+          storeIn: subscriptionPrice
+      - log: ${subscriptionPrice}
+      - if:
+          condition: "${normalPrice} == ${subscriptionPrice}"
+          then:
+            - log: "The prices for both subscription and non subscription is the same as expected. Hence no discount is applied for subscription"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - User should not get the discount for the subscription but gets it"
+
+  - name: us.functions.subs.validateThatSubscriptionPriceAndNormalPriceAreSame
+    platform: android
+    flow:
+      - getString:
+          identifier: us.mappings.subs.normalPriceLabel
+          attribute: value
+          extractNumbers: true
+          storeIn: normalPrice
+      - log: ${normalPrice}
+      - getString:
+          identifier: us.mappings.subs.subscriptionPriceLabel
+          attribute: value
+          extractNumbers: true
+          storeIn: subscriptionPrice
+      - log: ${subscriptionPrice}
+      - if:
+          condition: "${normalPrice} == ${subscriptionPrice}"
+          then:
+            - log: "The prices for both subscription and non subscription is the same as expected. Hence no discount is applied for subscription"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - User should not get the discount for the subscription but gets it"
+
+  - name: us.functions.cart.SetUpSubscriptionScreenValidationsForSubscribedAndSubEligibleItems
+    platform: android
+    flow:
+        - if:
+            condition: ${subscriptionStatus} == 'existing'
+            then:
+                - if:
+                    identifier:
+                      present:
+                        - identifier: us.mappings.cart.subscribedItem.every4WeeksLink
+                    then:
+                      - click: 
+                          identifier: us.mappings.cart.subscribedItem.every4WeeksLink
+                    else: 
+                      - failTest:
+                          message: "FAILURE - ${env} - No items were sbuscribed yet"
+            else:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+                  then:
+                    - click:
+                        identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+                  else: 
+                    - failTest:
+                        message: "FAILURE - ${env} - Nosubuscription eligible items on cart"
+        - sleep:
+            duration: 3000
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.subscriptionSetupScreen.header
+            then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.subscriptionSetupScreen.subscriptionItem
+                    - identifier: us.mappings.subscriptionSetupScreen.subscriptionItemAmount
+                    - identifier: us.mappings.subscriptionSetupScreen.subscriptionItemQuantityBar
+                    - identifier: us.mappings.subscriptionSetupScreen.gotItEverySection
+                    - identifier: us.mappings.subscriptionSetupScreen.confirmCTA
+                    - identifier: us.mappings.subscriptionSetupScreen.closeButton 
+              - if:
+                  condition: ${member} == 'nonMember'
+                  then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.subscriptionSetupScreen.nonMemberTwoStatementLines
+              - if:
+                  condition: ${subscriptionStatus} == 'existing'
+                  then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.subscriptionSetupScreen.removeSubscriptionCTA
+              - click:
+                  identifier: us.mappings.subscriptionSetupScreen.closeButton  
+            else: 
+                - failTest:
+                    message: "FAILURE - ${env} - Set up Subscription not loaded"                          
+
+  - name: us.functions.cart.SetUpSubscriptionScreenValidationsForSubscribedAndSubEligibleItems
+    platform: ios
+    flow:
+        - if:
+            condition: ${subscriptionStatus} == 'existing'
+            then:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.cart.subscribedItem.every4WeeksLink
+                  then:
+                    - click: 
+                        identifier: us.mappings.cart.subscribedItem.every4WeeksLink
+                  else: 
+                    - failTest:
+                        message: "FAILURE - ${env} - No items were sbuscribed yet"
+            else:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+                  then:
+                    - click:
+                        identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+                  else: 
+                    - failTest:
+                        message: "FAILURE - ${env} - Nosubuscription eligible items on cart"
+        - sleep:
+            duration: 3000
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.subscriptionSetupScreen.header
+            then:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.subscriptionSetupScreen.subscriptionItem
+                    - identifier: us.mappings.subscriptionSetupScreen.subscriptionItemAmount
+                    - identifier: us.mappings.subscriptionSetupScreen.subscriptionItemQuantityBar
+                    - identifier: us.mappings.subscriptionSetupScreen.gotItEverySection
+                    - identifier: us.mappings.subscriptionSetupScreen.confirmCTA
+                    - identifier: us.mappings.subscriptionSetupScreen.closeButton 
+              - if:
+                  condition: ${member} == 'nonMember'
+                  then:
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.subscriptionSetupScreen.nonMemberTwoStatementLines
+              - if:
+                  condition: ${subscriptionStatus} == 'existing'
+                  then:
+                    - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.subscriptionSetupScreen.removeSubscriptionCTA
+              - click:
+                  identifier: us.mappings.subscriptionSetupScreen.closeButton  
+            else: 
+                - failTest:
+                    message: "FAILURE - ${env} - Set up Subscription not loaded" 
+
+  - name: us.functions.cart.enrollForSubscriptionOfAnItem
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+          then:
+            - click: 
+                identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+          else: 
+            - failTest:
+                message: "FAILURE - ${env} - Nosubuscription eligible items on cart"
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscriptionSetupScreen.header
+          then:
+            - click: 
+                identifier: us.mappings.subscriptionSetupScreen.every4weeks
+            - click:
+                identifier: us.mappings.subscriptionSetupScreen.confirmCTA
+
+
+  - name: us.functions.cart.enrollForSubscriptionOfAnItem
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+          then:
+            - click: 
+                identifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+          else: 
+            - failTest:
+                message: "FAILURE - ${env} - No subuscription eligible items on cart"
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscriptionSetupScreen.header
+          then:
+            - click: 
+                identifier: us.mappings.subscriptionSetupScreen.every4weeks
+            - click:
+                identifier: us.mappings.subscriptionSetupScreen.confirmCTA
+                  
+
+# Validate the subscription and OTP items on Review Order screen 
+ 
+  - name: us.functions.reviewOrder.SubAndOTPItemsValidations
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.oneTimePurchase
+            - name: direction
+              string: down 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapings.reviewOrder.subscriptionLabel
+            - identifier: us.mapings.reviewOrder.viewDetails
+      - click:
+          identifier: us.mapings.reviewOrder.viewDetails
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.itemDetailsScreen.header
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.itemDetails.oneTimePurchase
+                  - identifier: us.mapings.itemDetails.subscriptionLabel
+                  - identifier: us.mapings.itemDetails.subscriptionItemRecurrence
+                  - identifier: us.mapings.itemDetails.closeButton
+            - click:
+                identifier: us.mapings.itemDetails.closeButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mapings.reviewOrder.chooseSubscriptionPreferences
+            - name: direction
+              string: down
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subscriptionTerms  
+            - name: direction
+              string: down  
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subscriptionTerms.checkBox 
+            - name: direction
+              string: down 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.requiredLabel
+            - identifier: us.mappings.reviewOrder.subscriptionTerms.checkBox
+      - click:
+          identifier: us.mappings.reviewOrder.subscriptionTerms.checkBox
+
+  - name: us.functions.reviewOrder.SubAndOTPItemsValidations
+    platform: ios
+    flow:
+      - scroll:  
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.oneTimePurchase
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapings.reviewOrder.subscriptionLabel
+            - identifier: us.mapings.reviewOrder.viewDetails
+            - identifier: us.mapings.reviewOrder.chooseSubscriptionPreferences
+      - click:
+          identifier: us.mapings.reviewOrder.viewDetails
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.itemDetailsScreen.header
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.itemDetails.oneTimePurchase
+                  - identifier: us.mapings.itemDetails.subscriptionLabel
+                #  - identifier: us.mapings.itemDetails.subscriptionItemRecurrence # No identifier
+                  - identifier: us.mapings.itemDetails.doneButton
+            - click:
+               identifier: us.mapings.itemDetails.doneButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subscriptionTerms
+            - name: direction
+              string: down
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.requiredLabel
+            - name: direction
+              string: down
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.subscriptionTerms.checkBox
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.reviewOrder.subscriptionTerms
+            - identifier: us.mappings.reviewOrder.requiredLabel
+      - click:
+          identifier: us.mappings.reviewOrder.subscriptionTerms.checkBox                
+
+  - name: us.functions.reviewOrder.subscribedItemFutureOrderDeliveryAddress
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.deliveryAddressLabel
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.maappings.reviewOrder.selectANewAddressCTA
+          then:
+            - click:
+                identifier: us.maappings.reviewOrder.selectANewAddressCTA
+          else:            
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.reviewOrder.futureOrderDeliveryMessage
+                  - identifier: us.mappings.reviewOrder.deliveryAddressEditLink
+            - click:
+                identifier: us.mappings.reviewOrder.deliveryAddressEditLink
+            - sleep:
+                duration: 2000
+            - click:
+                identifier: us.maappings.selectAnAddress.addNewAddressLink
+      - sleep:
+          duration: 2000    
+      - executeFunction:
+          name: us.functions.account.deliveryAddress.addAddress
+          params:
+            - name: firstName
+              string: test
+            - name: lastName
+              string: user
+            - name: streetAddress
+              string: us.data.deliveryaddress.streetAddress
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+      - click:
+          identifier: us.maappings.selectAnAddress.continueCTA
+
+  - name: us.functions.reviewOrder.subscribedItemFutureOrderDeliveryAddress
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.reviewOrder.deliveryAddressLabel
+            - name: direction
+              string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.maappings.reviewOrder.selectANewAddressCTA
+          then:
+            - click:
+                identifier: us.maappings.reviewOrder.selectANewAddressCTA
+          else:            
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.reviewOrder.futureOrderDeliveryMessage
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.reviewOrder.deliveryAddressEditLink   
+            - click:
+                identifier: us.mappings.reviewOrder.deliveryAddressEditLink
+            - sleep:
+                duration: 2000
+            - click:
+                identifier: us.maappings.selectAnAddress.addNewAddressLink    
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: us.functions.deliveryAddress.addAddress
+          params:
+            - name: firstName
+              string: test
+            - name: lastName
+              string: user
+            - name: streetAddress
+              string: us.data.deliveryaddress.streetAddress
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+
+  - name: us.functions.subs.subscription.skipSubscription
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.item.SubsManageSubscriptions.selectedFerquency
+           - identifier: us.mappings.item.SubsManageSubscriptions.nextDeliveryInfo
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.item.SubsManageSubscriptions.manageSubPageTitle
+           - identifier: us.mappings.item.SubsManageSubscriptions.currentFrequency
+           - identifier: us.mappings.item.SubsManageSubscriptions.nextDeliveryDate
+           - identifier: us.mappings.item.SubsManageSubscriptions.cardDetails
+           - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+           - identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+          #  - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemName
+           - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemQuantity
+           - identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeButton
+           - identifier: us.mappings.item.SubsManageSubscriptions.skipButton
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.skipButton
+          wait: 3000
+      - verifyIdentifier:
+          present:
+           - identifier: us.mappings.subscribe.skipUpcomingShipmentTitle
+           - identifier: us.mappings.subscribe.skipSubscriptionButton 
+           - identifier: us.mappings.subscribe.neverMindnButton  
+      - click:
+          identifier: us.mappings.subscribe.skipSubscriptionButton               
+      - sleep:
+          duration: 5000         
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.subscribe.skipButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.subscriptionUpdateSuccessMessage 
+          then:
+            - log: "Subscription skipped Successfully"
+          else: 
+            - failTest:
+                message: "FAILURE - ${env} - Subscription Updated Message Not Displayed for Skiping Subscription"
+     
+
+  #Edit and existing Subscription
+  - name: us.functions.subs.editExistingSubscription
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - scroll:
+                direction: down
+                untilIdentifier: us.mappings.paymentMethod.creditCard.edit
+      - click:
+          identifier: us.mappings.paymentMethod.creditCard.edit
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.maappings.manageSubscription.pageTitle
+            - identifier: us.mappings.ibottaRewards.rewardsDetails.closeButton
+            - identifier: us.mappings.ibottaRewards.subscriptionItems.increaseQuantity
+            - identifier: us.mappings.search.decreaseQty
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.ibottaRewards.subscriptionItems.increaseQuantity
+          wait: 1000
+      - click:
+          identifier: us.mappings.item.SubsAddress
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.selectAnAddress.header
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.differentAddress
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.differentAddress
+          else:
+            - click:
+                identifier: us.maappings.backTo.manageSubscription.page
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.maappings.selectAnAddress.continueCTA
+          wait: 2000
+      - click:
+          identifier: us.mappings.ibottaRewards.subscribeSheet.frequencySection
+          wait: 2000
+      - click:
+          identifier: us.maappings.manageSubscription.frequencySelection.dropDown
+          wait: 2000
+      - executeFunction:
+          name: us.functions.manageSubscription.selectFREQ
+          params:
+            - name: FREQ
+              string: 3 weeks
+      - log: Modified FREQ to 3 weeks
+      - click:
+          identifier: us.maappings.manageSubscription.frequencySelection.saveButton
+          wait: 2000
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.Applybutton
+          wait: 2000
+      - log: "Updated the existing Subscription and Saved it successfully!!!"
+      - click:
+          identifier: us.mappings.item.SubsGotitButton
+          wait: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.manageSubscription.mainPageTitle
+
+  #Edit and existing Subscription
+  - name: us.functions.subs.editExistingSubscription
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.Edit
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.maappings.manageSubscription.pageTitle
+            - identifier: us.mappings.subscriptionSetupScreen.closeButton
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.manageSubscription.maxQuantity
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.amend.item.quanity.incrementButton
+                  - identifier: us.mappings.myItems.reorder.subscription.stepper.decrementBtn
+            - sleep:
+                duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.item.quanity.incrementButton
+            enabled:
+              - identifier: us.mappings.amend.item.quanity.incrementButton
+                value: true
+          then:
+            - click:
+                identifier: us.mappings.amend.item.quanity.incrementButton
+          else:
+            - click:
+                identifier: us.mappings.myItems.reorder.subscription.stepper.decrementBtn
+      - click:
+          identifier: us.mappings.ibottaRewards.subscribeSheet.addressBar
+          wait: 1000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.selectAnAddress.header
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.differentAddress
+          then:
+            - click:
+                identifier: us.mappings.orderDetails.editDeliveryAddress.selectAddress.differentAddress
+          else:
+            - click:
+                identifier: us.mappings.buyNow.navigateback
+      - sleep:
+          duration: 2000
+      # - click:
+      #     identifier: us.mappings.item.SubsAddressEdit.continue
+          # wait: 2000
+      ######################################
+      # Need to add the step to update/change the subscription frequency.
+      # https://jira.walmart.com/browse/CEPG-191343
+      ######################################
+      - click:
+          identifier: us.mappings.subscribe.applyButton
+          wait: 2000
+      - log: "Updated the existing Subscription and Saved it successfully!!!"
+      - click:
+          identifier: us.mappings.subscribe.gotItButton
+          wait: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.manageSubscription.mainPageTitle
+
+  #Click Subscribed items 
+  - name: us.functions.subs.selectSubscribedItem
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions.selectFirstSubscribedItem
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.selectFirstSubscribedItem
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popup.okButton
+            - click:
+                identifier: us.mappings.popup.okButton
+      - sleep:
+          duration: 3000
+
+  #Verify  Manage Subscription page 
+  - name: us.functions.subs.verifyManageSubscriptionPage
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions.manageSubPageTitle
+            - identifier: us.mappings.item.SubsManageSubscriptions.currentFrequency
+            - identifier: us.mappings.item.SubsManageSubscriptions.nextDeliveryDate
+            - identifier: us.mappings.item.SubsManageSubscriptions.cardDetails
+            - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+            - identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+            - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemName
+            - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemQuantity
+            - identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeButton
+            - identifier: us.mappings.item.SubsManageSubscriptions.skipButton
+
+  #Accept Sub Term popup  
+  - name: us.functions.subs.subscriptionTermPopup
+    platform: android
+    flow:
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.subscriptionTermPopup
+            - identifier: us.mappings.subscribe.manageSubscription.popUpClose
+            - identifier: us.mappings.subscribe.manageSubscription.termsText
+            - identifier: us.mappings.subscribe.manageSubscription.agreeButton
+            # - identifier: us.mappings.subscribe.manageSubscription.editFrequenyButton
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.agreeButton
+      - sleep:
+          duration: 5000
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.subscribe.manageSubscription.updatedBannerMessage
+
+  #Edit Subscription Frequency 
+  - name: us.functions.subs.editFrequencySelection
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.twoWeekFrequency         
+            - identifier: us.mappings.subscribe.manageSubscription.threeWeekFrequency 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.manageSubscription.twoWeekSelectedFrequency
+          then:
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.threeWeekFrequency 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.manageSubscription.threeWeekSelectedFrequency
+          then:
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.twoWeekFrequency   
+      - sleep:
+          duration: 2000          
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.updateButtonForFrequency
+      - sleep:
+          duration: 4000 
+      - executeFunction:
+          name: us.functions.subs.confirmFrequencySelection
+
+  #Confirm Subscription Frequency 
+  - name: us.functions.subs.confirmFrequencySelection
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopup
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupCloseBTN
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupBackBTN
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupMessage
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupConfirmBTN
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupNoThanksBTN
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupConfirmBTN
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popup.okButton
+            - click:
+                identifier: us.mappings.popup.okButton
+      - sleep:
+          duration: 3000
+
+  #Edit and existing Subscription based on New UI
+  - name: us.functions.subs.editExistingSubscriptionNewUI
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+          wait: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.editPageTitle
+            - identifier: us.mappings.subscribe.manageSubscription.productName
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.subscribe.manageSubscription.maxTextLabel
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscribe.manageSubscription.quantityIncreaseButton
+                  - identifier: us.mappings.subscribe.manageSubscription.quantityDecreaseButton
+            - sleep:
+                duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.item.quanity.incrementButton
+            enabled:
+              - identifier: us.mappings.amend.item.quanity.incrementButton
+                value: true
+          then:
+            - click:
+                identifier: us.mappings.amend.item.quanity.incrementButton
+          else:
+            - click:
+                identifier: us.mappings.myItems.reorder.subscription.stepper.decrementBtn
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.updateSubscriptionButton     
+          wait: 3000
+      - executeFunction:
+          name: us.functions.subs.subscriptionTermPopup
+
+
+# ---- 
+  #Click Subscribed items 
+  - name: us.functions.subs.selectSubscribedItem
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions.selectFirstSubscribedItem
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.selectFirstSubscribedItem
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popup.okButton
+            - click:
+                identifier: us.mappings.popup.okButton
+      - sleep:
+          duration: 3000
+
+  #Verify  Manage Subscription page 
+  - name: us.functions.subs.verifyManageSubscriptionPage
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions.manageSubPageTitle
+            - identifier: us.mappings.item.SubsManageSubscriptions.currentFrequency
+            - identifier: us.mappings.item.SubsManageSubscriptions.nextDeliveryDate
+            - identifier: us.mappings.item.SubsManageSubscriptions.cardDetails
+            - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+            - identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+            - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemName
+            - identifier: us.mappings.item.SubsManageSubscriptions.subscribedItemQuantity
+            - identifier: us.mappings.item.SubsManageSubscriptions.unsubscribeButton
+            - identifier: us.mappings.item.SubsManageSubscriptions.skipButton
+
+  #Accept Sub Term popup  
+  - name: us.functions.subs.subscriptionTermPopup
+    platform: ios
+    flow:
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.subscriptionTermPopup
+            - identifier: us.mappings.subscribe.manageSubscription.popUpClose
+            - identifier: us.mappings.subscribe.manageSubscription.termsText
+            - identifier: us.mappings.subscribe.manageSubscription.agreeButton
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.agreeButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.updatedBannerMessage
+
+  #Edit Subscription Frequency 
+  - name: us.functions.subs.editFrequencySelection
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.editFrequenyButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.twoWeekFrequency         
+            - identifier: us.mappings.subscribe.manageSubscription.threeWeekFrequency 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.manageSubscription.twoWeekSelectedFrequency
+          then:
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.threeWeekFrequency 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.manageSubscription.threeWeekSelectedFrequency
+          then:
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.twoWeekFrequency   
+      - sleep:
+          duration: 2000          
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.updateButtonForFrequency
+      - sleep:
+          duration: 4000 
+      - executeFunction:
+          name: us.functions.subs.confirmFrequencySelection
+
+  #Confirm Subscription Frequency 
+  - name: us.functions.subs.confirmFrequencySelection
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopup
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupCloseBTN
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupBackBTN
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupMessage
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupConfirmBTN
+            - identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupNoThanksBTN
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.confirmFreqChangePopupConfirmBTN
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.popup.technicalError
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popup.okButton
+            - click:
+                identifier: us.mappings.popup.okButton
+      - sleep:
+          duration: 3000
+
+  #Edit and existing Subscription based on New UI
+  - name: us.functions.subs.editExistingSubscriptionNewUI
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.editItemsButton
+          wait: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.manageSubscription.editPageTitle
+            # - identifier: us.mappings.subscribe.manageSubscription.productName
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.subscribe.manageSubscription.maxTextLabel
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscribe.manageSubscription.quantityIncreaseButton
+                  - identifier: us.mappings.subscribe.manageSubscription.quantityDecreaseButton
+            - sleep:
+                duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.item.quanity.incrementButton
+            visible:
+              - identifier: us.mappings.amend.item.quanity.incrementButton
+                value: "true"
+          then:
+            - click:
+                identifier: us.mappings.amend.item.quanity.incrementButton
+          else:
+            - click:
+                identifier: us.mappings.myItems.reorder.subscription.stepper.decrementBtn
+      - click:
+          identifier: us.mappings.subscribe.manageSubscription.updateSubscriptionButton     
+          wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.checkout.verifySubscriptionTermsBottomSheet
+          then:
+            - executeFunction:
+                name: us.functions.checkout.placeOrderAndAcceptSubscriptionTerms 
+      - sleep:
+          duration: 4000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.subscriptionUpdateSuccessMessage 
+          then:
+            - log: "Subscription Quantity updated Successfully"
+          else: 
+            - failTest:
+                message: "FAILURE - ${env} - Subscription Quantity Not updated Successfully"      
+
+# Set up subscription from item page
+  - name: us.function.item.setUpsubscription.addToCart
+    platform: android
+    flow:
+     - click:
+        identifier: us.mappings.search.firstItemFromSearchResult
+     - sleep:
+        duration: 4000
+     - click:
+        identifier: us.mappings.search.subscribeBadge    
+     - verifyIdentifier:
+         present:
+           - identifier: us.mappings.item.setupSubscription
+     - click:
+        identifier: us.mappings.item.setupSubscription
+     - click:
+        identifier: us.mappings.item.setupSubscription.agreeCheckbox
+     - click:
+        identifier: us.mappings.reviewOrder.onepayContinue
+     - click:
+        identifier: us.mappings.item.setupSubscription.getItDeliveredTomorrow 
+     - click:
+        identifier: us.mappings.item.setupSubscription.addSubcriptionToDelivery      
+     - sleep:
+        duration: 4000        
+     - click:
+        identifier: us.mappings.item.closeitemSubscriptionpage      
+
+# Set up subscription from item page
+  - name: us.function.item.setUpsubscription.addToCart
+    platform: ios
+    flow:
+     - click:
+        identifier: us.mappings.search.firstItem
+     - sleep:
+        duration: 4000   
+     - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.subscribeOption
+            - name: direction
+              string: down         
+     - click:
+        identifier: us.mappings.item.subscribeOption    
+     - verifyIdentifier:
+         present:
+           - identifier: us.mappings.item.setupSubscription
+     - click:
+        identifier: us.mappings.item.setupSubscription
+     - click:
+        identifier: us.mappings.item.setupSubscription.agreeCheckbox
+     - click:
+        identifier: us.mappings.subs.addSubscriptionToCartButton
+     - click:
+        identifier: us.mappings.item.setupSubscription.getItDeliveredTomorrow  
+     - click:
+        identifier: us.mappings.item.setupSubscription.addSubcriptionToDelivery  
+     - sleep:
+        duration: 4000            
+     - click:
+        identifier: us.mappings.item.closeItemDetailsPage             
+
+
+  - name: us.functions.subs.addAddressInReviewOrderPage
+    platform: ios
+    flow:    
+      - sleep:
+          duration: 2000
+      - scroll:
+          direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subscribe.manageSubscription.selectAddressBTN
+          then:
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.selectAddressBTN
+            - executeFunction:
+                name: us.functions.reserveSlot.fcormpselectaddressandcontinue 
+            - sleep:
+                duration: 7000
+
+  - name: us.functions.subs.validateNewUISubscriptioTermsPageAndAccept
+    platform: android
+    flow:   
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.checkout.verifySubscriptionTermsBottomSheet # us.mappings.subscribe.manageSubscription.termsAndConditionsPopUP
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.subscribe.manageSubscription.seeFullTermsButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.subscribe.manageSubscription.subscriptionAgreeButton
+            - click:
+                identifier: us.mappings.subscribe.manageSubscription.subscriptionAgreeButton
+            - log: "Agreed Subscriptions Terms & Conditions"
+            - sleep:
+                duration: 5000
+
+  - name: us.functions.subs.cancelNormalSubscriptions
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.item.SubsManageSubscriptions.unsubscribe
+          wait: 1000
+
+
+#giving the reason for cancellation
+      - executeFunction:
+            name: us.functions.subs.selectReasonAndConfirm
+            params:
+                - name: reason
+                  string: This item is often out of stock.                
+      - sleep:
+          duration: 4000
+      - verifyIdentifier:
+          notPresent:
+            - identifier: us.mappings.ibottaRewards.manageSubscriptionPage.productTitle
+      - log: Subscription cancelled
+
+  - name: us.functions.subs.SubscriptionEnableItempage
+    platform: android
+    flow: 
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.earlyAccessBanner
+          then:
+            - click:
+                identifier: us.mappings.item.earlyAccessBannerCloseBTN
+      - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.item.subscribeRadiobutton
+                  - name: direction
+                    string: down                     
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.subscribeRadiobutton
+      - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.item.oneTimeSubscribe
+                  - name: direction
+                    string: down    
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.oneTimeSubscribe  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.subscriptionPriceLabel   
+      - getString:
+          identifier: us.mappings.subs.subscriptionPriceLabel 
+          storeIn: subsPrice 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${subsPrice}
+          getResponse:
+            storeIn: subscriptionPriceAmount
+      - log: Subscribe to auto delivery amount - ${subscriptionPriceAmount}
+      - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.subs.normalPriceLabel
+                  - name: direction
+                    string: down   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.normalPriceLabel 
+      - getString:
+          identifier: us.mappings.subs.normalPriceLabel 
+          storeIn: normalPrice 
+      - executeNode:
+          file: us/e2e-tests/helpers/splitPayment.js
+          args:
+            - value: ${normalPrice}
+          getResponse:
+            storeIn: normalPriceAmount
+      - log: one time purchase amount - ${normalPriceAmount}            
+      - if: 
+          condition:  ${subscriptionPriceAmount} == ${normalPriceAmount}  
+          then:
+            - log:
+                message: "Both prices are same"
+                color: CYAN_BOLD
+      - sleep:
+          duration: 2000                
+      - click: 
+          identifier: us.mappings.item.subscribeRadiobutton
+          wait: 1000
+      - if: 
+          condition: ${subsfrequency} != null
+          then:  
+            - scroll:
+                direction: right 
+                withinIdentifier: us.mappings.myItems.reorder.subscriptionFREQ
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.item.subsriptionFrequency
+                  - name: direction
+                    string: left     
+                  - name: identifierScope
+                    string: us.mappings.myItems.reorder.subscriptionFREQ
+            - click:
+                identifier: us.mappings.item.subsriptionFrequency
+          else:
+            - click:
+                identifier: us.mappings.item.subsriptionFrequency.mostCommon
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPageInWalmart
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subscribe.subscribeButton
+      - click: 
+          identifier: us.mappings.subscribe.subscribeButton
+      - sleep:
+          duration: 4000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.reorder.subscriptionFREQ
+           # - identifier: us.mappings.ibottaRewards.subscriptionItems.quantity1
+      - sleep:
+          duration: 2000

@@ -1,0 +1,140 @@
+general:
+  platform: ios
+  tags: cart-012-ios, ca-function-run, cart_ios
+  testCaseId: cart-012-ios
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+
+  - name: With a guest user and with a user without addres, when adding GM items a msg in top of cart should be shown with a link to add the address. 'To accurately see how fast you can get your order delivered, add a delivery address', Cart page shows for GM/Freight and MP items shipping information (shipping date range in the top of the group as well as the delivery date per item, and the postal code of the shipping address).
+    flow:
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+      - log:
+          message: navigated from onboarding to home
+          color: YELLOW 
+
+    # Add product to cart - GM - 3P
+    # Product Search
+      - executeFunction:
+          name: ca.functions.searchPage.searchItemArray
+          params:
+            - name: items
+              string: ca.test.data.cart012.gmItemArray
+            - name: quantity
+              string: ca.test.data.product_1_qty
+            - name: checkNonPromotionBadges
+              string: true  
+      - log:
+          message: GM product searched
+          color: YELLOW 
+
+      - storeIn:
+          key: gm_item
+          value: ${productTitle}
+
+      - storeIn:
+          key: gm_item_price
+          value: ${productCost}
+          
+      - log:
+          message: Added a GM product to cart as guest user!
+          color: GREEN_BOLD_BRIGHT  
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+      - log:
+          message: Navigated to cart
+          color: YELLOW 
+
+    # validate address message in cart
+      - executeFunction:
+          name: ca.test.functions.cart.validateAddressMessage
+      - log:
+          message: Validated address message in cart
+          color: YELLOW 
+
+      - goBack: true
+
+    # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos
+      - log:
+          message: navigated to sign page
+          color: YELLOW 
+           
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.cart012.emailios
+            - name: password
+              string: ca.test.data.cart012.passwordios 
+      - executeFunction:
+          name: ca.test.functions.accountPage.navigateToShop
+      - log:
+          message: signed in
+          color: YELLOW 
+
+    # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+      - log:
+          message: Navigated to cart
+          color: YELLOW 
+
+    # Validate the shipping information
+      - executeFunction:
+          name: ca.test.functions.cart.validateShippingInformation
+          params:
+            - name: postalCode
+              string: ca.test.data.cart012.postalCodeK1W1K9
+      - log:
+          message: Validated shipping info in cart
+          color: YELLOW    
+
+    #Clear Cart
+      - executeFunction:
+          name:  ca.test.functions.cart.removeCartItems
+      - log:
+          message: cart cleared
+          color: YELLOW 
+
+      - log:
+          message: Cart page shows for GM/Freight and MP items shipping information (shipping date range in the top of the group as well as the delivery date per item, and the postal code of the shipping address)!
+          color: GREEN_BOLD_BRIGHT
+
+#------------------------------------------------------------------------------
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-012-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

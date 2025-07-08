@@ -1,0 +1,104 @@
+general:
+  tags:  C2662641, unified-teflon-e2e, unified-p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2662641
+  metadata:
+    - name: scenarioId
+      string: RT004	
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+ #***************************************************************************************************************
+  # Astro - Create order and move to Delivered status
+ #***************************************************************************************************************          
+
+      - executeFunction:
+          name: unified.us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: action
+              string: FetchAndValidateOrderMovment
+            - name: orderStatus
+              string: Delivered
+            - name: emailId
+              string: us.data.android.lmdreturn.email
+            - name: getOrderId
+              string: true
+
+      - log: Order Succefully created $orderNo
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+    
+          # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: us.data.android.lmdreturn.email
+              - name: password
+                string: us.data.android.lmdreturn.android.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - sleep:
+          duration: 3000 
+      - executeFunction:
+          name: unified.us.functions.returns.goToStartReturn
+      
+      - executeFunction:
+          name: unified.us.functions.returns.verifyStartReturnScreen
+
+      - executeFunction:
+          name: unified.us.functions.returns.itemReturn
+          params:
+            - name: itemIndex
+              string: 1
+            - name: returnReason
+              string: Item damaged
+            - name: returnMethod
+              string: Return from home   
+            - name: addressForPickup
+              string: us.data.android.lmd.addressForPickup    
+            - name: appointmentInstruction
+              string: us.data.android.lmd.appointmentInstruction                                     
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

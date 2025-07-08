@@ -1,0 +1,148 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Nov/1/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION:  This function empties the cart after test execution.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.after-scenario-exclusive.openCartAndDeleteAllProducts
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.ea.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.ea.cart.emptyCart
+      - log:
+          message: "End function: after-scenario-exclusive.openCartAndDeleteAllProducts"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function navigates to account page and performs a quick login.
+  # PARAMS:
+  #   ${userEmail}      [Mandatory]   In case the execution logs out the test user after re-launching the app.
+  #   ${userPassword}   [Mandatory]   In case the execution logs out the test user after re-launching the app.
+  # AUTHOR:
+  #   Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.ea.bottom-menu.tapAccount
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.account.loginButton
+          then:
+            - log:
+                message: "User logged out during Main Scenario..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.ea.account.tapLogin
+            - executeFunction:
+                name: mx.flows.ea.login.loginFromPopup
+                params:
+                  - name: userEmail
+                    string: ${userEmail}
+                  - name: userPassword
+                    string: ${userPassword}
+            - executeFunction:
+                name: mx.functions.ea.confirm-phone-number-popup.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.ea.account.assertPageDisplayed
+          else:
+            - log:
+                message: "User did not log out during Main Scenario..."
+                color: CYAN
+      - log:
+          message: "End function: after-scenario-exclusive.navigateToAccountAndLoginIfNotLogged"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function re-launches the app and navigates to EA Home page.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.after-scenario-exclusive.relaunchAndNavigateToHomePage
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+      - executeFunction:
+          name: mx.functions.login.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.prehome.tapEABanner
+      - executeFunction:
+          name: mx.functions.ea.home.assertPageDisplayed
+      - log:
+          message: "End function: after-scenario-exclusive.relaunchAndNavigateToHomePage"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function verifies and deletes if the expected address was deleted during the main scenario or
+  #                 not by its name in the Addresses page.
+  # PARAMS:       ${addressName}  [Mandatory]   Address to delete if displays in Addresses Page.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.after-scenario-exclusive.deleteAddressByNameIfNotDeleted
+    platform: android
+    flow:
+      - log:
+          message: "Address Name: '${addressName}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.addresses.addressByName # <--PARAM--${addressName}
+          then:
+            - log:
+                message: "Expected address by its name is listed, deleting address..."
+                color: CYAN
+            - executeFunction:
+                name: mx.flows.ea.addresses.deleteAddressByName
+                params:
+                  - name: addressName
+                    string: ${addressName}
+          else:
+            - log:
+                message: "Success: Expected address by its name is not listed."
+                color: CYAN
+      - log:
+          message: "End function: after-scenario-exclusive.deleteAddressByNameIfNotDeleted"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function verifies and deletes if the expected card was deleted during the main scenario or
+  #                 not by its name in the Wallet page.
+  # ${cardLastDigits}   [Mandatory]   Expected last 4 digits for Card (Required).
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.flows.ea.after-scenario-exclusive.deleteCardIfNotDeleted
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.wallet.cardLastDigits #<--PARAM--${cardLastDigits}
+          then:
+            - log:
+                message: "Expected card is displayed, deleting card..."
+                color: CYAN
+            - executeFunction:
+                name: mx.flows.ea.add-and-edit-card-form.deleteCardByLastDigitsFromWallet
+                params:
+                  - name: cardLastDigits
+                    string: ${cardLastDigits} 
+          else:
+            - log:
+                message: "Success: Expected card is not listed."
+                color: CYAN
+      - log:
+          message: "End function: after-scenario-exclusive.deleteCardIfNotDeletedd"
+          color: BLUE
