@@ -1,0 +1,107 @@
+name: Autoheal identifiers (from Hob-shop changes)
+
+on:
+  repository_dispatch:
+    types: [app_change]
+
+permissions:
+  contents: write         # required to push branch
+  pull-requests: write    # required to open PR
+
+jobs:
+  update-identifiers:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout tests repo (this repo)
+        uses: actions/checkout@v4
+
+      - name: Checkout Hob-shop app
+        uses: actions/checkout@v4
+        with:
+          repository: idcmurali1/Hob-shop
+          path: hob-shop
+          # use ref from the payload if present; else main
+          ref: ${{ github.event.client_payload.branch || 'main' }}
+
+      - name: Checkout autoheal framework
+        uses: actions/checkout@v4
+        with:
+          # use the repo that contains your autoheal code
+          repository: idcmurali1/auto-healing-framework
+          path: autoheal_fw
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          if [ -f autoheal_fw/requirements.txt ]; then
+            pip install -r autoheal_fw/requirements.txt
+          else
+            pip install pyyaml requests
+          fi
+
+      - name: Configure git identity for the commit
+        run: |
+          git config user.name  "autoheal-bot"
+          git config user.email "autoheal-bot@users.noreply.github.com"
+
+      - name: Write minimal config.yaml for CLI
+        run: |
+          mkdir -p autoheal_fw/config
+          cat > autoheal_fw/config/config.yaml <<'YAML'
+          llm:
+            provider: rulebased
+            openai_api_key: "${OPENAI_API_KEY:-}"
+            anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
+            model: "gpt-4o"
+            temperature: 0.1
+          vectordb:
+            provider: local
+            api_key: ""
+            index_name: "autoheal-failures"
+            base_path: "./vector_index"
+          vcs:
+            provider: local
+            github_token: "${GITHUB_TOKEN:-}"
+            repo: "idcmurali1/Automation-test-framework-HOB"
+          ci:
+            provider: local
+          artifact_store:
+            path: "./artifacts"
+          policy:
+            file: "./policies/policy.yaml"
+          logging:
+            level: "INFO"
+            patch_ledger: "./patches/ledger.jsonl"
+          YAML
+
+      - name: Run autoheal (extract IDs from app → update mappings → PR)
+        env:
+          # Built-in token is enough to push and open PRs in this repo
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # optional; not required for this run
+          PYTHONPATH: ${{ github.workspace }}/autoheal_fw
+        run: |
+          source venv/bin/activate
+          python -m autoheal.cli update-mappings-from-app \
+            --app_repo "$GITHUB_WORKSPACE/hob-shop" \
+            --tests_repo "$GITHUB_WORKSPACE" \
+            --logical "us.mappings.account.menuSettingsButton" \
+            --branch "autoheal/update-identifiers" \
+            --config "$GITHUB_WORKSPACE/autoheal_fw/config/config.yaml" \
+            --github_token "${GITHUB_TOKEN}"
+
+      - name: Upload artifacts (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoheal-artifacts
+          path: |
+            artifacts/**
+            autoheal_fw/config/config.yaml
