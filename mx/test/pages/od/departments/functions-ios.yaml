@@ -1,0 +1,216 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Javier Ramírez Hernández (vn53vq4)
+#  CREATED: Jan/05/2023
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This function scrolls down until department by name
+  # Param: ${departmentName} [Mandatory]  Name of the department
+  - name: mx.functions.departments.scrollDownToDepartment
+    platform: ios
+    flow: 
+      - log:
+          message: "Scrolls down until find department with name: ${departmentName}"
+          color: CYAN
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.departments.departmentByName
+          position: center
+          scrollLimit: 3         
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function scrolls up until department by name
+  # Param: ${departmentName} [Mandatory]  Name of the department
+  - name: mx.functions.departments.scrollUpToDepartment
+    platform: ios
+    flow: 
+      - log:
+          message: "Scrolls up until find department with name: ${departmentName}"
+          color: CYAN
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.departments.departmentByName
+          position: center
+          scrollLimit: 3
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function selects a department by name
+  # Param: ${departmentName} [Mandatory]  Department Name
+  # Author: ???
+  # Editor: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.departments.selectDepartment
+    platform: ios
+    flow: 
+      - log:
+          message: "Department Name: ${departmentName}"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.departments.departmentByName # <--PARAM--${departmentName}
+          then:
+            - scroll:
+                untilIdentifier: mx.mappings.departments.departmentByName # <--PARAM--${departmentName}
+                position: center
+                direction: down
+                scrollLimit: 3
+                wait: 1000
+      - click:
+          identifier: mx.mappings.departments.departmentByName # <--PARAM--${departmentName}
+      - log:
+          message: "End function: departments.selectDepartment"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function returns the departments count.
+  - name: mx.functions.departments.getDepartmentsCount
+    platform: ios
+    flow: 
+      - log:
+          message: "Getting the departments count...."
+          color: CYAN
+      - numberOfChildElements:
+          identifier: mx.mappings.departments.departmentsContainer
+          storeIn: returnedDepartmentsCount
+      - log:
+          message: There are ${returnedDepartmentsCount} departments.
+          color: CYAN
+    
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions selects a department by position
+  # Param: ${departmentIndex} [Mandatory]  Position of the department
+  # Note: Positioning starts at 1, not 0.
+  - name: mx.functions.departments.selectDepartmentByPosition
+    platform: ios
+    flow: 
+      - log:
+          message: "Selecting a department on position: ${departmentIndex}"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.departments.departmentByIndex
+      - log:
+          message: Department on position ${departmentIndex} selected.
+          color: CYAN
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions gets the department name by position
+  # Param: ${departmentIndex} [Mandatory]  Position of the department
+  # Note: Positioning starts at 1, not 0.
+  - name: mx.functions.departments.getDepartmentNameByPosition
+    platform: ios
+    flow: 
+      - log:
+          message: "Getting the department name from position: ${departmentIndex}"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.departments.departmentNameByIndex
+          attribute: label
+          storeIn: returnedDeparmentName
+      - log:
+          message: "The returned department is: ${returnedDeparmentName}"
+          color: CYAN
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function selects a random department.
+  - name: mx.functions.departments.selectRandomDepartment
+    platform: ios
+    flow: 
+      - log:
+          message: Generatting a random position...
+          color: CYAN
+      - loop:
+            begin: 0
+            end: 20      
+            mode: increment
+            flow:
+            - executeNode:
+                  file: mx/test/helpers/utils/getRandomInt.js
+                  args:
+                    - value: 0
+                    - value: 14
+                  getResponse:
+                    storeIn: departmentIndex
+            - log:
+                message: "Position got: ${departmentIndex}"
+                color: CYAN
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.departments.departmentByIndex
+                then:
+                  - click:
+                      identifier: mx.mappings.departments.departmentByIndex
+                  - log:
+                      message: Department on position ${departmentIndex} selected!
+                      color: CYAN
+                  - break: true
+                else:
+                    - log:
+                        message: “Department at position ${departmentIndex}… was not found, getting a new position”     
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts departments by name is displayed
+  # Param: ${departmentName} [Mandatory]  Name of the department
+  - name: mx.functions.departments.assertDepartmentDisplayed
+    platform: ios
+    flow: 
+      - log:
+          message: Validating that department ${departmentName} is displayed...
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.departments.departmentByName
+      - log:
+          message: The department ${departmentName} displayed successfully!
+          color: CYAN
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts departments by name is not displayed
+  # Param: ${departmentName} [Mandatory]  Name of the department
+  - name: mx.functions.departments.assertDepartmentNotDisplayed
+    platform: ios
+    flow: 
+      - log:
+          message: Validating that department ${departmentName} is not displayed...
+          color: CYAN
+      - verifyIdentifier:
+          notPresent:
+            - identifier: mx.mappings.departments.departmentByName
+      - log:
+          message: The department ${departmentName} is not displayed!
+          color: CYAN    
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts departments count
+  # Param: ${expectedDepartmentCount} [Mandatory]  Deparments expected count
+  - name: mx.functions.departments.assertDepartmentsCount
+    platform: ios
+    flow: 
+      - log:
+          message: Validating that department count is equals than the expected...
+          color: CYAN
+      - numberOfChildElements:
+          identifier: mx.mappings.departments.departmentsContainer
+          storeIn: returnedDepartmentsCount
+      - log:
+          message: The returned department count is ${returnedDepartmentsCount}, now validating with the expected count...
+          color: CYAN
+      - verifyValue: 
+          identifier: ${returnedDepartmentsCount}
+          equals: ${expectedDepartmentCount} 
+      - log:
+          message: The department count matched!
+          color: CYAN   

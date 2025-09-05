@@ -1,0 +1,203 @@
+general:
+  platform: ios
+  tags: C2644982 # (Deprecated as part of Regression Optimization) integratedsignupflow, us-golden-flows-wplus, plus_e2e, P1, C2644982, p1-wplus-teflon-e2e
+  testCaseId: C2644982
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 185
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+      - log: Start Main
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow079.createAccountPayload
+
+      # Workaround to correctly restart app with Teflon settings
+      - executeFunction:
+          name: us.functions.utils.restartapp
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: $password
+
+      # navigating to home screen
+      - executeFunction:
+          name: us.functions.global.navigation.goToHomeFromTabBar
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.loadBookingSlotScreen
+          params:
+            - name: page
+              string: home
+            - name: tab
+              string: delivery
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true
+
+      - executeFunction:
+          name: us.functions.wplus.reserveSlot.optInOrOutWPlusMembership
+          params:
+            - name: wplusUser
+              string: optIn
+
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: storeId
+              string: 32144
+            - name: itemType
+              string: FC_DELIVERY
+            - name: itemList
+              string: us.data.fclessThan35.itemLists
+
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: email
+      #         string: ${customerEmail}
+      #       - name: storeId
+      #         string: 32144
+      #       - name: itemType
+      #         string: FC_DELIVERY
+      #       - name: itemFilter #itemList
+      #         string: lessThan35
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.wplus.cart.chargeWaiveOffValidation
+          params:
+            - name: cartType
+              string: fcOnly
+
+      # proceeding to checkout/Review order page
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutwithOutClosingW+BottomSheet
+
+      - executeFunction:
+          name: us.functions.wplus.reviewOrder.splash.verifyWalmartPlusPlans
+          params:
+            - name: tenure
+              string: Monthly
+
+      - executeFunction:
+          name: us.functions.wplus.verifyOptInDetails.reviewOrderScreen
+
+      # Verify review order page
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.wplus.reviewOrder.chargeWaiveOffValidation
+          params:
+            - name: basketType
+              string: fcOnly
+
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvBeforePlaceOrder
+          params:
+            - name: cvv
+              string: us.data.flow005.payment.cvv
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyPaymentCardsDisplay
+          params:
+            - name: verifyEBT
+              string: notExists
+            - name: verifyGC
+              string: notexists
+            - name: verifyCC
+              string: exists
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: us.functions.wplus.verifyThankYouPage
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

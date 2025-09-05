@@ -1,0 +1,568 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validate add address panel text for new user in cart page
+  # No param 
+  - name: functions.cartPage.validateAddAddressPanelText
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+            - identifier: cartPage.addAddressPanelText
+              contains: data.paymentMethod.addAddressText
+      - log:
+          message: "End function: cartPage.validateAddAddressPanelText"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validate shipping charge in cart page
+  # No params
+  - name: functions.cartPage.validateShippingCharge
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: cartPage.shippingChargeText
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.shippingChargeText
+            - identifier: cartPage.shippingChargeValue
+      - getString:
+          identifier: cartPage.shippingChargeValue
+          attribute: text
+          storeIn: productPrice
+      - executeNode:
+          file: wcp/test/helpers/Price/cleanPrice.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: cleanProductPrice
+      - storeIn:
+          key: shippingChargeAmountCartPage
+          value: ${cleanProductPrice} 
+      - log:
+          message: Shipping charge is ${shippingChargeAmountCartPage}
+      - if:
+          condition: ${shippingChargeAmountCartPage} > 0 && ${shippingChargeAmountCartPage} != 'Free'
+          then:
+            - log:
+                message: Shipping charge is present
+      - log:
+          message: "End function: cartPage.validateShippingCharge"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+# Description: To validate pickup address 
+  - name: functions.cartPage.fulfillmentAddress 
+    platform: android
+    flow:
+        - getString:
+            identifier: cartPage.fulfillmentAddress
+            attribute: text
+            storeIn: fulfillmentAddressText
+        - log: "Address dispalyed in cart - ${fulfillmentAddressText}"
+        - log:
+            message: "End function: cartPage.fulfillmentAddress"
+            color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+  # Description: This function validates delivery address on cart page.
+  # Params:      ${streetAddress}
+  # Works for:   [ MX [✓]   MX-Bodega [✓]   US [__] ]
+  - name: functions.cartPage.verifyDeliveryAddress
+    platform: android
+    flow:
+      - log:
+          message: Expected Delivery address - "${streetAddress}".
+          color: CYAN
+      - try:
+          flow:
+            - verifyIdentifier:
+                text:
+                  - identifier: cartPage.fulfillmentAddress
+                    contains: ${streetAddress}
+          catch:
+            flow:
+              - getString:
+                  identifier: cartPage.fulfillmentAddress
+                  attribute: text
+                  storeIn: returnedAddress
+              - failTest:
+                  message: Returned Delivery address - "${returnedAddress}".
+      - log:
+          message: "End function: cartPage.verifyDeliveryAddress"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+ # Description: Validate if the fufillment type is contains expected text
+  - name: function.cartPage.validateFufillmentType
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+            - identifier: cartPage.fulfillmentMethod
+              contains: ${expectedFulfillmentType}
+      - log:
+          message: "End function: cartPage.validateFufillmentType" 
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This function generates a JSON object containing all the elements in the money box for the cart page.
+  #     Note: The function currently retrieves the following elements:
+  #           * Subtotal/Old subtotal
+  #           * Savings
+  #           * New Subtotal
+  #           * Tax
+  #           * 3P seller fee
+  #           * Pickup and delivery fee
+  #           * Estimated total
+  #     TODO: This function may require validation to handle fees other than those mentioned above, as it may produce 
+  #           unexpected results if the money box contains additional or different fees.
+  # No params
+  - name: functions.cartPage.getMoneyBoxData
+    platform: android
+    flow:
+      - numberOfChildElements:
+          identifier: cartPage.moneyBox.feeSummaryContainer
+          storeIn: moneyBoxLineItemCount
+          filterBy: cartPage.moneyBox.feeFilterLocator
+      - loop:
+          begin: 0
+          end: ${moneyBoxLineItemCount}
+          storeIndex: lineItem
+          mode: increment
+          flow:
+            - arithmetic:
+                expression: ${lineItem} + 1
+                storeIn: indexCount
+            - log: ${indexCount}
+            - getString:
+                identifier: cartPage.moneyBox.feeSummary.feeLabel
+                storeIn: feeLabel
+                attribute: text
+            - getString:
+                identifier: cartPage.moneyBox.feeSummary.feeValue
+                storeIn: feeValue
+                attribute: text
+            - executeNode:
+                file: wcp/test/helpers/checkoutPage/getMoneyBox.js
+                args:
+                  - value: ${feeLabel}
+                  - value: ${feeValue}
+                  - value: ${moneyBoxValueArray}
+                getResponse:
+                  storeIn: moneyBoxValueArray
+      - if:
+          identifier:
+            present:
+              - identifier: cartPage.moneyBox.feeSummary.oldSubTotal
+          then:
+            - executeFunction:
+                name: function.moneyBox.savingsCalculation
+      - log:
+          message: 'Money box data in JSON format: ${moneyBoxValueArray}'
+          color: CYAN
+      - log:
+          message: "End functions: cartPage.getMoneyBoxData"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------
+
+  # Descriotion: This function clicks on Switch button to either change between Delivery and Pick Up or between 
+  # Unscheduled and Scheduled Pick Up Or Delivery in the Cart Page
+
+  - name: functions.cartPage.tapOnSwitchButton
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: cartPage.fulfilment.switchingText
+          then: 
+            - click:
+                identifier: cartPage.switchButton
+            - sleep:
+                duration: 5000    
+      - log:
+          message: "Endfunction: cartPage.tapOnSwitchButton"
+
+    #--------------------------------------------------------------------------------------------------------------------
+  # Description: Validate cart quantity 
+  # No params
+  - name: functions.cartPage.validateCartIconSubTotal
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+            - identifier: homePage.cartTotalPrice
+              contains: ${subTotalCart}
+      - log:
+          message: "End functions: cartPage.validateCartIconSubTotal"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Validate cart quantity 
+  # Param:       ${storeRadioIndex}  Radio btn index
+  #              ${zipCode}          Zip code
+  - name: functions.cartPage.reserveTime.updateAndVerifyStore
+    platform: android
+    flow:
+      - getString:
+          identifier: cartPage.reserveTimePage.storeName
+          storeIn: storeName
+          attribute: text
+      - log: 
+          message: 'Current pickup store: ${storeName}'
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.cartPage.reserveTime.tapchangeStoreLink
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: functions.cartPage.reserveTime.selectStore.enterZipCodeToSearchStore
+          params:
+            - name: zipCode
+              string: "11220"
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.reserveTime.storeSelection.storeSelectorRecyclerView
+      - log: 
+          message: "Store loaded sucessfully selecting store ${storeRadioIndex} from the store selection page."
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.cartPage.reserveTime.storeSelection.selectStoreRadioBtn
+          params:
+            - name: storeRadioIndex
+              string: ${storeRadioIndex}
+      - getString:
+          identifier: cartPage.reserveTime.storeSelection.storeNameBasedOnRadioBtn  #<---- ${storeRadioIndex}
+          attribute: text
+          storeIn: selectedStoreName
+      - executeFunction:
+          name: functions.cartPage.tapSavePickupStore
+      - if:
+          condition: ${storeName} != ${selectedStoreName}
+          then:
+            - log: 
+                message: "[✓] Store is successfully updated."
+                color: GREEN_BOLD
+          else:
+            - failTest:    
+                message: "[X] Failed to update the store."
+      - log:
+          message: "End functions: cartPage.reserveTime.updateAndVerifyStore"
+          color: BLUE
+
+    #--------------------------------------------------------------------------------------------------------------------
+  # Descriotion: This function validate the slot time and fulfilment details in reserve time page and cart.
+  # Params:      ${platform}   Platform the execution is happening.
+  - name: functions.cartPage.reserveTime.validateFulfillmentTime
+    platform: android
+    flow:
+      - loop:
+          begin: 0
+          end: 3
+          mode: increment
+          storeIndex: slotIndex
+          flow:
+            - arithmetic:
+                expression: ${slotIndex} + 1;
+                storeIn: locatorIndex
+            - executeFunction:
+                name: functions.reserveATime.tapBookSlotDateBtn
+                params:
+                  - name: index
+                    string: ${locatorIndex}
+            - click:
+                identifier: cartPage.reserveTime.firstSlotRadioBtn
+            - getString:
+                identifier: cartPage.reserveTime.firstSlotRadioBtnText
+                attribute: text
+                storeIn: timeSlot
+            - executeNode:
+                file: wcp/test/helpers/CartPage/slotReservationDetails
+                args:
+                  - value: ${timeSlot}
+                  - value: ${slotIndex}
+                  - value: ${platform}
+                getValue:
+                  - key: day
+                    storeIn: day
+                  - key: date
+                    storeIn: date
+                  - key: cartSlotDetails
+                    storeIn: cartSlotDetails
+            - log: 
+                message: "Day: ${day} | Data: ${date} | Fulfillment Time : ${cartSlotDetails}"
+                color: GREEN_BOLD
+            - verifyIdentifier:
+                text:
+                  - identifier: cartPage.reserveTime.carouselDayText #<-----${locatorIndex}
+                    contains: ${day}
+            - verifyIdentifier:
+                text:
+                  - identifier: cartPage.reserveTime.carouselDateText #<-----${locatorIndex}
+                    contains: ${date}
+            - executeFunction:
+                name: functions.reserveATime.tapReserveBtn
+            - if:
+                identifier:
+                  present:
+                    - identifier: cartPage.reserveTime.errorTitle
+                then:
+                  - click:
+                      identifier: cartPage.reserveTime.retryButton
+                else:
+                  - break: true
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.fulfillmentTime #cartPage.fulfillmentTimeText #<----${cartSlotDetails}
+      - log:
+          message: "End functions: cartPage.reserveTime.validateFulfillmentTime"
+          color: BLUE
+  
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions validates below minimum fee
+  # Params expectedbelowOrderMinFee
+  - name: functions.cartPage.validateBelowMinimumFee
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.POSSection.belowOrderMinFeeLabel
+          text:
+            - identifier: cartPage.POSSection.belowOrderMinFeeValue
+              contains: ${expectedbelowOrderMinFee}
+
+      - log:
+          message: "End functions: cartPage.validateBelowMinimumFee"
+          color: BLUE
+
+ #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates the price of an specific product in cart.
+  # Params: 
+  #     ${productName} [Mandatory] Product to validate in cart.
+  #     ${expectedUnitPrice} [Mandatory] Unit price of the product. 
+  #     ${expectedCurrentPrice} [Mandatory] Current price of the product.
+  #     ${isProductDiscounted} [Optional] When true, adds an aditional validation for a discounted product. 
+  #     ${expectedOriginalPrice} [Optional] Original price of the product (before savings).
+  #     ${expectedPriceSavings} [Optional] Applied savings to the product. 
+
+  - name: functions.cartPage.assertProductPriceDetails
+    platform: android
+    flow:
+      - executeFunction:
+          name: functions.cartPage.assertUnitPrice
+          params:
+            - name: productName
+              string: ${productName}
+            - name: expectedUnitPrice
+              string: ${expectedUnitPrice}
+      - if:
+          identifier:
+            text:
+              - identifier: cartPage.currentPrice.byProductName #<- ${productName}
+                contains: ${expectedCurrentPrice}
+          then:
+            - log:
+                message: "[✓] Current product price is the expected one"
+                color: GREEN_BOLD
+            - if:
+                condition: ${isProductDiscounted} 
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: cartPage.originalPrice.byProductName
+                          contains: ${expectedOriginalPrice}
+                  - log:
+                        message: "[✓] Original price is the expected one"
+                        color: GREEN_BOLD
+                  - verifyIdentifier:
+                      text:
+                        - identifier: cartPage.priceSavings.byProductName
+                          contains: ${expectedPriceSavings}
+                  - log:
+                        message: "[✓] Price savings are the expected ones"
+                        color: GREEN_BOLD     
+          else:
+            - failTest:
+                message: "[X] There was a problem while trying to obtain the product price details"
+      - log:
+          message: "End function: cartPage.assertProductPriceDetails"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates the price of an specific product in cart.
+  # Params: 
+  #     ${productName} [Mandatory] Product to validate in cart.
+  #     ${expectedUnitPrice} [Mandatory] Current price of the product.
+
+  - name: functions.cartPage.assertUnitPrice
+    platform: android
+    flow:
+      - if:
+          identifier:
+            text:
+              - identifier: cartPage.unitPrice.byProductName #<- ${productName}
+                contains: data.itemMeasures.pieces
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: cartPage.unitPrice.byProductName #<- ${productName}
+                    contains: "${expectedUnitPrice}"
+            - log:
+                message: "[✓] Expected unit price for eaches product is correct"
+                color: GREEN_BOLD
+          else:
+            - if:
+                identifier:
+                  text:
+                    - identifier: cartPage.unitPrice.byProductName #<- ${productName}
+                      contains: "data.itemMeasures.weight" #TODO - Modify expected text for weightable products
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: cartPage.unitPrice.byProductName #<- ${productName}
+                          contains: "${expectedUnitPrice}"
+                  - log:
+                        message: "[✓] Expected unit price for weightable product is correct"
+                        color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "[X] There was a problem while trying to obtain the product unit price and measure"
+      - log:
+          message: "End function: cartPage.assertUnitPrice"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Verify bank promotion is displayed
+  # Params:   ${expectedBankPromotion}      [Required]  Expected bank promotion
+  - name: functions.cartPage.assertBankPromotionIsDisplayed
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+            - identifier: cartPage.financialBankPromotion
+              contains: ${expectedBankPromotion}
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.financialBankPromotionNavigation
+      - log:
+          message: "✓ Bank promotion is displayed in cart. Bank promo: ${expectedBankPromotion}"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: cartPage.assertBankPromotionIsDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function will validate if the alert text is present for unavailable item
+  # Params:   ${ItemCount}      [Mandatory]  Item count
+  - name: functions.cartPage.validatOOSAlertText
+    platform: android
+    flow:
+      - scroll:
+          direction: up
+          untilIdentifier: cartPage.addAddressPanel           
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.addAddressPanel
+            - identifier: cartPage.addAddressPanelText
+      - verifyIdentifier:
+          text:
+            - identifier: cartPage.addAddressPanelText
+              contains: ${ItemCount}
+      - log:
+          message: "End function: cartPage.oosAlertText.isPageDisplayed"
+                  
+  #--------------------------------------------------------------------------------------------------------------------
+ # Description: This functions validate range of EDD
+  # NoParam 
+  - name: functions.cartPage.validateEDDRange
+    platform: android
+    flow:
+      - getString:
+          identifier: cartPage.arrivesByDate.item1
+          attribute: text
+          storeIn: EDD1
+      - log:
+          message: "EDD of first item is ${EDD1}"
+      - getString:
+          identifier: cartPage.arrivesByDate.item2
+          attribute: text
+          storeIn: EDD2
+      - log:
+          message: "EDD of second item is ${EDD2}"             
+      - log:
+          message: "End function: cartPage.validateEDDRange"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------                
+
+  - name: functions.cartPage.deliveryFulfillmentIcon
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: cartPage.deliveryFulfillmentIcon
+      - log:
+          message: "End functions: cartPage.deliveryFulfillmentIcon"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function collapses the Basket Switching Section if it's expanded.
+  # NO PARAMS
+  - name: functions.cartPage.collapseBasketSwitchingSectionIfExpanded
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: cartPage.basketSwitchingSection.collapseButton
+            timeout: 3000
+          then:
+            - click:
+                identifier: cartPage.basketSwitchingSection.collapseButton
+      - log:
+          message: "End functions: cartPage.collapseBasketSwitchingSectionIfExpanded"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------                                
+  # Description: This function will validates the quantity added in cart
+  # ${productName} [Mandatory] Product to validate in cart.
+  # ${productQty} [Mandatory] Product to validate in cart.
+  - name: functions.cartPage.validateQuantity 
+    flow:          
+      - verifyIdentifier:
+            text:
+            - identifier: cartPage.itemQuantityValidation  # Mappings need to be updated.
+              contains: "${productQty}"          
+      - log:
+          message: "End function: cartPage.validateQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Navigate to bank promotion bottom sheet
+
+  - name: functions.cartPage.navigateToBankPromationBottomSheet
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: cartPage.financialBankPromotion
+          then:
+              - click:
+                  identifier: cartPage.financialBankPromotionNavigation
+      - log:
+          message: "End function: cartPage.navigateToBankPromationBottomSheet"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------

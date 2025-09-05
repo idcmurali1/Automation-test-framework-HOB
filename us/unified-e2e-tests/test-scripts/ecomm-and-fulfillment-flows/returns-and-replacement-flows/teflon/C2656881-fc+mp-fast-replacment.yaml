@@ -1,0 +1,112 @@
+general:
+  tags: C2656881, unified-p1-ecomm-teflon-e2e, unified-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2656881
+  metadata:
+    - name: scenarioId
+      string: RT009
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+
+ #***************************************************************************************************************
+  # Astro - Create order and move to Delivered status
+ #***************************************************************************************************************          
+
+      - executeFunction:
+          name: unified.us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: action
+              string: FetchAndValidateOrderMovment
+            - name: orderStatus
+              string: Delivered
+            - name: emailId
+              string: us.data.flow037a.email
+            - name: getOrderId
+              string: true
+      - log: Order Succefully created $orderNo
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.flow037a.email
+            - name: password
+              string: us.data.flow037a.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.returns.goToStartReturn
+ 
+      # Verify return screen display      
+      - executeFunction:
+          name: unified.us.functions.returns.verifyStartReturnScreen
+
+      # Item selection for replacement
+      - executeFunction:
+          name: unified.us.functions.returns.itemReturn
+          params:
+            - name: itemIndex
+              string: 1
+            - name: returnReason
+              string: Item arrived damaged
+            - name: returnType
+              string: Replacement
+            - name: replacementType
+              string: fast
+            - name: returnMethod
+              string: Return by mail
+            - name: itemType
+              string: fc
+
+      - sleep:
+          duration : 120000
+          
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo        
+
+      - executeFunction:
+          name: unified.us.functions.returns.returnODPValidation
+
+      # storing testrun result as passed
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

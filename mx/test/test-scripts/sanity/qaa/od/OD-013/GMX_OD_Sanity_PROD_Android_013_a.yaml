@@ -1,0 +1,1027 @@
+#======================================================================================================================
+#    AUTHOR: Sergio Fernandez (vn0t1qt)
+#   CREATED: Jun/13/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-sanity-production-android-013a, qaa-od-sanity-production-android
+  debug: true
+  testCaseId: MXMOB-1360
+
+scenarios:
+
+#######################################################################################################################
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MXMOB-QAA%3A+Tracking%3A+Test+Suite%3A+GlassMX+-+OD+-+Sanity+-+Production+-+Android
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MXMOB-1360
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MXMOB-1945
+#
+#  Flags Used:
+#    N/A
+#
+#######################################################################################################################
+
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+
+      - storeIn:
+          key: varTC_SUCCESSFUL_EXECUTION
+          value: false
+
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_OD_Sanity_PROD_Android_013_a
+
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: 'STEP (Before 1): Relaunch App...'
+            - name: squadNames
+              string: QAA
+
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+
+      - log: "BEFORE SCENARIO END"
+
+#######################################################################################################################
+
+  - name: Main
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 1-2: Navigate through Onboarding and select OD Banner...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1-2: Navigate through Onboarding and select OD Banner..."
+            - name: squadNames
+              string: CORE | QAA
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: banner
+              string: mx.data.qaa.sanity.prod.od013.banner
+            - name: zipCode
+              string: mx.data.qaa.sanity.prod.od013.zipCode
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 3: Login from Profile...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3: Login from Profile..."
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.sanity.prod.od013.user1.email
+            - name: userPassword
+              string: mx.data.qaa.sanity.prod.od013.user1.password
+            - name: userName
+              string: mx.data.qaa.sanity.prod.od013.user1.name
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 4: Change Store from Home (Supplier Store)...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4: Change Store from Home (Supplier Store)..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+      - executeFunction:
+          name: mx.flows.od.delivery-method-selector.changeCurrentStore
+          params:
+            - name: zipCode
+              string: mx.data.qaa.sanity.prod.od013.supplierStore.zipCode
+            - name: storeName
+              string: mx.data.qaa.sanity.prod.od013.supplierStore.name
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 5-7: Add Pieces Product to Cart from PLP...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5-7: Add Pieces Product to Cart from PLP..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapDepartments
+      - executeFunction:
+          name: mx.flows.od.taxonomy.openDepartment
+          params:
+            - name: L1
+              string: mx.data.qaa.sanity.prod.od013.product1.department.l1
+            - name: L2
+              string: mx.data.qaa.sanity.prod.od013.product1.department.l2
+            - name: L3
+              string: mx.data.qaa.sanity.prod.od013.product1.department.l3
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInPLP
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: direction
+              string: "down"
+      - executeFunction:
+          name: mx.functions.department-l3.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+      - storeIn:
+          key: varTC_product1_price # --> Price of Product 1 (Pieces) (PLP)
+          value: ${returnedPrice}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 8: Validate the Max Quantity Limit for Pieces Products (in PLP)...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 8: Validate the Max Quantity Limit for Pieces Products (in PLP)..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.flows.od.taxonomy.increaseProductToMaxQuantity
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: productType
+              string: mx.data.qaa.sanity.prod.od013.product1.type
+      - storeIn:
+          key: varTC_product1_maxQuantity # --> Max Quantity of Product 1 (Pieces) (PLP)
+          value: ${returnedMaxQuantity}
+      - executeFunction:
+          name: mx.functions.department-l3.assertProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: expectedQuantity
+              string: ${varTC_product1_maxQuantity}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 9: Open Cart...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: Open Cart..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 10: Validate the Max Quantity added for the Product cannot be increased...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: Validate the Max Quantity added for the Product cannot be increased..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.increaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: increments
+              string: '5'
+            - name: direction
+              string: down
+            - name: ignoreClickException
+              string: 'true'
+      - executeFunction:
+          name: mx.functions.cart.assertProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: expectedQuantity
+              string: ${varTC_product1_maxQuantity}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 11: Validate the information of the Pieces Product...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11: Validate the information of the Pieces Product..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_product1_price}
+            - value: ${varTC_product1_maxQuantity}
+            - value: false
+          getResponse:
+            storeIn: varTC_product1_subtotal # --> Subtotal of Product 1 (Pieces)
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${varTC_product1_maxQuantity}
+            - name: expectedWeightQuantity
+              string: ${varTC_product1_maxQuantity}
+            - name: expectedUnitPrice
+              string: ${varTC_product1_price}
+            - name: expectedSubtotal
+              string: ${varTC_product1_subtotal}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 12: Validate the Cart Totals...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12: Validate the Cart Totals..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - arithmetic:
+          expression: ${varTC_product1_maxQuantity}
+          storeIn: varTC_cart_productsCount # --> Cart Products Count
+      - executeFunction:
+          name: mx.functions.cart.assertProductsCountInSubtotalLabel
+          params:
+            - name: expectedProductsCount
+              string: ${varTC_cart_productsCount}
+
+      - arithmetic:
+          expression: ${varTC_product1_subtotal}
+          storeIn: varTC_cart_subtotal # --> Cart Subtotal
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${varTC_cart_subtotal}
+
+      - executeFunction:
+          name: mx.functions.cart.getTotalDiscount
+      - storeIn:
+          key: varTC_cart_discounts # --> Cart Discounts
+          value: ${returnedCartDiscount}
+
+      - executeFunction:
+          name: mx.functions.cart.getDeliveryFee
+      - storeIn:
+          key: varTC_cart_deliveryFee # --> Cart Delivery Fee
+          value: ${returnedDeliveryFee}
+
+      - arithmetic:
+          expression: ${varTC_cart_subtotal} + ${varTC_cart_discounts} + ${varTC_cart_deliveryFee}
+          storeIn: varTC_cart_estimatedTotal # --> Cart Estimated Total
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${varTC_cart_estimatedTotal}
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromBottom
+          params:
+            - name: expectedEstimatedTotal
+              string: ${varTC_cart_estimatedTotal}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # ADDITIONAL STEP (12.1): Erase Cart...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "ADDITIONAL STEP (12.1): Erase Cart..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+
+      #----------------------------------------------------------------------------------------------------------------
+      # ADDITIONAL STEP (12.2): Re-add the same Product with the minimum quantity...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "ADDITIONAL STEP (12.2): Re-add the same Product with the minimum quantity..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapDepartments
+      - executeFunction:
+          name: mx.flows.od.taxonomy.openDepartment
+          params:
+            - name: L1
+              string: mx.data.qaa.sanity.prod.od013.product1.department.l1
+            - name: L2
+              string: mx.data.qaa.sanity.prod.od013.product1.department.l2
+            - name: L3
+              string: mx.data.qaa.sanity.prod.od013.product1.department.l3
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductToCartByNameInPLP
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: direction
+              string: "down"
+      - executeNode:
+          file: mx/test/helpers/utils/calculateProductSubtotal.js
+          args:
+            - value: ${varTC_product1_price}
+            - value: 1
+            - value: false
+          getResponse:
+            storeIn: varTC_product1_subtotal # --> Subtotal of Product 1 (Pieces)
+
+      #----------------------------------------------------------------------------------------------------------------
+      # ADDITIONAL STEP (12.3): Reopen Cart and recalculate Totals...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "ADDITIONAL STEP (12.3): Reopen Cart and recalculate Totals..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+
+      # Recalculate Cart Subtotal...
+      - arithmetic:
+          expression: ${varTC_product1_subtotal}
+          storeIn: varTC_cart_subtotal # --> Cart Subtotal
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${varTC_cart_subtotal}
+
+      # Get Cart Discounts...
+      - executeFunction:
+          name: mx.functions.cart.getTotalDiscount
+      - storeIn:
+          key: varTC_cart_discounts # --> Cart Discounts
+          value: ${returnedCartDiscount}
+
+      # Get Cart Delivery Fee..
+      - executeFunction:
+          name: mx.functions.cart.getDeliveryFee
+      - storeIn:
+          key: varTC_cart_deliveryFee # --> Cart Delivery Fee
+          value: ${returnedDeliveryFee}
+
+      # Recalculate Cart Estimated Total...
+      - arithmetic:
+          expression: ${varTC_cart_subtotal} + ${varTC_cart_discounts} + ${varTC_cart_deliveryFee}
+          storeIn: varTC_cart_estimatedTotal # --> Cart Estimated Total
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 13: Reserve a Home Delivery Slot...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 13: Reserve a Home Delivery Slot..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.flows.od.cart.reserveSlot
+          params:
+            - name: deliveryMethod
+              string: HomeDelivery
+            - name: deliveryPlaceAction
+              string: Change
+            - name: addressName
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.addressName
+            - name: slotDate
+              string: lastAvailable
+            - name: slotTime
+              string: lastAvailable
+      - storeIn:
+          key: varTC_selectedDaySlot
+          value: ${returnedSelectedDaySlot}
+      - storeIn:
+          key: varTC_selectedTimeSlot
+          value: ${returnedSelectedTimeSlot}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 14: Continue purchase...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 14: Continue purchase..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 15: Add a Product from Missing Something Page if page is displayed, and continue to Checkout...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 15: Add a Product from Missing Something Page if page is displayed, and continue to Checkout..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - storeIn:
+          key: varTC_extraProductAdded # --> Extra Product Added?
+          value: false
+
+      - executeFunction:
+          name: mx.functions.missing-something.isPageDisplayed
+      - if:
+          condition: ${returnedIsPageDisplayed} == true
+          then:
+            - executeFunction:
+                name: mx.functions.missing-something.addFirstAvailableProductIfAny
+            - storeIn:
+                key: varTC_extraProductAdded # --> Extra Product Added
+                value: ${returnedProductAddedFlag}
+            - if:
+                condition: ${varTC_extraProductAdded}
+                then:
+                  - storeIn:
+                      key: varTC_extraProduct_productName
+                      value: ${returnedProductName} # --> Extra Product Name
+                  - storeIn:
+                      key: varTC_extraProduct_type
+                      value: ${returnedProductType} # --> Extra Product Type
+                  - storeIn:
+                      key: varTC_extraProduct_price
+                      value: ${returnedProductUnitPrice} # --> Extra Product Price
+                  - storeIn:
+                      key: varTC_extraProduct_quantityAsPieces
+                      value: ${returnedProductQuantityAsPieces} # --> Extra Product Quantity as Pieces
+                  - storeIn:
+                      key: varTC_extraProduct_quantityAsWeight
+                      value: ${returnedProductQuantityAsWeight} # --> Extra Product Quantity as Weight
+                  - if:
+                      condition: ${varTC_extraProduct_type} == 'Pieces'
+                      then:
+                        - executeNode:
+                            file: mx/test/helpers/utils/calculateProductSubtotal.js
+                            args:
+                              - value: ${varTC_extraProduct_price}
+                              - value: ${varTC_extraProduct_quantityAsPieces}
+                              - value: false
+                            getResponse:
+                              storeIn: varTC_extraProduct_subtotal # --> Extra Product Subtotal
+                      else:
+                        - executeNode:
+                            file: mx/test/helpers/utils/calculateProductSubtotal.js
+                            args:
+                              - value: ${varTC_extraProduct_price}
+                              - value: ${returnedProductQuantityAsWeight}
+                              - value: true
+                            getResponse:
+                              storeIn: varTC_extraProduct_subtotal # --> Extra Product Subtotal
+                  - arithmetic:
+                      expression: ${varTC_cart_subtotal} + ${varTC_extraProduct_subtotal}
+                      storeIn: varTC_cart_subtotal
+                  - arithmetic:
+                      expression: ${varTC_cart_estimatedTotal} + ${varTC_extraProduct_subtotal}
+                      storeIn: varTC_cart_estimatedTotal
+            - executeFunction:
+                name: mx.functions.missing-something.tapContinue
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 16: Validate Delivery Information in Checkout...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 16: Validate Delivery Information in Checkout..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+
+      - storeIn:
+          key: varTC_checkout_expectedProductsCount
+          value: 1
+      - if:
+          condition: ${varTC_extraProductAdded}
+          then:
+            - storeIn:
+                key: varTC_checkout_expectedProductsCount
+                value: 2
+      - storeIn:
+          key: varTC_checkout_subtotal
+          value: ${varTC_cart_subtotal}
+
+      - executeFunction:
+          name: mx.flows.od.review-order.assertDeliveryInformation
+          params:
+            - name: deliveryMethod
+              string: HomeDelivery
+            - name: expectedDaySlot
+              string: ${varTC_selectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${varTC_selectedTimeSlot}
+            - name: expectedStoreOrHomeName
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.addressName
+            - name: expectedStoreOrHomeAddress
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.homeAddress
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 17: Perform validation of Totals Information in Checkout...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 17: Perform validation of Totals Information in Checkout..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - storeIn:
+          key: varTC_checkout_deliveryFee
+          value: mx.data.qaa.sanity.prod.od013.deliveryInformation.deliveryFee
+      - executeFunction:
+          name: mx.flows.od.review-order.assertTotalsInformation
+          params:
+            - name: expectedSubtotalProductsCount
+              string: ${varTC_checkout_expectedProductsCount}
+            - name: expectedSubtotal
+              string: ${varTC_checkout_subtotal}
+            - name: assertDeliveryFee
+              string: 'true'
+            - name: expectedDeliveryFee
+              string: ${varTC_checkout_deliveryFee}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 18: Enter Order General Comments...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 18: Enter Order General Comments..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.review-order.deliveryHeaderContainer
+      - executeFunction:
+          name: mx.functions.review-order.tapAddDeliveryInstructions
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.enterTestOrderDisclaimer
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.tapSave
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 19: Select Pay at Delivery Payment Method...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 19: Select Pay at Delivery Payment Method..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToWallet
+      - executeFunction:
+          name: mx.flows.od.review-order.forceSelectPayAtDeliveryMethod
+          params:
+            - name: payAtDeliveryOption
+              string: mx.data.qaa.sanity.prod.od013.paymentInformation.payAtDeliveryOption
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 20: Fill out Phone Information...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 20: Fill out Phone Information..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.homeAddressPhoneNumber
+      - executeFunction:
+          name: mx.functions.review-order.uncheckUpdatesByPhoneCheckbox
+      - executeFunction:
+          name: mx.functions.review-order.assertUpdatesByPhoneCheckboxState
+          params:
+            - name: expectedState
+              string: 'false'
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 21: Place Order...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 21: Place Order..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+      - executeNode:
+          file: mx/test/helpers/utils/getTodaysDateAsStringForAssertion.js
+          getResponse:
+            storeIn: varTC_orderDate
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 22: Validate Order Confirmation Information...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 22: Validate Order Confirmation Information..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      # Get Order Number. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+      - storeIn:
+          key: varTC_orderNumber
+          value: ${returnedOrderNumber}
+
+      # Delivery Method Assertion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: HomeDelivery
+
+      # Total Assertion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - arithmetic:
+          expression: ${varTC_checkout_subtotal} + ${varTC_checkout_deliveryFee}
+          storeIn: varTC_order_total
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertTotal
+          params:
+            - name: expectedTotal
+              string: ${varTC_order_total}
+
+      # Delivery Slot Assertion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${varTC_selectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${varTC_selectedTimeSlot}
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliverySlot
+          params:
+            - name: expectedDeliverySlot
+              string: ${returnedDeliverySlot}
+
+      # Delivery Place Assertions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertHomeDeliveryAddressName
+          params:
+            - name: expectedHomeAddressName
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.addressName
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertHomeDeliveryAddress
+          params:
+            - name: expectedHomeAddress
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.homeAddress
+
+      # Products Count Assertion. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertProductsCount
+          params:
+            - name: expectedProductsCount
+              string: ${varTC_checkout_expectedProductsCount}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 23: Hit Discover more Products button...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 23: Hit Discover more Products button..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 24: Navigate to Orders History...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 24: Navigate to Orders History..."
+            - name: squadNames
+              string: CUSTOMER | QAA
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 24.1: Validate Order Information...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 24.1: Validate Order Information..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.orders-history.assertPageDisplayed
+      - executeFunction:
+          name: mx.flows.od.orders-history.assertOrder
+          params:
+            - name: orderNumber
+              string: ${varTC_orderNumber}
+            - name: expectedDeliveryMethod
+              string: HomeDelivery
+            - name: expectedTotal
+              string: ${varTC_order_total}
+            - name: expectedBanner
+              string: Walmart
+            - name: expectedDaySlot
+              string: ${varTC_selectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${varTC_selectedTimeSlot}
+            - name: expectedOrderStatus
+              string: Received
+            - name: expectedProductsCount
+              string: ${varTC_checkout_expectedProductsCount}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 25: Open placed Order and validate Order Information...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 25: Open placed Order and validate Order Information..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.orders-history.openOrder
+          params:
+            - name: orderNumber
+              string: ${varTC_orderNumber}
+
+      # Order Details Assertions. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 25.1: Order Details Assertions..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderDetailsWithoutDeliveryLocationAssertion
+          params:
+            - name: orderNumber
+              string: ${varTC_orderNumber}
+            - name: expectedOrderedDate
+              string: ${varTC_orderDate}
+            - name: expectedDeliveryMethod
+              string: HomeDelivery
+            - name: expectedOrderStatus
+              string: Received
+            - name: expectedBanner
+              string: Walmart
+            - name: expectedDaySlot
+              string: ${varTC_selectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${varTC_selectedTimeSlot}
+            - name: expectedProductsCount
+              string: ${varTC_checkout_expectedProductsCount}
+            - name: expectedPaymentMethod
+              string: PayAtDelivery
+            - name: expectedSubtotal
+              string: ${varTC_checkout_subtotal}
+            - name: assertDiscount
+              string: 'true'
+            - name: expectedDiscount
+              string: ${varTC_cart_discounts}
+            - name: expectedDeliveryFee
+              string: ${varTC_checkout_deliveryFee}
+            - name: expectedTotal
+              string: ${varTC_order_total}
+
+      # Delivery Location Assertion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 25.2: Delivery Location Assertion..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.order-details.orderNumber
+      - executeFunction:
+          name: mx.flows.od.order-details.assertRawDeliveryLocation
+          params:
+            - name: deliveryMethod
+              string: HomeDelivery
+            - name: expectedRawName
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.addressName
+            - name: expectedRawAddress
+              string: mx.data.qaa.sanity.prod.od013.deliveryInformation.homeAddressInOrderDetails
+
+      # Extra Product Assertions. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 25.3: Extra Product Details Assertion (if added)..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - if:
+          condition: ${varTC_extraProductAdded}
+          then:
+            - executeFunction:
+                name: mx.flows.od.order-details.assertProductDetails
+                params:
+                  - name: productName
+                    string: ${varTC_extraProduct_productName}
+                  - name: expectedPrice
+                    string: ${varTC_extraProduct_price}
+                  - name: expectedSubtotal
+                    string: ${varTC_extraProduct_subtotal}
+                  - name: productType
+                    string: ${varTC_extraProduct_type}
+                  - name: expectedOrderedQuantityAsPieces
+                    string: ${varTC_extraProduct_quantityAsPieces}
+                  - name: expectedOrderedQuantityAsWeight
+                    string: ${varTC_extraProduct_quantityAsWeight}
+          else:
+            - log:
+                message: "Extra product was not added from the Missing Something page."
+                color: CYAN
+
+      # Product 1 Assertions. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 25.4: Product 1 Details Assertion..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+      - executeFunction:
+          name: mx.flows.od.order-details.assertProductDetails
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.prod.od013.product1.name
+            - name: expectedPrice
+              string: ${varTC_product1_price}
+            - name: expectedSubtotal
+              string: ${varTC_product1_subtotal}
+            - name: productType
+              string: mx.data.qaa.sanity.prod.od013.product1.type
+            - name: expectedOrderedQuantityAsPieces
+              string: '1'
+            - name: expectedOrderedQuantityAsWeight
+              string: '1'
+
+      #----------------------------------------------------------------------------------------------------------------
+      # Test Case Successful Execution...
+      #----------------------------------------------------------------------------------------------------------------
+
+      - storeIn:
+          key: varTC_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+
+#######################################################################################################################
+
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: Test Data Reset..."
+
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${varTC_SUCCESSFUL_EXECUTION}
+
+      - if:
+          condition: ${varTC_SUCCESSFUL_EXECUTION} != true
+          then:
+
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP (After 1): Relaunch App..."
+                  - name: squadNames
+                    string: QAA
+            - executeFunction:
+                name: mx.functions.utils.relaunchApp
+            - executeFunction:
+                name: mx.functions.prehome.tapODBanner
+            - executeFunction:
+                name: mx.functions.home.assertPageDisplayed
+
+            - executeFunction:
+                name: mx.squad-reporting.setTestCaseStep
+                params:
+                  - name: step
+                    string: "STEP (After 2): Reset Cart..."
+                  - name: squadNames
+                    string: QAA
+            - executeFunction:
+                name: mx.functions.top-menu.tapCartIcon
+            - sleep:
+                duration: 5000
+            - executeFunction:
+                name: mx.functions.cart.emptyCart
+
+            - log:
+                message: "Data Reset Succeeded"
+                color: CYAN
+            - failTest:
+                message: "Main Scenario Failed: After Scenario Failed failed too to ensure proper Execution Status in SauceLabs."
+          
+          else:
+            - log:
+                message: "Main Scenario Passed: No data reset needed."
+                color: CYAN
+
+      - log: "AFTER SCENARIO END"

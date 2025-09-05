@@ -1,0 +1,105 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: 051
+# User : Registered User
+# Order Type: GO
+# Fulfillment: SCHEDULED_DELIVERY
+# Payment Type : CC
+# Experience: Customer Cancellation
+# Validation: Page Elements and Order cancellation
+#
+# Remark: Cost Assertions failing
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  testCaseId: C2728486
+  tags:  p1-us-teflon, p1-ca-en-teflon, p1-mx-mh-e2e-teflon, C2728486
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+      - log: ${APP_PLATFORM}
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Create  Scheduled Delivery order using astro api.
+      - log:
+          message: PREREQUISITE — Creating  Scheduled delivery order using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createOrder
+          params:
+            - name: payload
+              string: data.scheduled-delivery.createOrderPayload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+
+      # Login to account
+      # Click on login and select sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      # Tap Sign in button
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user.
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+     
+      # Navigate to ODP
+      - executeFunction:
+          name: functions.global.navigateToODPUseDeeplink
+
+      # Cancel order Process 
+      - executeFunction:
+          name: functions.orderDetailsPage.cancelOrder
+          params:
+            - name: reasonIndex
+              string: data.global.orderCancellation.reasonIndex3
+            
+      # Validate ODP after order cancellation
+      - executeFunction:
+          name: functions.orderDetailsPage.validateAfterCancellation
+          params:
+            - name: orderCancelled
+              string: true
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

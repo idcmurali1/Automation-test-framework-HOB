@@ -1,0 +1,158 @@
+#======================================================================================================================
+#    AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#   CREATED: Feb/13/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # PARAM:  ${expectedQuantity}   [Mandatory]   Count to assert
+  # AUTHOR: ???
+  # EDITOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.substitutes-preferences.assertTotalProductsCount
+    platform: android
+    flow:
+      - log:
+          message: "Expected Quantity: '${expectedQuantity}'"
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.substitutes-preferences.checkAllBoxesLabel
+              contains: Acepto sustitutos para ${expectedQuantity} artículo
+      - log:
+          message: "End function: substitutes-preferences.assertProductPrice"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if the product price is the expected
+  # Params:   ${expectedProductPrice}     [Mandatory]   Count to assert
+  #           ${productName}              [Mandatory]   Product name
+  #           ${expectedProductQuantity}  [Mandatory]   Product quantity. If quantity is 1, price per unit won't be displayed
+  - name: mx.functions.substitutes-preferences.assertProductPrice
+    platform: android
+    flow:
+      - if:
+          condition: ${expectedProductQuantity} == 1
+          then:
+            - getString:
+                identifier: mx.mappings.substitutes-preferences.totalPriceByName
+                attribute: text
+                storeIn: returnedProductPrice
+            - executeNode:
+                file: mx/test/helpers/slp/sanitizePrice.js
+                args:
+                  - value: ${returnedProductPrice}
+                getResponse:
+                  storeIn: returnedProductPrice
+          else:
+            - getString:
+                identifier: mx.mappings.substitutes-preferences.priceByName
+                attribute: text
+                storeIn: returnedProductPrice
+            - executeNode:
+                file: mx/test/helpers/utils/getNumberFromPriceString.js
+                args:
+                  - value: ${returnedProductPrice}
+                getResponse:
+                  storeIn: returnedProductPrice
+      - if:
+          condition: ${returnedProductPrice} == ${expectedProductPrice}
+          then:
+            - log:
+                message: Price is correct
+                color: CYAN
+          else:
+            - failTest:
+                message: "Price is not the same: ${returnedProductPrice} - ${expectedProductPrice}"
+      - log:
+          message: "End function: substitutes-preferences.assertProductPrice"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: ???
+  # EDITOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.substitutes-preferences.unselectAllProducts
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.substitutes-preferences.allSubstitutesCheckBox
+          attribute: checked
+          storeIn: isFlagChecked
+      - if:
+          condition: ${isFlagChecked} == true
+          then:
+            - click:
+                identifier: mx.mappings.substitutes-preferences.allSubstitutesCheckBox
+            - log:
+                message: All substitutes have been unchecked
+                color: CYAN
+          else:
+            - log:
+                message: "Products are already unselected"
+                color: CYAN
+      - log:
+          message: "End function: substitutes-preferences.unselectAllProducts"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if the product quantity is the expected
+  # Params:   ${expectedProductQuantity}  [Mandatory]   Count to assert
+  #           ${productName}      [Mandatory]   Product name
+  - name: mx.functions.substitutes-preferences.assertProductQuantity
+    platform: android
+    flow:
+      - log:
+          message: Checking if product count of ${productName} is ${expectedProductQuantity}
+          color: CYAN
+      - verifyIdentifier:
+          text:
+            - identifier: mx.mappings.substitutes-preferences.productQuantityByName
+              equals: Pza(s) ${expectedProductQuantity}
+      - log:
+          message: End function - substitutes-preferences.assertProductQuantity
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Asserts whether the General Substitutes Checkbox is checked or unchecked.
+  # PARAM:  ${expectedStatus}  [Mandatory]  Expected status to assert. Values: [ checked | unchecked ]
+  - name: mx.functions.substitutes-preferences.assertGeneralSubstitutesCheckboxStatus
+    platform: android
+    flow:
+      - log:
+          message: "Expected Status: ${expectedStatus}"
+          color: CYAN
+      - if:
+          condition: ${expectedStatus} != 'checked' && ${expectedStatus} != 'unchecked'
+          then:
+            - failTest:
+                message: "Fail: expected status option not valid (${expectedStatus})"
+      - getString:
+          identifier: mx.mappings.substitutes-preferences.allSubstitutesCheckBox
+          attribute: checked
+          storeIn: checkedFlag
+      - if:
+          condition: ${expectedStatus} == 'checked'
+          then:
+            - if:
+                condition: ${checkedFlag} != true
+                then:
+                  - failTest:
+                      message: "Fail: Actual Status is 'unchecked'"
+          else:
+            - if:
+                condition: ${checkedFlag} != false
+                then:
+                  - failTest:
+                      message: "Fail: Actual Status is 'checked'"
+      - log:
+          message: "Success: Actual Status is '${expectedStatus}'"
+          color: CYAN
+      - log:
+          message: "End function: substitutes-preferences.assertGeneralSubstitutesCheckboxStatus"
+          color: BLUE

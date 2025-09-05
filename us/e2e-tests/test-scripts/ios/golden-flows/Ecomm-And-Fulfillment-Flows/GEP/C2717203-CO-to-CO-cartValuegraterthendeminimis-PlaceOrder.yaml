@@ -1,0 +1,231 @@
+general:
+  platform: iOS
+  tags: C2717203 # , p1-ecomm-teflon-e2e, us-golden-flows
+  testCaseId: C2717203
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      #Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.gepFlow01.ios.createAccountPayLoad
+      #*******************************************************************************************************
+
+      # Astro - Clear cart
+
+      #*******************************************************************************************************
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: $customerEmail
+      
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: $customerEmail     
+            - name: itemType
+              string: FC_DELIVERY
+            - name: itemList
+              string: us.data.gepFlow01.itemGraterThendeminimis.itemLists
+
+      - storeIn:
+          key: item1
+          value: 5014853159
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome 
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: us.data.gep.flow01.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+      
+      - executeFunction:
+          name: us.functions.gic.select.inhome.delivery.address
+          params:
+            - name: shipAnotherCountry
+              string: true
+      
+      - executeFunction:
+          name: us.functions.account.deliveryAddress.addCOAddress
+          params:
+            - name: firstName
+              string: us.data.gep.flow01.firstName
+            - name: lastName
+              string: us.data.gep.flow01.lastName
+            - name: streetAddress
+              string: us.test.android.data.gep.flow01.addressFirstLine
+            - name: city
+              string: us.test.android.data.gep.flow01.addressCity
+            - name: state
+              string: us.test.android.data.gep.flow01.state 
+            - name: zipcode
+              string: us.test.android.data.gep.flow01.deliveryAddresszipCode
+            - name: phoneNumber
+              string: us.test.android.data.gep.flow01.mobileNumber
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.productSearch.searchAProduct
+          params:
+            - name: product
+              string: $item1
+
+      - sleep:
+          duration: 5000 
+
+             
+      
+      # laungh the expirence using expo link
+
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://expo?expo_preview=true&experiment_spec=f58da&variation_specs=J482z&experiment_count=0
+
+      # - sleep:
+      #     duration: 3000
+
+      # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/$item1
+
+      - executeFunction:
+          name: us.functions.item.validateItemPageDetial
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+            - name: validationScope
+              string: detailed         
+    
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      #Validate order confirmation page
+
+      # - executeFunction:
+      #     name: us.functions.orderConfirmation.verifyCardDetails
+      #     params:
+      #       - name: fulfillmentText
+      #         string: Delivery
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+      
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+ #***************************************************************************************************************
+
+  # Astro - Move order to PO Ready For Pickup 
+
+ #***************************************************************************************************************
+
+      # - executeFunction:
+      #     name:  us.functions.utils.astro.getOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+    
+      # - executeFunction:
+      #     name: us.functions.utils.astro.setOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: FC_DELIVERY
+      #       - name: status
+      #         string: Delivered
+      
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://orders/$orderNo
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

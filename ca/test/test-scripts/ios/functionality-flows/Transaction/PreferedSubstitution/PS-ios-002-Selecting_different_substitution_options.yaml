@@ -1,0 +1,203 @@
+#------------------------------------------------------------------------------
+# Add GO items to cart with amount above $35(Make A2C dynamic).
+# Book a pickup slot and Go to checkout page.
+# Click on "Choose substitution preferences"
+# Validate
+# "Substitution preferences" pop up.
+# Allow substitution for this order toggle is enabled.
+# Validate filter "All" and "Best Match"
+# Click on the first product "Edit" button -> choose "Replace with: first product in carousel" and click on "Select"
+# Validate Product is showing replacement product at the bottom and "Preferred substitution" filter is showing at the top
+# Click on the second product "Edit" button -> choose "Don't Replace" and click on "Select"
+# Validate Product show "Don't replace" and "No substitution" filter is showing at the top
+# Click on Done button and Validate logo and "Choose substitution preferences" link.
+#------------------------------------------------------------------------------
+general:
+  platform: ios
+  tags: ps-002-ios, #ca-function-run
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - log:
+          message: Disabling Prefered Substitution
+          color: CYAN_BOLD_BRIGHT
+  - name: Disabling Prefered Substitution
+    flow:
+
+            # Navigate onboarding to home
+            - executeFunction:
+                name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+            - log:
+                message: navigated from onboarding to home
+                color: YELLOW 
+
+            # Verifying home screen
+            - executeFunction:
+                name: ca.test.functions.home.headerElements.validateIosHomePage
+            - executeFunction:    
+                name: ca.test.functions.home.livingDesign.validateIosBottomNavigation
+            # Navigate to sign in page
+            - executeFunction:
+                name: ca.test.functions.home.navigateHomeToSignInIos
+            - log:
+                message: navigated to signin page
+                color: YELLOW 
+
+            # Sign In to the account
+            - executeFunction:
+                name: ca.test.functions.global.authentication.signInAccountIos
+                params:
+                  - name: email
+                    string: ca.test.data.ps002.emailios
+                  - name: password
+                    string: ca.test.data.ps002.passwordios
+            - executeFunction:
+                name: ca.test.functions.home.verifyUserNameInTopleft
+            - log:
+                message: Singed in
+                color: YELLOW 
+
+            # Clear Cart
+            - executeFunction:
+                name:  ca.test.functions.cart.removeCartItems
+            - log:
+                message: cart cleared 
+                color: YELLOW 
+
+            # Selecting store in home page
+            - executeFunction:
+               name: ca.test.functions.global.authentication.storeSelect
+               params:
+                - name: Zip_Code
+                  string: ca.test.data.onboarding.zipcodeL5V6N2
+                - name: storeName
+                  string: ca.test.search.storeNameL5V6N2
+            - log:
+               message: Updated the store to L5V6N2!
+               color: YELLOW 
+
+          # #product search:
+          #   - executeFunction:
+          #       name: ca.test.functions.productSearch.searchAProductIos
+          #       params:
+          #         - name: product
+          #           string: ca.test.data.product.GO_L1
+            - executeFunction:
+                name: ca.functions.searchPage.searchItemArray
+                params:
+                  - name: items
+                    string: ca.test.data.PS-002.goItemArray1
+                  - name: quantity
+                    string: ca.test.data.PS002.product_1_qty    
+                  - name: checkNonPromotionBadges
+                    string: true 
+
+          # #Add product to cart - GO - dynamic product addition                    
+          #   - executeFunction:
+          #       name: ca.test.functions.dynamicProduct
+
+            - executeFunction:
+                  name: ca.functions.searchPage.searchItemArray
+                  params:
+                    - name: items
+                      string: ca.test.data.PS-002.goItemArray2
+                    - name: quantity
+                      string: ca.test.data.product_1_qty
+                    - name: checkNonPromotionBadges
+                      string: true
+
+            - executeFunction:
+                  name: ca.functions.searchPage.searchItemArray
+                  params:
+                    - name: items
+                      string: ca.test.data.PS-002.goItemArray3
+                    - name: quantity
+                      string: ca.test.data.product_1_qty   
+                    - name: checkNonPromotionBadges
+                      string: true       
+
+            - log:
+                message: Asserting cart quantity.
+                color: GREEN_BOLD
+                
+            # - executeFunction:
+            #     name: ca.test.functions.cart.assertCartQuantity
+            #     params:
+            #       - name: cartQuantity
+            #         string: ca.test.data.PS002_qty               
+
+          # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCartIos
+            - log:
+                message: Navigated to cart
+                color: YELLOW 
+
+            #Add product to cart - GO - dynamic product addition                    
+            - executeFunction:
+                name: ca.test.functions.dynamicProduct    
+
+          # book  pickup slot
+            - executeFunction:
+                name: ca.test.functions.cart.pickup.changeStoreClick
+
+            - executeFunction:
+                name: ca.test.functions.bookASlot.reserveTimePage.standardSlotSelection
+
+          # Clicking book a slot button
+            - executeFunction:
+                name: ca.test.functions.bookASlot.reserveTimePage.bookASlotButton 
+          
+          # Proceed to Checkout
+            - executeFunction:
+                name: ca.test.functions.cart.proceedToCheckOut
+
+          # # # open to SubstitutePreferences
+            - executeFunction:
+                name: ca.test.functions.checkOut.chooseSubstitutePreferences
+          
+          # validate Pref sub page
+            - executeFunction:
+                name: ca.test.functions.checkOut.chooseSubstitutePreferences_validation
+
+          # validate Pref sub page - enabled
+            - executeFunction:
+                name: ca.test.functions.checkOut.chooseSubstitutePreferences_enableValidation
+            - executeFunction:
+                name: ca.test.functions.checkOut.chooseSubstitutePreferences.enable_edit
+
+#------------------------------------------------------------------------------
+
+            - storeIn:
+                key: testStatus
+                value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: PS-002-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

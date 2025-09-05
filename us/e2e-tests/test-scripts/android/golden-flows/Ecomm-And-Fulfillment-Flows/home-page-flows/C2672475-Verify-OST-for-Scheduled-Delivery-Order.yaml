@@ -1,0 +1,237 @@
+general:
+  platform: android
+  tags: p1-ecomm-teflon-e2e, C2672475, p1-fulcrum-teflon-e2e
+  testCaseId: C2672475
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:    
+    - name: scenarioId      
+      string: EC097
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+  - name: Main
+    flow:
+
+      - log: Start main
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: ostscd${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$     
+
+  # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createAccountPayload.genericChallengeAccount      
+
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # signing in to the account
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn  
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail} 
+            - name: password
+              string: $password 
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: store
+              string: 32144
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.storeDelivery.createOrderPayload
+            - name: skipOrderWait
+              string: true
+    
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed  
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storeDelivery
+          params:
+            - name: option
+              string: placed
+            - name: ostHeaderLabel
+              string: We've received your order
+            - name: ostSubHeaderLabel
+              string: Arrives 
+            - name: orderStatusLink
+              string: View order
+            - name: orderNo
+              string: ${orderNo}
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus          
+          params:
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Pick Complete
+
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation   
+
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop              
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed  
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storeDelivery
+          params:
+            - name: option
+              string: inprogress
+            - name: ostHeaderLabel
+              string: We're preparing your order
+            - name: ostSubHeaderLabel
+              string: Arrives
+            - name: orderStatusLink
+              string: View order
+            - name: orderNo
+              string: ${orderNo} 
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus 
+          params:
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Out for Delivery      
+
+      - sleep:
+          duration: 20000
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation   
+
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop       
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed  
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storeDelivery
+          params:
+            - name: option
+              string: outForDelivery
+            - name: ostHeaderLabel
+              string: Your order is on the way
+            - name: ostSubHeaderLabel
+              string: Estimated arrival
+            - name: orderStatusLink
+              string: Track         
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: Delivered
+
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop  
+
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup       
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed  
+
+      - executeFunction:
+          name: us.functions.homepage.redesign.verify.ost.storeDelivery
+          params:
+            - name: option
+              string: delivered
+            - name: ostHeaderLabel
+              string: Your order was delivered
+            - name: ostSubHeaderLabel
+              string: Left at front door #Ready to rate
+            - name: orderStatusLink
+              string: View order #Rate driver
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps          
+                        
+
+
+
+
+
+
+        
+          

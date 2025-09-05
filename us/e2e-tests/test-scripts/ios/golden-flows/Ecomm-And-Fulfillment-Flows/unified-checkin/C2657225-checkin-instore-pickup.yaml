@@ -1,0 +1,179 @@
+general:
+  platform: ios
+  tags:  #C2657225, p1-fulcrum-teflon-e2e, p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657225
+  metadata:
+    - name: scenarioId
+      string: FF001
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.flow043.email
+            - name: password
+              string: us.data.ios.flow043.password
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: STORE_UNSCHEDULED_PICKUP
+            - name: storeId
+              string: 32144
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/$item1
+
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      #       - log: 'R2_SUBFLOW_TRANSACTION'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.inStore.createOrderPayload
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+      #*******************************************************************************************************
+
+      # Astro - Move order status to PO Ready For Pickup
+
+      #*******************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_UNSCHEDULED_PICKUP
+            - name: status
+              string: PO Ready For Pickup
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.orderDetails.ost.pickup.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: In-store pickup
+            - name: orderStatus
+              string: Ready
+
+      - executeFunction:
+          name: us.functions.checkin.checkinUnscheduledPickup.inStorePickup
+
+      - executeFunction:
+          name: us.functions.checkin.instore.verifyUnScheduledCheckedInScreen
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.function.orderDetails.verifyButtonNameChangeToSeeMore
+
+      #*******************************************************************************************************
+
+      # Astro - Move order status to Customer Picked
+
+      #*******************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_UNSCHEDULED_PICKUP
+            - name: status
+              string: Customer Picked
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.orderDetails.ost.pickup.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: In-store pickup
+            - name: orderStatus
+              string: Picked up
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

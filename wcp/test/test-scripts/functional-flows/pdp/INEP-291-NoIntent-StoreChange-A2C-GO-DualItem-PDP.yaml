@@ -1,0 +1,193 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-291
+#       Flow : Select store without selecting intent A2C GO dual eaches/weighted items to cart from PDP
+#    
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-196600?src=confmacro
+#
+#   INEP Ticket
+#     https://jira.walmart.com/browse/INEP-291
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-291
+  tags: INEP-291, OPIF-196600, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-173, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Select store without selecting intent A2C GO dual eaches/weighted items to cart from PDP"
+    flow:
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - if: 
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction: 
+                name: functions.login.storeEmail
+                params:
+                  - name: userAndroidEmail
+                    string: data.mh.inep-291.userEmail-android # Need to update
+                  - name: useriOSEmail
+                    string: data.mh.inep-291.userEmail-ios # Need to update
+          else:
+            - executeFunction:
+                name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.global.gic.zipCode1
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      # Click on login and select sign in.
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user.
+      - log:
+          message: "Login with existing user using password as authentication method and ensure user is logged in.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password2
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+
+      - if: 
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction: 
+                name: functions.cartPage.clearCart
+
+      # Select store without selecting intent..
+      - log:
+          message: "Select store without selecting intent.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.homePage.selectStore
+          params:
+            - name: noIntent
+              string: true
+            - name: Zipcode
+              string: true              
+            - name: Zip_Code
+              string: data.onboarding.userPostalCode
+            - name: storeName
+              string: data.global.gic.storeNameScToreo
+
+      # Search for GO dual item and navigate to PDP..
+      - log:
+          message: "Search for GO dual item and navigate to PDP.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: data.global.itemsArray.dualItem
+
+      # Navigate to PDP.
+      - log:
+          message: "Validate PDP Details.."
+          color: PURPLE_BOLD_BRIGHT     
+      - executeFunction:
+          name: functions.productDetailsPage.validateItemDetails
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapAddToCart
+          params:
+            - name: quantity
+              string: data.itemCount.qty1
+
+      - executeFunction:
+           name: functions.productDetailsPage.tapClose   
+
+      # Validate purchase limit in cart..
+      - log:
+          message: "Validate purchase limit in cart.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.itemCount.qty1
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+    
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart.. "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

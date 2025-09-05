@@ -1,0 +1,107 @@
+# Author: Jyothee Gottam
+
+general:
+  platform: android
+  tags: C2662629, prod-e2e-real-device
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2662629
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PUSH_NOTIFICATION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - executeFunction:
+          name: us.functions.utils.restartapp
+
+      # Fetch prod customer accound id
+      - executeFunction:
+          name: us.functions.utils.prod.fetchCustomerId
+          params:
+            - name: email
+              string: us.data.prod.flow067e.email
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+          params:
+            - name: allowNotifications
+              string: true
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.flow067e.email
+            - name: password
+              string: us.data.prod.flow067e.password
+
+      - executeFunction:
+          name: us.functions.global.onboarding.smartLock.DismissNoneOfTheAbove
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Send a push notification
+      - callAPI:
+          url: http://notifications-mobile.glb.prod.walmart.com/business/WMT1H/customers/$customerAccountId/push/new
+          mediaType: application/json
+          requestBody: '{"body": "Your deals are here for home", "title": "Your deals are here", "url": "walmart://shop/deals"}'
+          header:
+            - key: apiKey
+              value: 48b2c607-08cf-4ce4-aeee-070571d75244
+            - key: Cache-Control
+              value: no-cache
+          requestMethod: POST
+          wait: 5000
+          verifyResponseCode: 202
+      - sleep:
+          duration: 10000    
+      - enableMobileWifiAndData:  true   
+
+      # Open Push notification
+      - openNotifications: true
+      - verifyIdentifier:
+          present:
+            - identifier: Your deals are here
+      - click: 
+          identifier: Your deals are here
+          wait: 5000
+
+      # Validate the search page
+      - executeFunction:
+          name: us.functions.search.closeHowDoYouWantYourOrderBottomTray
+
+      # Close Bottom sheet
+      - executeFunction:
+          name: us.functions.homePage.closeWplusPopup
+
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.search.filterfacet.appliedBrand
+              contains: "Savings (1000+)"
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

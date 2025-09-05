@@ -1,0 +1,195 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-353
+#       Flow - MH: Cart Item Info - Validate the Price details of the promotional items when quantity increased and decreased
+#
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179333
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-353
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-343
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-353
+  tags: INEP-353, OPIF-179333, p1-mh-opif-teflon-d-feb, INEP-343, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# # #   M A I N   S C E N A R I O
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Cart Item Info - Validate the Price details of the items when quantity increased and decreased"
+    flow:
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded   
+
+      # Add an item to cart.
+      - log:
+          message: "Add an item to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.product1.itemsArray
+
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart"
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon  
+
+      # Validating RollBack Badge.
+      - log:
+          message: "Validating RollBack Badge"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartOrProductDetailPage.rollBackBadge
+
+      # Validating the current price details of a product in cart.
+      - log:
+          message: "Validating the current price details of a product in cart"
+          color: PURPLE_BOLD_BRIGHT 
+      - executeFunction:
+          name: functions.cartPage.assertProductPriceDetails
+          params:
+            - name: productName
+              string: data.global.product1.name
+            - name: isProductDiscounted
+              string: true
+            - name: expectedCurrentPrice
+              string: data.global.product1.currentPrice
+            - name: expectedOriginalPrice
+              string: data.global.product1.originalPrice
+            - name: expectedUnitPrice
+              string: data.global.product1.unitPrice
+            - name: expectedPriceSavings
+              string: data.global.product1.savingsPrice
+
+      # Increasing product quantity and validating price details.
+      - log:
+          message: "Increasing product quantity and validating price details"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.increaseProductQuantityByName 
+          params:
+            - name: productName
+              string: data.global.product1.name
+            - name: quantity
+              string: data.mh.inep-353.itemQuantityIncrease
+
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: functions.cartPage.assertProductPriceDetails
+          params:
+            - name: productName
+              string: data.global.product1.name
+            - name: isProductDiscounted
+              string: true
+            - name: expectedCurrentPrice
+              string: data.mh.inep-353.currentPrice.increased
+            - name: expectedOriginalPrice
+              string: data.global.product1.originalPrice
+            - name: expectedUnitPrice
+              string: data.global.product1.unitPrice
+            - name: expectedPriceSavings
+              string: data.mh.inep-353.savingsPrice.increased
+
+      # Decreasing product quantity and validating price details.
+      - log:
+          message: "Decreasing product quantity and validating price details"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.decreaseProductQuantityByName 
+          params:
+            - name: productName
+              string: data.global.product1.name
+            - name: quantity
+              string: data.mh.inep-353.itemQuantityDecrease
+
+      - executeFunction:
+          name: functions.cartPage.assertProductPriceDetails
+          params:
+            - name: productName
+              string: data.global.product1.name
+            - name: isProductDiscounted
+              string: true
+            - name: expectedCurrentPrice
+              string: data.mh.inep-353.currentPrice.decreased
+            - name: expectedOriginalPrice
+              string: data.global.product1.originalPrice
+            - name: expectedUnitPrice
+              string: data.global.product1.unitPrice
+            - name: expectedPriceSavings
+              string: data.mh.inep-353.savingsPrice.decreased
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+      - log: 'INEP-353: MAIN SCENARIO END'
+      
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'AFTER SCENARIO START'
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+      - log: 'AFTER SCENARIO END'

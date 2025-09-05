@@ -1,0 +1,124 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr:
+          requiredLabels:
+            - "ca-functional"
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Run iOS Prod Sanity - Test
+          call: run_build(TEST_TAGS = 'prodSanity', SAUCE_APP = 'storage:filename=ca-walmart-development-latest.zip', REPORT_ID = "15")
+
+      - cron:
+          spec: H */6 * * *
+          call: run_build(TEST_TAGS = 'prodSanity', SAUCE_APP = 'storage:filename=ca-walmart-development-latest.zip', REPORT_ID = "15")
+
+      - manual:
+          name: Run iOS Prod functionality - Test
+          call: run_build(TEST_TAGS = 'ca-function-run', SAUCE_APP = 'storage:filename=ca-walmart-development-latest.zip', REPORT_ID = "16")
+
+      - cron:
+          spec: H */6 * * *
+          call: run_build(TEST_TAGS = 'ca-function-run', SAUCE_APP = 'storage:filename=ca-walmart-development-latest.zip', REPORT_ID = "16")
+
+  - spec: ca/release-latest
+    scheduling: concurrent
+
+    triggers:
+      - pr:
+          requiredLabels:
+            - "ca-functional"
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Run iOS Prod Sanity - Test
+          call: run_build(TEST_TAGS = 'prodSanity', SAUCE_APP = 'storage:filename=ca-walmart-release-latest.zip', REPORT_ID = "15")
+
+      - cron:
+          spec: H */6 * * *
+          call: run_build(TEST_TAGS = 'prodSanity', SAUCE_APP = 'storage:filename=ca-walmart-release-latest.zip', REPORT_ID = "15")
+
+      - manual:
+          name: Run iOS Prod functionality - Test
+          call: run_build(TEST_TAGS = 'ca-function-run', SAUCE_APP = 'storage:filename=ca-walmart-release-latest.zip', REPORT_ID = "16")
+
+      - cron:
+          spec: H */6 * * *
+          call: run_build(TEST_TAGS = 'ca-function-run', SAUCE_APP = 'storage:filename=ca-walmart-release-latest.zip', REPORT_ID = "16")
+
+envs:
+  global:
+    variables:
+      MARKET: ca
+      SLACK_CHANNEL: r2-ca-glass-prod-test-report
+      SAUCE_USERNAME: ca-glass
+      SAUCE_ACCESS_KEY: 5aeaa56f-ed83-411a-85d3-f8084e78aab1
+      POST_TO_SPLUNK: false
+      POST_TO_XRAY: false
+
+  env_ios_production:
+    variables:
+      APP_PLATFORM: ios
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/ios/ios-default.yaml
+      DEPENDENCY_PROFILE: looper_prod
+      GLASS_ENV: Production - v${BUILD_APP_VERSION}
+      MAPPING_LABELS: production_ios
+
+flows:
+
+  # Publishing report
+  publish_report:
+    try:
+      - publishReport:
+          context: ${REPORT_ID}${TEST_SESSION_ID}
+          dir: report
+          index: index.html
+          verbose: true
+      - var(REPORT_URL):
+        - shell (name Report URL): |
+            REPORT_VALUE=PUBLISH_REPORT_${REPORT_ID}${TEST_SESSION_ID}
+            echo ${!REPORT_VALUE}
+    catch:
+      - echo "Publish Report step failed. Please check Start R2 Test step. $flowErrorMessage"
+
+  # generating saucelabs build url
+  generate_sauce_labs_build_url:
+    - shell (name Sauce Labs Build URL): |
+        echo "https://app.saucelabs.com/archives/vdc?q=build:(r2-${TEST_SESSION_ID})"
+
+  # Getting app version from saucelabs using api
+  get_build_app_version:
+    try:
+      - var(VERSION_NAME = 'short_version')
+      - var(STORAGE_NAME):
+          - shell (name STORAGE_NAME): echo ${SAUCE_APP} | cut -f2 -d'='
+      - var(BUILD_APP_VERSION):
+          - shell (name BUILD_APP_VERSION): |
+              curl -s -u "$SAUCE_USERNAME:$SAUCE_ACCESS_KEY" "https://api.us-west-1.saucelabs.com/v1/storage/files?per_page=1&name=${STORAGE_NAME}" | grep -o "\"${VERSION_NAME}\": \"[^\"]*\"" | cut -f4 -d'"' | cut -f1 -d"-"
+      - echo "${BUILD_APP_VERSION}"
+    catch:
+      - echo "Unable to get build appVersion - $flowErrorMessage"
+
+  # Assigning to variable and printing on report
+  get_app_version:
+    - call: get_build_app_version
+    - var(APP_VERSION):
+        - shell  (name Get App Version): echo ${BUILD_APP_VERSION}
+
+  pr:
+    - parallel(failsafe):
+      - call: run_build(TEST_TAGS = 'prodSanity', SAUCE_APP = 'storage:filename=ca-walmart-development-latest.zip', REPORT_ID = "15")
+      - call: run_build(TEST_TAGS = 'ca-function-run', SAUCE_APP = 'storage:filename=ca-walmart-development-latest.zip', REPORT_ID = "16")
+
+  run_build:
+    - call: build(env_ios_production)

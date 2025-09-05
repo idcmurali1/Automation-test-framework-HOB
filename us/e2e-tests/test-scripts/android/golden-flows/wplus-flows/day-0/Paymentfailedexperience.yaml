@@ -1,0 +1,109 @@
+
+# Wplus - Payment failed experience alert and Splash banner on the Account for active user 
+
+general:
+  platform: ios
+  tags: 
+  testCaseId: 
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_ASSIST_NON_MEMBER_SIGN_UP_FLOW'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+      
+      # Create Non Member Account
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmartstoretest.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+      # User Payment failed 
+      - executeFunction:
+          name: us.functions.utils.astro.getRenewalEvents              
+
+      # User Payment failed 
+      - executeFunction:
+          name: us.functions.utils.astro.postpayment
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.payment.failed.payload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+  # Terminate and Relaunch the app 
+      - executeFunction:
+          name: us.test.functions.utils.relaunchApp
+
+      # User Payment failed 
+      - executeFunction:
+          name: us.functions.utils.astro.getRenewalEvent
+
+      # User Payment Sucess 
+      - executeFunction:
+          name: us.functions.utils.astro.postpayment
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.payment.pass.payload
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

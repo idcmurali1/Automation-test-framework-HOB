@@ -1,0 +1,135 @@
+general:
+  platform: android
+  tags: C2666161, us-golden-flows, p1-fulcrum-teflon-e2e, p0-ecomm-teflon-e2e,faultboard
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2666161
+  metadata:
+    - name: scenarioId
+      string: RT011
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+              - name: storeOnly
+                string: true
+
+#Search on Buy Now item and click item in Search Results
+      #Changed to healthy Astro API call . Please do not use static items
+      #Let it pass thru item health from astro, Reach out to Krish or astro team
+      - executeFunction:
+          name: us.functions.utils.fetchFulcrumAvailableItem # us.functions.utils.getSearchableItem us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144
+            - name: itemFilter
+              string: buynow
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/$item1
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Create account from buy now
+      - executeFunction:
+            name: us.functions.buyNow.newUser.overlay.createNewAccount
+            params:
+              - name: email
+                string: us.data.flow028.email
+              - name: password
+                string: us.data.flow028.password       
+
+      #Add delivery address through buy now flow
+      - executeFunction:
+          name: us.functions.buyNow.deliveryAddress.addAddress
+          params:
+            - name: firstName
+              string: us.data.flow028.firstName
+            - name: lastName
+              string: us.data.flow028.lastName
+            - name: streetAddress
+              string: us.data.flow028.streetAddress
+            - name: city
+              string: us.data.flow028.city
+            - name: state
+              string: us.data.flow028.state
+            - name: zipcode
+              string: us.data.flow028.zipcode
+            - name: phoneNumber
+              string: us.data.flow028.phoneNumber
+      #Add payment method through buy now flow
+      - executeFunction:
+            name: us.functions.buyNow.paymentMethod.addCardDetails
+            params:
+              - name: number
+                string: us.data.flow028.creditCard
+              - name: expiration
+                string: us.data.flow028.expiration
+              - name: cvv
+                string: us.data.flow028.creditCard.cvv
+              - name: phoneNumber
+                string: us.data.flow028.phoneNumber
+
+
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Validate order confirmation page
+      - executeFunction:
+          name: us.functions.buyNow.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

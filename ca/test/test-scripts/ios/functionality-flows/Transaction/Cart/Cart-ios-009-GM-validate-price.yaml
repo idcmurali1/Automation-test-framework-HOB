@@ -1,0 +1,170 @@
+general:
+  platform: ios
+  tags: cart-009-ios, ca-function-run, cart
+  testCaseId: cart-009-ios
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+
+  - name: Validating the price summary of the cart for GM.
+    flow:
+          - log:
+                message: Validating the price summary of the cart for GM.
+                color: CYAN_BOLD_BRIGHT
+                
+          # Navigate onboarding to home
+          - executeFunction:
+              name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+              params:
+                - name: ZIP_CODE
+                  string: ca.test.data.orleansZipCode
+          - log:
+              message: navigated from onboarding to home
+              color: YELLOW 
+
+      # Navigate to sign in page
+          - executeFunction:
+              name: ca.test.functions.home.navigateHomeToSignInIos
+          - log:
+              message: navigate to signin page
+              color: YELLOW 
+                  
+            # Sign In to the account
+          - executeFunction:
+              name: ca.test.functions.global.authentication.signInAccountIos
+              params:
+                - name: email
+                  string: ca.test.data.cart009.emailios
+                - name: password
+                  string: ca.test.data.cart009.passwordios 
+          - executeFunction:
+              name: ca.test.functions.accountPage.navigateToShop
+          - log:
+              message: signed in
+              color: YELLOW 
+
+          # Selecting store in home page
+          - executeFunction:
+              name: ca.test.functions.global.authentication.storeSelect
+              params:
+                - name: Zip_Code
+                  string: ca.test.data.orleansZipCode
+                - name: storeName
+                  string: ca.test.data.orleansStoreName
+          - log:
+              message: Updated the store to K1C1T1!
+              color: YELLOW 
+
+          #Clear Cart
+          - executeFunction:
+              name:  ca.test.functions.cart.removeCartItems
+          - log:
+              message: cart cleared
+              color: YELLOW     
+
+        # Add product to cart - GM 
+        # Product Search
+          - executeFunction:
+                name: ca.functions.searchPage.searchItemArray
+                params:
+                  - name: items
+                    string: ca.test.data.cart009.gmItemArray
+                  - name: quantity
+                    string: ca.test.data.product_1_qty
+                  - name: checkNonPromotionBadges
+                    string: true  
+          - log:
+              message: searched a GM product!
+              color: YELLOW 
+
+          - storeIn:
+              key: gm_item
+              value: ${productTitle}
+
+          - storeIn:
+              key: gm_item_price
+              value: ${productCost}
+
+          - executeFunction:
+              name: ca.test.functions.cart.assertCartQuantity
+              params:
+                - name: cartQuantity
+                  string: ca.test.data.product_1_qty 
+
+          - log:
+              message: Asserting cart total.
+              color: GREEN_BOLD
+
+          - executeFunction:
+              name: ca.test.functions.cart.assertCartTotal
+              params:
+                - name: subTotal
+                  string: ${totalPrice}
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+          - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+       # navigate to cart
+          - executeFunction:
+              name: ca.test.functions.global.navigation.goToCartIos
+          - log:
+              message: Navigated to cart
+              color: YELLOW 
+
+        # Verify cart subTotal
+          - executeFunction:
+              name: ca.test.functions.cart.cartSubTotal
+              params: 
+                - name: subTotal
+                  string: ${totalPrice}
+          - log:
+              message: subtotal validated
+              color: YELLOW
+
+          - executeFunction:
+              name: ca.test.functions.utils.taxCalculation
+              params:
+                - name: cartQuantity
+                  string: ca.test.data.product_1_qty
+                - name: taxableTotal
+                  string: ${totalPrice}
+                - name: slotPrice
+                  string: 0 
+                - name: taxPercentage
+                  string: ca.test.data.cart009.hst_tax_percentage
+
+          - executeFunction:
+              name: ca.test.functions.cart.estimatedTotalCalculation
+              params:
+                - name: tax
+                  string: ${taxValue}
+                - name: subTotal
+                  string: ${totalPrice}
+                - name: slotPrice
+                  string: 0
+#------------------------------------------------------------------------------
+
+          - storeIn:
+              key: testStatus
+              value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-009-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

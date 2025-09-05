@@ -1,0 +1,95 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Run iOS Test
+          call: run_tests(env_ios_prod)
+
+      - manual:
+          name: Run Android Test
+          call: run_tests(env_android_prod)
+
+      # - cron:
+      #     spec: 0 1 * * *
+      #     call: run_tests(env_ios_prod)
+
+      # - cron:
+      #     spec: 0 4 * * *
+      #     call: run_tests(env_android_prod)
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      SLACK_CHANNEL: r2-android-prod-test-results
+
+  env_ios_prod:
+    variables:
+      APP_PLATFORM: ios
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/ios/ios-default.yaml
+      TEST_TAGS: site-merchandising
+      DEPENDENCY_PROFILE: sm-prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      SAUCE_APP: storage:filename=glass-development-latest.zip
+      SLACK_CHANNEL: r2-glass-prod-ios-tests
+      POST_TO_ANIVIA: true
+      APP_BUILD_BRANCH: development-latest
+
+  env_android_prod:
+    variables:
+      APP_PLATFORM: android
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      TEST_TAGS: site-merchandising
+      DEPENDENCY_PROFILE: sm-prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      SAUCE_APP: storage:filename=glass-development-latest.apk
+      SLACK_CHANNEL: r2-android-prod-test-results
+      POST_TO_ANIVIA: true
+      APP_BUILD_BRANCH: development-latest
+
+flows:
+  run_tests:
+    - call: build_keywords
+
+  build_keywords:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          # - declare(APP_BRANCH)
+          - declare(APP_VERSION)
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - call: setup
+          # - shell: node ./us/scripts/get-campaign-details.js
+          - shell: node ./us/e2e-tests/helpers/generate-campaign-tests.js
+          # - call: get_app_branch
+          # - call: get_app_version
+          # - call: return_sauce_app_location
+          # - call: execute_test
+          # - call: publish_report
+          # - call: get_test_failures
+          # - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          # - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          # - call: slack_test_run_helper
+          # - call: post_to_anivia
+
+  post_to_anivia:
+    try:
+      - shell: node us/scripts/generate-sm-report.js
+    catch:
+      - echo "Unable to post results to Anivia - $flowErrorMessage"

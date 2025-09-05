@@ -1,0 +1,141 @@
+functions:
+
+  # Cutsomer accepts and reject few subs flow
+    - name: unified.us.functions.subs.acceptRejectYourSubs
+      flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.subs.reviewYourSubs.wantToEditText
+      - if:
+          identifier:
+            present:
+              -  identifier: us.mappings.subs.reviewYourSubs.wantToEditText
+          then:
+            - log: "Edit Text option displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Edit text should be present but is not"
+      - click:
+            identifier: us.mappings.subs.orderDetailsConfirmationPage.subsViewButton
+            wait: 6000
+      #  Verify review you subs page
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.reviewYourSubsHeader
+      - click:
+           identifier: us.mappings.subs.reviewYourSubsRejectRadioButton
+      - click:
+           identifier: us.mappings.subs.reviewYourSubsConfirmButton
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.unableToEditSubstitutions
+          then:
+            - log: "Retying to edit substitution after waiting for sometime"
+            - sleep:
+                duration: 10000
+            - click:
+                  identifier: us.mappings.subs.reviewYourSubsConfirmButton
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.subs.unableToEditSubstitutions
+                then:
+                  - log: "Unable to edit substitutions"
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - Unable to edit substitutions" 
+      #  Verify subs confirmation page
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.orderDetailsConfirmationPage.successBanner
+
+    - name: unified.us.functions.subs.verifyAfterReject
+      flow:
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.orderCanceled
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+             - click:
+                identifier: us.mappings.cancellation.ItemDropDownButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.unavailable
+
+
+    - name: unified.us.functions.subs.acceptSubItems
+      flow:
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subs.reviewYourSubs.wantToEditText
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.reviewYourSubs.wantToEditText
+      - click:
+            identifier: us.mappings.subs.orderDetailsConfirmationPage.subsViewButton
+            wait: 6000
+      #  Verify review you subs page
+      - verifyIdentifier:
+          timeout: 8000
+          present:
+            - identifier: us.mappings.subs.reviewYourSubsHeader
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subs.reviewYourSubsAccpetRadioButton
+            - name: direction
+              string: down
+      - click:
+           identifier: us.mappings.subs.reviewYourSubsAccpetRadioButton
+      - click:
+           identifier: us.mappings.subs.reviewYourSubsConfirmButton
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subs.orderDetailsConfirmationPage.successBanner
+            - name: direction
+              string: up
+      #  Verify subs order details confirmation page
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.orderDetailsConfirmationPage.successBanner
+
+      #  Verify order details page without subs after order is picked or delivered
+    - name: unified.us.functions.subs.orderPickedUpNonSubsAndSubsOrderDetailPage
+      flow:
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.subs.orderPickedUpSubsOrderDetailPage.SubsItem
+            - name: direction
+              string: down
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.orderPickedUpSubsOrderDetailPage.SubsItem   
+      - click:
+           identifier: us.mappings.subs.orderPickedUpSubsOrderDetailPage.SubsItem 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.subs.orderPickedUpSubsOrderDetailPage.SubsItemDetails   

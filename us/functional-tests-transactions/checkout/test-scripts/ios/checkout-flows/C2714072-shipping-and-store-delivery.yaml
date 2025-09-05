@@ -1,0 +1,175 @@
+# Validate checkout flow - mixed fulfillment - shipping and store delivery modules and TY page
+
+general:
+  platform: ios
+  tags: C2714072, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714072
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate checkout flow - mixed fulfillment - shipping and store delivery modules and TY page
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate checkout flow - mixed fulfillment - shipping and store delivery modules and TY page"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.template.ios.email
+            - name: password
+              string: us.data.prod.checkout.template.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search shipping item and add to cart
+      - executeFunction:
+          name: us.functions.functional.utils.addItemToCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.shippingOnly.item
+            - name: expectedItemCount
+              string: 1
+
+      # Search store delivery item and add to cart
+      - executeFunction:
+          name: us.functions.functional.utils.addItemToCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.delivery.noShipping.item
+            - name: expectedItemCount
+              string: 1
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      # Go to book slot
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Validate delivery instructions
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.deliveryModule.validateDeliveryInstructionsModule
+          params:
+            - name: fulfillmentDeliveryInstructions
+              string: ""
+
+      # Validate delivery from store and shipping modules
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateMixedFulfillmentModules 
+          params:
+            - name: delivery
+              string: true
+            - name: shipping
+              string: true
+
+      # Opt out of text message updates
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.reviewOrder.mobileContactText
+          position: center
+
+      - executeFunction:
+          name: us.functions.functional.utils.optOutTextMessage
+
+      # Validate POS
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateScheduledDeliveryPOS
+          params:
+            - name: isBelowThreshold
+              string: true
+
+      # Place order
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      # Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: Order number ${orderNo}
+
+      # Validate thank you page delivery from store and shipping modules
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.fulfillmentCardTitle
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateThankYouMixedFulfillmentModules
+          params:
+            - name: delivery
+              string: true
+            - name: shipping
+              string: true
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

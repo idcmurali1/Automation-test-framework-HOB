@@ -1,0 +1,160 @@
+functions:
+  # NOTE Moved these functions to this new file as part of refactoring, functionality to be updated with latest
+  # during unified test automation. Update to support both platforms
+
+  # Verify Subscription details and terms in checkout
+  - name: us.functions.functional.checkout.reviewOrder.itemDetails.validateSubscriptionDetails
+    flow:
+      - sleep:
+          duration: 1000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentCardTitle
+              - identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentTime
+          then:
+            - getString:
+                identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentTime
+                attribute: label
+                storeIn: fcDeliveryActualDateTime
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - fulfillmentCardTitle and fulfillmentTime not present"
+      - sleep:
+          duration: 1000
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.itemDetails.validateSubscriptionDetailsAndFrequency
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+  # Verify Subscription details and frequency in ItemDetails section
+  - name: us.functions.functional.checkout.reviewOrder.itemDetails.validateSubscriptionDetailsAndFrequency
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapings.reviewOrder.subscriptionLabel
+            - identifier: us.mapings.reviewOrder.viewDetails
+      - click:
+          identifier: us.mapings.reviewOrder.viewDetails
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.itemDetailsScreen.header
+            - identifier: us.mapings.itemDetails.subscriptionLabel
+            - identifier: us.mapings.itemDetails.subscriptionItemRecurrence
+            - identifier: us.mappings.cart.missingAnything.closeButton
+      - if:
+          condition: ${subsfrequency} == '4 month'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.reviewOrder.viewDetails.subscriptionWeeks
+                    contains: 4 months
+      - click:
+          identifier: us.mappings.cart.missingAnything.closeButton
+
+  # Verify Subscription Terms and Alert message in review order page
+  - name: us.functions.functional.checkout.reviewOrder.validateSubscriptionTermsAlertMessage
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionTermsText
+          then:
+            - log: "The subscription text is present as expected"
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.subscriptionSlotFeeLabel
+                  - identifier: us.mappings.functional.checkout.reviewOrder.subscriptionSlotHeaderLabel
+            - if:
+                condition: ${fulfillmentTypeSubscription} == 'Shipping'
+                then:
+                  - verifyIdentifier:
+                      value:
+                        - identifier: us.mappings.functional.checkout.reviewOrder.subscriptionSlotHeaderLabel
+                          contains: 'Subscription delivery day'
+                        - identifier: us.mappings.functional.checkout.reviewOrder.subscriptionSlotFeeLabel
+                          contains: 'For each subscription order below $35, a $6.99 fee will apply.'
+                else:
+                  - if:
+                      condition: ${fulfillmentTypeSubscription} == 'Delivery'
+                      then:
+                        - verifyIdentifier:
+                            value:
+                              - identifier: us.mappings.functional.checkout.reviewOrder.subscriptionSlotHeaderLabel
+                                contains: 'Subscription delivery day and time'
+                              - identifier: us.mappings.functional.checkout.reviewOrder.subscriptionSlotFeeLabel
+                                contains: 'For each subscription delivery, a $9.95 fee will apply. A $6.99 fee also applies to each subscription order below $35.'
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Subscription text should be displayed but is not"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionTermsAlertMessage
+          then:
+            - log: "The LDA alert message is shown as expected"
+          else:
+            - failTest:
+                message: "The LDA alert message should be shown but is not"
+      - loop:
+          begin: 0
+          end: 15
+          storeIndex: i
+          mode: increment
+          flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.subs.subscriptionCheckBox
+                then:
+                  - log: "The  subscription checkbox is displayed as expected"
+                  - break: true
+                else:
+                  - scroll:
+                      direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.subs.subscriptionCheckBox
+          then:
+            - log: "Subscription checkbox is displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - The checkbox should be displayed but is not"
+      - click:
+          identifier: us.mappings.subs.subscriptionCheckBox
+
+  # Verify Subscription details and frequency in Order Confirmation page for shipping or delivery
+  - name: us.functions.functional.checkout.orderConfirmation.validateSubscriptionForShippingOrDelivery
+    flow:
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.fulfillment.validateCardImageAndTitle
+          params:
+            - name: fulfillmentType
+              string: ${fulfillmentTypeText}
+      - verifyIdentifier:
+          present:
+            - identifier: us.mapings.itemDetails.subscriptionLabel
+          value:
+            - identifier: us.mapings.itemDetails.subscriptionLabel
+              contains: Subscription
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePromiseDate
+          params:
+            - name: fulfillmentType
+              string: FC_DELIVERY
+      - getString:
+          identifier: us.mappings.functional.checkout.reviewOrder.fulfillmentSection.fulfillmentTime
+          attribute: label
+          storeIn: fcDeliveryOrderConfirmationDateTime
+      - if:
+          condition: ${fcDeliveryOrderConfirmationDateTime} == ${fcDeliveryActualDateTime}
+          then:
+            - log: "Promise date displayed is in right format"
+          else:
+            - failTest:
+                message: "Promise date displayed is in wrong format"

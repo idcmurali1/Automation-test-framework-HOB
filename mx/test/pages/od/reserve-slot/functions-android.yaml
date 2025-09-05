@@ -1,0 +1,641 @@
+#======================================================================================================================
+#    AUTHOR: Francisco Javier Ramírez Hernández (vn53vq4)
+#   CREATED: Nov/16/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  - name: mx.functions.reserve-slot.selectTodaySlot
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.todaySlotButton
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.todaySlotButtonIsAvailable
+          then:
+            - click:
+                identifier: mx.mappings.reserve-slot.todaySlotButton
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.todaySlotButtonIsNotAvailable
+                then:
+                  - failTest:
+                      message: "Fail: Today Slot unavailable."
+                else:
+                  - log:
+                      message: "Today Slot already selected."
+                      color: CYAN
+      - log:
+          message: "End function: reserve-slot.selectTodaySlot (Success: Today Slot selected)"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.selectTomorrowSlot
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.tomorrowSlotButtonIsAvailable
+      - click:
+          identifier: mx.mappings.reserve-slot.tomorrowSlotButton
+      - log:
+          message: "End function: reserve-slot.selectTomorrowSlot (Success: Tomorrow Slot selected)"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.selectDayAfterTomorrowSlot
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.dayAfterTomorrowSlotButtonIsAvailable
+          then:
+            - click:
+                identifier: mx.mappings.reserve-slot.dayAfterTomorrowSlotButton
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.dayAfterTomorrowSlotButtonIsNotAvailable
+                then:
+                  - failTest:
+                      message: "Fail: Day After Tomorrow Slot unavailable."
+                else:
+                  - log:
+                      message: "Day After Tomorrow Slot already selected."
+                      color: CYAN
+      - log:
+          message: "End function: reserve-slot.selectDayAfterTomorrowSlot (Success: Day After Tomorrow Slot selected)"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.selectFirstAvailableDateSlot
+    platform: android
+    flow:
+      - storeIn:
+          key: slotSelectedSuccessfully
+          value: false
+      - loop:
+          begin: 0
+          end: 2
+          storeIndex: i
+          mode: increment
+          flow:
+            - log:
+                message: "Checking Slot ${i}"
+                color: CYAN
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.blockedDateSlot
+                then: 
+                  - log:
+                      message: "Slot ${i} blocked."
+                      color: CYAN
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: mx.mappings.reserve-slot.selectedDateSlot
+                      then:
+                        - log:
+                            message: "Slot ${i} available & selected already."
+                            color: CYAN
+                      else:
+                        - click:
+                            identifier: mx.mappings.reserve-slot.dateSlotByIndex
+                  - storeIn:
+                      key: slotSelectedSuccessfully
+                      value: true
+                  - break: true
+      - if:
+          condition: ${slotSelectedSuccessfully} == false
+          then:
+            - failTest:
+                message: "Fail: all slots blocked."
+      - log:
+          message: "End function: reserve-slot.selectFirstAvailableDateSlot"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.selectLastAvailableDateSlot
+    platform: android
+    flow:
+      - storeIn:
+          key: slotSelectedSuccessfully
+          value: false
+      - loop:
+          begin: 2
+          end: 0
+          storeIndex: i
+          mode: decrement
+          flow:
+            - log:
+                message: "Checking Slot ${i}"
+                color: CYAN
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.blockedDateSlot
+                then: 
+                  - log:
+                      message: "Slot ${i} blocked."
+                      color: CYAN
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: mx.mappings.reserve-slot.selectedDateSlot
+                      then:
+                        - log:
+                            message: "Slot ${i} available & selected already."
+                            color: CYAN
+                      else:
+                        - click:
+                            identifier: mx.mappings.reserve-slot.dateSlotByIndex
+                  - storeIn:
+                      key: slotSelectedSuccessfully
+                      value: true
+                  - break: true
+      - if:
+          condition: ${slotSelectedSuccessfully} == false
+          then:
+            - failTest:
+                message: "Fail: all slots are blocked."
+      - log:
+          message: "End function: reserve-slot.selectLastAvailableDateSlot (Success: Last Available Slot selected)"
+          color: BLUE
+      
+  # --------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Scrolls on the Time Slot Container into the desired direction.
+  # PARAMS:  ${direction}    [Mandatory]  Direction to scroll into.
+  #          ${scrollCount}  [Mandatory]  Number of scrolls to perform.
+  - name: mx.functions.reserve-slot.scrollTimeSlotContainer
+    platform: android
+    flow:
+      - log:
+          message: "Direction: ${direction}"
+          color: CYAN
+      - log:
+          message: "Scroll Count: ${scrollCount}"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.reserve-slot.timeSlotContainer
+          attribute: bounds
+          storeIn: bounds
+      - executeNode:
+          file: mx/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: ${bounds}
+            - value: Android
+          getValue:
+            - key: x
+              storeIn: bx
+            - key: x2
+              storeIn: bx2
+            - key: y
+              storeIn: by
+            - key: y2
+              storeIn: by2
+      - log:
+          message: "Time Slot Container Bounds: { x:${bx}, y:${by}, x2:${bx2}, y2:${by2}, width:---, height:--- }"
+          color: CYAN
+      - arithmetic:
+          expression: ${bx} + ((${bx2} - ${bx}) / 2)
+          storeIn: coordX
+      - arithmetic:
+          expression: ${by} + 50
+          storeIn: topY
+      - arithmetic:
+          expression: ${by2} - 50
+          storeIn: bottomY
+      - if:
+          condition: ${direction} == 'down'
+          then:
+            - loop:
+                begin: 0
+                end: ${scrollCount}
+                flow:
+                  - drag:
+                      from:
+                        x: ${coordX}
+                        y: ${bottomY}
+                      to:
+                        x: ${coordX}
+                        y: ${topY}
+                      wait: 3000
+      - if:
+          condition: ${direction} == 'up'
+          then:
+            - loop:
+                begin: 0
+                end: ${scrollCount}
+                flow:
+                  - drag:
+                      from:
+                        x: ${coordX}
+                        y: ${topY}
+                      to:
+                        x: ${coordX}
+                        y: ${bottomY}
+                      wait: 3000
+      - log:
+          message: "End function: reserve-slot.scrollTimeSlotContainer"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Scrolls down until WalmartPass section is displayed on home.
+  - name: mx.functions.reserve-slot.scrollDown
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          position: center
+          scrollLimit: 8
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.selectLastAvailableTimeSlot
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.reserve-slot.scrollTimeSlotContainer
+          params:
+            - name: direction
+              string: down
+            - name: scrollCount
+              string: '3'
+      - numberOfChildElements:
+          identifier: mx.mappings.reserve-slot.timeSlotContainer
+          filterBy: mx.mappings.reserve-slot.timeSlotGeneral
+          storeIn: numberOfSlots
+      - storeIn:
+          key: i
+          value: ${numberOfSlots}
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.timeSlotByIndex
+      - click:
+          identifier: mx.mappings.reserve-slot.timeSlotByIndex
+      - log:
+          message: "End function: reserve-slot.selectLastAvailableTimeSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.selectRandomTimeSlot
+    platform: android
+    flow:
+      # Scroll all the way to the top of the slot time list...
+      - executeFunction:
+          name: mx.functions.reserve-slot.scrollTimeSlotContainer
+          params:
+            - name: direction
+              string: up
+            - name: scrollCount
+              string: '3'
+      # Construct the string array of time slots looping through them all the way to the bottom of the list...
+      - storeIn:
+          key: stringArray
+          value: ""
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: x
+          flow:
+            - numberOfChildElements:
+                identifier: mx.mappings.reserve-slot.timeSlotContainer
+                filterBy: mx.mappings.reserve-slot.timeSlotTextLabelGeneral
+                storeIn: numberOfSlots
+            - arithmetic:
+                expression: ${numberOfSlots} + 1
+                storeIn: numberOfSlots
+            - loop:
+                begin: 1
+                end: ${numberOfSlots}
+                storeIndex: i
+                flow:
+                  - getString:
+                      identifier: mx.mappings.reserve-slot.timeSlotTextLabelByIndex
+                      storeIn: displayedText
+                  - executeNode:
+                      file: mx/test/helpers/utils/appendUniqueToStringArray.js
+                      args:
+                        - value: ${stringArray}
+                        - value: ${displayedText}
+                      getResponse:
+                        storeIn: stringArray
+            - executeFunction:
+                name: mx.functions.reserve-slot.scrollTimeSlotContainer
+                params:
+                  - name: direction
+                    string: down
+                  - name: scrollCount
+                    string: '1'
+      # Get one of the slots randomly from the constructed array...
+      - executeNode:
+          file: mx/test/helpers/utils/getRandomFromStringArray.js
+          args:
+            - value: ${stringArray}
+          getResponse:
+            storeIn: text
+      - log:
+          message: "Random Slot Got: ${text}"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.timeSlotRadioButtonByText
+          then:
+            - click:
+                identifier: mx.mappings.reserve-slot.timeSlotRadioButtonByText
+          else:
+            - executeFunction:
+                name: mx.functions.reserve-slot.scrollTimeSlotContainer
+                params:
+                  - name: direction
+                    string: up
+                  - name: scrollCount
+                    string: '3'
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.timeSlotRadioButtonByText
+                then:
+                  - click:
+                      identifier: mx.mappings.reserve-slot.timeSlotRadioButtonByText
+                else:
+                  - scroll:
+                      direction: down
+                      scrollLimit: 3
+                      untilIdentifier: mx.mappings.reserve-slot.timeSlotRadioButtonByText
+                  - click:
+                      identifier: mx.mappings.reserve-slot.timeSlotRadioButtonByText
+      - log:
+          message: "End function: reserve-slot.selectRandomTimeSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the first express time slot available (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectFirstAvailableExpressSlot
+    platform: android
+    flow:
+      - loop:
+           begin: 1
+           end: 8      
+           storeIndex: i
+           mode: increment
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                  then: 
+                    -  click:
+                         identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                    - break: true
+                  else:
+                      - log: "Express Time slot with index ${i} is not available, verifying with the next time slot..."
+  
+    # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the last available express time slot (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectLastAvailableExpressSlot
+    platform: android
+    flow:
+        - executeFunction: 
+            name: mx.functions.reserve-slot.scrollDown
+        - loop:
+           begin: 7
+           end: 0
+           storeIndex: i
+           mode: decrement
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                  then: 
+                    -  click:
+                         identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                    - break: true
+                  else:
+                      - log: "Express Time slot with index ${i} is not available, verifying with the next time slot..."
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects an available random time express slot (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectRandomAvailableExpressSlot
+    platform: android
+    flow:
+      - loop:
+           begin: 1
+           end: 20
+           storeIndex: j
+           mode: increment
+           flow:
+            - executeNode:
+                  file: mx/test/helpers/utils/getRandomInt.js
+                  args:
+                    - value: 1
+                    - value: 8
+                  getResponse:
+                    storeIn: i
+            - log: "The number generated is: ${i}"
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.timeSlotByIndexIsExpress
+                then: 
+                    - click:
+                        identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                    - break: true
+                else:
+                    - log: "Current time slot is not an express, continue with the next..."
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: Returns the Day of the Selected Delivery Slot and saves it in the global variable 
+  #              ${returnedSelectedDaySlot} in the following format:
+  #              <Index_of_selected_button>, <Day>, <Date>
+  #              (i.e. 1, Hoy, 6/12)
+  - name: mx.functions.reserve-slot.getSelectedDaySlot
+    platform: android
+    flow:
+      - getString:
+          identifier: mx.mappings.reserve-slot.selecteDaySlotDayLabel
+          attribute: text
+          storeIn: day
+      - getString:
+          identifier: mx.mappings.reserve-slot.selecteDaySlotDateLabel
+          attribute: text
+          storeIn: date
+      - loop:
+           begin: 0
+           end: 3
+           storeIndex: i
+           mode: increment
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.selectedDateSlot
+                  then: 
+                    - log: 
+                        message: "Checked slot: ${i}, selected"
+                        color: CYAN
+                    - arithmetic:
+                        expression: ${i} + 1
+                        storeIn: index
+                    - break: true
+                  else:
+                    - log: 
+                        message: "Checked slot: ${i}, not selected"
+                        color: CYAN
+      - storeIn:
+          key: returnedSelectedDaySlot
+          value: ${index}, ${day}, ${date}
+      - log:
+          message: "End function: reserve-slot.getSelectedDaySlot (Delivery Slot Day Got: '${returnedSelectedDaySlot}')"
+          color: BLUE
+
+  # --------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This method executes a fixed process to find the selected time slot. Wherever the time slot container is
+  #   positioned at, it will scroll all the way up and then try to find the selected radio button scrolling down.
+  - name: mx.functions.reserve-slot.fixForFindingSelectedTimeSlot
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.reserve-slot.scrollTimeSlotContainer
+          params:
+            - name: direction
+              string: up
+            - name: scrollCount
+              string: "3"
+      - storeIn:
+          key: timeSlotFound
+          value: false
+      - loop:
+          begin: 0
+          end: 4
+          flow:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.reserve-slot.selectedRadioButton
+                then:
+                  - executeFunction:
+                      name: mx.functions.reserve-slot.scrollTimeSlotContainer
+                      params:
+                        - name: direction
+                          string: down
+                        - name: scrollCount
+                          string: "1"
+                else:
+                  - storeIn:
+                      key: timeSlotFound
+                      value: true
+                  - break: true
+      - if:
+          condition: ${timeSlotFound} == false
+          then:
+            - failTest:
+                message: "Fail: selected time slot not found"
+      - log:
+          message: "End function: reserve-slot.fixForFindingSelectedTimeSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method taps on close button
+  - name: mx.functions.reserve-slot.address-message-popup.tapClose
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.address-message-popup.closeButton
+      - log:
+          message: "End function: reserve-slot.address-message-popup.tapClose"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method asserts add direction pop-up is not displayed
+  - name: mx.functions.reserve-slot.address-message-popup.assertPopupNotDisplayed
+    platform: android
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: mx.mappings.reserve-slot.address-message-popup.popupTitle
+            - identifier: mx.mappings.reserve-slot.address-message-popup.addAddressButton
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method taps on save button
+  - name: mx.functions.reserve-slot.address-message-popup.tapSave
+    platform: android
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.address-message-popup.saveButton
+      - log:
+          message: "End function: reserve-slot.address-message-popup.tapSave"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This function detects if first time slot is express, if it is a online payment will search for normal time slot
+  - name: mx.functions.reserve-slot.selectTimeSlotIfExpressDeliveryIsNotPresent
+    platform: android
+    flow:
+        - executeFunction:
+            name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot
+        - storeIn:
+            key: i
+            value: 1
+        - if:
+            identifier:
+              present:
+                - identifier: mx.mappings.reserve-slot.selectedExpressTimeSlotAndOnlinePayByIndex
+            then:
+              - executeFunction:
+                  name: mx.functions.reserve-slot.selectLastAvailableDateSlot
+              - executeFunction:
+                  name: mx.functions.reserve-slot.getSelectedDaySlot
+              - executeFunction:
+                  name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+              - executeFunction:
+                  name: mx.functions.reserve-slot.selectLastAvailableTimeSlot
+              - log:
+                  message: "Warning: the selected time slot is not express"
+            else:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                  then:
+                    - log:
+                        message: "Selected time slot is express, it's not necessary to select a different time slot"
+                        color: CYAN
+                  else:
+                    - log:
+                        message: "Warning: the selected time slot is not express"
+                        color: YELLOW
+        - log:
+            message: "End function: reserve-slot.selectTimeSlotIfExpressDeliveryIsNotPresent"
+            color: BLUE

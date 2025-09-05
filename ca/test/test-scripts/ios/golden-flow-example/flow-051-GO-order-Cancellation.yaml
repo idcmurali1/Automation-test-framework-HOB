@@ -1,0 +1,163 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Scenarios Covered:
+# Navigate onboarding to home, Creating account using astro
+# Navigate to sign in page and login
+# Account page validation after login and Placing order using astro api
+# navigate to account page and Go to purchase page
+# Purchase history page to view Details and Order cancellation
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  platform: ios
+  tags: flow-051, ca_poj, fr_poj, Post-Transction-English-iOS-Flow, Post-Transction-French-iOS-Flow
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+      - log: ${APP_PLATFORM}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+          
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.astro.createAccount
+          params:
+            - name: payLoad
+              string: ca.test.data.flow051.astroRequestBody1        
+          
+       # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos 
+
+      # Login to account  
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.flow051.emailios
+            - name: password
+              string: ca.test.data.flow051.passwordios
+
+      # Account page validation after login
+      - executeFunction:
+          name: ca.test.functions.accountPage.accountPageAfterLogin
+
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameInTopleft 
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp        
+
+      # Placing order using astro api
+      - executeFunction:
+          name: ca.test.functions.astro.placeOrder.GO
+          params:
+            - name: email
+              string: ca.test.data.flow051.emailios
+            - name: password
+              string: ca.test.data.flow051.passwordios 
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      # navigate to account page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToAccountPage
+    
+      # Go to purchase page
+      - executeFunction:
+          name: ca.test.functions.accountPage.purchaseHistoryButtonIos
+
+      # # Validating purchase history page    
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistoryPageValidationIos
+
+      # Workaround for app stuck in purchase history
+      #Terminate and relaunch the app
+      - executeFunction:
+         name: ca.test.functions.utils.terminateApp
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Navigate to account page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToAccountPage
+    
+      # Go to purchase page
+      - executeFunction:
+          name: ca.test.functions.accountPage.purchaseHistoryButtonIos       
+
+      # Purchase history page to view Details
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.viewDetailsButtonIos
+      
+      # # Order Id assertion                     
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.orderIdAssertion
+      
+      # # Address Assertion
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.addressAssertion
+      #     params:
+      #       - name: addressLine
+      #         string: ca.test.data.flow051.addressLine 
+      
+      # # Cost Assertion
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.costAssertion
+      #     params:
+      #       - name: subTotalAstro
+      #         string: ca.test.data.flow051.subtotal.ios
+      #       - name: totalTax
+      #         string: ca.test.data.flow051.Taxes.ios
+      #       - name: estimate_total
+      #         string: ca.test.data.flow051.Total.ios
+      
+      # Order cancellation
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.orderCancellation
+      
+      # # Validating order cancellation page - locator issue
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.orderCancellationPageValidation        
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-051
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps
+    
+            

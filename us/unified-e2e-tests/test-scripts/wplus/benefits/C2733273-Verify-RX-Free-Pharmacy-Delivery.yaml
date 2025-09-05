@@ -1,0 +1,133 @@
+general:
+  tags: C2733273, unified-p0-wplus-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2733273
+  metadata:
+    - name: scenarioId
+      string: wp054
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+              name: unified.us.functions.utils.astro.rxpd.create.rx
+              params:
+                - name: patientId
+                  string: 129547     
+                - name: siteId
+                  string: 5522
+                - name: ndc
+                  string: 00093505698
+                - name: moveTo
+                  string: EOD
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.teflon.rx.wplus.email
+              
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Account info
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.teflon.rx.wplus.email
+            - name: password
+              string: us.data.teflon.rx.wplus.password
+
+      # Navigate to Services
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToServicesFromTabBar
+
+      # Navigate to Pharmacy
+      - executeFunction:
+          name: unified.us.functions.services.naviagteToServices
+          params:
+            - name: servicesName
+              string: Pharmacy
+
+      # Enter Pharmacy Pin
+      - executeFunction:
+          name: unified.us.functions.services.pharmacy.enterPin
+
+      #Verify WPlus banner on "Review your refill request" page
+      - executeFunction:
+          name: unified.us.functions.wplus.services.pharmacy.placeRefillRequestAndVerifyWplusBanners
+
+      #Verify WPlus banner on Learn more splash page
+      - executeFunction:
+          name: unified.us.functions.wplus.services.pharmacy.verifyWplusTextOnLearnMoreSplash
+
+      - executeFunction:
+          name: unified.us.functions.wplus.services.pharmacy.navigateToPharmacyFromPrescriptionRefillPage
+
+      # Add to Cart
+      - executeFunction:
+          name: unified.us.functions.services.pharmacy.addToCart
+
+      #Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: timeSlot
+              string: generic
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+
+      # # Validate free delivery for pharmacy informations on Cart
+      - executeFunction:
+          name: unified.us.functions.cart.pharmacy.minOrderFeeWaiveoffValidation
+  
+      # Proceed to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Validate free delivery for pharmacy informations on checkout screen
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.pharmacy.minOrderFeeWaiveoffValidation
+
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps 

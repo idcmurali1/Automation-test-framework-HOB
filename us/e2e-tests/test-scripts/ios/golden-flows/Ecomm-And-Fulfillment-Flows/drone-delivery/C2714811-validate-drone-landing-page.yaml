@@ -1,0 +1,134 @@
+# TC #11 Customer is signed in, with an eligible full address and drone eligible delivery store set in GIC * Customer proceeds to the 
+# landing page and adds items to cart from either landing page or item page from LP * Capacity counter will display at the top of the page 
+# (note: android will not be sticky) * Customer proceeds to checkout 
+
+general:
+  platform: ios
+  tags: C2714811, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714811
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+ #***************************************************************************************************************
+
+  # Astro - Clear cart
+
+ #***************************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.flow.drone.ios.email  #us.data.flow060.email
+
+  - name: Main
+    flow:
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome.paramZip
+          params:
+            - name: ZIP_CODE
+              string: us.data.flow.drone.supported.zipCode #us.data.flow060.store.zipcode
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.flow.drone.ios.email #us.data.flow060.email
+            - name: password
+              string: us.data.flow.drone.ios.password #us.data.flow060.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Select Delivery intent from GIC
+      # - executeFunction:
+      #     name: us.functions.gic.expandIfCollapsed
+      # - executeFunction:
+      #     name: us.functions.gic.setFulfillment
+      #     params:
+      #       - name: option
+      #         string: Delivery
+
+      # - executeFunction:
+      #     name: us.functions.gic.module.selectAdress.fromSelector
+      #     params:
+      #       - name: deliveryAddress
+      #         string: ${STREET_ADDR:7190 Pecan St, Frisco, TX 75034}
+      #       - name: deliveryAddressCard
+      #         string: ${STREET_ADDR:7190 Pecan St, Frisco, TX, 75034}
+
+      # Verify GIC Shop-drone-ready picks and navigate to Drone Landing Page 
+      - executeFunction:
+          name: us.functions.gic.verify.navigateToDroneLanding                                         
+
+      # Verify Drone Landing Page and add items
+      - executeFunction:
+          name: us.functions.item.droneLandingPage.addDroneReadyItems
+
+      - executeFunction:
+          name: us.functions.gic.verify.droneCapacityAndTimer
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+      
+      # Customer adds Drone eligible item from Drone landing page
+      # Drone slot is auto-reserved in cart with capacity counter and text
+      # Verify Drone Delivery Fulfillment Text is displayed in Cart
+      # Verify Drone Delivery Fee in POS            
+
+      # DRONE FUNCTIONS
+      - executeFunction:
+          name: us.functions.cart.verifyAndReserveDroneSlot
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      # Validate on Review order screen
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Drone delivery
+
+      - executeFunction:
+          name: us.functions.reviewOrder.verifyDroneFulfillmentDetails           
+  
+      #Place order
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvAndPlaceOrder          
+  
+      - executeFunction:                                 
+          name: us.functions.orderConfirmation.ratings
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps                                                                          

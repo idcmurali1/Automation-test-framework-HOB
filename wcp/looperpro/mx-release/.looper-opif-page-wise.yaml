@@ -1,0 +1,223 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+branches:
+
+  triggers:
+      - push: disabled
+      - pr: disabled
+      - manual:
+          name: Quick SUCCESS Build
+          call: default
+      - manual:
+          name: Run for MX/Teflon/DevApp (Xray-TestPlan)
+          call: run_with_xray_test_plan_reporting(Market = 'MX', Env = 'teflon', BuildType = 'development')
+      - manual:
+          name: Run for MX/Production/DevApp (Xray-TestPlan)
+          call: run_with_xray_test_plan_reporting(Market = 'MX', Env = 'production', BuildType = 'development')
+      - manual:
+          name: Run for MX/Teflon/RCApp (Xray-TestPlan)
+          call: run_with_xray_test_plan_reporting(Market = 'MX', Env = 'teflon', BuildType = 'rc')
+      - manual:
+          name: Run for MX/Production/RCApp (Xray-TestPlan)
+          call: run_with_xray_test_plan_reporting(Market = 'MX', Env = 'production', BuildType = 'rc')
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+parameters:
+
+  - Platform: { type: choice, choices: "android,ios" }
+  - AppPage: { type: choice, choices: "SearchPage,CartPage,CheckOutPage,ContentPage,BookSlotPage,P13N,PurchaseHistory,OrderDetailsPage,ProfilePage" }
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+envs:
+
+  global:
+    variables:
+
+      SAUCE_USERNAME: wcp-apps-e2e
+      SAUCE_ACCESS_KEY: ENC[rnmbZWq+9q4Y2NblUl3yKduKKFO9zq86fEbKAl0j4lm4uh5bgYho+//5ZRtDYEqx]
+      SAUCE_APP: ""
+
+      JIRA_USERNAME: SVCIECMXCART
+      JIRA_PASSWORD: ENC[fzAC0kGD9TQRwrAKSdzrQrejhaaFVA7ng5b4dOiAyQI=]
+      JIRA_PROJECT_ID: INEP
+      JIRA_TEST_SUITE: FUNCTIONAL
+      JIRA_SUMMARY_PREFIX: MERGE_HALLWAYS
+
+      POST_TO_SPLUNK: false
+      POST_TO_XRAY: false
+      POST_TO_ES: false
+
+      SLACK_CHANNEL: merge-hallways-native-apps-report
+
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      GLASS_ENV: ""
+      MARKET: ""
+      DEPENDENCY_FILE_NAME: ""
+      DEPENDENCY_PROFILE: ""
+      MAPPING_LABELS: ""
+
+      R2_VERIFIER_PATH: ""
+      pageFound: "NO" # Internal control var; DO NOT MODIFY.
+
+  android_vars:
+    variables:
+      VERSION_NAME: version
+      APP_PLATFORM: android
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+  ios_vars:
+    variables:
+      VERSION_NAME: short_version
+      APP_PLATFORM: ios
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Tag*: ${TEST_TAGS}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Environment*: ${GLASS_ENV}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+flows:
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  default:
+    - shell(name SUCCESS): |
+        echo SUCCESS
+        exit 0
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  run_with_xray_test_plan_reporting:
+    - call: config_run_for_xray_test_plan_reporting
+    - call: run_build_for_page_wise_opifs
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  config_run_for_xray_test_plan_reporting:
+    - group(name Configuring run for Xray Test Plan Reporting...):
+        - declare(appExtension)
+        - shell(name Platform): echo ${Platform}
+        - shell(name Market): echo ${Market}
+        - shell(name BuildType): echo ${BuildType}
+        - switch(${Platform}):
+            case(android):
+              - var(GLASS_ENV):
+                  - shell(name GLASS_ENV): echo '%{Env.toUpperCase()}' # Android App requires environment in upper case.
+              - var(appExtension):
+                  - shell(name appExtension): echo apk
+            case(ios):
+              - var(GLASS_ENV):
+                  - shell(name GLASS_ENV): echo '${Env}' # iOS App requires environment in lower case.
+              - var(appExtension):
+                  - shell(name appExtension): echo zip
+            otherwise:
+              - fail('Incorrect value for Platform - ${Platform}.')
+        - var(SAUCE_APP):
+            - shell(name SAUCE_APP): echo "storage:filename=mx-${BuildType}-latest.${appExtension}"
+        - var(DEPENDENCY_PROFILE):
+            - shell(name DEPENDENCY_PROFILE): echo "looper-${Market}-xray-test-plan-reporting"
+        - switch(${Market}):
+            case(MX):
+              - var(MARKET):
+                  - shell(name MARKET): echo wcp
+              - var(R2_VERIFIER_PATH):
+                  - shell(name R2_VERIFIER_PATH): echo wcp
+              - var(DEPENDENCY_FILE_NAME):
+                  - shell(name DEPENDENCY_FILE_NAME): echo "${MARKET}/test/dependencies/${Platform}/${Platform}-default.yaml"
+              - var(MAPPING_LABELS):
+                  - shell(name MAPPING_LABELS): echo "mx_ea_${Platform}_${Env}_merge_hallways"
+            otherwise:
+              - fail('Cant configure MAPPING_LABELS, market ${Market} not yet configured.')
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  run_build_for_page_wise_opifs:
+    - group(name Running build for page-wise OPIFs [ Xray Test Plan Reporting ]...):
+        - try:
+            # Read the pages config from the OPIFDetails.json file...
+            - exposeVars(source = json, file = ./wcp/test/helpers/OPIF/OPIFDetails.json):
+                vars:
+                  pages: '.pages[*]'
+
+            # Check if form selected to execute all pages or only an specific page...
+            - if: |
+                %{AppPage == 'ALL_PAGES'}
+              then:
+                - shell(name Execute for ALL PAGES): echo "Execution created for ALL PAGES..."
+                # Loop through OPIFDetails.pages executing for all pages...
+                - foreachParallelFailsafe(${pages}):
+                    - foreachParallelFailsafe(${value.opifs}):
+                        - call: execute_opif(opifId = '${value.opifId}', testPlanId = '${value.testPlanId}', opifSummary = '${value.opifSummary}')
+
+              else:
+                - shell(name Execute for $AppPage): echo "Execution created for ${AppPage}..."
+                # Loop through OPIFDetails.pages executing only while desired page for execution is not found...
+                - foreach(${pages}):
+                    - if: |
+                        %{pageFound == 'NO'}
+                      then:
+                        - var(iterationPageName): ${value.name}
+                        - if: |
+                            %{iterationPageName == AppPage}
+                          then:
+                            - shell(name $iterationPageName found ✔︎): echo "${iterationPageName} found; the OPIFs configured for this file will be executed..."
+                            - var(pageFound):
+                                - shell(name pageFound ✔︎): echo YES
+                            - shell(name Executing page's OPIFs...): echo "Executing OPIFs for ${iterationPageName}..."
+                            - shell(name Print ENV): printenv|sort
+                            # Loop through the page's OPIFs to execute them...
+                            - foreachParallelFailsafe(${value.opifs}):
+                                - call: execute_opif(opifId = '${value.opifId}', testPlanId = '${value.testPlanId}', opifSummary = '${value.opifSummary}')
+                          else:
+                            - shell(name Checked $iterationPageName): echo "${iterationPageName} from loop iteration is not the desired app page to execute for."
+                # Check if desired page for execution was not found and fail in such case...
+                - if: |
+                    %{pageFound == 'NO'}
+                  then:
+                    - shell(name No OPIFs found for $AppPage): |
+                        echo "No OPIFs config found for '${AppPage}' in file './wcp/test/helpers/OPIF/OPIFDetails.json'."
+                        exit 1
+          catch:
+            - fail('${flowErrorMessage}')
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  execute_opif:
+    - group(name ● $opifId ● $testPlanId ● $opifSummary):
+        - shell(name OPIF Info:): |
+            echo "OPIF ID - ${opifId} | Test Plan ID - ${testPlanId} | OPIF Summary - ${opifSummary}"
+        - call: run_build(TEST_TAGS = '${opifId}', JIRA_TEST_PLAN_KEY = '${testPlanId}', OPIF_SUMMARY = '${opifSummary}', REPORT_ID = '${opifId}-${Platform}-')
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  run_build:
+    - var(TEST_SESSION_ID = '%{REPORT_ID.concat(TEST_SESSION_ID)}')
+    - call: build(${Platform}_vars)
+
+  # OVERWRITTEN FLOWS FROM INHERITED LOOPER FILE  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+
+  get_app_version:
+    - call: get_build_app_version
+    - var(APP_VERSION):
+        - shell(name APP_VERSION): echo ${BUILD_APP_VERSION}
+
+  #  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+  get_build_app_version:
+    try:
+      - var(storageName):
+          - shell (name Local var storageName): echo ${SAUCE_APP} | cut -f2 -d'='
+      - var(buildAppVersion):
+          - shell(name Local var buildAppVersion): |
+              curl -s -u "$SAUCE_USERNAME:$SAUCE_ACCESS_KEY" "https://api.us-west-1.saucelabs.com/v1/storage/files?per_page=1&name=${STORAGE_NAME}" | grep -o "\"${VERSION_NAME}\": \"[^\"]*\"" | cut -f4 -d'"' | cut -f1 -d"-"
+      - echo "${BUILD_APP_VERSION}"
+    catch:
+      - echo "Unable to get Build App Version - ${flowErrorMessage}"

@@ -1,0 +1,71 @@
+general:
+  platform: android
+  tags: C2715340
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - executeFunction:
+          name: sc.functions.utils.getUserOrderDetails
+          params:
+            - name: email
+              string: sc.data.C2715340.user.email
+            - name: orderStatus
+              string: DELIVERED
+
+      # Login
+      - executeFunction:
+          name: sc.functions.accounts.login
+          params:
+            - name: email
+              string: sc.partner1.email
+            - name: password
+              string: sc.partner1.password
+
+      - executeFunction:
+          name: sc.functions.home.verify.kpi.unshipped
+
+      - executeFunction:
+          name: sc.functions.orders.searchOrder
+          params:
+            - name: searchType
+              string: 'Order #'
+            - name: searchValue
+              string: ${orderNo}
+
+      - executeFunction:
+          name: sc.functions.orders.verifyOrder
+
+      - verifyIdentifier:
+          text:
+            - identifier: sc.mappings.orders.orderDetails.bottomSheet.orderNumber
+              equals: ${orderNo}
+
+      - executeFunction:
+          name: sc.functions.orders.preAcknowledgeOrder
+
+      - executeFunction:
+          name: sc.functions.orders.printpackingslip
+
+      - executeFunction:
+          name: sc.functions.orders.verifyOrderMenuOptions
+
+      - executeFunction:
+          name: sc.functions.orders.cancelOrder
+
+      - executeFunction:
+          name: sc.functions.orders.quickFilterOrders
+          params:
+            - name: quickFilter
+              string: Canceled
+
+      - storeIn:
+          key: testStatus
+          value: passed

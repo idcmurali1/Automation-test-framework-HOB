@@ -1,0 +1,154 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-292
+#       Flow : Select deliveryIntent A2C from cart Carousals eaches item(TC04-DeliveryIntent-A2C-CartCarousals-PlaformName)
+#    
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-196600
+#
+#   INEP Ticket
+#     https://jira.walmart.com/browse/INEP-292
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-292
+  tags: INEP-292, OPIF-196600, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-173, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   M A I N   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Select deliveryIntent A2C from cart Carousals eaches item-InCart.test"
+    flow:
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - if: 
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction: 
+                name: functions.login.storeEmail
+                params:
+                  - name: userAndroidEmail
+                    string: data.mh.inep-292.userEmail-android # Need to update
+                  - name: useriOSEmail
+                    string: data.mh.inep-292.userEmail-ios # Need to update
+          else:
+            - executeFunction:
+                name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded  
+
+       # Sign in
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      - executeFunction: 
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      - executeFunction:
+         name: functions.global.tapShopBtn
+
+      - if: 
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction: 
+                name: functions.cartPage.clearCart
+
+      - executeFunction:
+         name: functions.global.gic.selectDeliveryIntent
+
+      - executeFunction:
+         name: functions.global.tapCartIcon
+
+      - executeFunction:
+         name: functions.cartPage.verifyCartcarousel
+
+      - executeFunction:
+         name: functions.cartPage.cartcarousel.ATC.firstItem
+
+      - executeFunction:
+         name: functions.cartPage.validateProductDetails
+         params:
+           - name: productName
+             string: ${productName}
+           - name: productPrice
+             string: ${productPrice}
+           - name: productQty
+             string: data.itemCount.qty1
+
+      - executeFunction:
+         name: functions.cartPage.assertFulfillmentTypeInCart
+         params:
+           - name: fulfillmentText
+             string: data.cartPage.DeliveryFromStoreFulfillmentType
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+      - log: 'INEP-92: MAIN SCENARIO END'
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: "Main Scenario passed Successfully."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Main Scenario failed."
+      - log: "AFTER SCENARIO ENDED"              

@@ -1,0 +1,156 @@
+functions: 
+  
+  # Description: This function is used to Validate Money Box On Checkout Page
+  # Param  ${checkForStrikeOutPrice}                [Optional] >> Mark as true
+  #        ${checkForBelowHandlingThresholdFee}     [Optional] >> Mark as true
+  #        ${checkForBelowShippingThresholdFee}     [Optional] >> Mark as true
+  #        ${checkForAboveShippingThresholdFee}     [Optional] >> Mark as true
+  #        ${checkForWalmartPickupFee}              [Optional] >> Mark as true
+  #        ${checkForGroceryPickupFee}              [Optional] >> Mark as true
+  #        ${checkForGroceryDeliveryFee}            [Optional] >> Mark as true
+  #        ${checkForBagFee}                        [Optional] >> Mark as true
+  #        ${checkForMarketPlaceShippingFee}        [Optional] >> Mark as true
+  #        ${checkForMarketPlacePickupFee}          [Optional] >> Mark as true
+  #        ${checkForEcoHandlingFee}                [Optional] >> Mark as true
+  #        ${checkForCrfFee}                        [Optional] >> Mark as true
+  #        ${checkForBevFee}                        [Optional] >> Mark as true
+  #        ${checkForHstTax}                        [Optional] >> Mark as true
+  #        ${checkForGstTax}                        [Optional] >> Mark as true
+  #        ${checkForAssociateDiscountFee}          [Optional] >> Mark as true
+  #        ${checkForDriverTipFee}                  [Optional] >> Mark as true
+  # @Author: pratik.shete [vn55ofc]
+  # @Last Update:
+
+  - name: ca.test.functions.checkoutPage.validateMoneyBox
+    flow:
+      - executeFunction:
+          name: ca.test.functions.checkoutPage.moneyBox.validateSubtotal
+          params:
+            - name: checkForStrikeOutPrice
+              string: ${checkForStrikeOutPrice}
+      - if:
+          condition: ${checkForBelowHandlingThresholdFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateHandlingFee
+      - if:
+          condition: ${checkForBelowShippingThresholdFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateBelowThresholdShippingFee
+      - if:
+          condition: ${checkForAboveShippingThresholdFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateWalmartShippingFee
+      - if:
+          condition: ${checkForWalmartPickupFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateWalmartPickupFee
+      - if:
+          condition: ${checkForGroceryPickupFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateGroceryPickupFee
+      - if:  
+          condition: ${checkForGroceryDeliveryFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateGroceryDeliveryFee
+      - if: 
+          condition: ${checkForBagFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateBagFee
+      - if:  
+          condition: ${checkForMarketPlaceShippingFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateMarketPlaceShippingFee
+      - if:
+          condition: ${checkForMarketPlacePickupFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateMarketPlacePickupFee
+      - if:
+          condition: ${checkForEcoHandlingFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateEcoHandlingFee
+      - if:
+          condition: ${checkForCrfFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateCrfFee
+      - if:  
+          condition: ${checkForBevFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateBevDepositFee
+      - executeFunction:
+          name: ca.test.functions.checkoutPage.moneyBox.validateTotalTax
+      - if:
+          condition: ${checkForHstTax}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateHstTax
+      - if:
+          condition: ${checkForGstTax}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneybox.validateGstTax
+      - if:
+          condition: ${checkForAssociateDiscountFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateAssociateDiscountFee
+      - if:
+          condition: ${checkForDriverTipFee}
+          then:
+            - executeFunction:
+                name: ca.test.functions.checkoutPage.moneyBox.validateDriverTipFee
+      - executeFunction:
+          name: ca.test.functions.checkoutPage.moneyBox.validateEstimatedTotal
+  #--------------------------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates the Driver tip value in Money box on checkout
+  # params: ${customTipAmount}               [Mandatory]  DriverTip Amount
+  - name: ca.test.functions.checkout.driverTip.moneyBoxValidations
+    platform: android
+    flow:
+      - executeFunction:
+          name: ca.test.functions.checkout.driverTip.enterCustomValue
+      - if:
+          condition: ${customTipAmount} > 100
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.checkout.driverTip.thresholdErrorMsg
+      - if:
+          condition: ${customTipAmount} <= 100
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ca.test.mappings.checkout.estimatedTotalText
+                scrollLimit: 5
+      - if:
+          condition: ${customTipAmount} <= 100 && ${customTipAmount} > 0
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: ca.test.mappings.checkout.driverTip.amount
+                  - identifier: ca.test.mappings.checkout.driverTip.percentage
+            - log:
+                message: Driver Tip is and amount present in money box
+      - if:
+          condition: ${customTipAmount} == '0'
+          then:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: ca.test.mappings.checkout.driverTip.driverTipMoneyBox
+            - log:
+                message: Driver Tip is not present in money box!
+      - log:
+          message: "End functions: checkout.driverTip.moneyBoxValidations"
+          color: GREEN_BOLD

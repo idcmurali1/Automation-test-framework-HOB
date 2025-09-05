@@ -1,0 +1,174 @@
+general:
+  tags:  C2689714, unified-p0-ecomm-teflon-e2e 
+  testCaseId: C2689714
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 461
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - storeIn:
+          key: email
+          value: wmtusers${timestamp}@walmart.com 
+#          value: ibotta423@wm.com
+          
+      - storeIn:
+          key: password
+          value: us.data.teflon.password
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Account info
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: $email
+            - name: android.password
+              string: us.data.teflon.password
+            - name: ios.email
+              string: $email
+            - name: ios.password
+              string: us.data.teflon.password
+
+      - sleep:
+          duration: 30000
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      # Navigate to home page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop
+
+      - executeFunction:
+          name: unified.us.functions.home.closeLimitedTimeWalmartCashPopUpIfDisplayed
+
+      - executeFunction:
+            name: unified.us.functions.home.changeStore
+            params:
+              - name: zipcode
+                string: 95122
+              - name: storeOnly
+                string: true
+  
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 427889157 #167874221 
+
+      - executeFunction:
+          name: unified.us.functions.ibotta.verifyIbottaRewards.on.itemSearch
+
+      # Click First item in the search list
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.ibotta.selectIbottaSubscription.on.itemPage.AddSubscription
+     
+     # Navigate to cart and verify Items in Cart    
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+      
+    # Verify Walmart Cash claimed badge in cart page
+      - executeFunction:
+          name: unified.us.functions.ibotta.verifyibottaRewards.on.cartPage
+      
+      - executeFunction: 
+         name: unified.us.functions.cart.continueToCheckoutOrNewOrder 
+      
+    # Verify walmart cash rewards details in review order page
+      - executeFunction:
+          name: unified.us.functions.ibotta.verifyibottaRewards.on.reviewOrderPage
+    
+    # Place order
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+      
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+      - log: ${orderNo}
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.verifyWalmartCashPendingAndSubscriptionText
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://account
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: unified.us.functions.account.verify.walmartCashPage
+
+      - sleep:
+          duration: 3000
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

@@ -1,0 +1,198 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-595
+#       Flow : MH: Select GIC Pickup intent and store, A2C and validate store details in cart
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179336
+#   INEP TEST ID:
+#     https://jira.walmart.com/browse/INEP-595
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-863
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-595
+  tags: INEP-595, OPIF-179336, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-863, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Select GIC Pickup intent and store, A2C and validate store details in cart"
+    flow:
+
+      # Create account using astro api..
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+      # Click on login and select sign in..
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user..
+      - log:
+          message: "Login with existing user using password as authentication method and ensure user is logged in.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+
+      # Select pickup and select store..
+      - log:
+          message: "Select pickup and select store.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.homePage.selectStore
+          params:
+            - name: Zipcode
+              string: true              
+            - name: Zip_Code
+              string: data.global.gic.zipCode1
+            - name: storeName
+              string: data.global.gic.storeNameCalzada
+
+      # Add item from search page..
+      - log:
+          message: "Add item from search page.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+          params:          
+            - name: productArray
+              string: data.global.itemsArray.unscheduled # Need to update item
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.global.item.1count
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+    
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart.. "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails 
+
+      # Validate fulfilment details in cart page.. 
+      - log:
+          message: "Validate fulfilment details in cart page.. "
+          color: PURPLE_BOLD_BRIGHT                    
+      - executeFunction:
+          name: function.cartPage.validateFufillmentType
+          params:
+            - name: expectedFulfillmentType
+              string: data.cartPage.freePickupFulfillmentType
+
+      # Select Pickup slot from cart..
+      - log:
+          message: "Select Pickup slot from cart.."
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      - executeFunction:
+          name: functions.reserveATime.bookSlot
+          params:
+            - name: fufillment
+              string: data.global.deliveryText.pickup
+            - name: slotType
+              string: Standard
+
+      # Validate cart page for pickup..
+      - log:
+          message: "Validate cart page for pickup.."
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction:
+          name: functions.cartPage.scheduledPickup.verifyCard      
+      - executeFunction:
+          name: functions.cartPage.verifyDeliveryAddress
+          params:
+            - name: streetAddress
+              string: data.inep-589.deliveryAddress
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - executeFunction:
+          name: functions.utils.after

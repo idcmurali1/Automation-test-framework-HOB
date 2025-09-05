@@ -1,0 +1,127 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-86
+#       Registered user without a slot being booked when clicked on proceed to checkout BAS page is loaded.
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179345
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-86
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-79
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-86
+  tags: INEP-86, OPIF-179345, p1-mh-opif-teflon-d-feb, INEP-79, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Book Slot - Registered user without a slot being booked when clicked on proceed to checkout BAS page is loaded..."
+    flow:
+
+
+      # Create user and onboard to application..
+      - log:
+          message: "Create user and onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.walmartGroceryStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+
+      - log:
+          message: "Add 1P Item Grocery Item."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.productDetailsPage.addToCartUsingItemArrayList-GetProductDetails
+          params:
+            - name: productArray
+              string: data.global.itemsArray.groceryByPieces
+      - executeFunction:
+            name: functions.productDetailsPage.tapClose
+
+
+      - log:
+          message: "Verify while clicking proceed to checkout without booking slot."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.global.gic.selectPickupIntent
+          params:
+            - name: page
+              string: cart                
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}   
+      - executeFunction:
+          name: functions.cartPage.reserveTime.validateRegisteredUserReserveTimePage
+
+
+  #  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  # #   A F T E R   S C E N A R I O
+  # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

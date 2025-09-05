@@ -1,0 +1,86 @@
+
+# W+ Prevent phone number recycling trial signups for Auto Launch
+
+general:
+  platform: ios
+  tags: C2716450
+  testCaseId: C2716450
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_ASSIST_NON_MEMBER_SIGN_UP_FLOW'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+      
+      # Create Non Member Account
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmartstoretest.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createAccountPayload.generic
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: us.functions.wplus.nonmember.PhoneRecycleFailedError.BottomSheet
+
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage  
+
+      - executeFunction:
+          name: us.functions.wplus.membership.verifyMyMembershipDetails           
+          params:
+              - name: tenure
+                string: monthly
+              - name: membershipType
+                string: trial
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,163 @@
+#------------------------------------------------------------------------------
+# Add GO item to cart with cart value above $35. (Make the add to cart dynamic which validate cart value before adding another product to cart)
+# Book a delivery from store slot.
+# Go to checkout page.
+# Update the custom tip box with $101 value.
+# Validate the error message "Tips can be up to $100."
+# Update the custom tip box with $100 value.
+# Validate the driver tip is updated to $100
+# Validate driver tip is showing in money box with %.
+#------------------------------------------------------------------------------
+general:
+  platform: ios
+  tags: dt-003-ios #, ca-function-run
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+  - name: Driver tip capped at $100
+    flow:
+            # Navigate onboarding to home
+            - executeFunction:
+                name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+            - log:
+                message: navigated from onboarding to home
+                color: YELLOW 
+
+            # Verifying home screen
+            - executeFunction:
+                name: ca.test.functions.home.headerElements.validateIosHomePage
+            - executeFunction:    
+                name: ca.test.functions.home.livingDesign.validateIosBottomNavigation
+            # Navigate to sign in page
+            - executeFunction:
+                name: ca.test.functions.home.navigateHomeToSignInIos
+            - log:
+                message: navigated to signin page
+                color: YELLOW 
+
+            # Sign In to the account
+            - executeFunction:
+                name: ca.test.functions.global.authentication.signInAccountIos
+                params:
+                  - name: email
+                    string: ca.test.data.dt003.emailios
+                  - name: password
+                    string: ca.test.data.dt003.passwordios
+            - executeFunction:
+                name: ca.test.functions.home.verifyUserNameInTopleft
+            - log:
+                message: Singed in
+                color: YELLOW 
+
+            # Clear Cart
+            - executeFunction:
+                name:  ca.test.functions.cart.removeCartItems
+            - log:
+                message: cart cleared 
+                color: YELLOW 
+
+            # Selecting store in home page
+            - executeFunction:
+               name: ca.test.functions.global.authentication.storeSelect
+               params:
+                - name: Zip_Code
+                  string: ca.test.data.onboarding.zipcodeL5V6N2
+                - name: storeName
+                  string: ca.test.search.storeNameL5V6N2
+            - log:
+               message: Updated the store to L5V6N2!
+               color: YELLOW 
+
+       # Selecting address at home page
+            - executeFunction:
+                name: ca.test.functions.home.changeLocationLink
+                params:
+                  - name: address
+                    string: ca.test.data.deliveryPinCode_K1C1T1
+            - log:
+               message: Updated the address to K1C1T1.
+               color: YELLOW 
+
+          #product search:
+            - executeFunction:
+                name: ca.test.functions.productSearch.searchAProductIos
+                params:
+                  - name: product
+                    string: ca.test.data.product.GO_L1
+
+          #Add product to cart - GO - dynamic product addition                    
+            - executeFunction:
+                name: ca.test.functions.dynamicProduct
+          
+          # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCartIos
+            - log:
+                message: Navigated to cart
+                color: YELLOW
+
+          # # temporary 
+          # # add addredd popup issue in delivery slot page
+          #   - executeFunction:
+          #       name: ca.test.functions.cart.deliverySlot_avoid_addaddresspopup
+          #       params:
+          #         - name: address
+          #           string: K1C 1T1
+
+         # Book a delivery slot
+            - executeFunction:
+                name: ca.test.functions.cart.deliverySlotIos
+            - log:
+                message: Booked delivery slot
+                color: YELLOW
+                
+          # Proceed to Checkout
+            - executeFunction:
+                name: ca.test.functions.cart.proceedToCheckOut
+
+          #Go to Driver tip box
+            - executeFunction:
+                name: ca.test.functions.checkout.drivertipOptionValidation
+
+          #Update the custom tip box with $101 value and error msg validation
+            - executeFunction:
+                name: ca.test.functions.checkout.dripvertipErrorMsgValidaion
+                params:
+                  - name: CustomTipAmount
+                    string: 101
+
+          #Update the custom tip box with $100 value and % validation
+            - executeFunction:
+                name: ca.test.functions.checkout.dripvertip100Scenario
+                params:
+                  - name: CustomTipAmount
+                    string: 100
+                  - name: tipAmount
+                    string: "$100"
+                  - name: tipPercentage
+                    string: ca.test.data.dt003.tipPercentage
+#------------------------------------------------------------------------------
+
+            - storeIn:
+                key: testStatus
+                value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: DT-003-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

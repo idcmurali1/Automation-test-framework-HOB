@@ -1,0 +1,236 @@
+# ================================================================================================================================
+# TC: 022
+# Flow: TC-022: 3P WFS No Shipping Charge items + Paypal
+# ================================================================================================================================
+general:
+  testCaseId: C2720139
+  tags: C2720139, p1-mx-ea-teflon, p1-bodega-ea-teflon, p1-mx-ea-prod, p1-bodega-ea-prod, p1-ca-en-teflon, p1-ca-en-prod, p1-ca-fr-prod, p1-us-prod, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon
+  combineScenarios: true
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+
+      #Create new account using Astro API if env is teflon
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.astroApi.createNewAccountWithCreatePayload
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp022.android.email
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp022.ios.email
+            - storeIn:
+                key: password
+                value: data.global.password.Password2
+
+      # Onboard to aplication and select EA options.
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Navigate and validate homepage.
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      # Click on login and select sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user.
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+      # - if:
+      #     condition: ${environment} == 'Production'
+      #     then:
+      #       - executeFunction:
+      #           name: functions.accountPage.addAndDeleteAddress
+
+      # Search for item and validate if search results are displayed.
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            - if:
+                condition: ${market} == 'MX' || ${market} == 'MX-Bodega'  #this if market condition will be removed once the CEPG-292007 will be fixed be[Deeplink issue]
+                then:
+                  - executeFunction:
+                      name: functions.searchPage.addToCartUsingItemArray
+                      params:
+                        - name: productArray
+                          string: data.wcp22.wfsSeller1
+                  - executeFunction:
+                      name: functions.searchPage.addToCartUsingItemArray
+                      params:
+                        - name: productArray
+                          string: data.wcp22.wfsSeller2
+                else:
+                  - executeFunction:
+                      name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                      params:
+                        - name: productArray
+                          string: data.wcp22.wfsSeller1
+                  - executeFunction:
+                      name: functions.productDetailsPage.tapClose
+                  - executeFunction:
+                      name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                      params:
+                        - name: productArray
+                          string: data.wcp22.wfsSeller2
+                  - executeFunction:
+                      name: functions.productDetailsPage.tapClose
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                params:
+                  - name: productArray
+                    string: data.wcp22.wfsSeller
+
+            - executeFunction:
+                name: functions.productDetailsPage.tapClose
+
+      # Navigate to cart and ensure items are added to cart and validate subTotal.
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+
+      # TODO: Remove below if condition when this ticket is fixed INDECART-3695
+      - if:
+          condition: ${market} != 'CA' && ${environment} == 'Production'
+          then:
+            - executeFunction:
+                name: functions.cartPage.scrollDownToPOS
+            - executeFunction:
+                name:  functions.cartPage.pos.validateNoShippingCharge
+
+
+      # Navigate to review order page.
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+
+      # Select Paypal as payment method
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.paymentMethod.applyPayPalPayment
+                params:
+                  - name: payPalEmailId
+                    string: data.default.payPalEmailId
+                  - name: payPalPassword
+                    string: data.default.payPalPassword
+                  - name: lastFourDigits
+                    string: data.default.payPalCredit.lastFourDigits
+
+          
+      # TODO: Remove below if condition when this ticket is fixed INDECART-3695
+      - if:
+          condition: ${market} != 'CA'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.scrollToPOS
+            - executeFunction:
+                  name: functions.checkoutPage.validateNoShippingCharge
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDetails
+                params:
+                  - name: expectedDeliveryType
+                    string: data.global.deliveryType.S2H
+                  - name: expectedFulfillmentName
+                    string: data.global.userName.ACCEPT
+                  - name: expectedFulfillmentAddress
+                    string: data.global.s2h.deliveryAddress
+                  - name: expectedTotalItemsCount
+                    string: data.tc-022.totalQuantity
+
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            # Validate ODP
+            - executeFunction:
+                name: functions.orderDetailPage.verifySectionDisplayed
+            - executeFunction:
+                name: functions.orderDetailPage.verifyDeliveryType
+                params:
+                  - name: expectedDeliveryType
+                    string: data.global.deliveryText.delivery
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyPaymentType
+                params:
+                  - name: paymentType
+                    string: data.global.paypalText
+
+            - executeFunction:
+                name: functions.orderDetailPage.scrollToPOS
+
+            - executeFunction:
+                name: functions.orderDetailPage.validateNoShippingChargeWithDiscount
+                
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

@@ -1,0 +1,146 @@
+general:
+  tags: C2657044, unified-prod-e2e, prod-e2e,  p2-ecomm-prod-e2e, unified-prod-e2e-mp, EC033 #prod-e2e-dct
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657044
+  metadata:
+    - name: scenarioId
+      string: EC033 #88
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+  - name: Main
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+       # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.cps.android.email
+            - name: android.password
+              string: us.data.prod.cps.password1
+            - name: ios.email
+              string: us.data.prod.cps.ios.email
+            - name: ios.password
+              string: us.data.prod.cps.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: address
+              string: San Jose Supercenter
+            - name: store
+              string: 95122
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      #Add 3P item - Compare sellers flow
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.prod.cps.ios.3p.searchTerm
+
+      - executeFunction:
+          name: unified.us.functions.search.applyRetailerFilter
+          params:
+            - name: option
+              string: Walmart
+
+      - executeFunction:
+          name: unified.us.functions.search.promptGotItButton 
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: excludeSponsored
+              string: true
+
+      - executeFunction:
+          name: unified.us.functions.addNonWinningOfferItem.cartItemsPresent
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Verify shipping header on cart page
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder 
+
+      # Verify shipping header on review order page
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: Shipping
+      
+      # Enter mobile contact phone number
+      - executeFunction:
+          name: unified.us.functions.checkout.enterMobileContact
+          params:
+            - name: phoneNumber
+              string: us.data.flow001.phoneNumber
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,207 @@
+general:
+  tags: C2719945, unified-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  
+  testCaseId: C2719945
+  metadata:
+    - name: scenarioId
+      string: ####
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+    #  Astro clear cart
+      - if: 
+          condition: ${platform} == 'Android'
+          then:        
+            - executeFunction:
+                name: unified.us.functions.utils.astro.clearCart
+                params:
+                  - name: email
+                    string: us.data.flow.cfs.android.email
+
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:        
+            - executeFunction:
+                name: unified.us.functions.utils.astro.clearCart
+                params:
+                  - name: email
+                    string: us.data.flow.cfs.ios.email
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Will take the user to the account menu from where the user can sign in to the app
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      #Create new account using Astro API if env is teflon
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.authentication.signInAccountWithParams
+                params:
+                  - name: ios.email
+                    string: us.data.flow.cfs.ios.email
+                  - name: ios.password
+                    string: us.data.flow.cfs.ios.password
+                  - name: android.email
+                    string: us.data.flow.cfs.android.email
+                  - name: android.password
+                    string: us.data.flow.cfs.android.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+  
+      - executeFunction:
+          name: unified.us.functions.home.rateDriverPopup
+
+      - executeFunction:
+          name: unified.us.functions.gic.module.selectAdress.fromSelector
+          params:
+            - name: deliveryAddress
+              string: ${STREET_ADDR:2476 Barlow Ave, San Jose, CA 95122}
+            - name: deliveryAddressCard
+              string: ${STREET_ADDR:2476 Barlow Ave, San Jose, CA, 95122}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'Add substitutable lower and medium priced items'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+      # Select Delivery intent from GIC
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: unified.us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      # Add item1 to the cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/5017217949
+      - executeFunction:
+           name: unified.us.functions.item.addItemToCart
+      - sleep:
+          duration: 3000
+
+      # Go to cart
+      - executeFunction:
+           name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Verify cart
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.cart.checkoutWithSlotBooking
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: today
+            - name: slotIndex
+              string: 4
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      # POS & Wallet 'Temporary Hold' language and bottom-sheet verification
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.incrementalAuth.verifyTemporaryHold
+
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+
+      # Go to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+      - sleep:
+          duration: 3000
+
+      # Add item3 to the cart for existing amendable order
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/5017217979
+      - executeFunction:
+           name: unified.us.functions.item.addItemToCart
+      - sleep:
+          duration: 3000
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Amends cart page 'Temporary Hold' language and bottom-sheet verification
+      - executeFunction:
+          name: unified.us.functions.cart.amendsPage.verifyTemporaryHold
+
+      - executeFunction:
+          name: unified.us.functions.cart.addToExistingOrder
+
+      - executeFunction:
+          name: unified.us.functions.amend.creditCard.InCart
+          params:
+            - name: cvv
+              string: "111"
+
+      - executeFunction:
+          name: unified.us.functions.amend.verify.itemAddedToOrder
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - storeIn:
+          key: testStatus
+          value: passed
+          
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps 

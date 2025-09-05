@@ -1,0 +1,168 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-244
+#       Flow - MH: Validate Fulfillment Instruction for Unscheduled Order Delivery
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179425
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-244 
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-239
+#
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-244
+  tags: INEP-244, OPIF-179425, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, INEP-239, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: tcVars_userEmail
+                value: data.mh.inep244.user.email-android
+            - storeIn:
+                key: tcVars_deliveryAddress
+                value: data.defaultAddress.fullString.forThankYouPage.android
+          else:
+            - storeIn:
+                key: tcVars_userEmail
+                value: data.mh.inep244.user.email-ios
+            - storeIn:
+                key: tcVars_deliveryAddress
+                value: data.defaultAddress.fullString.forThankYouPage.ios
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Validate Fulfillment Instruction for Unscheduled Order Delivery"
+    flow:
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+    
+      # Go to Order History Page and validate order is created and opened
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${tcVars_userEmail}
+            - name: userPassword
+              string: data.global.password.Password2
+      
+      # Clear cart if needed before adding new products
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      # Add unshceduled itmes to cart
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.scheduled
+      # Open cart
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      # Continue to checkout page
+      - executeFunction:
+           name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded
+      # Get fullfillment date
+      - executeFunction:
+          name: functions.checkoutPage.getFulfillmentDate # Returns -> ${returnedFulfillmentDate}
+      - executeFunction:
+          name: functions.checkoutPage.reformatFulfillmentDate # Returns -> ${returnedFormattedFulfillmentDate}
+          params: 
+            - name: fulfillmentDate
+              string: ${returnedFulfillmentDate}
+      # Scroll until payment method and add CVV for card
+      - executeFunction:
+            name: functions.checkoutPage.scrollToCVVTextfield
+      - executeFunction:
+          name: functions.checkoutPage.addCVV
+          params:
+            - name: CVV
+              string: data.global.card.cvv.123
+      # Place order
+      - executeFunction:
+          name: functions.checkoutPage.tapPlaceOrderButton
+      # Validate Thank you page displayed
+      - executeFunction:
+            name: functions.thankYouPage.verifyThankYouPageDisplayed
+      
+      # Assert delivery address
+      - executeFunction:
+          name: functions.thankYouPage.assertFulfillmentDate
+          params:
+            - name: expectedFulfillmentDate
+              string: ${returnedFormattedFulfillmentDate}
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

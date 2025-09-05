@@ -1,0 +1,212 @@
+# Validate unscheduled pickup flow - pickup module in review order and TY page
+
+general:
+  platform: ios
+  tags: C2713816, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2713816
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate unscheduled pickup flow - pickup module in review order and TY page
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate unscheduled pickup flow - pickup module in review order and TY page"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.template.ios.email
+            - name: password
+              string: us.data.prod.checkout.template.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search item and add to cart
+      - executeFunction:
+          name: us.functions.search.addItemtoCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.bagfee.scPickupDelivery.item
+            - name: expectedItemCount
+              string: 1
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      # Select unscheduled pickup
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: pickup
+            - name: page
+              string: cart
+            - name: slotDay
+              string: today
+            - name: timeSlot
+              string: unscheduled
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Validate unscheduled pickup module
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateUnscheduledPickupModule
+
+      # Edit pickup person, add alternate pickup person
+      - storeIn:
+           key: pickupPersonFirstName
+           value: John
+      - storeIn:
+           key: pickupPersonLastName
+           value: Doe
+      - storeIn:
+           key: pickupPersonEmail
+           value: jd@cloudtest.org
+      - storeIn:
+           key: altPickupPersonFirstName
+           value: Walter
+      - storeIn:
+           key: altPickupPersonLastName
+           value: Woe
+      - storeIn:
+           key: altPickupPersonEmail
+           value: ww@cloudtest.org
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.editPickupPerson
+          params:
+            - name: pickupPersonFirstName
+              string: ${pickupPersonFirstName}
+            - name: pickupPersonLastName
+              string: ${pickupPersonLastName}
+            - name: pickupPersonEmail
+              string: ${pickupPersonEmail}
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.addAlternatePickupPerson
+          params:
+            - name: altPickupPersonFirstName
+              string: ${altPickupPersonFirstName}
+            - name: altPickupPersonLastName
+              string: ${altPickupPersonLastName}
+            - name: altPickupPersonEmail
+              string: ${altPickupPersonEmail}
+
+      # Validate unscheduled pickup module with alternate pickup person
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePickupPersonDetails
+          params:
+            - name: pickupPersonName
+              string: ${pickupPersonFirstName} ${pickupPersonLastName}
+            - name: altPickupPersonName
+              string: ${altPickupPersonFirstName} ${altPickupPersonLastName}
+
+      # Edit pickup person, remove alternate pickup person
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.removeAlternatePickupPerson
+
+      # Validate unscheduled pickup module without alternate pickup person
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePickupPersonDetails
+          params:
+            - name: pickupPersonName
+              string: ${pickupPersonFirstName} ${pickupPersonLastName}
+
+      # Validate POS
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.pos.validateNoBelowThesholdCharge
+      
+      # Place order without phone number
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+      
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      # Validate error messages
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePhoneNumberRequiredError
+      
+      # Place order with phone number
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.enterPhoneNumber
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      # Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      # Validate unscheduled pickup module in TY page
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.functional.checkout.reviewOrder.TY.fulfillmentTitleView.curbsidePickupTitle
+          position: center
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.TY.validateUnscheduledPickupModule
+
+      - log: Order number ${orderNo}
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

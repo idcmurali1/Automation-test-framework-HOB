@@ -1,0 +1,93 @@
+#Day Zero Automation Spanish Experience - Completed 
+general:
+  platform: android
+  tags: skelton-test-for-CodeActivation, C2709195 
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  testCaseId: C2709195
+  metadata:
+    - name: scenarioId
+      string: 476
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp     
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: us.data.ios.unifiedCheckin.password
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Create Account using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.ios.unifiedCheckin.createAccountPayload
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: $password 
+
+
+      # Deeplink to reactibvation code
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://plus/activate?activationCode=WP2VF8GQ2H
+
+
+      #Validate the Activation Page Loaded Successfully using Deep Link
+      - executeFunction:
+          name: us.functions.wplus.verifyActivateCodePageLoaded
+
+
+      #Validate the Code Activation - Negative Scenario
+      - executeFunction:
+          name: us.functions.wplus.activateCodeForNonMember
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

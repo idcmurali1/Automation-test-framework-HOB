@@ -1,0 +1,113 @@
+general:
+  platform: ios
+  tags: us-golden-flows-wplus, C2657244, p0-wplus-teflon-e2e
+  testCaseId: C2657244
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 191, WP013
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flowinhome.createAccountPayload.annual
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: E2epassword$
+
+      # Navigate to walmart plus
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      # Sign up from inhome trial via hub
+      - executeFunction:
+          name: us.functions.wplus.inHome.trial.signUp.via.hub
+
+      # Verify inHome plusUp details on Manage Membership flow
+      - executeFunction:
+          name: us.functions.wplus.inHome.validateMyPlusUpsDetailsOnManageMembershipPage
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: trial
+
+      # Verify inHome plusUp details on Manage plusUps screen
+      - executeFunction:
+          name: us.functions.wplus.inhome.managePlusUpsScreen.verifyPlusUpDetails
+          params:
+            - name: tenure
+              string: annual
+      
+      # Cancel In-Home Membership 
+      - executeFunction:
+          name: us.functions.wplus.inHome.via.manage.cancelMembershipPlan
+
+      # Verify memebership details after cancelation on In-home Review Membership page
+      - executeFunction:
+          name: us.functions.wplus.inHome.cancelmember.verifyReviewmembershipDetails
+
+      - executeFunction:
+          name: us.functions.wplus.inHome.cancelmember.selectCancelReason
+
+   # Verify memebership details after cancelation on manage membership page
+      - executeFunction:
+          name: us.functions.wplus.inHome.validatecancelmemberPlusUpsOnManageMembershipPage
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: paid        
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,132 @@
+functions:
+
+  # Description: Navigate to product details page with deeplink.
+  # Params:      ${productArray}         [Mandatory]  Search product using array.
+  - name: functions.productPage.navigatetoPDPwithDeeplink
+    flow:
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - executeFunction:
+                name: functions.utils.getMarketDeeplinkPrefix
+            - executeFunction:
+                name: functions.onboarding.navigation.goToDeepLink                       
+                params:
+                - name: deepLinkUrl
+                  string: ${deeplinkMarketPrefix}item/${searchText}
+                - name: deeplinkMarketPrefix
+                  string: ${deeplinkMarketPrefix}
+            - if:
+                identifier:
+                  present:
+                    - identifier: productDetailsPage.addToCartButton
+                then:
+                  - storeIn:
+                      key: isAddToCartButtonDisplayed
+                      value: true
+                  - log:
+                      message: Breaking the loop as required cart value is achieved.
+                      color: GREEN_BOLD
+                  - break: true 
+      - log:
+               message: "End function: functions.productPage.navigatetoPDPwithDeeplink"
+               color: BLUE
+# -------------------------------------------------------------------------------------------------------------------
+
+  # Description: Setting up the subscription and add to the cart.
+  # No param 
+  - name: functions.productPage.setupSubscriptionFromItemPage
+    flow:
+      - executeFunction:
+          name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed
+      - executeFunction:
+          name: functions.productPage.isOnetimePurchaseEnabled
+      - executeFunction:
+          name: functions.productPage.selectSubscribeRadioButton
+      - if:
+          condition: ${market} == 'US'
+          then:
+            - executeFunction:
+                name: functions.setupSubscriptionPopup.tapDeliveryFrequency
+      - executeFunction:
+          name: functions.productPage.clicksetUpSubscriptionButton
+      - if:
+          condition: ${market} == 'CA'
+          then:
+            - executeFunction:
+                name: functions.isSetUpSubscriptionPopupDisplayed
+            - executeFunction:
+                name: functions.setupSubscriptionPopup.tapDeliveryFrequency
+            - executeFunction:
+                name: functions.setupSubscriptionPopup.tapAddSubscriptionToCartBtn
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+      - log:
+          message: "End function: functions.productPage.setupSubscriptionFromItemPage"
+          color: BLUE
+
+# ---------------------------------------------------------------------------------------------------------------
+ # Description: This function is used to unsubscribe an item from manage subscription page
+  # No Param
+  - name: functions.subscriptionPage.manageSubscription.unSubscribe
+    flow:
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.taponMySubscription
+      - if: 
+          identifier:
+            present:
+              - identifier: accountPage.mySubscription.tapOnFrequencychevron
+          then:
+            - executeFunction:
+                name: functions.accountPage.mySubscription.tapOnFrequencychevron
+            - executeFunction:
+                name: functions.mySubscription.manageSubscriptions.tapOnUnSubscribe
+            - executeFunction:
+                name: functions.mySubscription.manageSubscriptions.unSubscribeConfirmationBottomSheet
+          else:
+            - log: "There is no subsciptions available currently for this account"
+      - if: 
+            condition: ${platform} == 'Android'
+            then:
+                - click:
+                    identifier: subscription.mySubscription.backButton
+                - scroll:
+                    direction: up
+                    scrollLimit: 0
+            else:
+                - click:
+                    identifier: global.accountBtn
+      - log:
+          message: "End Functions: functions.subscriptionPage.manageSubscription.unsubscribe"
+          color: BLUE
+
+# --------------------------------------------------------------------------------------------------------------
+# Description : This function validates manage subscription page.
+# No Param
+  - name: functions.subscriptionPage.verifyManageSubscription
+    flow: 
+      - executeFunction:
+          name: functions.accountPage.mySubscriptions.changeDeliveryDay
+      - executeFunction:
+          name: functions.accountPage.mySubscription.tapOnFrequencychevron
+      - executeFunction:
+          name: functions.mySubscriptions.manageSubscription.updateFrequency
+      - executeFunction:
+          name: functions.mySubscriptions.manageSubscription.veifiyUpdatedFrequency
+      - executeFunction:
+          name: functions.mySubscriptions.manageSubscription.editPayment
+      - executeFunction:
+          name: functions.mySubscriptions.manageSubscription.increaseQuantity
+      - click:
+           identifier: subscription.mySubscription.backButton
+      
+      - click:
+          identifier: subscription.mySubscription.backButton  
+            
+      - log:
+            message: "End Functions: functions.subscriptionPage.verifyManageSubscription"
+            color: BLUE

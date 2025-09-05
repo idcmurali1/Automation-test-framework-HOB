@@ -1,0 +1,715 @@
+functions:
+  - name: unified.us.functions.buyNow.existingUser.overlay
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.buyNow.buyNowButton
+          then:
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: unified.us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.buyNow.buyNowButton
+                        - name: direction
+                          string: down
+                        - name: scrollLimit
+                          string: 4
+            - click:
+                identifier: us.mappings.buyNow.buyNowButton
+            - if:
+                identifier:
+                  timeout: 5000
+                  present:
+                    - identifier: us.mappings.buyNow.AddonServicesPopupTitle
+                then:
+                  - click:
+                      identifier: us.mappings.buyNow.AddonServices.Closebutton
+            - if:
+                identifier:
+                  timeout: 5000
+                  present:
+                    - identifier: us.mappings.buyNow.shippingTab
+                then:
+                  - click:
+                      identifier: us.mappings.buyNow.shippingTab
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.buyNow.titleNavigationBar
+                  - identifier: us.mappings.buyNow.productTitle
+                  # - identifier: us.mappings.buyNow.deliverToAddress
+                  - identifier: us.mappings.buyNow.arrivingText
+                  # - identifier: us.mappings.buyNow.payWithText (These identifiers are causing issues when the address or payload not loaded)
+                  - identifier: us.mappings.buyNow.estimatedTotalText
+                  - identifier: us.mappings.buyNow.placeOrderButton
+            - executeFunction:
+                name: unified.us.functions.buyNow.addAddress.selectOrVerify
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Buy now button is not present "
+
+  - name: unified.us.functions.buyNow.addAddress.selectOrVerify
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.buyNow.addAddress
+          then:
+            - click:
+                identifier: us.mappings.buyNow.addAddress
+                wait: 10000
+            - executeFunction:
+                name: unified.us.functions.reserveSlot.fcormpselectaddressandcontinue
+            - sleep:
+                duration: 10000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.buyNow.deliverToAddress
+          else:
+            - sleep:
+                duration: 10000
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.buyNow.deliverToAddress
+
+  - name: unified.us.functions.buyNow.existingUser.upgradeShippingAndVerifyFields
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.buyNow.arrivingText
+      - click:
+          identifier: us.mappings.buyNow.arrivingText
+          wait: 3000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.buyNow.upgradeShipping
+            - name: direction
+              string: down
+      - click:
+          identifier: us.mappings.buyNow.upgradeShipping
+          wait: 3000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - getString:
+                identifier: us.mappings.buyNow.selectDateText
+                attribute: text
+                storeIn: newSpeedingOption
+          else:
+            - getString:
+                identifier: us.mappings.buyNow.selectDateText
+                attribute: label
+                storeIn: newSpeedingOption
+      - log: ${newSpeedingOption}
+      - click:
+          identifier: us.mappings.buyNow.upgradeShippingConfirmButton
+          wait: 3000
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: us.mappings.buyNow.arrivingText
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - getString:
+                identifier: us.mappings.buyNow.arrivingtextValue
+                attribute: Text
+                storeIn: UpgradedDate
+          else:
+            - getString:
+                identifier: us.mappings.buyNow.arrivingText
+                attribute: label
+                storeIn: UpgradedDate
+      - log: UpgradedDate ${UpgradedDate}
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: ${newSpeedingOption}
+                    equals: ${UpgradedDate}
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.buyNow.deliverToAddAnAddressText
+                    notEquals: Add delivery address
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.buyNow.payWithText
+                    notEquals: Add a credit or debit card
+
+                  - identifier: us.mappings.buyNow.estimatedTotalText
+                  - identifier: us.mappings.buyNow.placeOrderButton
+          else:
+            - executeNode:
+                file: us/e2e-tests/helpers/dateValidations.js
+                args:
+                  - value: buyNowDateUpgrade
+                  - value: ${newSpeedingOption}
+                  - value: ${UpgradedDate}
+                getResponse:
+                  storeIn: comparison
+            - if:
+                condition: ${comparison} != true
+                then:
+                  - failTest:
+                      message: "date validation failed."
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.buyNow.deliverToAddAnAddressText
+                    notEquals: Add delivery address
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.buyNow.payWithText
+                    notEquals: Add a credit or debit card
+
+                  - identifier: us.mappings.buyNow.estimatedTotalText
+                  - identifier: us.mappings.buyNow.placeOrderButton
+
+   # Validating the wplus Opt In and wplus Opt out on the buynow overlay screen 
+  - name: unified.us.functions.wplus.buyNow.wplusOptIn
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.buyNow.walmartOptInBanner
+          then:
+            - log: Wplus Banner Available
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                   - verifyIdentifier:
+                       value:
+                          - identifier: us.mappings.buyNow.walmartOptInHeader
+                            contains: $6.99 order min fee            
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Wplus Banner not Available"
+      - if:
+          condition: ${wplusUser} == 'optIn'
+          then:
+            - log: Opting in for wplus membership
+            - if:
+                condition: ${platform} == 'iOS'     
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNow.walmartOptInCheckbox
+                then:
+                  - click:
+                      identifier: us.mappings.buyNow.walmartOptInCheckbox
+            - if:
+                condition: ${platform} == 'Android'     
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNow.walmartOptInOutCheckbox
+                then:    
+                   - click:
+                       identifier: us.mappings.buyNow.walmartOptInOutCheckbox
+
+      - if:
+          condition: ${wplusUser} == 'optOut'
+          then:
+            - log: Opting out of wplus membership
+            - if:
+                condition: ${platform} == 'iOS'     
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNow.walmartOptOutCheckbox
+                then:
+                  - click:
+                      identifier: us.mappings.buyNow.walmartOptOutCheckbox 
+                else:
+                   - verifyIdentifier:
+                        present:
+                          - identifier: us.mappings.buyNow.walmartOptInOutCheckbox
+                   - click:
+                       identifier: us.mappings.buyNow.walmartOptInOutCheckbox             
+               
+  # Validating that the minimum order fee is waived off for shipping item with 3 days shipping added to cart
+  - name: unified.us.functions.wplus.cart.noMinimumOrderFeeWaived
+    flow:
+       - if:
+          identifier:
+            present:
+               - identifier: us.mappings.wplus.freeShippingNoOrderMinimumLabel 
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.wplus.freeShippingNoOrderMinimumLabel
+                      #Verify wplus free shipping no order minumum text on buynow overlay
+          else: 
+            - failTest:
+                message: "FAILURE - ${env} - Buy now is unavailable for the searched Product"
+            # - executeFunction:
+            #     name: us.functions.utils.scrollIfNotVisible
+            #     params:
+            #       - name: identifier
+            #         string: us.mappings.home.feedback.module.button
+            #       - name: direction
+            #         string: down               
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.wplus.freeShippingNoOrderMinimumLabel
+
+  - name: unified.us.functions.buyNow.associateDiscountPrompt.applyDiscount
+    flow:
+       - click:
+          identifier: us.mappings.buyNow.buyNowButton
+          wait: 6000
+       - if:
+          identifier:
+            present:
+              - identifier: us.mappings.buyNowUnavailableAlert
+          then:
+            - log: Buy Now button is unavailable
+            - click:
+                identifier: us.mappings.popup.okButton
+            - sleep:
+                duration: 2000
+            - log: Clicking on Buy Now button again
+            - click:
+                identifier: us.mappings.buyNow.buyNowButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNowUnavailableAlert.okay
+                then:
+                  - log: Buy Now button is unavailable on second try
+                  - failTest:
+                      message: "FAILURE - ${env} - Buy now unavailable "
+
+       - if:
+          identifier:
+            present:
+              - identifier: us.mappings.associateDiscount.pageTitle
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.associateDiscount.pageTitle
+                  - identifier: us.mappings.associateDiscount.applyAssociateDiscount
+                  - identifier: us.mappings.associateDiscount.doNotAppyAssociateDiscount
+                  - identifier: us.mappings.associateDiscount.VerifyDiscountpolicyArrow
+            - click:
+                identifier: us.mappings.associateDiscount.continueButton
+                wait: 6000
+            - sleep:
+                duration: 4000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.associateDiscount.continueButton
+                then:
+                    - click:
+                        identifier: us.mappings.associateDiscount.continueButton
+       - sleep:
+          duration: 5000
+       - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.buyNow.placeOrderButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+            - name: limit
+              string: 10
+       - if:
+          identifier:
+            present:
+              - identifier: us.mappings.buynow.pleaseAddYourAddressButton
+          then:
+            - click:
+                identifier:  us.mappings.buynow.pleaseAddYourAddressButton
+            - executeFunction:
+                name: us.functions.reserveSlot.fcormpselectaddressandcontinue  
+       - verifyIdentifier:
+          timeout: 100000
+          present:
+            - identifier: us.mappings.buyNow.arrivingText
+            - identifier: us.mappings.buyNow.payWithText
+            - identifier: us.mappings.buyNow.estimatedTotalText
+            - identifier: us.mappings.buyNow.placeOrderButton
+
+  - name: unified.us.functions.buyNow.editCard.verifyBuyNowEligibility
+    flow:
+      - click:
+          identifier: us.mappings.buyNow.payWithField
+          wait: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.buyNow.verifyEBTEligibility
+      - verifyIdentifier:
+          enabled:
+            - identifier: us.mappings.buyNow.verifyEBTSelectionButton
+              value: false
+
+  - name: unified.us.functions.buyNow.editCard.navigateback               
+    flow:
+      - click:
+          identifier: us.mappings.buyNow.navigateback
+          wait: 3000                
+
+  - name: unified.us.functions.buyNow.estTotal.associateDiscount.buyNowEligibility.text
+    flow:
+    - if:
+        condition: ${platform} == 'iOS'
+        then:
+          - click:
+              identifier: us.mappings.buyNow.estimatedTotalText
+              wait: 3000
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.buynow.estTotal.pos.associateDiscountLabel
+                - identifier: us.mappings.buynow.estTotal.pos.associateDiscountLabel.string           
+                - identifier: us.mappings.buynow.estTotal.pos.totalHeader
+                - identifier: us.mappings.buynow.estTotal.pos.subTotalLabel
+                - identifier: us.mappings.buynow.estTotal.pos.estimatedTaxesLabel.string
+                - identifier: us.mappings.buynow.estTotal.pos.estimatedTotalLabel.string
+          - click:
+              identifier: us.mappings.global.navigation.backNav.resourceId
+
+    - if:
+        condition: ${platform} == 'Android'
+        then:
+          - click:
+              identifier: us.mappings.buyNow.estimatedTotalText
+              wait: 3000
+          - verifyIdentifier:
+              present:
+                - identifier: us.mappings.associateDiscount.checkout.posAssociateDiscountLabel
+                - identifier: us.mappings.associateDiscount.checkout.posAssociateDiscountValueLabel          
+                - identifier: us.mappings.reviewOrder.subtotalPricelabel
+                - identifier: us.mappings.buynow.estTotal.total.titleText
+                - identifier: us.mappings.buynow.estTotal.subTotal.titleText
+                - identifier: us.mappings.buynow.estTotal.estTaxes.titleText
+                - identifier: us.mappings.buynow.estTotal.estTotalPOS.titleText
+                - identifier: us.mappings.reviewOrder.orderTotalAmount
+          - click:
+              identifier: us.mappings.global.navigation.backNav.resourceId
+
+  - name: unified.us.functions.buyNow.placeOrder.buyNow.associateDiscount.eligibility
+    flow:
+      - if:
+          identifier:
+            present: 
+              - identifier: us.mappings.buyNow.addCard.securityCodeField
+          then:          
+              - log: CVV field is Prompting user for Buy Now          
+              - verifyIdentifier:
+                  present:            
+                    - identifier: us.mappings.buyNow.addCard.securityCodeField
+              - enterText:
+                  identifier: us.mappings.buyNow.addCard.securityCodeField
+                  string: ${cvv}
+          else:
+            - log: CVV field is Not Prompting user for Buy Now
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNow.enterYourCvv
+                then:
+                  - click:
+                      identifier: us.mappings.buyNow.enterYourCvv
+                  - verifyIdentifier:
+                      present:            
+                        - identifier: us.mappings.buyNow.addCard.securityCodeField
+                  - enterText:
+                      identifier: us.mappings.buyNow.addCard.securityCodeField
+                      string: ${cvv}
+                  - click:
+                      identifier: us.mappings.reviewOrder.paymentMethod.continueButton
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.buyNow.placeOrderButton
+          position: center  
+                                
+      - executeFunction:
+          name: us.functions.buynow.guestUser.placeOrder
+      - sleep:
+          duration: 50000
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.buyNow.thankYouTitle
+            - identifier: us.mappings.buyNow.itemArrivesText
+            - identifier: us.mappings.buyNow.continueButton
+      - executeFunction:
+          name: us.functions.buyNow.orderConfirmation.getOrderNumber
+      - log: ${orderNo}            
+      - click:
+          identifier: us.mappings.buyNow.continueButton
+          wait: 3000                
+
+  - name: unified.us.functions.orderDetails.AssociateDiscount
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.buynow.orderDetails.associateDiscount.label
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.buynow.orderDetails.associateDiscount.label
+      - log: Associate Discount is present   
+
+
+  - name: unified.us.functions.buyNow.newUser.overlay.createNewAccount
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: executionStage
+                value: Pre-transactions
+            - sleep:
+                duration: 20000
+            - executeFunction:
+                name: unified.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.item.switching.fulfillment.shippingText   
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.item.switching.fulfillment.shippingText
+            - verifyIdentifier:
+                timeout: 280000
+                present:
+                  - identifier: us.mappings.buyNow.buyNowButton
+            - click:
+                identifier: us.mappings.buyNow.buyNowButton
+                wait: 30000
+            - executeFunction:
+                name: unified.us.functions.global.authentication.createAccountFromSignInScreen
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNowUnavailableAlert
+                then:
+                  - log: Buy Now button is unavailable
+                  - click:
+                      identifier: us.mappings.popup.okButton
+                  - sleep:
+                      duration: 2000
+                  - log: Clicking on Buy Now button again
+                  - click:
+                      identifier: us.mappings.buyNow.buyNowButton
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.buyNowUnavailableAlert
+                      then:
+                        - log: Buy Now button is unavailable on second try
+                        - failTest:
+                            message: "ENV_FAILURE - ${env} - Buy now unavailable " 
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: executionStage
+                value: Pre-transactions
+            - storeIn:
+                key: astroEmail        # remove afrer mobile verification issue get resolved 
+                value: "identity-testuser${timestamp}@walmart.com"
+      #Random phone number some times not working 
+            - storeIn:
+                key: astroPhoneNumber 
+                value: ${__randomUSPhone}
+                #5678923456
+                #1${__randomUSPhone}
+            - sleep:
+                duration: 10000
+            - verifyIdentifier:
+                timeout: 2000
+                present:
+                  - identifier: us.mappings.buyNow.buyNowButton
+            - click:
+                identifier: us.mappings.buyNow.buyNowButton
+                wait: 3000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.buyNow.buyNowUnAvailableMessage
+                then:
+                  - failTest:
+                      message: "ENV_FAILURE - Buy Now is Not Available Now Message displayed"
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.createAccount.signinAnotherOptions.banner
+                then:             
+                    - click:     
+                        identifier: us.mappings.account.createAccount.dismiss.banner           
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.createAccount.userEmailTextField
+                then:             
+                    - enterText:
+                        identifier: us.mappings.account.createAccount.userEmailTextField
+                        string: ${astroEmail}
+                        pressEnter: true
+                    - click:     
+                        identifier: us.mappings.global.authentication.signIn.continueButton   
+                else:                                  
+                  - click:
+                      identifier: us.mappings.global.authentication.createAccountButton
+            - verifyPresent:
+                identifier: us.mappings.account.createAccount.firstNameTextField
+            - enterText:
+                identifier: us.mappings.account.createAccount.firstNameTextField
+                string: TestFirst
+                pressEnter: true
+            - enterText:
+                identifier: us.mappings.account.createAccount.lastNameTextField
+                string: TestLast
+                pressEnter: true
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.createAccount.buyNowphoneNumberTextField
+                then:             
+                    - enterText:
+                        identifier: us.mappings.account.createAccount.buyNowphoneNumberTextField
+                        string: ${astroPhoneNumber}
+                        pressEnter: true
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.createAccount.passwordTextField
+                then:             
+                    - enterText:
+                        identifier: us.mappings.account.createAccount.passwordTextField
+                        string: E2epassword$
+                        pressEnter: true
+            - click:
+                identifier: us.mappings.global.authentication.createAccountButton
+            - sleep:
+                duration: 5000
+        
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.accountVerificationEmail.text
+                then:
+                  - executeFunction:
+                      name : us.functions.utils.astro.fetchPasscode.emailOTP      
+                      params:
+                        - name: email
+                          string: ${astroEmail}
+                  - log: "The OTP generated is: "
+                  - log: ${otpFromEmail}
+                  - log: "The Request Verification Code button is clicked"
+                  - verifyIdentifier:
+                          present:
+                          - identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+                  - enterText:
+                          identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+                          string: ${otpFromEmail}
+                  - log: "Entered the OTP form Customer's email"
+                  - click:
+                          identifier: us.mappings.global.authentication.signInButton
+                  - sleep:
+                          duration: 5000 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.enterVerificationCode.text
+                then:
+                  - storeIn:
+                      key: astroPhoneNumber 
+                      value: 1${astroPhoneNumber}
+                  - executeFunction:
+                      name : us.functions.authentication.verifyPhoneOTP
+                      params:
+                        - name: email
+                          string: ${astroEmail}
+                        - name: phone
+                          string: ${astroPhoneNumber}                          
+                  - executeFunction:
+                      name: us.functions.utils.handleTechnicalErrorPopup
+                  - verifyNotPresent:
+                      identifier: us.mappings.global.authentication.createAccountButton
+            - executeFunction:
+                name: unified.us.functions.utils.handleCartMergePopup
+      - log: Associate Discount is present
+
+  - name: unified.us.functions.buyNow.itemScreen.selectWplusCheckBox               
+    flow:
+     - if:
+          identifier:
+            present:
+              - identifier:  us.mappings.buyNow.itemScreen.wplusCheckBox
+          then:
+            - click:
+                identifier:   us.mappings.buyNow.itemScreen.wplusCheckBox
+          else:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string:  us.mappings.buyNow.itemScreen.wplusCheckBox     
+                  - name: direction
+                    string: down       
+            - click:
+                identifier: us.mappings.buyNow.itemScreen.wplusCheckBox
+
+  - name: unified.us.functions.wplus.buyNow.EmailOTP
+    flow:
+      - sleep:
+          duration: 2000  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.buyNow.confirmYourEmailHeader
+          then:
+            - executeFunction:
+                name: us.functions.utils.astro.fetchPasscode.emailOTP
+                params:
+                  - name: email
+                    string: ${email}
+            - log: "The OTP generated is: "
+            - log: ${otpFromEmail}
+            - log: "The Request Verification Code button is clicked"    
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+            - enterText:
+                identifier: us.mappings.global.authentication.signIn.textBoxForOTP
+                string: ${otpFromEmail}
+            - log: "Entered the OTP from Customer's email" 
+            - click:
+                identifier: us.mappings.global.authentication.ValidateOTPView.button  
+
+  - name: unified.functions.buynow.guestUser.placeOrder
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.buyNow.placeOrderButton
+      - click:
+           identifier: us.mappings.buyNow.placeOrderButton
+           wait: 5000
+      - verifyIdentifier:
+           timeout: 90000
+           present:
+              - identifier: us.mappings.buyNow.thankYouTitle
+              - identifier: us.mappings.buyNow.orderNumberLabel
+              - identifier: us.mappings.buyNow.continueButton
+
+
+  - name: unified.functions.buyNow.orderConfirmation.getOrderNumber
+    flow:   
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - sleep:
+          duration: 3000
+      - getString:
+          identifier: us.mappings.buyNow.orderNumberLabel
+          extractNumbers: true
+          storeIn: orderNo 

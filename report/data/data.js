@@ -1,0 +1,1 @@
+var DATA = {"app":null,"data":{"app":null,"deviceList":[],"info":{"Build and Version":null,"Platform":"iOS","CI":null,"Branch":null,"Tests":""}},"pluginId":"r2","identifiers":{"application":null},"accessibilityCheckErrors":[],"r2Version":"5.7.1","errors":[],"timestamp":"08/25/2025 14:06:13","status":"fair"};

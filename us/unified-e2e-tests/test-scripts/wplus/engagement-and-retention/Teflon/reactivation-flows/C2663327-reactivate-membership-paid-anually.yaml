@@ -1,0 +1,113 @@
+general:
+  tags:  C2663327 # covered in C2737180
+  testCaseId: C2663327
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: '319, 325, WP003'
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      # Create Wplus Paid Anually Account and convert to Paid using astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createTrialAccountConvertToPaid
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+      #Cancel membership using Astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.cancelPaidMembership
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #  Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+        # Navigate to SignIn
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+        # Signin
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: ${customerEmail}
+              - name: password
+                string: E2epassword$
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+         
+    # Navigate to Walmart+
+      - executeFunction:
+          name: unified.us.functions.account.navigateToWalmartPlusBenefits
+
+      - executeFunction:
+          name: unified.us.functions.benefits.clickChurnedActiveReactivateWplus   
+
+        #Navigate to Manage membership
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage 
+ 
+        # Verify Monthly Plan Activation on Manage Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: paid   
+
+      # storing testrun result as passed
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

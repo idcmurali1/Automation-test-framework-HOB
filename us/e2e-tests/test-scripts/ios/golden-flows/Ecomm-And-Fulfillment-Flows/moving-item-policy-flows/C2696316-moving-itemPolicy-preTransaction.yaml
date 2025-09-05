@@ -1,0 +1,239 @@
+# Place 3 seperate orders for Video Games per Shipping Address in 8 Hours, to trigger the pretransaction Item Policy prompt.
+
+general:
+  platform: ios
+  tags:  us-golden-flows, C2696316 #p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2696316
+  metadata:
+    - name: scenarioId
+      string: FF005
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+ #***************************************************************************************************************
+
+  # Astro - Clear cart
+
+ #***************************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.ios.flow.mip.email
+
+  - name: Main
+    flow:
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome.paramZip
+          params:
+            - name: ZIP_CODE
+              string: us.data.mip.store.zipcode
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.flow.mip.email
+            - name: password
+              string: us.data.mip.password
+
+      # Navigate to Home screen
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Create Multiple orders to a given shipping address
+      - executeFunction:
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.flowMip.createOrderPayload
+
+      - executeFunction: 
+          name: us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.flowMip.createOrderPayload
+
+      #Add Video Game item to cart using deeplink or use Search fx.
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.teflon.mipItem.videoGame
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+                
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping 
+    
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping 
+    
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+      
+       # Validate on Review order screen
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      # Click on place order, verify Moving Item Policy Prompt and save item for later
+      - executeFunction:
+          name: us.functions.reviewOrder.mip.confirmItemPolicy.editItems
+          params:  
+            - name: header
+              string: Update items
+            - name: violation
+              string: Warning, There’s a max limit on the number of video games. Reduce or remove the item before checking out.
+            - name: description
+              string: "Amazing Hidden Object Games: Greatest Hits Vol. 3 - 10 Pack"                             
+            - name: instructions
+              string: Remove item
+
+      #Add a non Video Game item to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.teflon.fc.nonMipItem
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+    
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping 
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping 
+    
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+      
+       # Validate on Review order screen
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      # Place order
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvAndPlaceOrder
+
+      - executeFunction:                                 
+          name: us.functions.orderConfirmation.ratings
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+#  ***************************************************************************************************************
+
+#   Astro - Move order to PO to Shipped
+
+#  ***************************************************************************************************************
+
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+    
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Shipped
+
+ #***************************************************************************************************************
+
+  # Astro - Move order to Delivered
+
+ #***************************************************************************************************************
+
+
+      - executeFunction:
+          name:  us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}          
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Delivered
+      
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: us.functions.orderDetails.ost.fcDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: us.data.fulfillment.shipping
+            - name: orderStatus
+              string: us.data.odp.shipping.textDelivered
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

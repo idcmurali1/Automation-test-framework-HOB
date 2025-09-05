@@ -1,0 +1,249 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: 012
+# User : Registered User
+# Order: Type: Digital items
+# Fulfillment: S2H
+# Payment Type : GC
+# Experience: A2C PDP
+# Validation: Digital item, Validate GC gets disabled when digital item is used.
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: ios
+  tags: flow-012, ca_authpoc, E2E-iOS-English, E2E-iOS-French, group-2
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+          
+      #temporary#
+      - executeFunction:
+          name: ca.test.functions.utils.avoidTestPopup
+
+     # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.flow012.onboardingZipcode
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.ios.data.flow012.email
+            - name: password
+              string: ca.test.ios.data.flow012.password
+
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.ios.data.flow012.email
+            - name: password
+              string: ca.test.ios.data.flow012.password
+
+      # Validating home page customer greeting
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameHomePage
+          params:
+            - name: usergreeting
+              string: ca.test.ios.data.flow012.userName
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Selecting store from home page
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.flow012.onboardingZipcode
+            - name: storeName
+              string: ca.test.data.flow012.storeName
+      
+       # Selecting address at home page
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: address
+              string: ca.test.data.flow012.addressZipCode
+
+      # Product Search using sku
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:           
+            - name: product
+              string: ca.test.data.flow012.digitalProductSku
+
+      # Navigating to PDP from SRP
+      - executeFunction:
+          name: ca.test.functions.productSearch.srpToPdpPage
+          params:
+            - name: productName
+              string: ca.test.data.flow012.digitalProductName
+
+      # PDP page header container validation
+      - executeFunction:
+          name: ca.test.functions.pdp.productHeaderContainer
+
+      # Validating product pdp filfullment details
+      - executeFunction:
+          name: ca.test.functions.pdp.primaryBuyBoxContainerMerchandise
+          params:
+            - name: productType
+              string: Digital
+        
+      # Validating product details card
+      - executeFunction:
+          name: ca.test.functions.PDPpage.validatingProductDetailsCard
+
+      # Product more details page 
+      - executeFunction:
+          name: ca.test.functions.pdp.MoreDetails
+
+      # Product Details Page Validation
+      - executeFunction:
+          name: ca.test.functions.pdp.validatingProductType
+          params:
+            - name: productType
+              string: ca.test.data.flow012.productTypeDigital
+
+      # Validate cart quantity
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantity
+           params:
+            - name: cartQuantity
+              string: ca.test.data.flow012.cartQuantity
+
+      # Asserting cart total
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ca.test.data.flow012.assertCartTotal    
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+          
+      # Selecting shipping
+      - executeFunction:
+          name: ca.test.functions.cart.selectShippingOptionsIos
+
+      # Verifying shipping address
+      - executeFunction:
+          name: ca.test.functions.cart.fulfillmentAddressIos
+          params:
+            - name: addressFirstLine
+              string: ca.test.data.flow012ios.shippingAddressFirstLine    
+      
+      # Cart fulfillment verification
+      - executeFunction:
+          name: ca.test.functions.cart.deliveryS2H.verifyCard      
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow012.digitalProductName
+      
+      # Verify cart subTotal
+      - executeFunction:
+          name: ca.test.functions.cart.cartSubTotal
+          params: 
+            - name: subTotal
+              string: ca.test.data.flow012.assertCartTotal
+
+      # Verify cart walmart shipping
+      - executeFunction:
+          name: ca.test.functions.cart.cartWalmartShipping
+          params: 
+            - name: walmartShipping
+              string: ca.test.data.flow012.walmartShipping
+
+      # Verify cart Taxes
+      - executeFunction:
+          name: ca.test.functions.cart.cartTaxes
+          params: 
+            - name: taxes
+              string: ca.test.data.flow012.totalTaxAmount
+
+      # Verify cart HST
+      - executeFunction:
+          name: ca.test.functions.cart.hstTaxAssertion
+          params: 
+            - name: hst_percentage
+              string: ca.test.data.flow012.hstTaxPercentageAssertion
+            - name: hst_tax_value
+              string: ca.test.data.flow012.hstTaxAmountAssertion
+
+      # Verify cart estimated total
+      - executeFunction:
+          name: ca.test.functions.cart.cartEstimatedTotal
+          params: 
+            - name: estimate_total
+              string: ca.test.data.flow012.estimatedTotal
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos
+      
+      # CheckOut page order review validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+          params:
+            - name: fulfillment
+              string: ca.test.data.flowios.fullfillmentType
+  
+     # verify the GC disabed for digital items
+      - executeFunction:
+          name: ca.test.functions.checkOut.payment.giftCard.disabledForDigitalProducts
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-012
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps  
+
+      

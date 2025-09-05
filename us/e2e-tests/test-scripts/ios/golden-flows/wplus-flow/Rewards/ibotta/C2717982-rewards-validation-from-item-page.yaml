@@ -1,0 +1,103 @@
+general:
+  platform: ios
+  tags: p1-wplus-teflon-e2e, us-golden-flows-wplus, C2717982
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2717982
+  metadata:
+    - name: scenarioId
+      string: 203
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start main
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - storeIn:
+          key: email
+          value: wmtuser${timestamp}@cloudtest.org
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+    # Create Account using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.reward.createAccountPayload
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with created account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $email
+            - name: password
+              string: $password
+              
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+      - terminateApp: true
+
+      # Apply Expo
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.wplus.cashPageRedesignExpoDeepLink
+
+      # Navigate to Account
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.wplus.userAccountDeepLink
+
+      # Navigate to cash center
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToCashCenter
+          
+      - executeFunction:
+          name: us.functions.search.navigateToRewardEligibleCashPage
+
+      - executeFunction:
+          name: us.functions.item.verifyAddToRewardCheckboxandClipRewardFromItemPage
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

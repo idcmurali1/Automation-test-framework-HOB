@@ -1,0 +1,235 @@
+general:
+  platform: android
+  # tags: C2717449, us-golden-flows, p1-ecomm-teflon-e2e , P1, us-golden-flows-ecom-p1
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2717449
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: majorapplianceflow3@walmart.com
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - storeIn:
+          key: customerEmail
+          value: majorapplianceflow3@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      # Search Items
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 
+
+# or
+
+# need to select which function needs to be used 
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: MP_DELIVERY
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 1093892980
+            - name: itemFilter
+              string: mpproseller
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/$item1
+
+      - executeFunction:
+          name: us.functions.item.majorAppliance.itemPage
+
+      - executeFunction:
+          name: us.functions.item.preAddToCartSteps
+
+      - executeFunction:
+          name: us.functions.item.validateAndClickAddToCartButton
+
+      - executeFunction:
+          name: us.functions.item.majorAppliance.deliveryoptions
+          params:
+            - name: RoomOfChoice
+              string: true
+            - name: HaulAway
+              string: true
+
+      - executeFunction:
+          name: us.functions.carePlans.addProtectionPlanFromPACScreen
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.majorAppliance.scheduleDelivery
+          params:
+          - name: guestuser
+            string: true
+          - name: customerEmail
+            string: majorapplianceflow3@walmart.com
+          - name: password
+            string: E2epassword$ 
+
+      - executeFunction:
+          name: us.functions.cart.verifyDeliveryCharges
+          params:
+            - name: HaulAway
+              string: true
+            - name: RoomOfChoice
+              string: true
+
+      #Continue to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.applianceDeliveryValidations
+
+      # Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.checkout.applianceDeliveryValidations
+      
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.checkout.applianceDeliveryValidations
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string:  MP_DELIVERY  #MP_WFS_DELIVERY
+            - name: status
+              string: Shipped
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: us.functions.orderDetails.ost.fcDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Shipping
+            - name: orderStatus
+              string: On the way
+      
+#*******************************************************************************************************
+
+      # Astro - Move order status to Delivered
+
+#*******************************************************************************************************
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string:  MP_DELIVERY 
+            - name: status
+              string: Delivered
+
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: us.functions.orderDetails.ost.fcDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Shipping
+            - name: orderStatus
+              string: Delivered
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

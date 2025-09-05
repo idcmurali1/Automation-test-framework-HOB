@@ -1,0 +1,144 @@
+#-------------------------------------------------------------------------------------------------------------------
+# POX: 005
+# User: Registered User
+# Order Type: GO
+# Fulfillment: SCHEDULED_PICKUP
+# Payment Type: CC
+# Experience: Delete Item
+# Validation: Validate OD
+# Developed BY: sureshkumar Peethambaram
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: android
+  tags: POX-005,ca_POX,en_POX
+  inherit:
+    filesRunAll:
+      - errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateOnboardingToHome.paramZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.pox005.onboardingZipCode
+
+      - executeFunction:
+          name: ca.test.functions.astro.createAccount
+          params:
+            - name: payLoad
+              string: ca.test.data.pox005.astroRequestBody1
+
+
+      # Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateHomePage
+
+#      # Verifying home screen bottom ribbon
+#      - executeFunction:
+#          name: ca.test.functions.home.livingDesign.validateBottomNavigation
+
+
+
+#      # Navigate to Account Tab
+#      - executeFunction:
+#          name: ca.test.functions.global.navigation.goToAccountFromTabBar
+
+#      # Account page validation after login
+#      - executeFunction:
+#          name: ca.test.functions.accountPage.accountPageBeforeLogin
+
+      # Placing order using astro api
+      - executeFunction:
+          name: ca.test.functions.astro.placeOrder.scheduledPickup
+          params:
+            - name: email
+              string: ca.test.data.pox005.emailId
+            - name: password
+              string: ca.test.data.pox005.password
+            - name: payLoad
+              string: ca.test.data.pox005.astroOrderBody
+#      - executeFunction:
+#          name: ca.test.functions.astro.addToCart
+#          params:
+#            - name: payLoad
+#              string: ca.test.data.pox005.addToCartPayLoad
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+      # Login to account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ca.test.data.pox005.emailId
+            - name: password
+              string: ca.test.data.pox005.password
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_Post order experience'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #Navigate to Account Tab
+      - executeFunction:
+         name: ca.test.functions.global.navigation.goToAccountFromTabBar
+      # Go to purchase page
+      - executeFunction:
+          name: ca.test.functions.accountPage.purchaseHistoryButton
+
+      # Validating purchase history page
+      - executeFunction:
+          name: ca.test.functions.purchaseHistoryPageValidation
+
+      # Purchase history page to view Details
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.viewDetailsButton
+
+      # Navigating to edit order button
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.viewDetails.editOrderButton
+      # Remove Items from order history page
+#      - executeFunction:
+#          name: ca.test.functions.purchaseHistory.removeGoItems
+#          params:
+#            - name: productName
+#              string: Banana
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.removeGoItems
+          params:
+            - name: productName
+              string: Cadbury Dairy Milk, Milk Chocolate, 100 G
+                      
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: POX-005
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

@@ -1,0 +1,72 @@
+general:
+  platform: ios
+  tags: C2715342
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Login
+      - executeFunction:
+          name: sc.functions.accounts.login
+          params:
+            - name: email
+              string: sc.partner1.email
+            - name: password
+              string: sc.partner1.password
+
+      - executeFunction:
+          name: sc.functions.navigation.toTab
+          params:
+            - name: tab
+              string: Catalog
+      
+      - executeFunction:
+          name: sc.functions.items.quickFilterItems
+          params:
+            - name: quickFilter
+              string: 'Unpublished'
+
+      - click:
+          identifier: sc.mappings.items.firstItemCard
+
+      - executeFunction:
+          name: sc.functions.items.verifyItemDetailsPage
+      
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.items.itemDetails.inventoryAvailable
+
+      - getString:
+                identifier: sc.mappings.items.itemDetails.inventoryAvailable
+                attribute: value
+                extractNumbers: true
+                storeIn: availableInventory
+
+      - click:
+          identifier: sc.mappings.items.itemDetails.editInventory
+
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.items.inventory.title
+
+      - verifyIdentifier:
+          value:
+            - identifier: sc.mappings.items.inventory.edit.firstOnHandValue
+              equals: ${availableInventory} 
+
+      - executeFunction:
+          name: sc.functions.items.editItemInventory
+          params:
+            - name: toBeAddedInventory
+              string: 10
+
+      - storeIn:
+          key: testStatus
+          value: passed

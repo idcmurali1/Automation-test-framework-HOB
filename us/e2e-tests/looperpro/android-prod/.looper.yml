@@ -1,0 +1,283 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+parameters:
+  - TEST_TAGS: { type: string }
+  - SAUCE_APP: { type: string }
+  - DEPENDENCY_PROFILE: { type: string }
+  - POST_TO_SPLUNK: { type: string }
+  - APP_BUILD_BRANCH: { type: string }
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      APP_PLATFORM: android
+      SLACK_CHANNEL: r2-glass-test-result # Add your own team's test result slack channel. Also, make sure to add looperbot app to channel.
+      # TESTRAIL_PROJECT_ID: 133 # OPTIONAL: If used, a new Testrail plan id will be generated on this project id for each looper run.
+      # TESTRAIL_PLAN_ID: '' # OPTIONAL: Declare global var TESTRAIL_PLAN_ID to be used in test configs
+      # SKIP_SLACK_TEST_RUN: passed # OPTIONAL: Set value to skip posting slack message for test runs using condition "all" or "passed"
+      TESTRAIL_PLAN_ID: 796378
+      POST_TO_ANIVIA: true
+      R2_VERIFIER_PATH: "./us/e2e-tests"
+
+  # Environment profiles can be specified here with specific environment variable values.
+  # Used for Run_test used for pr checks
+  env_android_teflon:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      # TEST_TAGS: example-test
+      DEPENDENCY_PROFILE: looper
+      GLASS_ENV: teflon
+      MAPPING_LABELS: teflon
+
+  env_android_prod_regression:
+    variables:
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      # DEPENDENCY_PROFILE: looper-prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      R2_THREADS: 10
+      SLACK_CHANNEL: r2-glass-prod-android-tests
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+  env_android_prod_regression-ott:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      # DEPENDENCY_PROFILE: looper-prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      R2_THREADS: 10
+      THREADS: 50
+      SLACK_CHANNEL: r2-glass-prod-android-tests
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+      WHITELISTED_FILE: whitelisted_android_url_list
+
+  env_android_wplus_prod:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      R2_THREADS: 10
+      SLACK_CHANNEL: r2-glass-prod-android-tests
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+      POST_TO_ES: true
+      APPLITOOLS_API_KEY: ENC[Rt+/oXg4fNf9b2Pq2MQ47frfGB42KVDp7l7/tQ/1na985VV7Ia42QMgDDOppIoaDTWfXJmsQW0Imo7rpXjXaQQ==]
+
+  env_android_spanish_prod_regression:
+    variables:
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      GLASS_ENV: production
+      MAPPING_LABELS: spanish_prod_e2e
+      R2_THREADS: 10
+      SLACK_CHANNEL: r2-glass-prod-android-tests
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+  env_android_prod_e2easaservice_parameters:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/android/android-default.yaml
+      TEST_TAGS: e2e-poc
+      DEPENDENCY_PROFILE: looper-prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      USE_TEST_REPORT: true
+      SLACK_CHANNEL: r2-glass-prod-android-tests
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+      SAUCE_APP: storage:filename=glass-development-latest.apk
+
+flows:
+  pr:
+    - if: |
+        %{TRIGGER_TARGET_BRANCH == 'development'}
+      then:
+        - call: run_tests(TEST_TAGS = 'example-test', SAUCE_APP = 'storage:filename=glass-development-latest.apk')
+      else:
+        - call: run_tests(TEST_TAGS = 'example-test', SAUCE_APP = 'storage:filename=glass-release-latest.apk')
+  run_tests:
+    - call: build(env_android_teflon)
+
+  run_prod_regression_base:
+    - call: build(env_android_prod_regression)
+
+  run_prod_spanish_regression_flows:
+    try:
+      - parallel(failsafe):
+          - call: run_prod_spanish_regression_base_release(POST_TO_ES = true, TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_regression_flows:
+    try:
+      - parallel(failsafe):
+          - call: run_prod_regression_base_release(POST_TO_ES = true, TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_teflon_modified_e2e_development:
+    - call: build(env_android_teflon_modified_e2e_development)
+
+  run_android_prod_wplus_tests:
+    try:
+      - call: build(env_android_wplus_prod)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_e2easaservice_poc:
+    try:
+      - parallel(failsafe):
+          - call: build(env_android_prod_e2easaservice_parameters)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_android_prod_wplus_tests_release:
+    try:
+      - call: generate_testrail_plan(env_android_wplus_prod)
+      - call: build(env_android_wplus_prod)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_regression_base_release:
+    try:
+      - call: generate_testrail_plan(env_android_prod_regression)
+      - call: build(env_android_prod_regression)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_spanish_regression_base_release:
+    try:
+      - call: generate_testrail_plan(env_android_spanish_prod_regression)
+      - call: build(env_android_spanish_prod_regression)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_regression_flows_quantum:
+    try:
+      - parallel(failsafe):
+          - call: build_quantum(env_android_prod_regression)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_regression_flows_ott:
+    try:
+      - parallel(failsafe):
+          - call: build_ott(env_android_prod_regression-ott)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  build_quantum:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: setup
+          - call: get_app_version
+          - call: get_repository_build
+          - call: return_sauce_app_location
+          - call: get_build_app_version
+          - call: execute_test
+          - shell: node ./us/e2e-tests/helpers/generateQuantumReport.js
+          - if: |
+              %{GLASS_ENV == 'production'}
+            then:
+              - call: check_pii_data
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          # - shell: node ./us/e2e-tests/helpers/calculateAvgTestTime.js
+          - call: get_test_failures
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          - call: slack_test_run_helper
+          - call: post_test_results_json_to_es
+          - call: post_test_results_json_to_splunk
+          - call: update_test_results_to_xray
+          - if: |
+              %{GLASS_ENV == 'production'}
+            then:
+              - call: check_pii_failure
+
+  build_ott:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: setup
+          - call: get_app_version
+          - call: get_repository_build
+          - call: start_sc
+          - call: execute_test
+          - shell: cat sc.log
+          - call: stop_sc
+          - if: |
+              %{GLASS_ENV == 'production'}
+            then:
+              - call: ott_check
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          - call: get_test_failures
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          - call: slack_test_run_helper
+          - if: |
+              %{GLASS_ENV == 'production'}
+            then:
+              - call: check_ott_failure
+
+  get_app_version:
+    - if: |
+        %{APP_PLATFORM == 'android'}
+      then:
+        - var(APP_VERSION):
+            - shell  (name Get App Version): head ${MARKET}/app-versions/${APP_BUILD_BRANCH}/android.txt
+      else:
+        - var(APP_VERSION):
+            - shell  (name Get App Version): head ${MARKET}/app-versions/${APP_BUILD_BRANCH}/ios.txt

@@ -1,0 +1,248 @@
+general:
+  tags: unified-teflon-e2e, unified-p0-ecomm-teflon-e2e, C2657247, p0-ecomm-teflon-e2e, p0-fulfillment
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+
+  testCaseId: C2657247
+
+  metadata:
+    - name: scenarioId
+      string: EC005
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+          
+      - storeIn:
+          key: customerEmail
+          value: fcdeliveryamendaddress${timestamp}@cloudtest.org
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Account using astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow083.createAccountPayload
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            # Fetch stock available items using fetch API
+            - executeFunction:
+                name: unified.us.functions.utils.fetchItemAndValidate
+                params:
+                  - name: itemType
+                    string: FC_DELIVERY
+                  - name: itemFilter
+                    string: buynow
+                  - name: storeId
+                    string: 32144
+                  - name: action
+                    string: FetchAndValidateOrderMovment
+                  - name: orderStatus
+                    string: Delivered
+                  - name: emailId
+                    string: $customerEmail
+                  - name: fulcrum
+                    string: true
+            - storeIn:
+                key: item1
+                value: $itemFetched
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.generic.amendableFcDeliveryPayload
+            - name: skipOrderWait
+              string: true
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+    # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+          - name: email
+            string: ${customerEmail}
+          - name: password
+            string: $password 
+ 
+      - executeFunction:
+          name: unified.us.functions.account.naviagteToMenuItems
+          params:
+            - name: menuItemName
+              string: Addresses
+
+      - executeFunction:
+          name: unified.us.functions.account.deliveryAddress.addAddress
+          params:
+            - name: firstName
+              string: test
+            - name: lastName
+              string: user
+            - name: streetAddress
+              string: us.data.editaddress.streetAddress
+            - name: city
+              string: us.data.editaddress.city
+            - name: state
+              string: us.data.editaddress.state
+            - name: zipcode
+              string: us.data.editaddress.zipcode
+            - name: phoneNumber
+              string: us.data.editaddress.phoneNumber
+
+      # *******************************************************************************************************
+
+      # Amend Address for FC Delivery
+
+      # *******************************************************************************************************
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # *******************************************************************************************************
+
+      # Astro - Move order status to Shipped
+
+      # *******************************************************************************************************
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderType
+              string: FC_DELIVERY
+            - name: altOrderType
+              string: OZARK
+            - name: status
+              string: Shipped
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.verifyTrackShipmentDetails
+          params:
+            - name: fulfillmentStatus
+              string: Shipped
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: unified.us.functions.orderDetails.ost.fcDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Shipping
+            - name: altFulfillmentType
+              string: Freight shipping
+            - name: orderStatus
+              string: On the way
+
+      #*******************************************************************************************************
+
+      # Astro - Move order status to Delivered
+
+      #*******************************************************************************************************
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.getOrderStatus
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderType
+              string: FC_DELIVERY
+            - name: altOrderType
+              string: OZARK
+            - name: status
+              string: Delivered
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.verifyTrackShipmentDetails
+          params:
+            - name: fulfillmentStatus
+              string: Delivered
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+              
+      - executeFunction:
+          name: unified.us.functions.orderDetails.ost.fcDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Shipping
+            - name: altFulfillmentType
+              string: Freight shipping
+            - name: orderStatus
+              string: Delivered
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

@@ -1,0 +1,102 @@
+#======================================================================================================================
+#  AUTHOR: Olga Gonzalez (vn55r4a)
+#  CREATED: Oct/15/2024
+#  REVISION: ---
+#  JIRA MANUAL TICKET: https://jira.walmart.com/browse/MMC-4002
+#  JIRA AUTOMATED TICKET: https://jira.walmart.com/browse/MMC-4432
+#  FLOW: Navigate to EA Banner, open Account page and perform login and then perform logout
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#  NOTE: JIRA features are not implemented yet for WCP approach.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-android, customer-walmart-ea-smoke-production-android-4002,
+        customer-bodega-ea-smoke-production-android, customer-bodega-ea-smoke-production-android-4002
+  testCaseId: MMC-4432
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: testCompleted 
+          value: false
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      - storeIn:
+          key: userEmail 
+          value: mx.data.customer.userEmail
+    
+      # Step 1-2 Onboarding 
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.data.customer.zipcode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Step 2-3-4 Tap global account button and sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      
+      #Step 5-6 LogIn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: mx.data.customer.password
+
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+      
+      #Step 7 LogOut
+      - executeFunction:
+          name: mx.functions.account.tapLogout
+      
+      #Test Execution Status    
+      - storeIn:
+          key: testCompleted 
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testCompleted}
+          then:
+            - log:
+                  message: "4002: Customer_Smoke_PROD_Android_SignOut_Verify_LogOutFromAccount - Completed Succesfully!!"
+                  color: YELLOW_BOLD
+          else:
+            - failTest:
+                message: "4002: Customer_Smoke_PROD_Android_SignOut_Verify_LogOutFromAccount - TEST FAILED!"       

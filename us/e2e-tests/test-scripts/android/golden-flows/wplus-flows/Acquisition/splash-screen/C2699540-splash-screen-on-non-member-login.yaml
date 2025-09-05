@@ -1,0 +1,112 @@
+general:
+  platform: android
+  tags: us-golden-flows-wplus, C2699540, p0-wplus-teflon-e2e
+  testCaseId: C2699540
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 399
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - storeIn:
+          key: customerEmail
+          value: identity-testuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$  
+          
+      # Create Account using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow.createAccountPayload
+          
+           
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      # - executeFunction:
+      #     name: us.functions.utils.astro.createAccount
+      #     params:
+      #       - name: payload
+      #         string: us.data.unverified.createAccountPayload
+      #       - name: withoutPayment
+      #         string: true
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+      # Navigate to home page
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop
+
+      # Terminate and Relaunch the app 
+      - executeFunction:
+          name: us.test.functions.utils.relaunchApp
+
+      - sleep:
+          duration: 10000
+
+      # Check for non-member Join Walmart plus splash page
+      - executeFunction:
+          name: us.functions.nonmember.splashpageOnLogin
+            
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage  
+
+      - executeFunction:
+          name: us.functions.wplus.membership.verifyMyMembershipDetails           
+          params:
+              - name: tenure
+                string: monthly
+              - name: membershipType
+                string: trial
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

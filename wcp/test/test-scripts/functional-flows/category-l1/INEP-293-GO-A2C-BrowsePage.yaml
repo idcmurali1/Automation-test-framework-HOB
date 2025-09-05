@@ -1,0 +1,149 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-293
+#       Flow - Add item from browser/content page.
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-196600
+#
+#   INEP Ticket
+#     https://jira.walmart.com/browse/INEP-293
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-293
+  tags: INEP-293, OPIF-196600, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Add item from browser/content page"
+    flow:
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      
+      # Navigate to departments page..
+      - log:
+          message: "Navigate to departments page.."
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction:
+          name: functions.global.tapDepartmentsBtn 
+      
+      # TODO: Uncommented this functions one this ticket is fixed: WCPMH-189
+      #- executeFunction:
+      #    name: functions.departmentsPage.validateDepartmentsPageIsDisplayed 
+
+      # Navigate to an specific category landing page..
+      - log:
+          message: "Navigate to an specific category landing page.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.departmentsPage.openSpecificCategory
+          params:
+            - name: categoryName
+              string: data.departmentsPage.testWCP   #Update with an available department name as appropriate for the environment.
+
+      # Add GO item to cart from home page..
+      - log:
+          message: "Add GO item to cart from home page.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.homePage.carousel.productAddToCart
+
+      # Validate purchase limit in cart..
+      - log:
+          message: "Validate purchase limit in cart..."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.validateCartQuantity
+          params:
+            - name: cartQuantity
+              string: data.itemCount.qty1
+      - executeFunction:
+          name: functions.cartPage.validateCartIconSubTotal
+          params:
+            - name: subTotalCart
+              string: ${carouselProductPrice}
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+    
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart.. "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+      - executeFunction:
+          name: functions.cartPage.validateProductDetails
+          params:
+            - name: productName
+              string: ${carouselProductName}
+            - name: productPrice
+              string: ${carouselProductPrice}
+            - name: productQty
+              string: data.itemCount.qty1
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

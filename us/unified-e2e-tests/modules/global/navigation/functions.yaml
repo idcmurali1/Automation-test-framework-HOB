@@ -1,0 +1,956 @@
+functions:
+  # Description: This method uses Global Back navigation
+  - name: unified.us.functions.global.navigation.backNavigation
+    flow:
+      - log: Global Back navigation
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.navigation.backNavigation
+                then:
+                  - click:
+                      identifier: us.mappings.global.navigation.backNavigation
+                      wait: 3000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - goBack: true #This is TBD as Android is not MVP or available yet for mappings and or IDs
+
+  - name: unified.us.functions.global.navigation.backButtonClick
+    flow:
+      - log: Global Back navigation
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - click:
+                identifier: us.mappings.global.navigation.backNavigationButton
+                wait: 3000
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - goBack: true
+
+  - name: unified.us.functions.global.navigation.toCartFromNavBar
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.navBar.cartIcon
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      - executeFunction:
+          name: unified.us.functions.cart.unavailableItemPopUp
+      - executeFunction:
+          name: unified.us.functions.cart.storeChangePopUp
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.amend.startShoppingButton
+          then:
+            - log: "cart Page loaded"
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.unavailableAlert.oosheader
+                then:
+                  - log: "cart page loaded "
+                else:
+                  - if:
+                      condition: ${skipValidation} == false
+                      then:
+                        - if:
+                            condition: ${platform} == 'Android'         
+                            then:
+                              - scroll:
+                                  direction: up
+                                  untilIdentifier: us.mappings.cart.navBarTitle
+                                  scrollLimit: 8
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.cart.navBarTitle
+                            then:
+                              - log: "cart page loaded"
+                            else:
+                              - failTest:
+                                  message: ENV_FAILURE - ${env} - Unable to load Cart Page
+
+  # Description: This method uses to navigate to services
+  - name: unified.us.functions.global.navigation.goToServicesFromTabBar
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - log: Navigate to service via tab bar
+      - if:
+          condition: ${platform} == 'Android'         
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.tabBar.services
+                  - name: direction
+                    string: up
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.services
+      - if:
+          condition: ${doubleClick}         
+          then:
+            - click:
+                identifier: us.mappings.tabBar.services
+            - click:
+                identifier: us.mappings.tabBar.services
+                wait: 3000
+          else:
+            - click:
+                identifier: us.mappings.tabBar.services
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: unified.us.functions.services.handleJoinOnePopup
+
+  # Description: This method uses to open deep link
+  - name: unified.us.functions.global.navigation.goToDeepLink
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Post-transactions
+      - log: Open deep link
+      - log: $deepLinkUrl
+      - verifyValue:
+          identifier: $deepLinkUrl
+          contains: "walmart://"
+      - openLink: ${deepLinkUrl}
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.openDeepLink
+      - sleep:
+          duration: 5000
+
+  # Intended only to be used by us.functions.global.navigation.goToDeepLink (Only for iOS)
+  - name: unified.us.functions.global.navigation.openDeepLink
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 0
+                present:
+                  - identifier: Open in “Walmart”?
+            - click:
+                identifier: Open
+          catch:
+            flow:
+              - log: Deeplink pop up not displayed
+
+  #Utility to navigate within buttomm tabs
+  # [mandatory] ${tabName}  - Shop / My Items / Search / Services / Account
+  - name: unified.us.functions.global.navigation.toTab
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.global.bottomBar.tabLink
+            - name: direction
+              string: up
+      - click:
+          identifier: us.mappings.global.bottomBar.tabLink
+
+
+  #Navigate to Account Tab
+  - name: unified.us.functions.global.navigation.goToAccountFromTabBar
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.tabBar.account
+            - name: direction
+              string: up
+            - name: scrollLimit
+              string: 2
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.account
+      - click:
+          identifier: us.mappings.tabBar.account
+      - sleep:
+          duration: 10000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.backButton
+          then:
+            - click:
+                identifier: us.mappings.wlus.membershipBottomsheetClose
+
+  - name: unified.us.functions.global.navigateToFeedback
+    flow:
+      - if:
+          condition: ${cartPage} == true
+          then:
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.cart.smartNudgeView
+                then:
+                  - click: 
+                      identifier: us.mappings.cart.smartNudgeViewClose
+            - storeIn:
+                key: cartPage
+                value: false
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.global.feedbackButton
+          then:
+              - log: Feedback button reached
+          else:
+              - log: need more scroll for feedback button to be visible
+              - scroll:
+                  direction: down
+                  untilIdentifier: us.mappings.global.feedbackButton
+                  scrollLimit: 35
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.global.feedbackButton
+      - click:
+          identifier: us.mappings.global.feedbackButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.feedback.surveyHeaderTxt
+                    contains: Your feedback matters! Help us improve the Walmart app
+          else:
+            - verifyIdentifier:
+                value:
+                  - identifier: us.mappings.home.feedback.surveyHeaderTxt
+                    contains: Your feedback matters! Help us improve the Walmart app
+
+  - name: unified.us.functions.global.submitFeedback
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.feedback.starRatings
+          catch:
+            flow:
+              - failTest:
+                  message: ENV_FAILURE - ${env} - Feedback page did not load
+      - click:
+          identifier: us.mappings.feedback.starRatings
+      - enterText:
+          identifier: us.mappings.home.feedback.inlineFeedbackTxt
+          string: ${feedbackReason} 
+      # - hideKeyboard: true     
+      - click:
+          identifier: us.mappings.home.feedback.shareFeedbackButton
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.feedback.thankYouTitle    
+              - identifier: us.mappings.feedback.thankYouSubText
+          then:
+            - log: "Successfully submited feedback"
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} -  CEPG-288772 - App crashing while submitting feedback
+      - click:
+          identifier:  us.mappings.home.feedback.doneButton 
+      - log: Tested ${feedbackReason}
+
+  - name: unified.us.functions.global.navigation.goToSearchFromTabBar
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.tabBar.search
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.tabBar.search
+            - click:
+                identifier: us.mappings.tabBar.search
+          else:
+            - click:
+                identifier: us.mappings.home.searchBar
+
+  - name: unified.us.functions.services.handleJoinOnePopup
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.services.joinOnePopup
+            - click:
+                identifier: us.mappings.global.closeButton
+          catch:
+            flow:
+              - log: No Join one popup displayed
+
+
+  - name: unified.us.functions.global.navigation.fromCheckoutBackToCart
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.alert.leaveAnyWayButton
+          then:
+            - click:
+                identifier: us.mappings.reviewOrder.alert.leaveAnyWayButton
+      - sleep:
+          duration: 2000
+
+  - name: unified.us.functions.services.naviagteToServices
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToServicesFromTabBar
+      - log:
+          message: Navigating to ${servicesName}
+          color: CYAN
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.storeToolsName
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center         
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.services.storeToolsName
+          then:
+            - click:
+                identifier: us.mappings.services.storeToolsName
+            - sleep:
+                duration: 3000
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.onboarding.technicalError
+                then:
+                  - failTest:
+                      message: ENV_FAILURE - ${env} - Service page - ${servicesName} did not load
+          else:
+            - failTest:
+                message: ENV_FAILURE - ${env} - Store Tool Service ${servicesName} is not available
+
+  - name: unified.us.function.services.pharmacy.dashboardvalidation
+    flow:
+      - if:
+          condition: ${account} == 'Guest'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.popularServices.pharmacy.pharmacyServices
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.popularServices.pharmacy.scheduleVaccine
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                present:   
+                  - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+                  - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+            - sleep:
+                duration: 2000    
+            - scroll:
+                  direction: up
+                  untilIdentifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                  position: center
+            - sleep:
+                duration: 5000 
+      - if:
+          condition: ${account} == 'Existing user'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+                  # - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  # - identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  - identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.popularServices.pharmacy.pharmacyServices
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                 present:
+                   - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                  #  - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                   - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+                   - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+      - sleep:
+          duration: 5000
+
+  - name: unified.us.function.services.handlePopUp
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      timeout: 0
+                      present:
+                        - identifier: us.mappings.global.authentication.selectSavedPasswordText
+                  - click:
+                      identifier: us.mappings.global.notNowButton
+                catch:
+                  flow:
+                    - log: Password selection dialog not displayed
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.authentication.signIn.anotherWayText
+                then:
+                  - log: "The Sign-in another way pop-up is displayed, dismissing it."
+                  - click:
+                      identifier: us.mappings.authentication.signIn.anotherWayPopUp.dismiss
+
+  - name: unified.us.function.services.checkAPriceValidation
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            # Validate Are you at the store bottom overlay
+            - executeFunction:
+                name: unified.us.functions.scanner.validateAreYouAtTheStoreBottomOverlay
+
+            # Validate Are you get accurate prices bottom overlay
+            - executeFunction:
+                name: unified.us.functions.scanner.validateGetAccuratePriceBottomOverlay
+
+            #Validate allow location
+            - executeFunction:
+                name: unified.us.functions.scanner.allowLocation
+
+            # Validate Are you get shop smart with scanner bottom overlay
+            - executeFunction:
+                name: unified.us.functions.scanner.shopSmartWithScannerBottomOverlay
+
+            - click:
+                identifier: us.mappings.home.ScannerCloseButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                condition: ${skip} == true
+                then:
+                  - log: skipping validation due to app crash in saucelabs while accessing camera
+                else:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.services.allowButton
+                      then:
+                        - click:
+                            identifier: us.mappings.services.allowButton
+                  - executeFunction:
+                      name: unified.us.functions.scanner.allowLocation
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.services.checkAPrice.shopSmartWithScannerText
+                      then:              
+                        - click:
+                            identifier: us.mappings.services.checkAPrice.gotItButton
+                  - verifyIdentifier: 
+                      present:
+                        - identifier: us.mappings.services.checkAPriceHeader
+                        - identifier: us.mappings.services.checkAPriceHeaderEnterBarCode
+
+  - name: unified.us.functions.storeMaps.services.storeMap.mapView
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.storeMaps.services.mapView            
+          then:
+            - log: "Map view displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Map view not displayed as expected"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.storeMaps.map            
+          then:
+            - log: "Map displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Map not displayed as expected"
+
+  - name: unified.us.function.services.validateScanAndGo
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            #Allow Camera Access
+            - executeFunction:
+                name: unified.us.functions.scanner.allowWouldYouLikeToAccessYourCameraOption
+
+            #Validate allow location
+            - executeFunction:
+                name: unified.us.functions.scanner.allowLocation
+
+            - executeFunction:
+                name: us.functions.services.cancelOrValidateScanAndGo
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: us.functions.global.authentication.handleSignInAnotherWayPopup
+            - executeFunction:
+                name: unified.us.functions.services.validateEmailOnSignInPage
+
+  - name: unified.us.function.services.validateNonWplusUserBenefitsBanner
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToServicesFromTabBar
+      - click:
+          identifier: us.mappings.services.wplusBenifitsCta
+      - if:
+          condition: ${account} == 'Guest'
+          then:
+            - executeFunction:
+                name: unified.us.functions.services.validateEmailOnSignInPage
+            - click:
+                identifier: us.mappings.global.closeButton
+      - if:
+          condition: ${account} == 'Existing user'
+          then:
+            - try:
+                flow:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mapppings.wplus.bottomSheet.benefits
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+                      then:
+                        - click:
+                            identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+                      else:
+                        - goBack: true
+                catch:
+                  flow:
+                    - failTest:
+                        message: "ENV_FAILURE - ${env} - Unable to open walmart plus benefits page"
+          
+
+  - name: unified.us.function.services.validateMemberPricesOnFuel
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - executeFunction:
+                name: us.functions.global.authentication.dismissSelectSavedPasswordDialog
+
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.global.authentication.emailField
+            - click:
+                identifier: us.mappings.global.closeButton
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.wplus.walmartPlusLogo
+            - goBack: true
+
+  - name: unified.us.functions.services.walmartLive
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.Services.walmartLive
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier: 
+          present:
+              - identifier: us.mappings.Services.getInspiredHeader
+              - identifier: us.mappings.Services.walmartLive
+      - click:
+          identifier: us.mappings.Services.walmartLive
+      - sleep:
+          duration : 5000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.Services.walmartLiveLogo
+      
+
+  - name: unified.us.functions.services.validateAutoCareCenterHeader
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+          # closing sign in page bottom sheets 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.closeButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.closeButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.autoCareCenterHeader
+            - identifier: us.mappings.services.autoCareCenterWelcomeText
+
+  - name: unified.us.functions.services.validateWalmartPay
+    flow:
+      - if:
+          condition: ${account} == 'Guest'
+          then:
+            - executeFunction:
+                name: unified.us.functions.services.validateEmailOnSignInPage
+            - click:
+                identifier: us.mappings.global.closeButton
+      - if:
+          condition: ${account} == 'Existing user'
+          then:
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - if: 
+                      identifier:
+                        present: 
+                          - identifier: us.mappings.services.allowButton
+                      then:
+                        - click: 
+                            identifier: us.mappings.services.allowButton
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.services.walmartPay.header
+                  - identifier: us.mappings.services.walmartPay.instructions      
+                  - identifier: us.mappings.services.walmartPay.addPaymentButton
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.global.closeButton
+                      then:
+                        - log: "Close button present as expected. Clicking on the close button"
+                        - click:
+                            identifier: us.mappings.global.closeButton
+                      else:
+                        - failTest:
+                            message: "ENV_FAILURE - ${env} - Close button should be present but is not"
+                  - sleep:
+                      duration: 5000
+                  - goBack: true
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.services.walmartPay.instructionsClose
+                      then:
+                        - log: "Close button present as expected. Clicking on the close button"
+                        - click:
+                            identifier: us.mappings.services.walmartPay.instructionsClose
+                      else:
+                        - failTest:
+                            message: "ENV_FAILURE - ${env} - Close button should be present but is not"
+                  - sleep:
+                      duration: 5000
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.global.closeButton
+                      then:
+                        - click:
+                            identifier: us.mappings.global.closeButton
+
+
+  - name: unified.us.functions.services.validateCustomCakesHeader
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.popularServices.customcakesHeader
+
+  - name: unified.us.functions.services.validateEmailOnSignInPage
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.global.authentication.emailField
+          catch:
+            flow:
+              - failTest:
+                  message: ENV_FAILURE - ${env} - Store Tool Service ${servicesName} Not responding
+
+  - name: unified.us.function.pharmacy.dashboardvalidation
+    flow:
+      - if:
+          condition: ${account} == 'Guest'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.popularServices.pharmacy.servicesListView
+                position: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                  - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                  - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+                  - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+
+      - if:
+          condition: ${account} == 'Existing user'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.PharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.welcomeToPharmacyHeader
+                  - identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+                  # - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  # - identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.ConnectToPharmacy
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.popularServices.pharmacy.GetStarted
+                  - identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - click:
+                identifier: us.mappings.popularServices.pharmacy.Dismiss
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.popularServices.pharmacy.servicesListView
+                position: center
+            - verifyIdentifier:
+                 present:
+                   - identifier: us.mappings.popularServices.pharmacy.pharmacyServices
+                  #  - identifier: us.mappings.popularServices.pharmacy.scanToRefill
+                   - identifier: us.mappings.popularServices.pharmacy.transferPrescriptions
+                   - identifier: us.mappings.popularServices.pharmacy.scheduleVaccine
+
+
+  - name: unified.us.functions.global.navigation.accountToHomeDeeplink
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+      - sleep:
+          duration: 4000
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+  # Wplus
+  - name: unified.us.functions.wplus.navigateToWalmartPlusNonMember
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.account.yourOrdersButton
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.account.walmartplus 
+                position: center
+            - click:
+                identifier: us.mappings.account.walmartplus
+            
+  - name: unified.us.functions.global.navigation.homeToOrderHistory
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.searchBar
+      - click:
+          identifier: us.mappings.tabBar.account
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToPurchaseHistory
+
+  - name: unified.us.functions.global.navigation.goToWalletPage
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://wallet
+
+  - name: unified.us.functions.global.navigation.accountToPurchaseHistory
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.purchaseHistoryRightArrow
+      - click:
+          identifier: us.mappings.account.purchaseHistoryRightArrow
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderHistory.title           
+            
+  - name: unified.us.functions.global.navigation.quantumMetric.getSessionDetails
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.closeButton
+                else:
+                  - log: "No pop-up window displayed proceeding further to fetch Quantum Metric details!!!"
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.reviewOrder.closeFreeTrialBottomSheet
+                then:
+                  - click:
+                      identifier: us.mappings.wplus.reviewOrder.closeFreeTrialBottomSheet
+                else:
+                  - log: "No promotional pop-up window displayed proceeding further to fetch Quantum Metric details!!!"
+            - sleep:
+                duration: 10000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.closeButton
+                else:
+                  - log: "No pop-up window displayed proceeding further to fetch Quantum Metric details!!!"
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://debugPanel/product-metric
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.closeButton
+                else:
+                  - log: "No pop-up window displayed proceeding further to fetch Quantum Metric details!!!"
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.quantumSessionReplayUrl.link
+                then:
+                  - log: 'The QuantumMetric Session Replay URL present'
+                  - click:
+                      identifier: us.mappings.global.quantumSessionReplayUrl.link
+                  - getClipboard:
+                      #                contentType: PLAINTEXT
+                      storeIn: quantumMetricSessionReplayUrl
+                  - log: 'The ------ QUANTUM METRIC SESSION Replay URL Value -------- is: ${quantumMetricSessionReplayUrl}'
+                else:
+                  - log: '!!-------- The QuantumMetric Session Replay URL, Text NOT present --------!!'
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.quantumSessionCookie.link
+                then:
+                  - log: 'The QuantumMetric Session Cookie present'
+                  - click:
+                      identifier: us.mappings.global.quantumSessionCookie.link
+                  - getClipboard:
+                      #                contentType: PLAINTEXT
+                      storeIn: quantumMetricSessionCookie
+                  - log: 'The ------ QUANTUM METRIC SESSION Cookie Value -------- is: ${quantumMetricSessionCookie}'
+                else:
+                  - log: '!!-------- The QuantumMetric Session Cookie, Text NOT present --------!!'
+            - createFile:
+                file: ./Quantum-results-${env}-${platform}.json
+                string: '{ "quantumSessionURL": "$quantumMetricSessionReplayUrl", "quantumSessionCookie": "$quantumMetricSessionCookie" }'
+
+  - name: unified.us.functions.global.navigation.toSubTab
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.global.accountPage.subTabLink
+            - name: direction
+              string: down
+      - click:
+          identifier: us.mappings.global.accountPage.subTabLink

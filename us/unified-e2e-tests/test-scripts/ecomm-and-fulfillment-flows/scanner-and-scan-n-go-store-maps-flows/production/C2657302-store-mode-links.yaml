@@ -1,0 +1,111 @@
+general:
+  tags: # unified-prod-e2e, C2657302
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657302
+  metadata:
+    - name: scenarioId
+      string: EC001
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn 
+      
+      # Account info
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.prod.wplusprod3.email
+            - name: android.password
+              string: us.data.prod.wplusprod3.password
+            - name: ios.email
+              string: us.data.prod.C2665548.email1
+            - name: ios.password
+              string: us.data.prod.wplus.password
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      - executeFunction:
+          name: unified.us.functions.home.handleOrderSavingsupdatesAndhandleReorderToolTip
+
+      - executeFunction:
+          name: unified.us.functions.home.debugPanel.setUpScanAndGo
+
+      - executeFunction:
+          name: unified.us.functions.home.scanAndGo
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.search.storeMapsScItem
+
+      - executeFunction:
+          name: unified.us.functions.search.scanAndGo.StoreMapsMapView
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToHomeFromTabBar
+          
+      - executeFunction:
+          name: unified.us.functions.home.assert.scanAndGo
+          params:
+            - name: option
+              string: checkprice
+            - name: barcode
+              string: 078742351865
+
+      - executeFunction:
+          name: unified.us.functions.scanner.assert.scannerBottomSheet
+          params:
+            - name: option
+              string: onlineandstore
+
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

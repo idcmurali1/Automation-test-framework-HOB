@@ -1,0 +1,351 @@
+general:
+  platform: ios
+  tags: us-golden-flows, C2657260, p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657260
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+ #***************************************************************************************************************
+
+        # Astro - Clear cart
+
+ #***************************************************************************************************************
+
+  - name: Main
+    flow:
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.ilcc.ios.createAccountPayLoad
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.location.updateStore
+          params:
+            - name: address
+              string: Denver Supercenter
+            - name: ZIP_CODE
+              string: 80212   
+      
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed                  
+
+      - executeFunction:
+          name: us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Pickup
+
+      - executeFunction:
+         name: us.functions.gic.collapseIfExpanded
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?expo_preview=true&experiment_spec=f58da&variation_specs=J482z&experiment_count=0
+
+######### item 1
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem  
+          params:
+            - name: source
+              string: astro            
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY 
+            - name: store
+              string: 32137
+            - name: backupItem
+              string: 499312381
+            - name: skipForNext
+              string: true 
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}  
+      
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+######### item 2       
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem 
+          params:
+            - name: source
+              string: astro            
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: store
+              string: 32137
+            - name: backupItem
+              string: 499312381
+            - name: excludeFetchedItem
+              string: true 
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}  
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart        
+######### item 3   
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem  
+          params:
+            - name: source
+              string: astro          
+            - name: itemType
+              string: FC_SFS
+            - name: backupItem
+              string: 229813890
+            - name: storeId
+              string: 32137
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}  
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart  
+
+######### item 4   
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: backupItem
+              string: 419971512
+            - name: storeId
+              string: 32137
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}  
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart  
+# # # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+    
+      - executeFunction:
+          name: us.functions.cart.handleEmptyCartScreen
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: delivery
+
+      - executeFunction:
+          name: us.functions.bookingSlotFromCart
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: dayAfter 
+            - name: slotIndex
+              string: 3
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true
+
+      - executeFunction:
+          name: us.functions.cart.seeDetails
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping 
+
+  # Verifying that 4 items are selected and checking the price
+      - executeFunction:
+          name: us.functions.cart.verifyItemsInCart
+
+  # Unchecking the first item 
+      - executeFunction:
+          name: us.functions.cart.deselectItemInCart
+
+  # Verifying the cart items and price 
+      - executeFunction:
+          name: us.functions.cart.verifyItemsAfter    
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      #Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+    
+      - executeFunction:                                 
+          name: us.functions.orderConfirmation.ratings
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      - executeFunction:
+          name:  us.functions.utils.astro.getOrderStatus
+
+      # - executeFunction:
+      #     name: us.functions.utils.astro.setOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}
+      #       - name: orderType
+      #         string: SFS
+      #       - name: status
+      #         string: Delivered
+    
+      # - executeFunction:
+      #     name: us.functions.utils.astro.setOrderStatus
+      #     params:
+      #       - name: orderNo
+      #         string: ${orderNo}          
+      #       - name: orderType
+      #         string: FC_DELIVERY
+      #       - name: status
+      #         string: Delivered
+      
+      # - executeFunction:
+      #     name: us.functions.global.navigation.goToDeepLink
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: walmart://orders/$orderNo
+
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Shipping
+      #       - name: orderStatus
+      #         string: Delivered
+      #       - name: index
+      #         string: 1
+
+      # - executeFunction:
+      #     name: us.functions.orderDetails.ost.mixedOrder.verifyOrderStatus
+      #     params:
+      #       - name: fulfillmentType
+      #         string: Shipping
+      #       - name: orderStatus
+      #         string: Delivered
+      #       - name: index
+      #         string: 2
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.seeDetails
+
+      - executeFunction: 
+          name: us.functions.cart.leftOverItemsInCart
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps          
+

@@ -1,0 +1,145 @@
+#######################################################################################################################
+#
+#   TEST CASE DETAILS: 
+#
+#      [ TC - INEP-138 ]
+#      FLOW: MH: Buy Now - Verify Buy Now button is Displayed for Unscheduled Items for Logged-in Users.
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF ID:
+#      https://jira.walmart.com/browse/OPIF-179421
+#
+#   JIRA STORY ID:
+#      Https://jira.walmart.com/browse/INEP-54
+#
+#   JIRA SUB-TASK ID:
+#      Https://jira.walmart.com/browse/INEP-101
+#
+#   JIRA TEST PLAN ID:
+#      https://jira.walmart.com/browse/INEP-107
+#
+#   JIRA TEST ID:
+#      https://jira.walmart.com/browse/INEP-138
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-138
+  tags: p1-mh-opif-teflon, OPIF-179421, INEP-138, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   B E F O R E   S C E N A R I O                                                                                     #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: 'INEP-138: BEFORE SCENARIO START'
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+
+      - log: 'INEP-138: BEFORE SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   M A I N   S C E N A R I O                                                                                         #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: 'INEP-138: MH: Buy Now - Verify Buy Now button is Displayed for Unscheduled Items for Logged-in Users'
+    flow:
+      - log: 'INEP-138: MAIN SCENARIO START'
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 1: ONBOARD INTO THE APP...'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.collapseGicIfExpanded
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 2: LOGIN WITH AN EXISTING USER ACCOUNT...'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: data.mh.inep138.user.email
+            - name: userPassword
+              string: data.global.password.Password3
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+      - executeFunction:
+          name: functions.accountPage.assertDisplayedUserName
+          params:
+            - name: userName
+              string: data.global.name.ACCEPT
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - log: #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+          message: 'STEP 3-4: DEEPLINK INTO PDP AND VALIDATE BUY NOW BUTTON IS DISPLAYED (multiple items loop)...'
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.productDetailsPage.validateBuyNowButton-forAllItemsInArray
+          params:
+            - name: itemsArray
+              string: data.global.itemsArray.unscheduled
+            - name: expectedToBeDisplayed
+              string: 'true'
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-138: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-138: AFTER SCENARIO START'
+
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+
+      - log: 'INEP-138: AFTER SCENARIO END'

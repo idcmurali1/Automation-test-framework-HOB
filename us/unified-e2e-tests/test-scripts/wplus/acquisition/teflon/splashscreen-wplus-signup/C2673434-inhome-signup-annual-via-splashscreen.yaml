@@ -1,0 +1,135 @@
+general:
+  tags:  unified-teflon-e2e, C2673434 #covered in C2737074
+  testCaseId: C2673434
+  inherit:
+    filesRunAll:
+      - errors-helpers.yaml
+  testCaseId: C2673434
+  metadata:
+    - name: scenarioId
+      string: 288
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      #Create Accountusing astro api - PayPal 
+      - executeFunction:
+          name: us.functions.utils.astro.createTrialAccountConvertToPaid
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flowinhome.createAccountPayload.annual
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      #Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      #Sign In
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: $password
+
+      # navigate to Home Screen  
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 80212
+            - name: storeName
+              string: Denver Supercenter
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      #Select inhome delivery address
+      - executeFunction:
+          name: unified.us.functions.gic.select.inhome.delivery.address
+
+
+      # Terminate and Relaunch the app 
+      - executeFunction:
+          name: unified.us.test.functions.utils.relaunchApp
+
+      # Verify inhome splashscreen is displayed
+      - executeFunction:
+          name: unified.us.funtions.home.splashscreen.wplus.freetrial.signup
+
+      #Navigate to Accounts Tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+      #Click On Walmart Plus Banner on Account PAge and Navigate to next page
+      - executeFunction:
+          name: unified.us.functions.wplus.account.navigateToWalmartPlus
+
+      # Navigate to manage membership screen
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      # Verify inHome plusUp details on Manage Membership flow
+      - executeFunction: 
+          name: unified.us.functions.wplus.inHome.validateMyPlusUpsDetailsOnManageMembershipPage
+          params:
+            - name: tenure
+              string: annual
+            - name: membership
+              string: trial
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

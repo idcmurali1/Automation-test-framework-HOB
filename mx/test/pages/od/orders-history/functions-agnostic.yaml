@@ -1,0 +1,627 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Feb/20/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+  
+  - name: mx.functions.orders-history.tapBack
+    flow:
+      - click:
+          identifier: mx.mappings.orders-history.backButton
+      - log:
+          message: "End function: orders-history.tapBack"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if page was displayed correctly
+  - name: mx.functions.orders-history.assertPageDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.orders-history.pageTitle
+            - identifier: mx.mappings.orders-history.ordersContainer
+      - log:
+          message: "End function: orders-history.assertPageDisplayed (Page displayed)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Taps the order by its position.
+  # Params:      ${position}  [Mandatory]  Expected position of the order.
+  - name: mx.functions.orders-history.tapOrderDetailsByPosition
+    flow:
+      - click:
+          identifier: mx.mappings.orders-history.viewDetailsButtonByPosition
+      - log:
+          message: "End function: orders-history.tapOrderDetailsByPosition"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Asserts the order's selected delivery method by position.
+  # Params:      ${position}                [Mandatory]  Expected position of the order (Set to 1 for first order).
+  # Params:      ${expectedDeliveryMethod}  [Mandatory]  Expected selected delivery method (Input: [ HomeDelivery | 
+  #                                                        PickupDelivery ]).
+  - name: mx.functions.orders-history.assertOrderDeliveryMethodByPosition
+    flow:
+      - log:
+          message: "Expected delivery method: ${expectedDeliveryMethod}"
+          color: CYAN
+      - if:
+          condition: ${expectedDeliveryMethod} != 'HomeDelivery' && ${expectedDeliveryMethod} != 'PickupDelivery'
+          then:
+            - failTest:
+                message: "Wrong input, verify delivery method supplied: ${expectedDeliveryMethod}"
+      - if:
+          condition: ${expectedDeliveryMethod} == 'HomeDelivery'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.orders-history.orderIsHomeDeliveryByPosition
+      - if:
+          condition: ${expectedDeliveryMethod} == 'PickupDelivery'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.orders-history.orderIsPickupDeliveryByPosition
+      - log:
+          message: Correct Delivery Method.
+          color: CYAN
+      - log:
+          message: "End function: orders-history.assertOrderDeliveryMethodByPosition"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${position}       [Mandatory]  Expected position of the order.
+  # PARAM:  ${expectedTotal}  [Mandatory]  Expected total, must have two decimals and not contain the '$' sign.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderTotalByPosition
+    flow:
+      - log:
+          message: "[ PARAM: Expected total: '${expectedTotal}' ]"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.orders-history.orderTotalByPosition.withoutExpectedTotalParam # <--${position}
+          storeIn: displayedTotal
+      - executeNode:
+          file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+          args:
+            - value: ${displayedTotal}
+          getResponse:
+            storeIn: displayedTotal
+      - log:
+          message: "Displayed Total: '${displayedTotal}'"
+          color: GREEN
+      - if:
+          condition: ${expectedTotal} != ${displayedTotal}
+          then:
+            - failTest:
+                message: Expected Total did not match Displayed Total.
+      - log:
+          message: Expected Total matched Displayed Total.
+          color: GREEN_BOLD
+      - log:
+          message: "End function: mx.functions.orders-history.assertOrderTotalByPosition"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Asserts the order's banner by position.
+  # Params: ${position}  [Mandatory]  Expected position of the order.
+  # Params: ${expectedBanner}    [Mandatory]  Expected banner, comes coded with the delivery slot. (input: [ Walmart | WalmartExpress ])
+  - name: mx.functions.orders-history.assertOrderBannerByPosition
+    flow:
+      - if:
+          condition: ${expectedBanner} != 'Walmart' && ${expectedBanner} != 'WalmartExpress'
+          then:
+            - failTest:
+                message: "Wrong input, verify delivery banner supplied: ${expectedBanner}"
+      - log:
+          message: "Expected banner: ${expectedBanner}"
+          color: CYAN
+      - if:
+          condition: ${expectedBanner} == 'Walmart'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.orders-history.walmartBannerByPosition
+                notPresent:
+                  - identifier: mx.mappings.orders-history.walmartExpressBannerByPosition
+      - if:
+          condition: ${expectedBanner} == 'WalmartExpress'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.orders-history.walmartExpressBannerByPosition
+      - log:
+          message: Correct Banner.
+          color: CYAN
+      - log:
+          message: "End function: orders-history.assertOrderBannerByPosition"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Asserts the order's current status by position.
+  # PARAMS:
+  #   ${position}             [Mandatory]  Expected position of the order to assert for.
+  #   ${expectedOrderStatus}  [Mandatory]  Expected order status. Values: [ Received | Preparing | Ready4Pickup | OnTheWay | Delivered ].
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderStatusByPosition
+    flow:
+      - storeIn:
+          key: statusConstant
+          value: ${expectedOrderStatus}
+      - executeNode:
+          file: mx/test/helpers/orders-history/parseToOrderStatusText.js
+          args:
+            - value: ${statusConstant}
+          getResponse:
+            storeIn: expectedOrderStatus
+      - log:
+          message: "Expected Order Status: '${statusConstant}' (${expectedOrderStatus})"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.orders-history.orderStatusByPosition
+      - log:
+          message: "Order Status is correct!"
+          color: CYAN
+      - log:
+          message: "End function: orders-history.assertOrderStatusByPosition"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Asserts the order's total products count by position.
+  # Params: ${position}         [Mandatory]  Expected position of the order.
+  # Params: ${expectedProductsCount}    [Mandatory]  Expected total quantity of purchased products, THIS IS NOT the same as the
+  #                                            total products quantity, this is just how many different products were
+  #                                            purchased. i.e: If you bought 3 apples and 4 pears this param would be '2'
+  #                                            and NOT '7'.
+  - name: mx.functions.orders-history.assertOrderProductsCountByPosition
+    flow:
+      - log:
+          message: "Expected products count: ${expectedProductsCount}"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.orders-history.productsCountByPosition
+          then:
+            - failTest:
+                message: "Expected products count: '${expectedProductsCount}', did not match displayed."
+      - log:
+          message: Correct Products count.
+          color: CYAN
+      - log:
+          message: "End function: orders-history.assertOrderProductsCountByPosition"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Asserts the displayed Order's Delivery Slot is correct.
+  # Params: ${position}              [Mandatory]  Expected position of the order.
+  # Params: ${expectedBanner}                [Mandatory]  Expected banner, comes coded with the delivery slot. (input: [ Walmart | Walmart Express ])
+  # Params: ${expectedDeliverySlot}  [Mandatory]  Expected delivery slot to be displayed. The value passed in this
+  #             param must be the string value returned by the 'delivery-slot-extraction/parseDeliverySlotForAssertion.js'
+  #             helper (see helper's documentation). Also the function mx.functions.utils.getDeliverySlot returns this value.
+  #
+  #   Flags used:
+  #   ${ASSERT_DELIVERY_SLOT_IN_ORDERS_HISTORY}
+  #       If set to 'true', the flow will perform assertion for the Delivery Slot in Orders History page.
+  #       If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+  #
+  - name: mx.functions.orders-history.assertOrderDeliverySlotByPosition
+    flow:
+    - if:
+        condition: ${ASSERT_DELIVERY_SLOT_IN_ORDERS_HISTORY} == true
+        then:
+          - storeIn:
+              key: deliverySlot
+              value: "${expectedDeliverySlot} ${expectedBanner}"
+          - log:
+              message: "Expected delivery slot: ${expectedDeliverySlot}"
+              color: CYAN
+          - if:
+              condition: ${APP_PLATFORM} == 'ios'
+              then:
+                - getString:
+                    identifier: mx.mappings.orders-history.deliverySlotByPosition
+                    storeIn: currentDeliverySlot
+                - executeNode:
+                    file: mx/test/helpers/delivery-slot/orders-history/getDeliverySlotAndBannerForiOS.js
+                    args:
+                      - value: ${currentDeliverySlot}
+                    getResponse:
+                      storeIn: parsedDeliverySlot
+              else:
+                - getString:
+                    identifier: mx.mappings.orders-history.deliverySlotAndBannerByPosition
+                    storeIn: currentDeliverySlot
+                - executeNode:
+                    file: mx/test/helpers/delivery-slot/orders-history/parseDeliverySlotAndBannerForAndroid.js
+                    args:
+                      - value: ${currentDeliverySlot}
+                    getResponse:
+                      storeIn: parsedDeliverySlot
+          - log: 
+              message: "Parsed displayed Delivery Slot: ${parsedDeliverySlot}"
+              color: CYAN
+          - if:
+              condition: ${deliverySlot} != ${parsedDeliverySlot}
+              then:
+                - failTest:
+                    message: "${deliverySlot}, did not match ${parsedDeliverySlot}"
+          - log:
+              message: Correct Delivery Slot.
+              color: CYAN
+        else:
+          - log:
+              message: "Delivery Slot Assertion has been turned off by flag: 'ASSERT_DELIVERY_SLOT_IN_ORDERS_HISTORY'"
+              color: YELLOW
+    - log:
+        message: "End function: orders-history.assertOrderDeliverySlotByPosition"
+        color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if orders was displayed correctly
+    # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.orders-history.assertOrdersHistoryListDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.orders-history.ordersDateContainer
+            - identifier: mx.mappings.orders-history.orderTotalLabel
+            - identifier: mx.mappings.orders-history.orderDeliveryOptionLabel
+            - identifier: mx.mappings.orders-history.orderStatusLabel
+            - identifier: mx.mappings.orders-history.orderProductsCountLabel
+            - identifier: mx.mappings.orders-history.viewDetailsButton
+      - log:
+          message: "End function: orders-history.assertOrdersHistoryListDisplayed (Orders displayed)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if last order cancelled label was displayed correctly
+    # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.orders-history.assertCancelledOrderDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.orders-history.lastOrderCancelledLabel
+      - log:
+          message: "End function: oorders-history.assertCancelledOrderDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.orders-history.assertReturnsAndCancellationLinkDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.orders-history.returnsAndCancellationsLink
+      - log:
+          message: "End function: order-details.assertReturnsAndCancellationLinkDisplayed"
+          color: BLUE
+          
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.orders-history.tapReturnsAndCancellationLink
+    flow:
+      - click:
+          identifier: mx.mappings.orders-history.returnsAndCancellationsLink
+      - log:
+          message: "End function: order-details.tapReturnsAndCancellationLink"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber} [Mandatory]  Order Number to be asserted to be displayed.
+  # AUTHOR:  Rodrigo Pacheco C. (vn53p0i)
+  # EDITOR:  Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderDisplayed
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.orders-history.orderContainerByOrderNumber # <-- ${orderNumber}
+            timeout: 10000
+          then:
+            - log:
+                message: '✓ Successful Assertion: Order displayed.'
+                color: GREEN_BOLD
+          else:
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.orders-history.orderContainerByOrderNumber # <-- ${orderNumber}
+                position: center
+                scrollLimit: 5
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.orders-history.orderContainerByOrderNumber # <-- ${orderNumber}
+                then:
+                  - log:
+                      message: '✓ Successful Assertion: Order displayed.'
+                      color: GREEN_BOLD
+                else:
+                  - failTest:
+                      message: 'X Failed Assertion: Order not displayed.'
+      - log:
+          message: 'End function: mx.functions.ea.orders-history.assertOrderDisplayed'
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber}      [Mandatory]  Order Number to be asserted.
+  #          ${fulfillmentType}  [Mandatory]  Expected Fulfillment Type. Options: [ pickup | delivery ].
+  # AUTHOR:  Rodrigo Pacheco (vn53p0i)
+  # EDITOR:  Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderFulfillmentType
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - log:
+          message: "Expected Fulfillment Type: '${fulfillmentType}'"
+          color: CYAN
+      - if:
+          condition: ${fulfillmentType} != 'pickup' && ${fulfillmentType} != 'delivery'
+          then:
+            - failTest:
+                message: "X ERROR: param <fulfillmentType>: Invalid value '${fulfillmentType}'."
+      - if:
+          condition: ${fulfillmentType} == 'pickup'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.orders-history.orderFulfillmentTypeLabel.pickup # <-- ${orderNumber}
+                then:
+                  - failTest:
+                      message: "X Failed Assertion: Fulfillment Type is not 'pickup'."
+      - if:
+          condition: ${fulfillmentType} == 'delivery'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.orders-history.orderFulfillmentTypeLabel.delivery # <-- ${orderNumber}
+                then:
+                  - failTest:
+                      message: "X Failed Assertion: Fulfillment Type is not 'delivery'."
+      - log:
+          message: "✓ Successful Assertion: Fulfillment Type is '${fulfillmentType}'."
+          color: GREEN_BOLD
+      - log:
+          message: 'End function: mx.functions.orders-history.assertOrderFulfillmentType'
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber}  [Mandatory]  Order Number to be asserted.
+  #          ${orderTotal}   [Mandatory]  Expected total, must have two decimals and not contain the '$' sign.
+  # AUTHOR:  Rodrigo Pacheco (vn53p0i)
+  # EDITOR:  Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderTotal
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - log:
+          message: "Expected Total: '${orderTotal}'"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.orders-history.orderTotalByOrderNumber # <-- ${orderNumber}, ${orderTotal}
+          then:
+            - failTest:
+                message: "X Failed Assertion: Total is not '${orderTotal}' or element was not found."
+      - log:
+          message: "✓ Successful Assertion: Total is '${orderTotal}'."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: mx.functions.orders-history.assertOrderTotal"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber}    [Mandatory]  Order Number to be asserted.
+  # AUTHOR:  Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderFulfillmentDateDisplayed
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.orders-history.orderFulfillmentDateAndBannerByOrderNumber # <-- ${orderNumber}
+          then:
+            - failTest:
+                message: "X Failed Assertion: Fulfillment Date not displayed."
+      - log:
+          message: "✓ Successful Assertion: Fulfillment Date displayed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: mx.functions.orders-history.assertOrderFulfillmentDateDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber}    [Mandatory]  Order Number to be asserted.
+  # AUTHOR:  Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderTrackerDisplayed
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.orders-history.orderStatusTrackerByOrderNumber # <-- ${orderNumber}
+          then:
+            - failTest:
+                message: "X Failed Assertion: Order Tracker not displayed."
+      - log:
+          message: "✓ Successful Assertion: Order Tracker displayed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: mx.functions.orders-history.assertOrderTrackerDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber}      [Mandatory]  Order Number to be asserted.
+  #          ${fulfillmentType}  [Mandatory]  Order's Fulfillment Type. Used to calculate the Expected Status.
+  #                                               Options: [ pickup | delivery ].
+  #          ${paymentMethod}    [Mandatory]  Order's Payment Method. Used to calculate the Expected Status.
+  #                                               Options: [ payAtStore | paypal | cashi | cc/dc ].
+  # AUTHOR:  Rodrigo Pacheco (vn53p0i)
+  # EDITORS: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderStatus
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - log:
+          message: "Data: fulfillmentType='${fulfillmentType}', paymentMethod='${paymentMethod}'"
+          color: CYAN
+      - if:
+          condition: ${fulfillmentType} != 'pickup' && ${fulfillmentType} != 'delivery'
+          then:
+            - failTest:
+                message: "X ERROR: param <fulfillmentType>: Invalid value '${fulfillmentType}'."
+      - if:
+          condition: ${paymentMethod} != 'payAtStore' && ${paymentMethod} != 'paypal' && ${paymentMethod} != 'cashi' && ${paymentMethod} != 'cc/dc' && ${paymentMethod} != 'cc' && ${paymentMethod} != 'dc'
+          then:
+            - failTest:
+                message: "X ERROR: param <paymentMethod>: Invalid value '${paymentMethod}'."
+      - executeNode:
+          file: mx/test/helpers/orders-history/parseToExpectedOrderStatus.js
+          args:
+            - value: ${fulfillmentType}
+            - value: ${paymentMethod}
+          getResponse:
+            storeIn: expectedStatus
+      - log:
+          message: "Expected Status: '${expectedStatus}'"
+          color: CYAN
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - getString:
+                identifier: mx.mappings.orders-history.orderStatusTrackerByOrderNumber # <-- ${orderNumber}
+                attribute: content-desc
+                storeIn: actualStatus
+          else:
+            - getString:
+                identifier: mx.mappings.orders-history.orderStatusTrackerByOrderNumber # <-- ${orderNumber}
+                storeIn: actualStatus
+      - log:
+          message: "Actual Status: '${actualStatus}'"
+          color: CYAN
+      - if:
+          condition: ${expectedStatus} == ${actualStatus}
+          then:
+            - log:
+                message: "✓ Successful Assertion: Order Status correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "X Failed Assertion: Order Status not correct."
+      - log:
+          message: "End function: mx.functions.orders-history.assertOrderStatus"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${orderNumber}    [Mandatory]  Order Number to be asserted.
+  #          ${productsCount}  [Mandatory]  Expected total quantity of purchased products.
+  # AUTHOR:  Rodrigo Pacheco (vn53p0i)
+  # EDITORS: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.assertOrderProductsCount
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - log:
+          message: "Expected Products Count: '${productsCount}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.orders-history.productsCountByOrderNumber # <--PARAMS--${orderNumber}
+          storeIn: displayedCount
+      - executeNode:
+          file: mx/test/helpers/utils/sanitizeQuantity.js
+          args:
+            - value: ${displayedCount}
+          getResponse:
+            storeIn: displayedCount
+      - log:
+          message: "Displayed Products Count: '${displayedCount}'"
+          color: CYAN
+      - if:
+          condition: ${productsCount} == ${displayedCount}
+          then:
+            - log:
+                message: "✓ Successful Assertion: Order Products Count correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "X Failed Assertion: Order Products Count not correct."
+      - log:
+          message: "End function: mx.functions.orders-history.assertOrderProductsCount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${orderNumber}  [Mandatory]  Order Number to be opened.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.orders-history.openOrder
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - if:
+          condition: ${platform} == 'iOS' && ${IOS_TURN_OFF_ORDER_INFO_ASSERTION_IN_ORDERS_HISTORY}
+          then:
+            - log:
+                message: '[!!!] [ IOS_TURN_OFF_ORDER_INFO_ASSERTION_IN_ORDERS_HISTORY=true ]'
+                color: YELLOW
+            - log:
+                message: Order cannot be opened by tapping it since none of it's elements can be identified by Order Number. The order will be opened using deep linking. Ensure Manual Testing is performed for this functionality.
+                color: YELLOW
+            - executeFunction:
+                name: mx.functions.utils.navigateToDeepLink.OrderDetails # <-- ${orderNumber}
+          else:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.orders-history.viewDetailsByOrderNumber # <-- ${orderNumber}
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: mx.mappings.orders-history.viewDetailsByOrderNumber # <-- ${orderNumber}
+                      scrollLimit: 10
+                      position: center
+            - click:
+                identifier: mx.mappings.orders-history.viewDetailsByOrderNumber # <-- ${orderNumber}
+      - log:
+          message: "End function: mx.functions.orders-history.openOrder"
+          color: BLUE

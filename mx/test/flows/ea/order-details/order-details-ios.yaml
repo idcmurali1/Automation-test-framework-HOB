@@ -1,0 +1,212 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#  CREATED: Mar/05/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION:  This flow performs all the assertions necessary for orders with a SINGLE DELIVERY. These
+  #                 assertions are NOT related to products.
+  # NOTE:         This flow is ONLY for Home Delivery.
+  # PARAMS:
+  #   ${expectedOrderNumber}      [Mandatory]   Order Number to assert.
+  #
+  #   ${expectedOrderedDate}      [Mandatory]   Expected Ordered Date, obtained from this function's returned value:
+  #                                               mx.functions.ea.review-order.tapPlaceOrder
+  #
+  #   ${expectedOrderStatus}      [Mandatory]   Expected order status. Values: [ Received | Waiting4Payment | Ready4Pickup | OnTheWay | Delivered ].
+  #
+  #   ${expectedDeliveryDate}     [Mandatory]   Expected Delivery date to assert. Input example: "Llega mañana", "Entrega estimada martes 7 de noviembre"
+  #
+  #   ${expectedHomeAddressName}  [Mandatory]   Address Name to validate.
+  #
+  #   ${assertBy}                 [Mandatory]   How to verify the desired address. Options: [ 'FullString' | 'Values' ]
+  #                                               If 'FullString' function validates by using 'addressFullString'.
+  #                                               If 'Values' function validates by individual values using the address related parameters.
+  #
+  #   ${addressFullString}        [Optional]    (Used only when ${assertBy} == 'FullString')
+  #                                               Full String containing the complete home delivery address.
+  #
+  #   ${streetName}               [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home Street to be displayed.
+  #
+  #   ${exteriorNumber}           [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home Exterior Number to be displayed.
+  #
+  #   ${city}                     [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home City to be displayed.
+  #
+  #   ${state}                    [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home State to be displayed.
+  #
+  #   ${zipCode}                  [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home ZIP Code to be displayed.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.order-details.assertDetailsForHomeDeliveryWithSingleDelivery
+    platform: ios
+    flow:
+      - log:
+          message: "Performing Order Details Page Assertions For Home Delivery (Single Delivery Order)..."
+          color: CYAN
+
+      # Correct Order Opened Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertCorrectOrderDisplayed
+          params:
+            - name: expectedOrderNumber
+              string: ${expectedOrderNumber}
+
+      # Ordered Date Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertOrderedDate
+          params:
+            - name: expectedOrderedDate
+              string: ${expectedOrderedDate}
+
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertDeliveryMethodForSingleDelivery
+          params:
+            - name: expectedDeliveryMethod
+              string: 'HomeDelivery'
+
+      # Order Status Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertStatusForSingleDelivery
+          params:
+            - name: expectedOrderStatus
+              string: ${expectedOrderStatus}
+
+      # Order Delivery Date Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertDeliveryDateForSingleDelivery
+          params:
+            - name: expectedDeliveryDate
+              string: ${expectedDeliveryDate}
+
+      # Home Address Name Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertHomeAddressNameForSingleDelivery
+          params:
+            - name: expectedHomeAddressName
+              string: ${expectedHomeAddressName}
+
+      # Home Address Assertion...
+      - if:
+          condition: ${assertBy} != 'FullString' && ${assertBy} != 'Values'
+          then:
+            - failTest:
+                message: "Invalid 'assertBy' Option provided: '${assertBy}'"
+      - log:
+          message: "Performing Address Assertion by: '${assertBy}'..."
+          color: CYAN
+      - if:
+          condition: ${assertBy} == 'FullString'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.order-details.assertHomeAddressByFullStringForSingleDelivery
+                params:
+                  - name: addressFullString
+                    string: ${addressFullString}
+      - if:
+          condition: ${assertBy} == 'Values'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.order-details.assertHomeAddressByIndividualValuesForSingleDelivery
+                params:
+                  - name: streetName
+                    string: ${streetName}
+                  - name: exteriorNumber
+                    string: ${exteriorNumber}
+                  - name: city
+                    string: ${city}
+                  - name: state
+                    string: ${state}
+                  - name: zipCode
+                    string: ${zipCode}
+      - log:
+          message: "End flow: order-details.assertDetailsForHomeDeliveryWithSingleDelivery"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This flow performs all the assertions necessary for orders with SINGLE DELIVERIES. These
+  #                 assertions are NOT related to products.
+  # NOTE:         This flow is ONLY for Pickup Delivery.
+  # PARAMS:
+  #   ${expectedOrderNumber}      [Mandatory]   Order Number to assert.
+  #
+  #   ${expectedOrderedDate}      [Mandatory]   Expected Ordered Date, obtained from this function's returned value:
+  #                                               mx.functions.ea.review-order.tapPlaceOrder
+  #
+  #   ${expectedOrderStatus}      [Mandatory]   Expected order status. Values: [ Received | Waiting4Payment | Ready4Pickup | OnTheWay | Delivered ].
+  #
+  #   ${expectedDeliveryDate}     [Mandatory]   Expected Delivery date to assert. Input example: "Llega mañana", "Entrega estimada martes 7 de noviembre"
+  #
+  #   ${expectedStoreName}        [Mandatory]   Expected Store Name.
+  #
+  #   ${addressFullString}        [Mandatory]   The string displayed on the page contains a "New Line" character, when you pass the value
+  #                                               obtained from inspector, remove this new line without adding any extra spaces or anything
+  #                                               at all, just remove the new line.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.order-details.assertDetailsForPickupDelivery
+    platform: ios
+    flow:
+      - log:
+          message: "Performing Order Details Page Assertions For Home Delivery (Single Delivery Order)..."
+          color: CYAN
+
+      # Correct Order Opened Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertCorrectOrderDisplayed
+          params:
+            - name: expectedOrderNumber
+              string: ${expectedOrderNumber}
+
+      # Ordered Date Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertOrderedDate
+          params:
+            - name: expectedOrderedDate
+              string: ${expectedOrderedDate}
+
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertDeliveryMethodForSingleDelivery
+          params:
+            - name: expectedDeliveryMethod
+              string: 'PickupDelivery'
+
+      # Order Status Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertStatusForSingleDelivery
+          params:
+            - name: expectedOrderStatus
+              string: ${expectedOrderStatus}
+
+      # Order Delivery Date Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertDeliveryDateForSingleDelivery
+          params:
+            - name: expectedDeliveryDate
+              string: ${expectedDeliveryDate}
+
+      # Store Name Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertStoreNameForSingleDelivery
+          params:
+            - name: expectedStoreName
+              string: ${expectedStoreName}
+
+      # Store Address by Full String Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertStoreAddressByFullStringForSingleDelivery
+          params:
+            - name: addressFullString
+              string: ${addressFullString}
+      - log:
+          message: "End flow: order-details.assertDetailsForPickupDelivery"
+          color: BLUE

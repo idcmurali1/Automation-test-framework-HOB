@@ -1,0 +1,164 @@
+
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - OPIF-827
+#       Flow - MH: Validate search on list page
+#    
+#
+#   CONFLUENCE OPIF TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179414
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-827
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-804
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-827
+  tags: INEP-827, OPIF-179414, p1-mh-opif-teflon, INEP-804, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Validate search on list page."
+    flow:
+ 
+   # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+       # Click on login and select sign in..
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user..
+      - log:
+          message: "Login with existing user account.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      - executeFunction:
+          name: functions.global.tapShopBtn    
+
+      # Navigate to my items from home page and click on lists.. 
+      - log:
+          message: "Navigate to my items from home page and click on lists and validate correct page is loaded"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.lists.selectMyItemsAndListsValidation
+
+      # Creating a new list.. 
+      - log:
+          message: "creating a new list"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.lists.validateCreateNewLists
+          params:
+            - name: listName
+              string: data.inep-827.listName      
+
+    # Validate user seeing the type ahead while typing the text in search field and able to select from suggestion.
+    # Type 'mil' -> Suggestion 'milk'
+      - log:
+          message: "Validates TypeAhead Functionality in list search and add items"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+                name: functions.myItemsPage.lists.search.validateTypeAheadAndSelectAndCancel
+                params:
+                  - name: productName
+                    string: data.inep-827.productName   
+      
+    # Validate the generic item card contains "Remove" and "Add item" cta.
+      - log:
+          message: "Validate the generic item card."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.lists.validateGenericItemListsPage           
+    
+    # Remove the generic item from list.
+      - log:
+          message: "Remove the generic item from list."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.lists.removeGenericItemFromList
+
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+
+    flow:
+      - log: "AFTER SCENARIO"
+
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+
+      - log: "AFTER SCENARIO ENDED"

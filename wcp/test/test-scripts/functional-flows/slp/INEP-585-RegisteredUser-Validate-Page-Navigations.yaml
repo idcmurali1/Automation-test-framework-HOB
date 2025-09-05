@@ -1,0 +1,133 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-585
+#       Flow - Registered User Validate Page Navigations
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-189576
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-585
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-485
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-585
+  tags: INEP-585, OPIF-189576, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Registered User Validate Page Navigations"
+    flow:
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API.
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail}, ${password}
+
+      # Onboard to application.
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+      # Login.
+      - log:
+          message: "Login."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+
+      # Validate navigation to PDP.
+      - log:
+          message: "Validate navigation to PDP."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: data.global.itemsArray.1P
+      - executeFunction:
+          name: functions.productDetailsPage.validateItemDetails
+      - executeFunction:
+           name: functions.productDetailsPage.tapClose      
+
+      # Validate navigation to Homepage.
+      - log:
+          message: "Validate navigation to Homepage."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.navigateBackToHome
+          
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

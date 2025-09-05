@@ -1,0 +1,72 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Run Android Sanity on Development Build - Staging
+          call: run_staging_android(TEST_TAGS = 'Android-Development-Build-Sanity')
+
+      - cron:
+          spec: H */2 * * *
+          call: run_staging_android(TEST_TAGS = 'Android-Development-Build-Sanity')
+
+      - manual:
+          name: Run iOS Sanity on Development Build - Staging
+          call: run_staging_iOS(TEST_TAGS = 'iOS-Development-Build-Sanity')
+
+      - cron:
+          spec: H */2 * * *
+          call: run_staging_iOS(TEST_TAGS = 'iOS-Development-Build-Sanity')
+
+envs:
+  global:
+    variables:
+      MARKET: ca
+      APP_PLATFORM: android
+      SLACK_CHANNEL: r2-ca-glass-development-sanity-report
+      SAUCE_USERNAME: CanadaMobile
+      SAUCE_ACCESS_KEY: be7b5ef5-86d1-450d-94ba-f3234f736ab8
+      POST_TO_SPLUNK: false
+      POST_TO_XRAY: false
+
+  env_android_staging:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/android/android-default.yaml
+      DEPENDENCY_PROFILE: looper
+      GLASS_ENV: staging
+      MAPPING_LABELS: staging
+      SAUCE_APP: storage:filename=${MARKET}-glass-development-latest.apk
+
+  env_iOS_staging:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/ios/ios-default.yaml
+      DEPENDENCY_PROFILE: looper
+      GLASS_ENV: staging
+      MAPPING_LABELS: iosStaging
+      SAUCE_APP: storage:filename=${MARKET}-glass-development-latest.zip
+
+flows:
+  get_app_version:
+    - if: |
+        %{APP_PLATFORM == 'android'}
+      then:
+        - var(APP_VERSION):
+            - shell  (name Get App Version): head ${MARKET}/app-versions/android.txt
+      else:
+        - var(APP_VERSION):
+            - shell  (name Get App Version): head ${MARKET}/app-versions/ios.txt
+  run_staging_android:
+    - call: build(env_android_staging)
+  run_staging_iOS:
+    - call: build(env_iOS_staging)

@@ -1,0 +1,243 @@
+general:
+  testCaseId: C2728482
+  tags: wcp-031, p1-us-prod, p1-ca-en-prod, p1-ca-fr-prod, p1-ca-en-teflon, p1-ca-fr-teflon, C2728482, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+  - name: Main
+    flow:
+
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  #    Onboarding
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Sign in
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp031.user.email.android
+          else:
+            - storeIn:
+                key: userEmail
+                value: data.wcp031.user.email.ios
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.wcp031.userPassword
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+            name: functions.cartPage.clearCart
+
+      - executeFunction:
+           name: functions.homePage.selectAddress
+           params:
+             - name: streetAddress
+               string: data.deliveryAddres    
+
+      - executeFunction:
+            name: functions.searchPage.addToCartUsingItemArray
+            params:
+               - name: productArray
+                 string: data.searchPage.VWItems
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                      name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                      params:
+                        - name: productArray
+                          string: data.searchPage.EachItems
+                        - name: quantity
+                          string: data.wcp031.itemQauntity 
+
+            - executeFunction:
+                   name: functions.productDetailsPage.tapClose 
+          else:                        
+            - executeFunction:
+               name: functions.searchPage.addToCartUsingItemArray
+               params:
+                  - name: productArray
+                    string: data.searchPage.EachItems 
+      
+      - executeFunction:
+            name: functions.searchPage.addToCartUsingItemArray
+            params:
+              - name: productArray
+                string: data.searchPage.flow31items                            
+
+      - executeFunction:
+           name: functions.global.tapCartIcon
+  
+      - executeFunction:
+           name: functions.cartPage.tapReserveATimeBtn
+
+      - executeFunction:
+           name: functions.reserveATime.bookSlot
+           params:
+             - name: fufillment
+               string: data.reserveATime.deliveryFromStore
+             - name: slotType
+               string: Standard  
+             - name: slotDay
+               string: tomorrow   
+
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails
+          
+      # - executeFunction:
+      #     name: functions.cartPage.assertFulfillmentTypeInCart
+      #     params:
+      #       - name: fulfillmentText
+      #         string: Delivery from store
+
+      - executeFunction:
+          name: functions.cartPage.scrollDownToPOS
+
+      - if:
+          condition: ${market} == 'CA'
+          then:
+            - if: 
+                condition: ${environment} == 'Production'
+                then:
+                  - storeIn:
+                      key: typeOfUser
+                      value: data.userType.regularUser
+                else:
+                  - storeIn:
+                      key: typeOfUser
+                      value: data.userType.deliveryPassUser
+
+            - executeFunction:
+                name: functions.cartPage.validatePOSBenefits
+                params:
+                  - name: userType
+                    string: ${typeOfUser}
+                  - name: fulfillment
+                    string: 'Schedule Delivery'
+                  - name: feeLabel
+                    string: data.moneyBox.belowMinOrderFeeText
+                  - name: feeValue
+                    string: data.moneyBox.belowMinOrderFeeValue     
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded     
+
+
+      - executeFunction:
+          name: functions.checkoutPage.validateItemDetails
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                  name: functions.checkoutPage.validateTipPercentagesAgainstOrderTotalAndApplyCustomTip
+                  params:
+                    - name: orderTotal
+                      string: ${cleanSubtotalValue}
+
+            - executeFunction:
+                name: function.utils.applyPayments
+                params:
+                  - name: paymentType
+                    string: 'creditCard'
+                  - name: cardNumber
+                    string: data.global.AmexCard.fullNumber
+                  - name: cardHolderFirstName
+                    string: data.global.name.ACCEPT
+                  - name: cardHolderLastName
+                    string: data.global.name.ACCEPT
+                  - name: expirationDate
+                    string: data.wcp08.expirationDate
+                  - name: expirationMonth
+                    string: data.wcp08.expirationMonth
+                  - name: expirationYear
+                    string: data.wcp08.expirationYear
+                  - name: cvv
+                    string: data.global.amexcard.cvv
+                  - name: phoneNumber
+                    string: data.defaultAddress.phoneNumber
+                  - name: sameBillingAddress
+                    string: true
+                  - name: defaultCard
+                    string: true
+                  - name: cardLast4Digits
+                    string:  data.global.AmexrCard.last4DigitsOnly
+
+        # Place Order
+            - executeFunction:
+               name: functions.checkoutPage.tapPlaceOrderButton    
+
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+            - executeFunction:
+                 name: functions.global.navigateToODPUseDeeplink     
+
+            - executeFunction:
+                name: functions.orderDetailsPage.verifyAmmendsBannerIsDisplayed
+
+            - executeFunction:
+               name: functions.orderDetailsPage.clickRescheduleCTA
+
+            - executeFunction:
+               name: functions.orderDetailsPage.Rescheduleslot
+
+            - executeFunction:
+               name: functions.orderDetailsPage.verifyRescheduleIsNotDisplayed 
+
+            - executeFunction:
+               name: functions.orderDetailPage.verifyItemDetails
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyPaymentMethodSection
+
+            - executeFunction:
+                  name: functions.astroApi.moveOrder
+                  params:
+                    - name: orderId
+                      string: ${returnedOrderNumber}
+                    - name: payload
+                      string: data.moveOrder.scheduled-delivery     
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

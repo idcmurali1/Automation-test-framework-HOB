@@ -1,0 +1,76 @@
+configuration:
+  runtime: "concord-v2"
+  processTimeout: "PT4H"
+  dependencies:
+    - "mvn://com.walmartlabs.concord.plugins:looper-task:latest"
+  arguments:
+    username: svcstoreautomation
+    baseUrl: "https://looperpro-cigateway.prod.walmart.com"
+    apiToken: ${crypto.decryptString("B104NtFTFiWjHz3FVwVee86RXyDFEsN+gl5/n7tt+gM94kZatDYKzzWJK5BRSX2x")}
+    postToSplunk: "false"
+    appBuildBranch: development-latest
+  meta:
+    testTags: ""
+    appBuildBranch: ""
+    dependencyProfile: ""
+
+flows:
+  runTests:
+    - task: looper
+      in:
+        username: ${username}
+        baseUrl: ${baseUrl}
+        apiToken: ${apiToken}
+        jobName: seller-center/us/e2e-tests/ios
+        call: ${looperFlow}
+        suspend: true
+        sync: true
+        parameters:
+          APP_BUILD_BRANCH: ${appBuildBranch}
+
+triggers:
+
+  ## development ##
+
+  # Execute staging test flows on android
+  - manual:
+      name: "[Tests - E2E STAG] [Env - STAG] [Branch - DEV]"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests_teflon
+
+  - cron:
+      spec: "0 10,20 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests_teflon
+
+  # Execute production test flows on android
+  - manual:
+      name: "[Tests - E2E PROD] [Env - PROD] [Branch - DEV]"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests_prod
+
+  # Disabled until we have solution on captcha hanlding for production
+  # - cron:
+  #     spec: "0 23 * * *"
+  #     timezone: "America/Los_Angeles"
+  #     entryPoint: runTests
+  #     arguments:
+  #       looperFlow: run_tests_prod
+
+  # Execute production test flows(in Staging) on android
+  - manual:
+      name: "[Tests - E2E PROD] [Env - STAG] [Branch - DEV]"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests_prod_on_teflon
+
+  - cron:
+      spec: "0 13 * * *"
+      timezone: "America/Los_Angeles"
+      entryPoint: runTests
+      arguments:
+        looperFlow: run_tests_prod_on_teflon

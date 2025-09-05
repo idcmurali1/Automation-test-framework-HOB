@@ -1,0 +1,238 @@
+general:
+  tags: unified-prod-e2e, C2658120, p2-ecomm-prod-e2e, EC072 , EC008, MP003, unified-prod-e2e-mp, unified-teflon-e2e-mp, unified-p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2658120
+  metadata:
+    - name: scenarioId
+      string: EC072 , EC008, MP003 #260
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      - log: ${env}    
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+      
+      #  Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+            
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - if:
+          condition: ${env} == 'production'
+          then:
+              - executeFunction:
+                  name: unified.us.functions.global.authentication.signInAccountWithParams
+                  params:
+                    - name: android.email
+                      string: us.data.prod.refurbitems.android.email
+                    - name: android.password
+                      string: us.data.prod.refurbitems.android.password
+                    - name: ios.email
+                      string: us.data.prod.refurbisheditems.ios.email
+                    - name: ios.password
+                      string: us.data.prod.refurbisheditems.ios.password
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            # Create Accountusing astro api
+              - executeFunction:
+                  name: unified.us.functions.utils.astro.createAccount
+                  params:
+                    - name: email
+                      string: $customerEmail
+                    - name: payload
+                      string: us.data.flow030.createAccountPayload
+              
+              - executeFunction:
+                  name: unified.us.functions.global.authentication.signInAccountWithParams
+                  params:
+                    - name: android.email
+                      string: ${customerEmail}
+                    - name: android.password
+                      string: $password
+                    - name: ios.email
+                      string: ${customerEmail}
+                    - name: ios.password
+                      string: $password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+              
+      # Add refurbished item to cart
+      - if:
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.search.searchItem
+                params:
+                  - name: searchTerm
+                    string: restored
+          else:
+            - executeFunction:
+                name: unified.us.functions.search.searchItem
+                params:
+                  - name: searchTerm
+                    string: Restored iphone
+
+      # Search Items
+      - executeFunction:
+          name: unified.us.functions.marketplace.search.restored.validations
+          params:
+            - name: searchresultsconditions
+              string: 'Restored: Like New'
+            - name: type
+              string: 'Restored: Like New'
+            - name: typeDesc
+              string: 'Restored ' # don't remove the space after Restored
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: excludeSponsored
+              string: true
+
+      # Item page validations
+      - executeFunction:
+          name: unified.us.functions.marketplace.itempage.restored.validations
+          params:
+            - name: type
+              string: 'Restored: Like New'
+            - name: typeDesc
+              string: 'Restored ' # don't remove the space after Restored
+
+      # verify item page of refurb item
+      - executeFunction:
+          name: unified.us.function.item.verifyRefurbishedItemPage
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.marketplace.cart.restored.validations
+          params:
+            - name: type
+              string: 'Restored: Like New'
+            - name: typeNew
+              string: 'Restored: Premium'
+            - name: typeDesc
+              string: 'Restored ' # don't remove the space after Restored   
+
+      # Verify cart page
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: listOfExpectedFulfilment
+              string: Shipping
+            - name: cart
+              string: true
+
+      # Go to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+          name: unified.us.functions.marketplace.reviewOrder.restored.validations
+          params:
+            - name: type
+              string: 'Restored: Like New'
+            - name: typeDesc
+              string: 'Restored ' # don't remove the space after Restored   
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.checkout.confirmCvvAndPlaceOrder
+
+            - executeFunction:
+                name: unified.us.functions.orderConfirmation.getOrderNumber
+
+            - log: ${orderNo}
+
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+
+            - executeFunction:
+                name: unified.us.functions.ODP.restored.validations
+                params:
+                  - name: type
+                    string: 'Restored: Like New'
+                  - name: typeDesc
+                    string: 'Restored ' # don't remove the space after Restored                 
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

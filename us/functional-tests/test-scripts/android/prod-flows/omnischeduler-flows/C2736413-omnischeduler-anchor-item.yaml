@@ -1,0 +1,126 @@
+# Author: Srushti Patel
+# Omni Scheduler Anchor items - Tire installation workflow
+# https://confluence.walmart.com/display/ACCNG/Omni+Scheduler+V1+Mobile+Regression+Test+Cases
+general:
+  platform: android
+#  tags: C2736413, prod-functional-omnischeduler
+  inherit:
+    filesRunAll:
+      - errors-helpers.yaml
+  testCaseId: C2736413
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main ACC
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.omniScheduler.android.email
+            - name: password
+              string: us.data.omniScheduler.android.password
+
+      # Navigating Back
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      # Navigating Home -> Services
+      - executeFunction:
+          name: us.functions.global.navigation.goToServicesFromTabBar
+
+      # Handle Join One Popup
+      - executeFunction:
+          name: us.functions.services.handleJoinOnePopup
+
+      # Navigate to Auto care center
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.servicePopularServicesLabel
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+
+      #Opening auto care center - Auto Services
+      - executeFunction:
+          name: us.functions.omniScheduler.services.navigateToServices
+          params:
+            - name: servicesName
+              string: Auto Services
+
+      #Clicking on schedule a service
+      - executeFunction:
+          name: us.functions.services.acc.schedulingService
+
+      #Select a vehicle
+      - executeFunction:
+          name: us.functions.services.acc.schedulingService.selectVehicle
+
+     # Navigate to select service
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.acc.selectService.heading
+
+      # Verify select service recycler view is present
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.autoCareCenter.accWorkflowRecyclerView
+            - identifier: us.mappings.services.autoCareCenter.accWorkflowRecyclerView.workflowItemCardTireInstallation
+
+      # click on tire installation
+      - click:
+          identifier: us.mappings.services.autoCareCenter.accWorkflowRecyclerView.workflowItemCardTireInstallation
+
+      # click continue
+      - click:
+          identifier: us.mappings.services.autoCareCenter.accWorkflowFooterButton
+
+      # Verify select Yes, I need to buy new tires
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.autoCareCenter.accWorkflowRecyclerView
+            - identifier: us.mappings.services.autoCareCenter.accWorkflowRecyclerView.workflowItemCardBuyTires
+
+      # click on Yes I need to buy new tires
+      - click:
+          identifier: us.mappings.services.autoCareCenter.accWorkflowRecyclerView.workflowItemCardBuyTires
+
+      # click continue
+      - click:
+          identifier: us.mappings.services.autoCareCenter.accWorkflowFooterButton
+
+      # Navigating to the Anchor items screen
+      - executeFunction:
+          name: us.functions.omniScheduler.schedulingService.anchorItem
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,689 @@
+functions:
+  
+    #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function taps on shop button in home page
+  # No params
+  - name: functions.global.tapCartIcon
+    flow:
+      - sleep:
+          duration: 10000
+      - if:
+          condition: ${market} == 'US'
+          then:
+            - executeFunction:
+                name: functions.global.closePopUp  
+      - click:
+          identifier: global.cartIcon
+      - sleep:
+          duration: 5000
+      - log:
+          message: "End functions: global.tapCartIcon"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Navigate to account page from the bottom tab bar
+  # No params
+  - name: functions.global.tapAccountBtn
+    flow:
+      - click:
+          identifier: global.accountBtn
+      - log:
+          message: "End functions: global.tapAccountBtn"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------
+  # Description: This function clicks on my items
+  # No Param
+
+  - name: functions.global.tapMyItemsBtn
+    flow:
+      - click:
+          identifier: global.myItemsBtn
+
+      - log:
+          message: "End function: global.tapMyItemsBtn"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function taps on shop button on bottom tab bar
+  # No params
+  - name: functions.global.tapShopBtn
+    flow:
+      - click:
+          identifier: global.shopBtn
+          wait: 3000
+      - if:
+          condition: ${market} == 'US'
+          then:
+            - executeFunction:
+                name: functions.homePage.isWplusBottomsheetDisplayed
+            - if:
+                condition: ${returnedIsDisplayed}
+                then:
+                  - executeFunction:
+                      name: functions.homePage.wplusBottomsheet.tapCloseBtn          
+      - log:
+          message: "End functions: global.tapShopBtn"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Go back to previous page
+  # No params
+  - name: functions.global.tapBackBtn
+    flow:
+      - goBack: true
+      - log:
+          message: "End functions: global.tapBackBtn"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Navigates back to Pre-home Page.
+  # No params
+  - name: functions.global.navigateBackToPreHome
+    flow:
+      - click:
+          identifier: global.backToPreHomeBtn
+      - log:
+          message: "End function: functions.global.navigateBackToPreHome"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Close any pop up has the same close identifier
+  # No params
+  - name: functions.global.closePopUp
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: global.closeBtn
+          then:
+              - click:
+                  identifier: global.closeBtn
+
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function navigate to order detail page via deeplink
+  - name: functions.global.navigateToODPUseDeeplink
+    flow:
+      - executeFunction:
+          name: functions.utils.getMarketDeeplinkPrefix
+      
+      - executeFunction:
+          name: functions.onboarding.navigation.goToDeepLink
+          params:
+              - name: deepLinkUrl
+                string: ${deeplinkMarketPrefix}orders/${returnedOrderNumber}
+              - name: deeplinkMarketPrefix
+                string: ${deeplinkMarketPrefix}
+      - if:
+          condition: ${platform} == 'iOS' && (${market} == 'MX' || ${market} == 'MX-Bodega'')
+          then:
+            - executeFunction:
+                name: functions.onboarding.isShoppingExperienceTitleDisplayed
+            - if:
+                condition: ${returnedTitleIsDisplayed} == true
+                then:
+                  - executeFunction:      
+                      name: functions.onboarding.shoppingExperience.tapShoppingOption 
+                      params:
+                        - name: ShoppingExperience
+                          string: ${ShoppingExperience}
+      - executeFunction:
+          name: functions.utils.handlePopUp
+      - log: 
+          message: "End function: functions.global.navigateToODPUseDeeplink"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function turns WCP/MH expo on via deeplink
+  - name: functions.global.enableWCPExpo
+    flow:
+      - if:
+          condition: ${merge-hallways}
+          then:
+            - executeFunction:
+                name: functions.onboarding.enableMergeHallwaysExpo
+            - executeFunction:
+                name: functions.onboarding.closePopUps
+            - executeFunction:
+                name: functions.global.tapShopBtn
+            - executeFunction:
+                name: functions.homePage.gic.collapseIfExpanded
+            - log:
+                message: SUCCESS | Merge Hallays is setting correct
+                color: GREEN_BOLD
+      - log:
+            message: "End function: global.enableWCPExpo"
+            color: BLUE                    
+#--------------------------------------------------------------------------------------------------------------------
+  # Description: This function change MX/BO Env to Teflon, close pop ups   
+  - name: functions.global.EAOnboardingHelper
+    flow: 
+        - if:
+            condition: (${market} == 'MX' || ${market} == 'MX-Bodega') && ${platform} == 'Android'
+            then:
+                - if:
+                    condition: ${environment} == 'Teflon'
+                    then:
+                      - executeFunction:
+                          name: functions.debugPanel.changeEnvToTelfon
+                          params:
+                            - name: debugPanel
+                              string: debugPannel.deepLink
+                - executeFunction:
+                    name: functions.onboarding.closePopUps
+        - log:
+            message: "End function: global.EAOnboardingHelper"
+            color: BLUE  
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Close any pop up has the same close identifier
+  # No params
+  - name: functions.global.resetCartInformation/GlobalVars
+    flow:
+      # Reset global var for product details array
+      - storeIn:
+          key: productDetailsArray
+          value: 'null'
+      # Reset global var for product subtotal
+      - storeIn:
+          key: totalPrice
+          value: 0
+      - log:
+          message: "End function: functions.global.resetCartInformation/GlobalVars"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function returns the corresponding title for the given error code.
+  # Params:      ${errorCode}  [Mandatory]  Error code for which to return its related title.
+  - name: functions.global.getErrorCodeTitle
+    flow:
+      - storeIn:
+          key: errorTitle
+          value: ''
+      - if:
+          condition: ${errorCode} == 'data.global.errorCodes.addToCart.noAvailability'
+          then:
+            - storeIn:
+                key: errorTitle
+                value: data.global.errorTitles.addToCart.noAvailability
+      - if:
+          condition: ${errorCode} == 'data.global.errorCodes.addToCart.digitalItem'
+          then:
+            - storeIn:
+                key: errorTitle
+                value: data.global.errorTitles.addToCart.digitalItem
+      - log:
+          message: "End function: functions.global.getErrorCodeTitle"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+            
+  # Description: This function clicks on services option
+  # No params 
+  - name: functions.global.tapServicesBtn
+    flow:
+      - click:
+          identifier: global.servicesBtn 
+          wait: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: global.bottomsheetCloseBtn
+          then:
+            - click:
+                identifier: global.bottomsheetCloseBtn
+                wait: 5000
+          else:
+            - log : botomsheet is not displayed
+      - log: 
+          message: "End function: functions.global.tapServicesBtn"
+          color: BLUE
+
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function clicks on departments option 
+  # No params 
+  - name: functions.global.tapDepartmentsBtn
+    flow:
+      - click:
+          identifier: global.departmentsBtn
+      - log: 
+          message: "End function: functions.global.tapDepartmentsBtn"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function handles the tap on the 'Pick Up' intent on the GIC homepage and cart page.
+  # No Param
+
+  - name: functions.global.gic.selectPickupIntent
+    flow:
+      - if:
+          condition: ${page} == 'home'
+          then:
+           - executeFunction:
+               name: functions.homePage.gic.expandIfCollapsed
+           - executeFunction:
+               name: functions.global.verifyIfPickupintentIsSelected
+      - if:
+          condition: ${page} == 'cart'
+          then:
+           - executeFunction:
+                name: functions.cartPage.expandPickupDeliveryOptions
+           - click:
+               identifier: cartpage.selectPickupIntent      
+
+      - log:
+          message: "End function: global.gic.selectPickupIntent"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function handles the tap on the 'Delivery' intent on the GIC homepage and cart page.
+  # No Param
+
+  - name: functions.global.gic.selectDeliveryIntent
+    flow:
+       - if:
+          condition: ${page} == 'home'
+          then:
+            - executeFunction:
+                name: functions.homePage.gic.expandIfCollapsed
+            - executeFunction:
+                name: functions.global.verifyIfDeliveryintentIsSelected
+       - if:
+          condition: ${page} == 'cart'
+          then:
+           - executeFunction:
+               name: functions.cartPage.expandPickupDeliveryOptions
+           - click:
+               identifier: cartpage.selectDeliveryIntent        
+                 
+       - log:
+           message: "End function: global.gic.selectDeliveryIntent"
+           color: BLUE   
+  # ----------------------------------------------------------------------------------------------------------------          
+
+  # Description: This function handles the tap on the 'Shipping' intent on the GIC homepage and cart page. US ONLY
+  # No Param
+  - name: functions.global.gic.selectShippingIntent     
+    flow:
+      - if:
+          condition: ${page} == 'home'
+          then:
+            - executeFunction:
+                name: functions.homePage.gic.expandIfCollapsed
+            - executeFunction:
+                name: functions.homePage.gic.tapOnShippingIntent
+      - log:
+           message: "End function: gic.selectShippingIntent"
+           color: BLUE 
+  
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description:Validate bokk promotion bottom sheet is displayed and close it
+  - name: functions.global.bankPromationBottomSheet.validateIsDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: bankPromotion.subtitle
+            - identifier: bankPromotion.content
+      - click:
+            identifier: bankPromotion.closeBtn
+      - log: 
+          message: "End function: bankPromationBottomSheet.validateIsDisplayed"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function select and verify delivery address from different pages. Currently its 
+  # configured for PDP and Cart page.
+  # Params:      ${streetAddress}
+  # Works for:   [ MX [✓]   MX-Bodega [✓]   US [__] ]
+  - name: function.globalPages.selectAndVerifyDeliveryAddress
+    flow:
+      - if:
+          condition: ${page} == 'ProductDetailsPage'
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.tapAddressBtn
+          else:
+            - executeFunction:
+                name: functions.cartPage.tapOnAddressLink
+      - executeFunction:
+          name: functions.accountPage.setAddress # <-- ${streetAddress}
+      - executeFunction:
+          name: functions.accountPage.tapContinueBtn
+      - if:
+          condition: ${page} == 'ProductDetailsPage'
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.verifyDeliveryAddress # <-- ${streetAddress}
+          else:
+            - executeFunction:
+                name: functions.cartPage.verifyDeliveryAddress # <-- ${streetAddress}
+      - log:
+          message: "End functions: globalPages.chooseDeliveryAddress&AssertAddressSelected"
+          color: BLUE
+
+#-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions validate if the money box displayed.
+  # Params:      No params
+  # Works for:   [ MX [✓]   MX-Bodega [✓]   US [__] ]
+  - name: functions.globalPages.isMoneyBoxDisplayed
+    flow:
+      - storeIn:
+          key: returnedIsDisplayed
+          value: false
+      - scroll:
+          direction: down
+          untilIdentifier: globalPages.moneyBox.estimateTotal
+          position: center
+      - if:
+          identifier:
+            present:
+              - identifier: globalPages.moneyBox.estimateTotal
+          then:
+            - storeIn:
+                key: returnedIsDisplayed
+                value: true
+            - log:
+                message: "End function: globalPages.isMoneyBoxDisplayed (Displayed)"
+                color: BLUE
+          else:
+            - storeIn:
+                key: returnedIsDisplayed
+                value: false 
+            - log:
+                message: "End function: globalPages.isMoneyBoxDisplayed (Not displayed)"
+                color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function Clicks on done button
+  # No params
+  - name: functions.global.tapDoneBtn
+    flow:
+      - click:
+          identifier: global.doneBtn
+      - log:
+          message: "End function: global.tapDoneBtn"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Navigate to Savings page from the bottom tab bar
+  # No params
+  - name: functions.global.tapSavingsBtn
+    flow:
+      - click:
+          identifier: global.savingsBtn
+      - log:
+          message: "End functions: global.tapSavingsBtn"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Verify no intent is selected in GIC
+  # No params
+  - name: functions.global.gic.verifyNoIntentIsSelected
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+              - verifyIdentifier:
+                  checked:
+                    - identifier: homepage.gic.expandedView.pickupIntent
+                      value: false
+              - verifyIdentifier:
+                  checked:
+                    - identifier: homepage.gic.expandedView.DeliveryIntent
+                      value: false
+          else:
+              - verifyIdentifier:
+                  label:
+                    - identifier: homepage.gic.expandedView.pickupIntent
+                      notContains: "seleccionado"
+              - verifyIdentifier:
+                  label:
+                    - identifier: homepage.gic.expandedView.DeliveryIntent
+                      notContains: "seleccionado"
+      - log:
+          message: "✓ No intent is selected"
+          color: GREEN_BOLD
+      - log:
+          message: "End functions: global.gic.verifyNoIntentIsSelected"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Unselect intent in GIC
+  # No params
+  - name: functions.global.gic.unselectIntent
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+              - try:
+                  flow:
+                    - verifyIdentifier:
+                        checked:
+                          - identifier: homepage.gic.expandedView.pickupIntent
+                            value: false
+                    - log:
+                        message: "✓ Pickup intent is not selected"
+                        color: GREEN
+                  catch:
+                    flow:
+                      - click:
+                          identifier: homepage.gic.expandedView.pickupIntent
+                      - log:
+                          message: "Unselected pickup intent"
+                          color: GREEN_BOLD
+              - try:
+                  flow:
+                    - verifyIdentifier:
+                        checked:
+                          - identifier: homepage.gic.expandedView.DeliveryIntent
+                            value: false
+                    - log:
+                        message: "✓ Delivery intent is not selected"
+                        color: GREEN
+                  catch:
+                    flow:
+                      - click:
+                          identifier: homepage.gic.expandedView.DeliveryIntent
+                      - log:
+                          message: "Unselected delivery intent"
+                          color: GREEN_BOLD
+          else:
+              - try:
+                  flow:
+                    - verifyIdentifier:
+                        label:
+                          - identifier: homepage.gic.expandedView.pickupIntent
+                            notContains: "seleccionado"
+                    - log:
+                        message: "✓ Pickup intent is not selected"
+                        color: GREEN
+                  catch:
+                    flow:
+                      - click:
+                          identifier: homepage.gic.expandedView.pickupIntent
+                      - log:
+                          message: "Unselected pickup intent"
+                          color: GREEN_BOLD
+              - try:
+                  flow:
+                    - verifyIdentifier:
+                        label:
+                          - identifier: homepage.gic.expandedView.DeliveryIntent
+                            notContains: "seleccionado"
+                    - log:
+                        message: "✓ Delivery intent is not selected"
+                        color: GREEN
+                  catch:
+                    flow:
+                      - click:
+                          identifier: homepage.gic.expandedView.DeliveryIntent
+                      - log:
+                          message: "Unselected delivery intent"
+                          color: GREEN_BOLD
+      - log:
+          message: "End functions: global.gic.unselectIntent"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Verify expected intent is selected
+  # Params:   ${expectedIntent}   [Required]  Expected intent (pickup | delivery).
+  - name: functions.global.gic.verifyIntentIsSelected
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+              - if:
+                  condition: ${expectedIntent} == 'pickup'
+                  then:
+                    - verifyIdentifier:
+                        checked:
+                          - identifier: homepage.gic.expandedView.pickupIntent
+                            value: true
+                    - log:
+                        message: "✓ Pickup intent is selected"
+                        color: GREEN_BOLD
+                  else:
+                    - if:
+                        condition: ${expectedIntent} == 'delivery'
+                        then:
+                          - verifyIdentifier:
+                              checked:
+                                - identifier: homepage.gic.expandedView.DeliveryIntent
+                                  value: true
+                          - log:
+                              message: "✓ Delivery intent is selected"
+                              color: GREEN_BOLD
+                        else:
+                          - failTest: "X Invalid intent. Intent: ${expectedIntent}"
+          else:
+              - if:
+                  condition: ${expectedIntent} == 'pickup'
+                  then:
+                    - verifyIdentifier:
+                        label:
+                          - identifier: homepage.gic.expandedView.pickupIntent
+                            contains: "seleccionado"
+                    - log:
+                        message: "✓ Pickup intent is selected"
+                        color: GREEN_BOLD
+                  else:
+                    - if:
+                        condition: ${expectedIntent} == 'delivery' || ${expectedIntent} == 'Entrega'
+                        then:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: homepage.gic.expandedView.DeliveryIntent
+                                  contains: "seleccionado"
+                          - log:
+                              message: "✓ Delivery intent is selected"
+                              color: GREEN_BOLD
+                        else:
+                          - failTest: "X Invalid intent. Intent: ${expectedIntent}"
+      - log:
+          message: "End functions: global.gic.verifyIntentIsSelected"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions is the responsible to close the update quantity 
+  # Params: No params
+  - name: functions.global.closeUpdateItemQuantitySelectorIfDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: global.updateItemQuantitySelector
+          then:
+            - click:
+                coordinates: 50%, 50% 
+                wait: 5000
+      - log:
+          message: "End functions: global.closeUpdateItemQuantitySelectorIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function closes the experience onboarding bottom sheet. 
+  # Params: No params
+  - name: functions.global.experienceOnboardingBottomSheet.dismissIfDisplayed
+    flow:
+      - if:
+          condition: ${market} == 'MX'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: global.experienceOnboardingBottomSheet.title
+                then:
+                  - click:
+                      identifier: global.experienceOnboardingBottomSheet.startShoppingBtn
+                else:
+                  - log:
+                      message: "Experience onboarding bottom sheet not shown."
+                      color: GREEN
+      - log:
+          message: "End functions: global.experienceOnboardingBottomSheet.dismissIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function Validates freight fee in Money Box
+  # Params: No params
+  - name: functions.global.moneyBox.validateFreightCharge
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: global.moneyBox.freightCharge
+      - log:
+          message: "End functions: global.moneyBox.validateFreightCharge"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions is the responsible to dismiss the payment error on place order
+  # Params: No params
+  - name: functions.global.closePaymentFailureButtonIfDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: global.acceptBtn
+          then:
+            - click:
+                coordinates: 70%, 70%
+                wait: 5000
+      - log:
+          message: "End functions: global.closePaymentFailureButtonIfDisplayed"
+          color: BLUE
+  
+   #Description: This functions  captures screenshot
+  # Params: required
+  - name: function.utils.captureScreenshots
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: global.verifyPageTitle
+      - log:
+          message: Capturing screenshots for the loaded screen
+          color: GREEN_BOLD
+      - takeScreenshot:
+          fileLabel: ${fileName}
+      - log:
+          message: "End function utils.captureScreenshots"
+          color: BLUE
+  
+  - name: functions.global.allDepartmentsBtn
+    flow:
+      - click:
+          identifier:  global.alldepartmentsBtn
+      - log: 
+          message: "End function: functions.global.allDepartmentsBtn from home"
+          color: BLUE

@@ -1,0 +1,307 @@
+general:
+  platform: ios
+  # tags:  C2671716, Tipping, us-golden-flows-ecom-p1, p1-ecomm-teflon-e2e
+  testCaseId: C2671716
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: EC131 #370
+  #running in prod
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'Delivery TIPPING FOR ORDERS > 35$- IOS'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.tipping.email.ios.sc.greaterthan35
+
+      - executeFunction:
+          name: us.functions.checkGiftCardBalanceAndLoadIfZero
+          params:
+            - name: balance
+              string: 100
+            - name: PID
+              string: a992f1e9-4924-43ae-9f0e-e48a81464df9.9268
+
+  - name: Main  #Create a new Customer with Membership - Scheduled Delivery from Store (> $35)
+    flow:
+      - log: Start Main
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: us.data.tipping.email.ios.sc.greaterthan35
+
+      # onboarding
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # signing in to the account
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: E2epassword$
+
+      # # # Sign in with default account
+      # # - executeFunction:
+      # #     name: us.functions.global.authentication.signInAccount.via.emailOTP
+      # #     params:
+      # #       - name: email
+      # #         string: us.data.tipping.email.ios.sc.greaterthan35
+
+      # Navigate to home page
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      # Select Delivery Intent
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+           name: us.functions.utils.fetchFromDataList
+           params:
+             - name: email
+               string: us.data.tipping.email.ios.sc.greaterthan35
+             - name: itemType
+               string: STORE_SCHEDULED_DELIVERY
+             - name: itemList
+               string: us.data.flow.greaterthan35.SCDitemLists2
+
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem
+      #     params:
+      #       - name: source
+      #         string: astro
+      #       - name: itemType
+      #         string: STORE_SCHEDULED_DELIVERY
+      #       - name: store
+      #         string: 32144
+      #       - name: itemFilter
+      #         string: greaterThan35
+      #       - name: skipForNext
+      #         string: true
+
+      - storeIn:
+          key: item2
+          value: $itemFetched
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/$item2 
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'Navigating to cart and scheduling a delivery slot as a wplus member'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      # proceeding to checkout/Review order page
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      #Swicth to Different card on Review Order Screen
+      - executeFunction:
+          name: us.functions.reviewOrder.switchToDifferentCard
+          params:
+            - name: cardEndingWith
+              string: 7777
+
+      # Driver percentage tip validation
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.driverTipAmountVerification.on.orderReviewPage
+          params:
+            - name: greaterThan35Dollars
+              string: true
+            - name: driverTipPercentage
+              string: 10
+            - name: storeCheckoutTotalAmount
+              string: true
+            - name: decimalPlacesNeededForTipCalc
+              string: 2
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: cvv
+              string: 123
+      
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'Post order confirmation validation for Drivers Deliver tip selection on the Order details page'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Move to PO Acknowledged
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Acknowledged
+
+      # Validate Driver Tip when the Order is in PO Acknowledged status
+      - executeFunction:
+          name: us.functions.utils.astro.validateDriverTip
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: PO Acknowledged
+            - name: driverTipAmt
+              string: ${percentageAmount}
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - sleep:
+          duration: 30000
+
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.verification.for.inProgressODP.GreaterThan35
+          params:
+            - name: tipInPercentage
+              string: true
+            - name: tipPercentageAmtExpected
+              string: 10
+            - name: VerifyCheckoutTotalAmount
+              string: true
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: Delivered
+
+      # Validate Driver Tip when the Order is in Delivered status
+      - executeFunction:
+          name: us.functions.utils.astro.validateDriverTip
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: status
+              string: Delivered
+            - name: driverTipAmt
+              string: ${percentageAmount}
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Verify order status in order details page
+      - executeFunction:
+          name: us.functions.orderDetails.ost.scheduledDelivery.verifyOrderStatus
+          params:
+            - name: fulfillmentType
+              string: Delivery from store
+            - name: orderStatus
+              string: Delivered
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'Post order confirmation validation for Drivers Deliver tip selection on the Order details page'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      #Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Drivers Deliver tip selection on the Order details page.
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.verification.for.driverTip.onODP.GreaterThan35
+          params:
+            - name: tipInPercentage
+              string: true
+
+      # storing testrun result as passed
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

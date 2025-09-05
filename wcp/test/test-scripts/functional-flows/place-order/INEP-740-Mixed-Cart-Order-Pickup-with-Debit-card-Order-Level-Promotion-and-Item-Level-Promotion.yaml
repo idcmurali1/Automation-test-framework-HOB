@@ -1,0 +1,292 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-740
+#       Flow : Create mixed order with Debit card Pickup + order level promotion + item level promotions
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179465
+#
+#   INEP TEST ID:
+#     https://jira.walmart.com/browse/INEP-740
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-442
+#
+#   JIRA Native Apps Automation ID:
+#     https://jira.walmart.com/browse/INEP-613 
+########################################################################################################################
+
+general:
+  testCaseId: INEP-740
+  tags: INEP-740, OPIF-179465, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Create mixed order with Debit card Pickup + order level promotion + item level promotions"
+    flow:
+
+      # Create account using astro api..
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API..
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.generateTimeStampEmail
+      - executeFunction:
+          name: functions.astroApi.createAccount
+          params:
+            - name: payload
+              string: data.global.payload.visaCard1111
+
+
+      # Onboard to application..
+      - log:
+          message: "Onboard to the application.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore          
+      - executeFunction:
+         name: functions.homePage.assertPageLoaded
+
+     # Add to cart GO item and GM item (Mixed Cart)
+      - log:
+          message: "ASTRO API - ADD ITEM TO CART"
+          color: PURPLE_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.addToCart  
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: password
+              string: data.global.password.Password1
+            - name: storeId
+              string: data.inep-740.storeId # Need to update
+            - name: s1
+              string: data.inep-740.item1  # Need to update
+            - name: q1
+              string: "1"
+            - name: orderType
+              string: data.orderType.storeScheduledPickup
+            - name: s2
+              string: data.inep-740.item2 # Need to update
+            - name: q1
+              string: "1"
+            - name: orderType
+              string: data.orderType.storeUnscheduledPickup
+
+      # Click on login and select sign in..
+      - log:
+          message: "Click on Login and Select Sign in.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.global.tapAccountBtn          
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login with existing user user..
+      - log:
+          message: "Login with existing user account.."
+          color: PURPLE_BOLD_BRIGHT       
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      - executeFunction:
+          name: functions.global.tapShopBtn 
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *              
+
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart.. "
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon    
+
+      # Validate item and quantity available in cart..
+      - log:
+          message: "Validate item and quantity available in cart.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails 
+
+      # Select pickup slot from cart..
+      - log:
+          message: "Select pickup slot from cart.."
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      - executeFunction:
+           name: functions.reserveATime.bookSlot
+           params:
+             - name: fufillment
+               string: data.global.deliveryText.pickup
+             - name: slotType
+               string: Standard  
+             - name: slotDay
+               string: tomorrow
+      
+      - executeFunction:
+          name: functions.cartPage.validatePromotions
+          params:
+            - name: itemName
+              string: data.inep-740.itemName
+
+      - executeFunction:
+          name: functions.cartPage.scheduledPickup.verifyCard
+      - executeFunction:
+          name: functions.cartPage.unscheduledOrder.verifyCard
+
+      # Validate reduced prices/strikethrough price
+      - log:
+          message: "Validate savings details in cart page.."
+      - executeFunction:
+          name: functions.cartPage.scrollDownToPOS
+      - executeFunction:
+          name: functions.cartPage.pos.validateReducedPrice
+      # Click checkout button and navigate to ROP..
+      - log:
+          message: "Click checkout button and navigate to ROP.. "
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded
+
+      # Validate item details view details in ROP..
+      - log:
+          message: "Validate item details view details in ROP.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.checkoutPage.viewDetails.verifyDetails
+          params:
+            - name: validateSavingDetails
+              string: true
+            - name: itemName
+              string: data.inep-740.itemName
+
+      # Select cvv ..
+      - log:
+          message: "Select cvv.."
+          color: PURPLE_BOLD_BRIGHT         
+      - executeFunction:
+          name: functions.checkoutPage.scrollToCVVTextfield
+      - executeFunction:
+          name: functions.checkoutPage.addCVV
+          params:
+            - name: CVV
+              string: data.global.card.cvv.123
+
+      # Apply promo code for discount..
+      - log:
+          message: "Apply promo code for discount.."
+          color: PURPLE_BOLD_BRIGHT  
+      - executeFunction:
+          name: functions.checkoutPage.applyValidPromoCodeFlow # Need to add the promocode details..
+          params:
+            - name: promoCode
+              string: data.inep-740.promoCode # Need to add the promocode details..
+            - name: promoCodeText
+              string: data.inep-740.promoCode.label # Need to add the promocode details..
+
+      # Verify discount details in moneybox and place order..         
+      - log:
+          message: "Verify discount details in moneybox and place order.."
+          color: PURPLE_BOLD_BRIGHT   
+      - executeFunction:
+          name: functions.checkoutPage.validateMoneyBoxField
+          params:
+            - name: moneyBoxFieldName
+              string: ${promoCodeText}
+      - executeFunction:
+          name: functions.checkoutPage.validateReducedPrice                
+      - executeFunction:
+          name: functions.checkoutPage.tapPlaceOrderButton
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Verify the Thank you page..
+      - log:
+          message: "Verify the Thank you page.."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+      - executeFunction:
+          name: functions.thankYouPage.verifyPromoCodeTextIsDisplayed
+      # Navigate to ODP using deeplink..
+      - log:
+          message: "Navigate to ODP using deeplink.."
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: functions.global.navigateToODPUseDeeplink
+
+      # Verify the fulfillment and payment method displayed..
+      - log:
+          message: "Verify the fulfillment and payment method displayed.."
+          color: PURPLE_BOLD_BRIGHT    
+      - executeFunction:
+          name: functions.orderDetailPage.verifySectionDisplayed
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethodSection              
+
+      - executeFunction:
+          name: functions.orderDetailPage.verifyCardPayment
+          params:
+            - name: expectedCardLastFourDigit
+              string:  data.global.debitCard.visa.last4DigitsOnly
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - executeFunction:
+          name: functions.utils.after 

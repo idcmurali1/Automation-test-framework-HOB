@@ -1,0 +1,173 @@
+#######################################################################################################################
+#
+#   TEST CASE DETAILS: 
+#
+#      [ TC - INEP-241 ]
+#      FLOW: Validate the pay in store instruction.
+#    
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF ID:
+#      https://jira.walmart.com/browse/OPIF-179425
+#
+#   JIRA TEST PLAN ID:
+#      https://jira.walmart.com/browse/INEP-239
+#
+#   JIRA TEST ID:
+#      https://jira.walmart.com/browse/INEP-241
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-241
+  tags: p1-mh-opif-teflon, OPIF-179425, p1-mh-opif-teflon-d-feb, INEP-241, INEP-239, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   B E F O R E   S C E N A R I O                                                                                     #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: 'BEFORE SCENARIO START'
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: tcVars_userEmail
+                value: data.mh.inep241.user.email-android
+          else:
+            - storeIn:
+                key: tcVars_userEmail
+                value: data.mh.inep241.user.email-ios
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+
+      - log: 'BEFORE SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   M A I N   S C E N A R I O                                                                                         #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: "MH: Validate the pay in store instruction"
+    flow:
+
+      # Onboard to application ..
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      # Sign In ..
+      - log:
+          message: "Sign in."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${tcVars_userEmail}
+            - name: userPassword
+              string: data.mh.astrobot.password
+
+      # Clear cart if needed before adding new products ..
+      - log:
+          message: "Clear cart if needed before adding new products."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      # Perform a purchase with 'pay in store' payment method ..
+      - log:
+          message: "Perform a purchase with 'pay in store' payment method."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.scheduled
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+           name: functions.cartPage.tapContinueToCheckoutBtn
+
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded
+      - executeFunction:
+            name: functions.checkoutPage.scrollToCVVTextfield
+      - executeFunction:
+          name: functions.checkoutPage.selectPaymentMethod
+          params:
+            - name: payment
+              string: payAtStore
+      - executeFunction:
+          name: functions.checkoutPage.tapPlaceOrderButton
+      # Validate Thank you page displayed ..
+      - log:
+          message: "Validate Thank you page displayed."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+            name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+      # Validate Pay in store instructions and barcode displayed ..
+      # TODO: validate teflon mappings android and iOS.
+      - log:
+          message: "Validate Pay in store instructions and barcode displayed."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.thankYouPage.scrollDownToPayment
+      - executeFunction:
+          name: functions.thankYouPage.validatePayInStoreInstructions
+      - executeFunction:
+          name: functions.thankYouPage.validatePayInStoreBarCode
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+      - log: 'INEP-241: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'AFTER SCENARIO START'
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+      - log: 'AFTER SCENARIO END'
+

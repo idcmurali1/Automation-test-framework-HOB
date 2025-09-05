@@ -1,0 +1,194 @@
+# Author : Joel Litvin  #Regression test case - Happy path for BuyNow Eligibility and Associate Discount
+general:
+  platform: ios
+  tags:  us-golden-flows, us-golden-flows-ecom-p1, C2657256, p2-ecomm-teflon-e2e, p1-spanish-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657256
+  metadata:
+    - name: scenarioId
+      string: EC030
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+#*******************************************************************************************************
+
+      # Astro - Clear cart
+
+#*******************************************************************************************************
+
+
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.flow078.email.ios
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.flow078.email.ios
+            - name: password
+              string: us.data.flow078.password
+      
+      # Navigate and restart
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # - executeFunction:
+      #     name: us.functions.home.setStore
+      #     params:
+      #         - name: store
+      #           string: 32144
+      #         - name: storeName
+      #           string: San Jose Supercenter
+      #         - name: storeOnly
+      #           string: true
+#new
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      # - executeFunction:
+      #     name: us.functions.gic.select.inhome.delivery.address   
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      #Search on Buy Now item and click item in Search Results
+      #Changed to healthy Astro API call . Please do not use static items
+      #Let it pass thru item health from astro
+      # - executeFunction:
+      #     name: us.functions.utils.getSearchableItem  
+      #     params:
+      #       - name: itemType
+      #         string: FC_DELIVERY
+      #       - name: store
+      #         string: 32144
+      #       - name: itemFilter
+      #         string: buynow
+            # - name: itemFilter
+            #   string: associatediscount
+
+      - executeFunction:
+          name: us.functions.utils.fetchItemAndValidate
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: action
+              string: FetchItem
+            - name: itemFilter
+              string: buynow
+            - name: emailId
+              string: us.data.flow078.email.ios
+
+      - storeIn:
+          key: item1
+          value: $itemFetched          
+
+      # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl} #Table #pencil #us.data.flow078.item.buyNow
+
+      #Tapping BuyNow and Apply Associate Discount
+      - executeFunction:
+          name: us.functions.buyNow.associateDiscountPrompt.applyDiscount  #working here
+
+      - executeFunction:
+          name : us.functions.buyNow.editCard.verifyBuyNowEligibility   #working
+
+      - executeFunction:
+          name : us.functions.buyNow.editCard.navigateback      
+
+      #Verify associate discount under Est Total Bottom sheet:
+      - executeFunction:
+          name: us.functions.buyNow.estTotal.associateDiscount.buyNowEligibility.text #working here
+
+      #Verify Est total Text String when under $35 and then Above $35 threshold.
+
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 945213102
+            - name: itemFilter
+              string: greaterThan35
+            - name: itemSubFilter
+              string: buynow
+      - executeFunction:
+          name: us.functions.buyNow.estTotal.buyNowEligibility.belowAndAbove.includesText #working here
+          params:          
+            - name: deepLinkUrl
+              string: ${deeplinkURl} #us.data.flow078.item.buyNow.includesTaxes
+
+      #Placing order through buy now flow with CVV and Associate Discount
+      - executeFunction:
+          name: us.functions.buyNow.placeOrder.buyNow.associateDiscount.eligibility #working here
+          params:
+            - name: CVV
+              string: us.data.flow078.creditCard.cvv
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Assert Associate Discount on Order Details Page
+      - executeFunction:
+          name: us.functions.orderDetails.AssociateDiscount
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

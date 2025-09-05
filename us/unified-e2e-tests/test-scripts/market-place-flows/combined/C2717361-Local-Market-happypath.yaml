@@ -1,0 +1,282 @@
+#author : Madhuvishnu
+general:
+  tags: C2717361 , unified-prod-e2e , MP006 , unified-teflon-e2e , unified-prod-e2e-mp , unified-p0-ecomm-teflon-e2e
+
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2717361
+  metadata:
+    - name: scenarioId
+      string: MP006
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo          
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.authentication.signInInfo
+                params:
+                  - name: android.email
+                    string: lmptest1android@walmart.com
+                  - name: android.password
+                    string: E2epassword$
+                  - name: ios.email
+                    string: lmptest1ios@walmart.com	
+                  - name: ios.password
+                    string: E2epassword$
+
+            - executeFunction:
+                name: unified.us.functions.utils.astro.clearCart
+
+            - storeIn:
+                key: search_word
+                value: beef      
+
+            - storeIn:
+               key: selllerId
+               value: 103332838
+
+            # replacing with fulcrum fxn to check the stability of this script .
+            - executeFunction:
+                name: unified.us.functions.utils.fetchFulcrumAvailableItem
+                params:
+                  - name: featureName
+                    string: LMP Items
+                  - name: storeId
+                    string: All
+                  - name: itemType
+                    string: MP_DELIVERY 
+
+            - storeIn:
+                key: itemId
+                value: $itemFetched                                  
+
+      - if:
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.authentication.signInInfo
+                params:
+                  - name: android.email
+                    string: localmarketplaceandroid@cloudtest.org
+                  - name: android.password
+                    string: E2epassword$
+                  - name: ios.email
+                    string: localmarketplaceios@cloudtest.org
+                  - name: ios.password
+                    string: E2epassword$
+
+            - storeIn:
+                key: search_word
+                value: Flowers
+
+            - storeIn:
+               key: selllerId
+               value: 101609283   
+
+            - storeIn:
+               key: itemId
+               value: 9134505512           # 9129450379 # 9132953221 #9112608189 #9122066534                                        
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.home.setStore
+                params:
+                    - name: store
+                      string: 75211
+                    - name: storeName
+                      string: Dallas
+
+      - if:
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.home.setStore
+                params:
+                  - name: store
+                    string: 30093
+                  - name: storeName
+                    string: Norcross
+
+            - executeFunction:
+                name: unified.us.functions.utils.prod.clearCart
+
+            - executeFunction:
+                name: unified.us.functions.home.localmarketplace.entrypoints
+
+            - executeFunction:
+                name: unified.us.functions.home.localMarketPlaceLandingPageValidations
+
+            - executeFunction:
+                name: unified.us.functions.search.localMarketPlaceLandingPageValidations
+                params:
+                  - name: fulfillment
+                    string: Delivery
+                  - name: searchTerm
+                    string: ${search_word}
+                  - name: SPARK
+                    string: true       
+
+            # DeepLink to Seller page
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://global/seller/${selllerId}
+
+            - executeFunction:
+                name: unified.us.functions.home.localmarketplace.sellerPageValidations   
+
+            - executeFunction:
+                name: unified.us.functions.shopPage.localFinds.slaBadgeValidations  
+ 
+      # Deeplink to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/${itemId} 
+      
+      - executeFunction:
+            name: unified.us.functions.shopPage.localFinds.slaBadgeValidations  
+
+      - executeFunction:
+          name: unified.us.functions.item.localMarketPlace.itemPageValidations
+          params:
+            - name: fulfillment
+              string: Delivery
+            - name: Spark
+              string: true   
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.localMarketPlace.cartPageValidations
+          params:
+            - name: fulfillment
+              string: Delivery
+            - name: Spark
+              string: true  
+            - name: MinBasketFee 
+              string: true       
+
+      #Continue to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.localMarketPlace.reviewOrderPageValidations
+          params:
+            - name: fulfillment
+              string: Delivery
+            - name: Spark
+              string: true     
+            - name: MinBasketFee
+              string: true             
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+        # Place order
+          - executeFunction:
+              name: unified.us.functions.checkout.placeOrder
+
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+          - log: 'R2_SUBFLOW_POST_TRANSACTION'
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+          - executeFunction:
+              name: unified.us.functions.orderConfirmation.getOrderNumber
+
+          - log: ${orderNo}
+
+          - executeFunction:
+              name: unified.us.functions.orderDetails.localMarketPlace.OrderConfirmationPageValidations
+              params:
+                - name: fulfillment
+                  string: Delivery
+                - name: Spark
+                  string: true     
+
+          # Deeplink into order details page
+          - executeFunction:
+              name: us.functions.global.navigation.goToDeepLink
+              params:
+                - name: deepLinkUrl
+                  string: walmart://orders/$orderNo                            
+
+          - executeFunction:
+              name: unified.us.functions.orderDetails.localMarketPlace.OrderHistoryValidations
+              params:
+                - name: fulfillment
+                  string: Delivery
+                - name: Spark
+                  string: true  
+                - name: MinBasketFee
+                  string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

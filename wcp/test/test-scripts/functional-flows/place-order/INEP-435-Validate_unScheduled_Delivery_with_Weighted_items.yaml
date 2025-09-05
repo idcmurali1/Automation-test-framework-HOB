@@ -1,0 +1,283 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-435
+#       Flow - MH:  Place unscheduled delivery order weighted items
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179465
+#
+#   JIRA STORY ID:
+#      Https://jira.walmart.com/browse/INEP-336
+#
+#   JIRA TEST PLAN ID:
+#     https://jira.walmart.com/browse/INEP-442
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-435
+#
+#   JIRA SUB-TASK ID:
+#      Https://jira.walmart.com/browse/INEP-613
+#   
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-435
+  tags: INEP-435, OPIF-179465, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon, native-apps-opif-test-case
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: 'INEP-435: BEFORE SCENARIO START'
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+
+      - log: 'INEP-435: BEFORE SCENARIO END'
+      
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Place unscheduled delivery order weighted items"
+    flow:
+      - log: 'INEP-435: MAIN SCENARIO START'
+
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API.
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail} , ${userPassword}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa 
+
+      # Onboard to application.
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      
+      # login to application.
+      - log:
+          message: "Login to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # <-- ${userEmail}, ${userPassword}
+
+     # Navigate to shop button and add products to cart.
+      - log:
+          message: "Navigate to cart and ensure Items are added to cart."
+          color: PURPLE_BOLD_BRIGHT 
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.mh.inep435.weightedItemArray
+      - executeFunction:
+          name: functions.searchResultPage.getProductName # --> Returns: ${productName}
+      - executeFunction:
+          name: functions.searchResultPage.getProductPrice # --> Returns: ${productPrice}
+          params:
+            - name: productName
+              string: ${productName}
+
+      # Navigate to cart and ensure items are added to cart.
+      - log:
+          message: "Navigate to cart and ensure items are added to cart."
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.global.tapCartIcon  
+      - executeFunction:
+         name: functions.cartPage.tapOnSwitchButton  
+          
+      # Validating "parts and grams" button are displayed.
+      - log:
+          message: "Validating 'parts and grams' button are displayed"
+          color: PURPLE_BOLD_BRIGHT 
+      - executeFunction:
+          name: functions.cartPage.assertUnitOfMeasureDisplayed
+
+      # Validating price is same when either parts or grams is selected.
+      - log:
+          message: "Validating price is same when either parts or grams is selected"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.switchProductToPieces
+          params:
+            - name: productName
+              string: ${productName}
+      - executeFunction:
+          name: functions.cartPage.validateProductPrice
+          params:
+            - name: productName
+              string: ${productName}
+            - name: productPrice
+              string: ${productPrice}
+      - executeFunction:
+          name: functions.cartPage.switchProductToWeight
+          params:
+            - name: productName
+              string: ${productName}
+      - executeFunction:
+          name: functions.cartPage.validateProductPrice
+          params:
+            - name: productName
+              string: ${productName}
+            - name: productPrice
+              string: ${productPrice}
+
+    # Validating the value in quantity stepper when grams is selected.
+      - log:
+          message: "Validating the value in quantity stepper when grams is selected"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateQuantityLabelDisplayed
+
+      # Select continue to checkout.
+      - log:
+          message: "Navigate to ROP"
+          color: PURPLE_BOLD_BRIGHT      
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+          
+      
+      # Validate fulfillment method.
+      - log:
+          message: "Validate fulfillment method."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.checkout.validateFufillmentType
+          params:
+            - name: expectedFulfillmentType
+              string: data.global.deliveryText.delivery
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+     
+      # Select payment method.
+      - log:
+          message: "Validating User is able to select payment method"
+          color: PURPLE_BOLD_BRIGHT        
+      - scroll:
+          direction: down
+          untilIdentifier: checkoutPage.addCvvTextField
+          position: center
+      - executeFunction:
+         name: functions.checkoutPage.addCVV
+         params:
+         - name: CVV
+           string: data.global.card.cvv.1234
+      - executeFunction:
+          name: functions.checkoutPage.selectMsiOption 
+      
+      # Place the order.
+      - log:
+          message: "Place the Order."
+          color: PURPLE_BOLD_BRIGHT        
+      - executeFunction: 
+          name: functions.checkoutPage.tapPlaceOrderButton    
+            
+      # Validate thankyou page.
+      - log:
+           message: "Validate Thankyou Page Header."
+           color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+           name: functions.thankYouPage.verifyThankYouPageDisplayed # RETURNS --> ${returnedOrderNumber}
+            
+      # Navigate to ODP.
+      - log:
+            message: "Navigate to ODP."
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.navigateToODPUseDeeplink
+            
+      # Validate item is displayed in ODP.
+      - log:
+            message: "Validate correct item is displayed in ODP."
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+            name: functions.orderDetailPage.verifySectionDisplayed
+      - executeFunction:
+          name: functions.orderDetailPage.verifyDeliveryType
+          params:
+          - name: expectedDeliveryType
+            string: data.global.deliveryText.delivery
+      
+      # Validate payment details is displayed in ODP.
+      - executeFunction:
+            name: functions.orderDetailPage.verifyItemDetails
+      - log:
+            message: "Validate Payment Details Displayed in ODP."   
+            color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethodSection
+      - executeFunction:
+          name: functions.orderDetailPage.verifyCardPayment
+          params:
+          - name: expectedCardLastFourDigit
+            string:  data.global.creditCard.visa.4242.last4DigitsOnly
+      - executeFunction:
+          name: functions.orderDetailPage.validateMoneybox
+      
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-435: MAIN SCENARIO END'
+         
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+  
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-435: AFTER SCENARIO START'
+
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+
+      - log: 'INEP-435: AFTER SCENARIO END'
+       

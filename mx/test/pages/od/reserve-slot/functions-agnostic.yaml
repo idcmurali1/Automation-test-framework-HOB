@@ -1,0 +1,613 @@
+#======================================================================================================================
+#    AUTHOR: Francisco Javier Ramírez Hernández (vn53vq4)
+#   CREATED: Nov/16/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method taps Close button
+  - name: mx.functions.reserve-slot.tapBack
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.backButton
+      - log:
+          message: "End function: reserve-slot.tapBack"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # USES FLAG:  ${ASSERT_PAGE_TITLE}
+  # EDITOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.reserve-slot.assertPageDisplayed
+    flow:
+      - if:
+          condition: ${ASSERT_PAGE_TITLE} == true
+          then:
+            - verifyIdentifier:
+                timeout: 20000
+                present:
+                  - identifier: mx.mappings.reserve-slot.reserveATimeTitle
+                  - identifier: mx.mappings.reserve-slot.pickupDeliveryButton
+                  - identifier: mx.mappings.reserve-slot.homeDeliveryButton
+          else:
+            - log:
+                message: "Page title assertion has been turned off by flag:'ASSERT_PAGE_TITLE'"
+                color: YELLOW
+            - verifyIdentifier:
+                timeout: 20000
+                present:
+                  - identifier: mx.mappings.reserve-slot.pickupDeliveryButton
+                  - identifier: mx.mappings.reserve-slot.homeDeliveryButton
+      - log:
+          message: "End function: reserve-slot.assertPageDisplayed"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.reserve-slot.tapChange
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.changeStoreOrAddressButton
+      - sleep:
+          duration: 4000
+      - log:
+          message: "End function: reserve-slot.tapChange"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method taps on Save Address button
+  - name: mx.functions.reserve-slot.tapSaveAddressIfDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.saveAddressButton
+          then:
+              - click:
+                  identifier: mx.mappings.reserve-slot.saveAddressButton
+      - log:
+          message: "End function: reserve-slot.tapSaveAddressIfDisplayed"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method taps on Add address Button
+  - name: mx.functions.reserve-slot.tapAddAddress
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.changeStoreOrAddressButton
+      - log:
+          message: "End function: reserve-slot.tapAddAddress"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # AUTHOR: ???
+  # EDITOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.homeDeliveryButton
+      - log:
+          message: "End function: reserve-slot.tapHomeDeliveryMethod"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # Description: This method asserts there is an available date slot to select
+  - name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.availableDateSlot
+      - log:
+          message: There are available dates
+          color: CYAN
+      - log:
+          message: "End function: reserve-slot.assertThereAreAvailableDateSlots"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects an available random date slot (Available days are: today, tomorrow, day after tomorrow)
+  - name: mx.functions.reserve-slot.selectRandomDateSlot
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.availableDateSlot
+          index: -1
+      - log:
+          message: "End function: reserve-slot.selectRandomDateSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method asserts there is an available time slot to select
+  - name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.availableTimeSlot
+      - log:
+          message: There are slots available
+          color: CYAN
+      - log:
+          message: "End function: reserve-slot.assertThereAreAvailableTimeSlots"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method returns the delivery fee from the selected time slot
+  - name: mx.functions.reserve-slot.getSelectedTimeSlotDeliveryFee
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.selectedTimeSlotDeliveryFee
+          then:
+            - getString:
+                identifier: mx.mappings.reserve-slot.selectedTimeSlotDeliveryFee
+                storeIn: returnedDeliveryFee
+            - executeNode:
+                file: mx/test/helpers/cart/getPriceFromLabel.js
+                args:
+                  - value: ${returnedDeliveryFee}
+                getResponse:
+                  storeIn: returnedDeliveryFee
+            - arithmetic:
+                expression: ${returnedDeliveryFee}
+                numberOfDecimalPlaces: 2
+                storeIn: returnedDeliveryFee
+            - log:
+                message: Extracted fee - ${returnedDeliveryFee}
+                color: CYAN
+          else:
+            - storeIn:
+                key: returnedDeliveryFee
+                value: "0.00"
+            - log:
+                message: "End function: reserve-slot.getSelectedTimeSlotDeliveryFee"
+                color: BLUE
+      - log:
+          message: "End function: reserve-slot.getSelectedTimeSlotDeliveryFee"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the first time slot available (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot
+    flow:
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: mx.functions.reserve-slot.scrollTimeSlotContainer
+                params:
+                  - name: direction
+                    string: up
+                  - name: scrollCount
+                    string: '3'
+            - storeIn:
+                key: i
+                value: 1
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.reserve-slot.timeSlotByIndex
+            - click:
+                identifier: mx.mappings.reserve-slot.timeSlotByIndex
+          else:
+            - loop:
+                begin: 1
+                end: 8
+                storeIndex: i
+                mode: increment
+                flow:
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: mx.mappings.reserve-slot.timeSlotByIndex
+                        then: 
+                          -  click:
+                              identifier: mx.mappings.reserve-slot.timeSlotByIndex
+                          - break: true
+                        else:
+                            - log: 
+                                message: "Time slot with index ${i} is not available, verifying next time slot..."
+                                color: CYAN
+      - log:
+          message: "End function: reserve-slot.selectFirstAvailableTimeSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # Description: This method taps on Reserve button
+  - name: mx.functions.reserve-slot.tapReserve
+    flow:
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: mx.mappings.reserve-slot.continueReserveButton
+      - click:
+          identifier: mx.mappings.reserve-slot.continueReserveButton
+      - log:
+          message: "End function: reserve-slot.tapReserve"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects an available random time slot (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectRandomVisibleTimeSlot
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.availableTimeSlot
+          index: -1
+      - log:
+          message: "End function: reserve-slot.selectRandomVisibleTimeSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method asserts add direction pop-up is displayed
+  - name: mx.functions.reserve-slot.address-message-popup.assertPopupDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.address-message-popup.popupTitle
+            - identifier: mx.mappings.reserve-slot.address-message-popup.addAddressButton
+      - log:
+          message: "End function: reserve-slot.address-message-popup.assertPopupDisplayed"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.address-message-popup.tapAddAddress
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.address-message-popup.addAddressButton
+      - log:
+          message: "End function: reserve-slot.address-message-popup.tapAddAddress"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  - name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.address-message-popup.popupTitle
+          then:
+            - click:
+                identifier: mx.mappings.reserve-slot.address-message-popup.closeButton
+      - log:
+          message: "End function: reserve-slot.address-message-popup.closePopupIfDisplayed"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # AUTHOR: ???
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.pickupDeliveryButton
+      - log:
+          message: "End function: reserve-slot.tapPickupDeliveryMethod"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # DESCRIPTION: Asserts whether the displayed selected Store Name is equal to the given one.
+  # 
+  # PARAM:  ${storeName}  [Mandatory]  Name of the expected selected store.
+  - name: mx.functions.reserve-slot.assertSelectedStore
+    flow:
+      - log:
+          message: "Store Name: ${storeName}"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.storeByName
+      - log:
+          message: "End function: reserve-slot.assertSelectedStore"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  # AUTHOR: ?????
+  # EDITOR: Isis Tolentino (vn53dge)
+  # RETURNS: ${returnedStoreName}
+  - name: mx.functions.reserve-slot.getSelectedStore
+    flow:
+      - getString:
+          identifier: mx.mappings.reserve-slot.storeName
+          storeIn: returnedStoreName
+      - log:
+          message: "Displayed Store Name: ${returnedStoreName}"
+          color: CYAN
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeNode:
+                file: mx/test/helpers/reserve-slot/getSelectedStoreForiOS.js
+                args:
+                  - value: ${returnedStoreName}
+                getResponse:
+                  storeIn: returnedStoreName
+      - log:
+          message: "Selected Store Name Got: ${returnedStoreName}"
+          color: CYAN
+      - log:
+          message: "End function: reserve-slot.getSelectedStore"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # DESCRIPTION: Gets a string containing the selected address in the reserve-slot page.
+  #   It returns the data in 2 ways:
+  #     1) As a string containing the raw value obtained from the page (the whole address).
+  #     2) In a group of variables which every single one holds a piece od the data (a piece of the address).
+  # RETURNS:
+  #   ${returnedDeliveryAddress} A string with the raw value obtained from the address (the whole address).
+  #   ${returnedStreetName}      A string containing only the Street Name.
+  #   ${returnedExteriorNumber}  A string containing only the Exterior Number.
+  #   ${returnedCity}            A string containing only the City.
+  #   ${returnedState}           A string containing only the State.
+  #   ${returnedZipCode}         A string containing only the ZIP Code.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.reserve-slot.getSelectedAddress
+    flow:
+      - getString:
+          identifier: mx.mappings.reserve-slot.userAddress
+          storeIn: returnedDeliveryAddress
+      - log:
+          message: "Displayed delivery address in reserve slot: '${returnedDeliveryAddress}'"
+          color: CYAN
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeNode:
+                file: mx/test/helpers/reserve-slot/cleanSelectedDeliveryAddressForiOS.js
+                args:
+                  - value: ${returnedDeliveryAddress}
+                getResponse:
+                  storeIn: returnedDeliveryAddress
+      - executeNode:
+          file: mx/test/helpers/reserve-slot/splitAddressValues.js
+          args:
+            - value: ${returnedDeliveryAddress}
+            - value: ${APP_PLATFORM}
+          getValue:
+            - key: street
+              storeIn: returnedStreetName
+            - key: exteriorNumber
+              storeIn: returnedExteriorNumber
+            - key: city
+              storeIn: returnedCity
+            - key: state
+              storeIn: returnedState
+            - key: zipCode
+              storeIn: returnedZipCode
+      # Using '\e[36m' to print in CYAN and '\e[0m' to reset color, to simplify logs.
+      - log: "\e[36mreturnedDeliveryAddress: '${returnedDeliveryAddress}'\e[0m"
+      - log: "\e[36mreturnedStreetName: '${returnedStreetName}'\e[0m"
+      - log: "\e[36mreturnedExteriorNumber: '${returnedExteriorNumber}'\e[0m"
+      - log: "\e[36mreturnedCity: '${returnedCity}'\e[0m"
+      - log: "\e[36mreturnedState: '${returnedState}'\e[0m"
+      - log: "\e[36mreturnedZipCode: '${returnedZipCode}'\e[0m"
+      - log:
+          message: "End function: reserve-slot.getSelectedAddress"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  - name: mx.functions.reserve-slot.tapClose
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.closeButton
+      - log:
+          message: "End function: reserve-slot.tapClose"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method asserts the user address is selected
+  # Param ${expectedUserAddress} [Mandatory] User's address (divided by commas for helper's correct validation).
+  #                                          Make the first two values be '{street}, {extNum}' for correct validation.
+  - name: mx.functions.reserve-slot.assertSelectedAddress
+    flow:
+        - log:
+            message: "User home address: ${expectedUserAddress}"
+            color: CYAN
+        - getString:
+            identifier: mx.mappings.reserve-slot.userAddress
+            storeIn: displayedUserAddress
+        - if:
+            condition: ${APP_PLATFORM} == 'android'
+            then:
+              - executeNode:
+                  file: mx/test/helpers/utils/removeFirstCommaFromAddressForAndroidValidations.js
+                  args:
+                    - value: ${expectedUserAddress}
+                  getResponse:
+                    storeIn: expectedUserAddress
+            else:
+              - executeNode:
+                  file: mx/test/helpers/reserve-slot/cleanSelectedDeliveryAddressForiOS.js
+                  args:
+                    - value: ${displayedUserAddress}
+                  getResponse:
+                    storeIn: displayedUserAddress
+        - executeNode:
+            file: mx/test/helpers/utils/stringContainsAll.js
+            args:
+              - value: ${expectedUserAddress}
+              - value: ${displayedUserAddress}
+            getResponse:
+              storeIn: isAddressCorrect
+        - if:
+            condition: ${isAddressCorrect} == true
+            then:
+              - log:
+                  message: "Address is correct."
+                  color: CYAN
+            else:
+              - failTest:
+                  message: "Failed: address is not correct, please verify displayed or expected address or read helper's documentation."
+        - log:
+            message: "End function: reserve-slot.assertSelectedAddress"
+            color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method verifies the selected delivery address.
+  # NOTE: this assertion must be performed with the returned value of mx.functions.address-selector-popup.getSelectedAddress
+  # Params  ${streetName}     [Mandatory]   Name of the street to be validated.
+  #         ${exteriorNumber} [Mandatory]   Exterior number to be validated.
+  #         ${city}           [Mandatory]   City to be validated.
+  #         ${state}          [Mandatory]   State to be validated.
+  #         ${zipCode}        [Mandatory]   ZIP Code to be validated.
+  # NOTE: TO DO: UPDATE THIS FUNCTION ONCE THE BUG ON IOS GETS FIXED (IOS NOT DISPLAYING EXTERIOR NUMBER)!!!!!!!!!!!!!
+  - name: mx.functions.reserve-slot.assertSelectedAddressByIndividualValues
+    flow:
+      # Using '\e[36m' to print in CYAN and '\e[0m' to reset color, to simplify logs.
+      - log: "\e[36mExpected StreetName: '${streetName}'\e[0m"
+      # Remove this if statement and print all the values as usual once the bug on iOS gets fixed.
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - log: "\e[36mExpected ExteriorNumber: '${exteriorNumber}'\e[0m"
+      - log: "\e[36mExpected City: '${city}'\e[0m"
+      - log: "\e[36mExpected State: '${state}'\e[0m"
+      - log: "\e[36mExpected ZipCode: '${zipCode}'\e[0m"
+      - getString:
+          identifier: mx.mappings.reserve-slot.userAddress
+          storeIn: displayedAddress
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeNode:
+                file: mx/test/helpers/utils/stringContainsAll.js
+                args:
+                  - value: ${displayedAddress}
+                  - value: ${streetName}, ${exteriorNumber}, ${city}, ${state}, ${zipCode}
+                getResponse:
+                  storeIn: isAddressCorrect
+      # Remove this if statement and check all the values in one node execution as usual once the bug on iOS gets fixed.
+          else:
+            - executeNode:
+                file: mx/test/helpers/utils/stringContainsAll.js
+                args:
+                  - value: ${displayedAddress}
+                  - value: ${streetName}, ${city}, ${state}, ${zipCode}
+                getResponse:
+                  storeIn: isAddressCorrect
+      - if:
+          condition: ${isAddressCorrect} == true
+          then:
+            - log:
+                message: "Address is correct."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Expected address not contained in: '${displayedAddress}'"
+      - log:
+          message: "End function: reserve-slot.assertSelectedAddressByIndividualValues"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+
+  # Description: Returns the Time of the Selected Delivery Slot and stores it in the variable ${returnedSelectedTimeSlot} 
+  # Using the following format:(i.e. 4pm-5pm)
+  - name: mx.functions.reserve-slot.getSelectedTimeSlot
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.selectedTimeSlotTimeLabel12HourFormat
+          then:
+            - getString:
+                identifier: mx.mappings.reserve-slot.selectedTimeSlotTimeLabel12HourFormat
+                storeIn: currentDisplayedLabel 
+            - log: 
+                message: "Label of selected time slot: ${currentDisplayedLabel}"
+                color: CYAN
+            - executeNode:
+                file: mx/test/helpers/delivery-slot/stringCleanerForDeliverySlotAssertion.js
+                args:
+                  - value: ${currentDisplayedLabel}
+                getResponse:
+                  storeIn: parsedTimeSlot
+            - storeIn:
+                  key: returnedSelectedTimeSlot
+                  value: ${parsedTimeSlot}
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.selectedTimeSlotTimeLabel24HourFormat
+                then:
+                  - getString:
+                      identifier: mx.mappings.reserve-slot.selectedTimeSlotTimeLabel24HourFormat
+                      storeIn: currentDisplayedLabel 
+                  - log: 
+                      message: "Label of selected time slot: ${currentDisplayedLabel}"
+                      color: CYAN
+                  - executeNode:
+                      file: mx/test/helpers/reserve-slot/formatTo12Hour.js
+                      args:
+                        - value: ${currentDisplayedLabel}
+                      getResponse:
+                        storeIn: parsedTimeSlot
+                  - storeIn:
+                        key: returnedSelectedTimeSlot
+                        value: ${parsedTimeSlot}
+                else:
+                  - failTest:
+                      message: "Couldn't find any time slots."
+      - log:
+          message: "End function: reserve-slot.getSelectedTimeSlot (Delivery slot time got: ${returnedSelectedTimeSlot})"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects an available random normal time slot (from 9:00 am to 9:00 pm, no online sale or express delivery)
+  - name: mx.functions.reserve-slot.selectRandomVisibleNormalTimeSlot
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.availableNormalTimeSlot
+          index: -1
+      - log:
+          message: "End function: reserve-slot.selectRandomVisibleNormalTimeSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.reserve-slot.closePopupIfDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.reserveATimeTitle
+          then:
+            - click:
+                identifier: mx.mappings.reserve-slot.closeButton
+      - log:
+          message: "End function: reserve-slot.closePopupIfDisplayed"
+          color: BLUE
+  # --------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Teresa Partida (vn55epy)
+  - name: mx.functions.reserve-slot.assertHomeDeliveryIsSelected
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.homeDeliveryTabIsSelected
+      - log:
+          message: "End function: reserve-slot.assertHomeDeliveryIsSelected"
+          color: BLUE

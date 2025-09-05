@@ -1,0 +1,151 @@
+functions:
+  - name: unified.us.functions.item.enterCustomAmount
+    flow:
+      - if:
+          identifier:
+           notPresent:
+            - identifier: us.mappings.item.giftCardCustomerPriceField
+          then:
+          - scroll:
+              direction: down
+              untilIdentifier: us.mappings.item.giftCardCustomerPriceField
+      - if: 
+          condition: ${platform} == 'Android'
+          then:     
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.giftCardDefaultAmount
+                text:
+                  - identifier: us.mappings.item.giftCardDefaultAmount
+                    equals: $50
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.giftCardDefaultAmount
+                label:
+                  - identifier: us.mappings.item.giftCardDefaultAmount
+                    equals: Card amount, currently selected $50
+      - enterText:
+          identifier: us.mappings.item.giftCardCustomerPriceField
+          string: ${amount}
+          pressEnter: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.default.keyboardDoneButton # us.mappings.tipping.custom.numpad.doneButton
+          then:
+            - click:
+                identifier: us.mappings.default.keyboardDoneButton # us.mappings.tipping.custom.numpad.doneButton
+      - if: 
+          condition: ${platform} == 'Android'
+          then:  
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.item.stickyATC.productPrimaryPrice
+                    contains: ${amount}
+            - getString:
+                identifier: us.mappings.item.stickyATC.productPrimaryPrice
+                attribute: text
+                storeIn: giftCardPrice
+            - log: $giftCardPrice
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.item.productPrimaryPrice
+                    contains: $${amount}
+            - getString:
+                identifier: us.mappings.item.productPrimaryPrice
+                attribute: label
+                storeIn: giftCardPrice
+            - log: $giftCardPrice
+
+# Validating Back order arrival and Price Quarantee banges on item page
+  - name: unified.us.functions.item.verifyBackOrderTagIsSeenInItemDetailsPage
+    flow:
+      - sleep:
+          duration: 5000
+      - if: 
+          condition: ${platform} == 'iOS' 
+          then: 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.item.itemDetails.backOrderArrivalDate
+                then: 
+                  - verifyIdentifier:
+                      label:
+                        - identifier: us.mappings.item.itemDetails.backOrderArrivalDate
+                          contains: On backorderArrives
+                  - log: "The back order arrival date badge validated on item page"
+                else:
+                - failTest: 
+                    message: "DATA FAILURE - ${env} - BackOrder badge is not appearing on item page"
+      - if: 
+          condition: ${platform} == 'Android'
+          then: 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.item.itemDetails.backOrderArrivalDate
+                then: 
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.item.itemDetails.backOrderArrivalDate
+                          contains: On backorder
+                  - verifyIdentifier:
+                      text:
+                        - identifier: us.mappings.item.itemDetails.backOrderArrivalText
+                          contains: Arrives
+                  - log: "The back order arrival date badge validated on item page"
+                else:
+                - failTest: 
+                    message: "DATA FAILURE - ${env} - BackOrder badge is not appearing on item page"
+
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.itemDetails.backOrderPriceGuarantee
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.itemDetails.backOrderPriceGuarantee
+          then:
+            - log: "The backorder price guarantee is shown as expected"
+          else:
+            - failTest:
+                message: "DATA_FAILURE - ${env} - Backordered badge is not present as expected on item page"
+
+# Clicking Details link on item page 
+  - name: unified.us.functions.item.verifyBackOrderPriceGuaranteeDetailsLink
+    flow:
+      - click:
+          identifier: us.mapping.item.itemDetails.backOrderPriceGuaranteeDetailsButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.itemDetails.backOrderPriceGuaranteeBottomSheetHeader
+          then:
+            - log: "Backorder bottomsheet is shown as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Details link is non functional"
+
+ # Validating Details bottom sheet 
+  - name: unified.us.functions.item.verifyBackorderPriceGuaranteeBottomsheet
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.item.itemDetails.backOrderPriceGuaranteeBottomSheetHeader
+            - identifier: us.mappings.item.itemDetails.instructionReadingBanner
+            - identifier: us.mappings.item.itemDetails.termsBottomsheetGotItButton
+      - click:
+          identifier: us.mappings.item.itemDetails.termsBottomsheetGotItButton

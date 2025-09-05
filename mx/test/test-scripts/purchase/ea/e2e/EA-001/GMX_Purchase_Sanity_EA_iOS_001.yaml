@@ -1,0 +1,506 @@
+#======================================================================================================================
+#  AUTHOR: Ana Belén García Aranda (vn532ri)
+#  CREATED: May/24/2024
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: purchase-e2e-ea-production-ios-001, purchase-e2e-ea-production-ios
+  debug: true
+
+scenarios:
+
+#######################################################################################################################
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MXMOB-QAA%3A+Tracking%3A+Test+Suite%3A+GlassMX+-+EA+-+Sanity+-+Production+-+iOS
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MXMOB-1634
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MXMOB-1605
+#
+#  FLAGS USED: N/A
+#
+#######################################################################################################################
+
+  - name: Main
+    flow:
+      - log: "TEST START: QAA - EA - PRODUCTION SANITY - OD-001"
+
+      #----------------------------------------------------------------------------------------------------------------
+      - log: "STEP 1: Navigate through Onboarding as guest user and switch to the EA"
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1: Navigate through Onboarding as guest user and switch to the EA"
+            - name: squadNames
+              string: CORE | QAA
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: banner
+              string: EA
+            - name: zipCode
+              string: mx.data.qaa.sanity.ea-001.zipCode
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 2: Search Product"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.flows.ea.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.sanity.ea-001.firstProduct
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.flows.ea.sort-and-filter.addSoldByFilterWithOptionFromSLP
+          params:
+            - name: soldByOption
+              string: 'ByWalmart'
+
+      - executeFunction:
+          name: mx.functions.ea.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.firstProduct
+
+      - storeIn:
+          key: firstProductPrice
+          value: ${returnedPrice}
+
+      - if:
+         condition: ${returnedDiscountAmount} != 0.00
+         then:
+           - storeIn:
+               key: firstDiscountAmount
+               value: ${returnedDiscountAmount}
+           - storeIn:
+               key: firstOriginalPrice
+               value: ${returnedOriginalPrice}
+           - storeIn:
+               key: firstProductDiscount
+               value: 'true'
+         else: 
+           - storeIn:
+                key: firstProductDiscount
+                value: 'false'
+           - storeIn:
+               key: firstDiscountAmount
+               value: '0.00'
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3: Open the product description page (PDP)"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.ea.slp.openProductDetailsByName
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.firstProduct
+
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4: Add product to Cart"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.addToCart
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.assertAddedToCart
+
+      - storeIn:
+          key: EA_001_IS_CART_EMPTY
+          value: "false"
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5: Close PDP"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.tapClose
+
+      - executeFunction:
+          name: mx.functions.ea.slp.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 6: Search Product"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.flows.ea.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.sanity.ea-001.secondProduct
+
+      - executeFunction:
+          name: mx.flows.ea.sort-and-filter.addSoldByFilterWithOptionFromSLP
+          params:
+            - name: soldByOption
+              string: 'ByWalmart'
+
+      - executeFunction:
+          name: mx.functions.ea.slp.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.secondProduct
+
+      - storeIn:
+          key: secondProductPrice
+          value: ${returnedPrice}
+
+      - if:
+         condition: ${returnedDiscountAmount} != 0.00
+         then:
+           - storeIn:
+               key: secondDiscountAmount
+               value: ${returnedDiscountAmount}
+           - storeIn:
+               key: secondOriginalPrice
+               value: ${returnedOriginalPrice}
+           - storeIn:
+               key: secondProductDiscount
+               value: 'true'
+         else: 
+           - storeIn:
+                key: secondProductDiscount
+                value: 'false'
+           - storeIn:
+               key: secondDiscountAmount
+               value: '0.00'
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 7: Open the product description page (PDP)"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.ea.slp.openProductDetailsByName
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.secondProduct
+
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 8: Add product to Cart"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.addToCart
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.assertAddedToCart
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: Close PDP"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.tapClose
+
+      - executeFunction:
+          name: mx.functions.ea.slp.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: Go to Cart"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.top-menu.tapCartIcon
+
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11: Validate Product Details compared vs PDP"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.cart.expandProductListIfNotExpanded
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.firstProduct
+            - name: direction
+              string: down
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductUnitPrice
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.firstProduct
+            - name: expectedUnitPrice
+              string: ${firstProductPrice}
+
+      - if:
+          condition: ${firstProductDiscount} == true
+          then:
+            - executeFunction:
+                name: mx.functions.ea.cart.assertProductOriginalPrice
+                params:
+                  - name: productName
+                    string: mx.data.qaa.sanity.ea-001.firstProduct
+                  - name: expectedOriginalPrice
+                    string: ${firstOriginalPrice}
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.secondProduct
+            - name: direction
+              string: down
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductUnitPrice
+          params:
+            - name: productName
+              string: mx.data.qaa.sanity.ea-001.secondProduct
+            - name: expectedUnitPrice
+              string: ${secondProductPrice}
+
+      - if:
+          condition: ${secondProductDiscount} == true
+          then:
+            - executeFunction:
+                name: mx.functions.ea.cart.assertProductOriginalPrice
+                params:
+                  - name: productName
+                    string: mx.data.qaa.sanity.ea-001.secondProduct
+                  - name: expectedOriginalPrice
+                    string: ${secondOriginalPrice}
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12: Validate Cart Totals"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductsCountInSubtotalLabel
+          params:
+            - name: expectedProductsCount
+              string: mx.data.qaa.sanity.ea-001.totalProductsExpected
+
+      - arithmetic:
+          expression: ${firstProductPrice} + ${secondProductPrice}
+          storeIn: firstAndSecondPrices
+          numberOfDecimalPlaces: 2
+
+      - storeIn:
+          key: subtotalAmmount
+          value: ${firstAndSecondPrices}
+
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.ea.cart.subtotalValue
+          position: center
+          timeout: 500
+          scrollLimit: 3
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${subtotalAmmount}
+
+      - executeFunction:
+          name: mx.functions.ea.cart.getDisplayedDeliveryFee
+
+      - arithmetic:
+          expression: ${subtotalAmmount} + ${returnedDeliveryFee}
+          storeIn: estimatedTotal
+          numberOfDecimalPlaces: 2
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${estimatedTotal}
+
+      - executeFunction:
+          name: mx.functions.ea.cart.assertEstimatedTotalFromButton
+          params:
+            - name: expectedEstimatedTotal
+              string: ${estimatedTotal}
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 13: Continue purchase"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.cart.tapContinue
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 14: Create new Account"  
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+         name: mx.functions.ea.login.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.flows.od.login.createAccountFromLoginPopup
+          params:
+            - name: userFirstName
+              string: mx.data.qaa.sanity.ea-001.userFirstName
+            - name: userLastName
+              string: mx.data.qaa.sanity.ea-001.userLastName
+            - name: userPassword
+              string: mx.data.qaa.sanity.ea-001.userPassword
+            - name: testCaseNum
+              string: mx.data.qaa.sanity.ea-001.testCaseNum
+
+      - sleep:
+          duration: 5000
+
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.add-and-edit-address-form.closeButton
+          then:
+              - executeFunction:
+                  name: mx.functions.ea.add-and-edit-address-form.tapClose
+
+      - storeIn:
+          key: EA_001_IS_CART_EMPTY
+          value: "false"
+
+  #####################################################################################################################
+
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_EA_Sanity_PROD_iOS_001
+      - log:
+          message: "WORKAROUND: RELAUNCHING APP TO FIX ISSUE REGARDING INTERNAL APP FLAGS"
+          color: YELLOW
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+      - storeIn:
+          key: selectedStore
+          value: mx.data.qaa.sanity.ea-001.storeName
+      - storeIn:
+          key: EA_001_IS_CART_EMPTY
+          value: "true"
+      - storeIn:
+          key: EA_001_SUCCESSFUL_EXECUTION
+          value: "false"
+      - log: "BEFORE SCENARIO END"
+
+  #####################################################################################################################
+
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: Test Data Reset..."
+      - if:
+          condition: ${EA_001_SUCCESSFUL_EXECUTION} != true
+          then:
+            - executeFunction:
+                name: mx.flows.od.after-scenario-exclusive.emptyCart
+                params:
+                  - name: userEmail
+                    string: ${returnedUniqueEmail}
+                  - name: userPassword
+                    string: mx.data.qaa.sanity.ea-001.user.password
+                  - name: isCartEmpty
+                    string: ${EA_001_IS_CART_EMPTY}
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: CYAN
+      - log: "AFTER SCENARIO END"

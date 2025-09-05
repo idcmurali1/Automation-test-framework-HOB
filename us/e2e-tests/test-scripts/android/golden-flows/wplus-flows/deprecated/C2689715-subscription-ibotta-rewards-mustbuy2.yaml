@@ -1,0 +1,138 @@
+general:
+  platform: android
+  tags:
+  testCaseId: C2689715 #GPMNETE-99796
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 462
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - executeNode:
+          file: us/e2e-tests/helpers/dateGeneratorInRequestedFormat.js
+          args:
+            - value: '4'
+            - value: 'YYYYMMDD'
+          getResponse:
+            storeIn: newDate
+      - storeIn:
+          key: formated_new_date
+          value: ${newDate}
+      - log: 'The new Date is below.: $formated_new_date'
+      - log: $formated_new_date
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - sleep:
+          duration: 100000
+
+          # Terminate and Relaunch the app
+      - executeFunction:
+          name: us.test.functions.utils.relaunchApp
+
+      - sleep:
+          duration: 45000
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+      # Navigate to home page
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 466215216
+
+      - executeFunction:
+          name: us.functions.ibotta.verifyIbottaRewards.on.itemSearch
+          params:
+            - name: mustBuy2items
+              string: true
+
+      # Click First item in the search list
+      - executeFunction:
+          name: us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: us.functions.ibotta.selectIbottaSubscription.on.itemPage
+          params:
+            - name: mustBuy2items
+              string: true
+
+      - executeFunction:
+          name: us.functions.ibotta.ibottaSubscription.on.subscriptionPage
+
+      - executeFunction:
+          name: us.functions.ibotta.ibottaSubscription.on.manageSubscriptionPage
+          params:
+            - name: customerEmail
+              string: customerEmail
+
+      - executeFunction:
+          name: us.funtions.ibotta.navigateToOrdersFromManageSubscriptionPage.verifySubscriptionSavings
+
+      - sleep:
+          duration: 3000
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

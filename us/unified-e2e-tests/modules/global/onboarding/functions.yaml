@@ -1,0 +1,227 @@
+functions:
+  # Description: This method navigates users from launching app to home page. 
+  - name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+    flow:
+      - storeIn:
+          key: executionStage
+          value: onboarding
+      - log: Welcome screen loaded
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+          - startActivity:
+              packageName: ${APP_PACKAGE:com.walmart.android.debug}
+              activityName: com.walmart.glass.integration.splash.SplashActivity
+              params:
+                - key: appWaitActivity
+                  value: com.walmart.glass.onboarding.view.OnboardingActivity
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.onboarding.nextButton
+          then:
+            - verifyIdentifier:
+                timeout: 40000
+                present:
+                  - identifier: us.mappings.global.onboarding.nextButton
+            - storeIn:
+                key: testStarted
+                value: true
+            - click:
+                identifier: us.mappings.global.onboarding.nextButton
+            - log: Notifiction Prompt screen loaded
+            - verifyIdentifier:
+                timeout: 40000
+                present:
+                  - identifier: us.mappings.global.onboarding.notificationScreenText
+            - if:
+                condition: ${allowNotifications} 
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.global.onboarding.notificationScreenText
+                  - click:
+                      identifier: us.mappings.global.onboarding.allowNotifications
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.global.onboarding.allowNotificationsSystem
+                  - click:
+                      identifier: us.mappings.global.onboarding.allowNotificationsSystem
+                else:
+                  - click:
+                      identifier: us.mappings.global.onboarding.maybeLaterButton
+                      wait: 2000
+      - log: location screen loaded       
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: us.mappings.global.onboarding.locationScreenText
+      - storeIn:
+          key: testStarted
+          value: true
+      - click:
+          identifier: us.mappings.global.onboarding.enterZipCodeButton
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: us.mappings.global.onboarding.shareZipCodeScreenText
+      - sleep:
+          duration: 2000 
+      - enterText:
+          identifier: us.mappings.global.onboarding.enterZipCodeField
+          string: us.data.onboarding.zipcode
+      - click:
+          identifier: us.mappings.global.onboarding.searchButton   
+      - sleep:
+          duration: 3000  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.onboarding.technicalError
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Onboarding failure error"
+      - executeFunction:
+          name: unified.us.functions.home.handlePersonalizedScreen
+      - if:
+          identifier:
+            timeout: 5000
+            present:
+              - identifier: us.mapping.gic.locationAccuracy.closeBanner.searchScreen
+          then:
+            - click:
+                identifier: us.mapping.gic.locationAccuracy.closeBanner.searchScreen
+      - executeFunction: # Handled iOS prod scripts that are failing
+          name: unified.us.functions.home.toolTip
+      - executeFunction:
+          name: unified.us.functions.gic.collapseIfExpanded
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.searchBarSelected
+
+  - name: unified.us.functions.global.navigation.accountToHome
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Shop
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+  - name: unified.us.functions.home.handlePersonalizedScreen
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier:  us.mappings.global.onboarding.personalizedScreen
+          then:
+            - log: Observed Personalize Shopping Screen
+            - verifyIdentifier:
+               present:
+                 - identifier: us.mappings.global.onboarding.personalizedScreenBody
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - click:
+                      identifier: us.mappings.global.onboarding.personalizedScreenAllow
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - click:
+                      identifier: us.mappings.global.onboarding.continueButton
+            - log:
+                message: Personalized Shopping Experience Screen Handled.
+                color: GREEN
+          else:
+            - log:
+                message: Personalized Shopping Experience Popup didn't display.
+                color: GREEN
+
+
+  - name: unified.us.functions.home.toolTip
+    flow:
+      - if:
+          identifier:
+            timeout: 8000
+            present:
+              - identifier: us.mappings.global.onboarding.toolTip
+          then:
+            - log: tooltip displayed
+            - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.global.onboarding.toolTipCloseButton
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - click:
+                        identifier: us.mappings.global.onboarding.toolTipCloseButton
+                        useActions: true  # please download r2 jar 5.6
+                else:
+                  - click:
+                      identifier: us.mappings.global.onboarding.toolTipCloseButton
+                  
+
+
+  - name: unified.us.functions.global.navigation.goToHomeFromTabBar
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+      - click:
+          identifier: us.mappings.tabBar.shop
+          wait: 8000
+
+  - name: unified.us.functions.global.navigation.goToMyItemsFromTabBar
+    flow:
+      - if:
+          identifier:
+            present:
+            - identifier: us.mappings.tabBar.myItems
+          then:
+            - log: My items tab visible
+          else:
+            - scroll:
+                direction: up
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.myItems
+      - click:
+          identifier: us.mappings.tabBar.myItems
+
+  - name: unified.us.functions.global.navigation.goToListTabFromMyitem
+    flow:
+      - sleep:
+          duration: 2000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.myItems.listsTab
+      - click:
+          wait: 5000
+          identifier: us.mappings.myItems.listsTab
+
+  - name: unified.us.functions.global.navigation.backNavigationForListpage
+    flow:
+      - log: Global Back navigation
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - goBack: true
+
+  - name: unified.us.functions.global.onboarding.smartLock.DismissNoneOfTheAbove
+    flow:
+      - if: 
+          identifier: 
+            present: 
+              - identifier: us.mappings.home.smartlock.noneOfTheAbove
+          then: 
+            - click: 
+                identifier: us.mappings.home.smartlock.noneOfTheAbove
+          else:
+            - if:
+                identifier: 
+                  present: 
+                    - identifier: us.mappings.home.smartlock.noneOfTheAbove.new
+                then: 
+                  - click: 
+                      identifier: us.mappings.home.smartlock.noneOfTheAbove.new

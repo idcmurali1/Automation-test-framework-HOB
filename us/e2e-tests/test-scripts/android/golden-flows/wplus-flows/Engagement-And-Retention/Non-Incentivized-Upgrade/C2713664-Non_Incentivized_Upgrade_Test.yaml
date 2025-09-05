@@ -1,0 +1,102 @@
+general:
+  platform: android
+  tags: wplus_e2e, us-golden-flows-wplus, wplus_android_tests, C2713664, p1-wplus-teflon-e2e
+  testCaseId: C2713664
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: NA
+  # TC1 of confluence : https://confluence.walmart.com/x/uPMHeQ
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      # Create Wplus Trial Account and convert to Paid using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createTrialAccountConvertToPaid
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.monthly
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+          params:
+              - name: allowNotifications
+                string: true
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+     #terminate the App
+      - terminateApp: true
+
+     #Expo Link for Variation 1
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+              - name: deepLinkUrl
+                string: us.data.wplus.nonIncentivizedUpgradeExpoDeepLink
+
+      - sleep:
+         duration: 10000
+
+      - executeFunction:
+            name: us.functions.global.navigation.goToDeepLink
+            params:
+                - name: deepLinkUrl
+                  string: us.data.wplus.nonIncentivizedUpgradeSplashDeepLink
+      
+      - sleep:
+         duration: 5000
+
+      #Verifying that clicking the "Switch & Save" button on Splash screen correctly navigates to the confirmation splash page.
+      - executeFunction:
+          name: us.functions.homePage.switchAndSaveAndExploreBenefits
+
+      - executeFunction:
+           name: us.functions.wplus.benefits.hub.benefitsTitleValidation
+           
+      - storeIn:
+          key: testStatus
+          value: passed
+          
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

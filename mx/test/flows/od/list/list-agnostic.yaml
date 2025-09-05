@@ -1,0 +1,153 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Feb/08/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow removes a product from any list and validates it's not listed afterwards.
+  # Param  ${productName}  [Mandatory] Product name to remove.
+  # AUTHOR: Rodrigo Pacheco C.
+  - name: mx.flows.od.list.deleteProductFromList
+    flow: 
+      - executeFunction:
+          name: mx.functions.list.tapDeleteProduct
+      - executeFunction:
+          name: mx.functions.list.delete-product-popup.tapDelete
+      - executeFunction:
+          name: mx.functions.list.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.list.assertProductNotListed
+      - log:
+          message: "End flow: od.list.deleteProductFromList"
+          color: BLUE
+
+  # Description: This flow adds a product by its name, validates it was added and gets price and
+  # quantity of the product
+  # Param  ${productName}  [Mandatory] Product name to add to cart.
+  # AUTHOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.list.addProductToCartByName
+    flow:
+      - executeFunction:
+          name: mx.functions.list.addProductToCart
+      - executeFunction:
+          name: mx.functions.list.assertProductAddedToCart
+      - executeFunction:
+          name: mx.functions.list.getProductPrice
+      - executeFunction:
+          name: mx.functions.list.getProductSubtotal
+      - executeFunction:
+          name: mx.functions.list.getProductType
+      - if:
+          condition: "${returnedProductType} == 'Dual' || ${returnedProductType} == 'Pieces'"
+          then:
+            - executeFunction:
+                name: mx.functions.list.getProductQuantityAsPieces
+            - storeIn:
+                key: returnedProductQuantity
+                value: ${returnedProductQuantityAsPieces}
+            - log:
+                message: "${productName} - ${returnedProductPrice} - ${returnedProductQuantity}"
+                color: GREEN_BOLD
+          else:
+            - executeFunction:
+                name: mx.functions.list.getProductQuantityAsWeight
+            - storeIn:
+                key: returnedProductQuantity
+                value: ${returnedProductQuantityAsWeight}
+            - log:
+                message: "${productName} - ${returnedProductPrice} - ${returnedProductQuantity}"
+                color: GREEN_BOLD
+      - log:
+          message: "End flow: od.list.addProductToCartByName"
+          color: BLUE
+
+ #----------------------------------------------------------------------------------------------------------------------
+
+  # Description:
+  #   This flow creates a custom list from the add-to-list-popup.
+  # NOTE:
+  #   When the list is created from the PDP, it will automatically add the product to the list, to assert the product
+  #     has been added, first navigate to the lists page and open newly created custom list to assert product is displayed.
+  # PARAMS:
+  #   ${newListName}  [MANDATORY]  Name of the new list.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.flows.od.list.createCustomList
+    platform:
+    flow:
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.tapCreateList
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.create-new-list.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.create-new-list.inputNewListName
+          params:
+            - name: newListName
+              string: ${newListName}
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.create-new-list.tapCreateList
+      - log:
+          message: "End flow: od.list.createCustomList"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description:
+  #   This flow edits a custom list from the list-settings-popup
+  # PARAMS:
+  #   ${listNewName}  [MANDATORY]  new name of the list.
+  # AUTHOR: Fernanda Peruyero (vn54e7a)
+  - name: mx.flows.od.list.editCustomList
+    platform: 
+    flow:
+      - executeFunction:
+          name: mx.functions.list.tapSettingsButton
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.create-new-list.inputNewListName
+          params:
+            - name: newListName
+              string: ${listNewName}
+      - executeFunction:
+          name: mx.functions.add-to-list-popup.create-new-list.tapCreateList
+      - log:
+          message: "End flow: od.list.editCustomList"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description:
+  #   This flow deletes a custom list from the add-to-list-popup.
+  # PARAMS:
+  #   ${listName}  [MANDATORY]  Name of the list to delete.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  # EDITOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.od.list.deleteCustomList
+    platform: 
+    flow:
+      - executeFunction:
+          name: mx.functions.list.tapSettingsButton
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.list.lists-settings-popup.tapDeleteThisList
+      - executeFunction:
+          name: mx.functions.list.delete-list-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.list.delete-list-popup.tapDelete
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.lists.assertListNotDisplayed
+          params:
+            - name: listName
+              string: ${listName}
+      - log:
+          message: "End flow: od.list.deleteCustomList"
+          color: BLUE

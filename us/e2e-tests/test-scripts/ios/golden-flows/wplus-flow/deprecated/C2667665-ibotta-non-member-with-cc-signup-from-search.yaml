@@ -1,0 +1,99 @@
+#====================================================Author: Viji (V0p0307)======================================================
+
+general:
+  platform: ios
+  tags: C2667665 #Disabled in prod
+  testCaseId: C2667665
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 395
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start main
+
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$   
+
+    # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow030.createAccountPayload
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn 
+
+      # Sign in with created account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 703465461
+              
+    
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Click on Join Walmart+ CTA 
+      - executeFunction:
+          name: us.functions.search.rewards.clickJoinWplusCta
+
+    # Choose Wplus plan from bottomsheet
+      - executeFunction:
+          name: us.functions.search.rewards.choosePlanFromBottomSheet
+
+      
+    # Verify item rewards after Auto refresh
+      - executeFunction:
+          name: us.functions.search.rewards.clipItemRewards
+
+    
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

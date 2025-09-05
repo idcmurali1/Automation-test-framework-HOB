@@ -1,0 +1,101 @@
+general:
+  platform: ios
+  tags: pdp-007, ca-function-run
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: false
+    endTestOnFailure: false
+    flow:
+      - log: Execute before scenarios
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  
+  - name: Validate multiple seller page's (reached from PDP) links work and show correct information in PDP page.
+    flow:
+      - log:
+          message: Validate multiple seller page's (reached from PDP) links work and show correct information in PDP page.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.onboarding.zipcode
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:           
+            - name: product
+              string: ca.test.data.pdp07.MP_ItemSku
+      - log: 
+          message: Extracting first product name from SRP.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.extractingFirstProductName
+
+      - log: 
+          message: Storing product name to a variable.
+          color: GREEN_BOLD
+
+      - storeIn:
+          key: multiSeller
+          value: ${productTitle}
+
+      - executeFunction:
+          name: ca.test.functions.productSearch.prod.srpToPdpPage
+          params:
+            - name: productName
+              string: ${multiSeller}
+
+      - executeFunction:
+          name: ca.test.functions.pdp.navigateToMoreSeller
+
+      - executeFunction:
+          name: ca.test.functions.pdp.moreSellerOptions.validatingSellerInfo
+
+      - executeFunction:
+          name: ca.test.functions.pdp.moreSellerOptions.addToCartSpecificSeller
+          params:
+            - name: productName
+              string: ca.test.data.pdp07.MP_ItemName 
+            - name: sellerName
+              string: ${filledBy}  
+
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+
+      - executeFunction:
+          name: ca.test.functions.cart.validatingProductFromSeller
+          params:
+            - name: productName
+              string: ca.test.data.pdp07.MP_ItemName 
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: pdp-007-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps         

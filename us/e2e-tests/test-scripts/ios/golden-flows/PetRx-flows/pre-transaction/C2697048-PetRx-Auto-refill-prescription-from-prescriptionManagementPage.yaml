@@ -1,0 +1,94 @@
+general:
+  platform: ios
+  tags: C2697048, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2697048
+  metadata:
+    - name: scenarioId
+      string: PV015
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+        # Get timestamp
+      - getTimestamp:
+           asDate: false
+           storeIn: timestamp
+
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.android.petrx.autoRefill.email
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Will take the user to the account menu from where the user can sign in to the app
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.android.petrx.autoRefill.email
+            - name: password
+              string: us.data.android.petrx.autoRefill.password
+
+      # Navigate to pets tab
+      - executeFunction:
+          name: us.functions.global.navigation.toSubTab
+          params:
+            - name: subTabName
+              string: Pets
+
+      - sleep:
+          duration: 3000
+
+      # Navigate to petRx management tab
+      - executeFunction:
+          name: us.functions.global.navigation.toSubTab
+          params:
+            - name: subTabName
+              string: Prescriptions
+
+      - sleep:
+          duration: 3000
+
+      - executeFunction:
+          name: us.functions.petRxAutoRefill
+
+      - sleep:
+          duration: 3000
+
+      - executeFunction:
+          name: us.functions.petRxAutoRefill.cancelSubscription
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

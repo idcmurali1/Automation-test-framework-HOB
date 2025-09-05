@@ -1,0 +1,117 @@
+#======================================================================================================================
+#  AUTHOR: Osmar Juárez (vn56dce)
+#  CREATED: Jan/28/2025
+#  REVISION: ---
+#
+#  Copyright © 2025 Walmart. All rights reserved.
+#
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [PDP] - Verify that the PDP page loads correctly
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-6477 
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-6412
+#
+#======================================================================================================================
+
+general:
+  tags: prepurchase-schema-validation-production-android-6412, prepurchase-schema-validation-production-android
+  testCaseId: MMS-6477
+
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+       - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+            
+       - executeFunction:
+          name: functions.utils.setMarketInfo
+
+       - storeIn:
+          key: MMS_6412_SUCCESSFUL_EXECUTION
+          value: false
+
+       - log: "BEFORE SCENARIO END"
+
+ # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: android
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+ 
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN APP AND COMPLETE ONBOARDING. (2) OPEN THE EA BANNER."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+      
+      # STEP 3 Scroll to the first item in Home and open the PDP--------------------------------------------------------
+      - log:
+         message: "STEP 3: SCROLL TO THE FIRST ITEM IN HOME AND OPEN THE PDP"
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.home.scrollDownUntilSomeCarousel
+          params:
+            - name: scrollLimit
+              string: '15'
+      - executeFunction: 
+          name: functions.searchPage.tapProductDetails
+
+      # STEP 4 Validate PDP displays with main elements.---------------------------------------------------------------- 
+      - log:
+         message: "STEP 4: VALIDATE THAT THE KEY PRODUCT ELEMENTS APPEAR."
+      
+      - executeFunction:
+          name: mx.functions.pdp.assertPageDisplayed
+
+      # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_6412_SUCCESSFUL_EXECUTION
+          value: true
+
+ # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_6412_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"
+  

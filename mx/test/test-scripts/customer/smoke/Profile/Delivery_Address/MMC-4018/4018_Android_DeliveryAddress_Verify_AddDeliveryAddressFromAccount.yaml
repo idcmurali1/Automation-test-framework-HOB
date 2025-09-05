@@ -1,0 +1,226 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Ramirez (vn53vq4)
+#  CREATED: Oct/22/2024
+#  REVISION: ---
+#  MANUAL JIRA TICKET: https://jira.walmart.com/browse/MMC-4018
+#  AUTOMATED JIRA TICKET: https://jira.walmart.com/browse/MMC-4433
+#
+#  FLOW: Navigate to EA Banner, open Account page,perform login verify account is logged in correctly and
+#        add new delivery address.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#  NOTE: JIRA features are not implemented yet for WCP approach.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-android, customer-walmart-ea-smoke-production-android-4018,
+        customer-bodega-ea-smoke-production-android, customer-bodega-ea-smoke-production-android-4018
+  testCaseId: MMC-4433
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: testStatus 
+          value: false
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      - storeIn:
+          key: userEmail 
+          value: mx.data.customer.userEmail
+      
+      - storeIn:
+          key: coloniaName 
+          value: mx.data.customer.shared.coloniaName
+
+      # Onboarding
+      - log:
+          message: "STEP 1: Onboarding..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Tap global account button and sign in.
+      - log:
+          message: "STEP 2: LOGIN..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: mx.data.customer.password
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+
+      # Open Add Address
+      - log:
+          message: "STEP 3: TAP ADD NEW ADDRESS..."
+          color: CYAN  
+      - executeFunction:
+          name: functions.accountPage.tapOnAddressRow
+      - executeFunction:
+          name: functions.account.addAddressPage.tapAddAddressBtn 
+
+      #Enter address information
+      - log:
+          message: "STEP 4: ENTER NEW ADDRESS INFORMATION..."
+          color: CYAN 
+  
+      - executeFunction:
+          name: functions.addAddressPage.enterFirstName # <-- ${firstName}
+          params:
+            - name: firstName
+              string: mx.data.customer.shared.userName
+      - executeFunction:
+          name: functions.addAddressPage.enterLastName # <-- ${lastName}
+          params:
+            - name: lastName
+              string: mx.data.customer.shared.lastName
+      - sleep:
+          duration: 2000          
+          
+      # Accept location permission pop up if displayed
+      - if:
+          identifier:
+            present:
+              - identifier: addAddressPage.allowLocationPermission
+            timeout: 3000
+          then:
+            - click:
+                identifier: addAddressPage.allowLocationPermission
+      - executeFunction:
+          name: mx.functions.add-and-edit-address-form.enterStreetAddress # <-- ${streetAddress}
+          params:
+            - name: streetAddress
+              string: mx.data.customer.shared.streetAddress
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: functions.addAddressPage.enterExteriorNumber # <-- ${exteriorNumber}
+          params:
+            - name: exteriorNumber
+              string: mx.data.customer.shared.exteriorNumber
+      - executeFunction:
+          name: functions.addAddressPage.enterInteriorNumber # <-- ${interiorNumber}
+          params:
+            - name: interiorNumber
+              string: mx.data.customer.shared.interiorNumber
+      
+      - executeFunction:
+          name: functions.addAddressPage.enterZipCode # <-- ${zipCode}
+          params:
+            - name: zipCode
+              string: mx.data.customer.shared.zipCode
+
+      # Happy path: dropdown selection.        
+      - click:
+          identifier: addAddressPage.coloniaDropdown
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: com.walmart.mg.debug:id/municipality_field
+          coordinates: 50%, 95%
+      - sleep:
+          duration: 4000
+
+      # Happy path: This is intended in order to hide keyboard.    
+      - executeFunction:
+          name: functions.addAddressPage.tapSaveButton
+
+      - click:
+          identifier: addAddressPage.crossingStreetsField
+      - enterText:
+          identifier: addAddressPage.crossingStreetsField
+          string: mx.data.customer.shared.crossingStreets
+          clearField: true
+          clickFirst: true
+      - executeFunction:
+          name: functions.utils.keyboard.tapNextBtn
+      - sleep:
+          duration: 4000
+      - executeFunction:
+          name: functions.addAddressPage.enterReferences # <-- ${references}
+          params:
+            - name: references
+              string: mx.data.customer.shared.references
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: functions.addAddressPage.enterPhoneNumber # <-- ${phoneNumber}
+          params:
+            - name: phoneNumber
+              string: mx.data.customer.shared.phoneNumber
+      - executeFunction:
+          name: functions.addAddressPage.tapSaveButton
+      - executeFunction:
+          name: functions.addAddressPage.mapViewForAddressConfirmation.isPageDisplayed
+      - executeFunction:
+          name: mx.functions.add-and-edit-address-form.confirmation-map.dragGeolocationPin
+      - executeFunction:
+          name: functions.addAddressPage.mapViewForAddressConfirmation.confirmLocation 
+
+      # Go back home page
+      - log:
+          message: "EXTRA STEP: NAVIGATE BACK TO HOME PAGE..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      
+      #Test Execution Status    
+      - storeIn:
+          key: testStatus 
+          value: true
+      
+      # Main HOOK completed
+      - log:
+          message: "MAIN HOOK COMPLETED SUCCESSFULLY!"
+          color: CYAN
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testStatus}
+          then:
+          - log:
+              message: "4018: Customer_Smoke_PROD_Android_DeliveryAddress_Verify_AddDeliveryAddressFromAccount - Completed Succesfully!!"
+              color: YELLOW_BOLD
+          else:
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."

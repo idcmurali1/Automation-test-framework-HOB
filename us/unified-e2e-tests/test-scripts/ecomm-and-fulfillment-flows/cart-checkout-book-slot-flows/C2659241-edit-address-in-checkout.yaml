@@ -1,0 +1,149 @@
+general:
+   tags: C2659241, prod-e2e, p2-ecomm-prod-e2e, prod-e2e-sim-dct, 
+   inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+   testCaseId: C2659241
+   metadata:
+    - name: scenarioId
+      string: 136, EC058
+#Added to C2659241-Verify-Freight-Non-config-Edit-Address
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Accoount info
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.android.nonConfig.email
+            - name: android.password
+              string: us.data.android.nonConfig.password
+            - name: ios.email
+              string: us.data.ios.cart.recommendation.email
+            - name: ios.password
+              string: us.data.ios.cart.recommendation.password
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: Shirt
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: excludeSponsored
+              string: true
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+           name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.verifyCardDetailsNew
+          params:
+            - name: cart
+              string: true
+            - name: listOfExpectedFulfilment
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.cart.editAddress
+
+      - executeFunction:
+          name: unified.us.functions.cart.recommendedWithYourOrderModule
+   
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Verify review order page
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+            - name: altFulfillmentText
+              string: shipping
+
+      # Verify review order page
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyAddress
+          params:
+            - name: streetAddress
+              string: 1694 Adrian Way, San Jose, CA 95122
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

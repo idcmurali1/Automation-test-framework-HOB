@@ -1,0 +1,161 @@
+general:
+  platform: android
+  tags: C2696940 # (Deprecated as part of Regression Optimization), p1-wplus-teflon-e2e
+  testCaseId: C2696940
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 486
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_CART_SHORTCUT_SIGN_UP_FLOW'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: New Customer with Membership - Scheduled delivery Order
+    endTestOnFailure: true
+    flow:
+      - log: Start Main
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@keynotetest.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Account
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow.createAccountPayload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: $password
+
+      # Navigating to home screen
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      # Set delivery and add address
+      - executeFunction:
+          name: us.functions.homePage.verify.InHome.deliveryslots
+
+      - executeFunction:
+          name: us.functions.gic.select.inhome.delivery.address
+
+      #      - executeFunction:
+      #          name: us.functions.utils.getSearchableItem
+      #          params:
+      #            - name: source
+      #              string: astro
+      #            - name: storeId
+      #              string: 32144
+      #            - name: itemType
+      #              string: STORE_SCHEDULED_DELIVERY
+      #            - name: backupItem
+      #              string: 2615935919
+      #
+      #      # Add item to cart from deeplink
+      #      - executeFunction:
+      #          name: us.functions.global.navigation.goToDeepLink
+      #          params:
+      #            - name: deepLinkUrl
+      #              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip//530910063
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: delivery
+
+      # Verify W+ opt-in on cart shortcut
+      - executeFunction:
+          name: us.functions.wplus.cart.shortcutOptIn
+
+      # Reserve the time on cart book slot
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: page
+              string: cart
+            - name: tab
+              string: delivery
+            - name: slotDay
+              string: tomorrow
+
+      # Proceeding to checkout/Review order page
+      - executeFunction:
+          name: us.functions.cart.continueToCheckouwithoutClosingWplusBottomSheet
+
+      # Select annual plan on Splash of review order page
+      - executeFunction:
+          name: us.functions.wplus.reviewOrder.splash.verifyWalmartPlusPlans
+          params:
+            - name: tenure
+              string: Annual
+
+      # Placing order and navigating to order confirmation page
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      # Verify customer joined W+
+      - executeFunction:
+          name: us.functions.wplus.verifyThankYouPage
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

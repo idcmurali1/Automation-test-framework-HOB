@@ -1,0 +1,541 @@
+functions:
+
+  ###########################################################################################
+  # Description : Function to fetch order status using astro API                            #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]     ${orderNo}      - (order # whose status needs to be fetched)            #
+  ###########################################################################################
+  - name: sc.functions.utils.astro.getOrderStatus
+    flow:
+      - loop:
+          begin: 0
+          end: 4
+          storeIndex: i
+          mode: increment
+          flow:
+            - log: Get order status for ${orderNo}
+            - callAPI:
+                url: http://astro.walmart.com/api/v2/teflon/order/${orderNo}
+                header:
+                  - key: segment
+                    value: oaoh
+                  - key: Content-Type
+                    value: application/json
+                requestMethod: GET
+                # wait: 5000
+                # verifyResponseCode: 200
+                # verifyResponseBodyContains:
+                #   - '"astroStatus":"SUCCESS"'
+                # retriesOnFail: 3
+                # retryDelay: 2000
+                getValue:
+                  - key: astroStatus
+                    storeIn: getOrderStatus
+                  - key: astroDescription
+                    storeIn: statusDescription
+                  - key: astroDetails.orderPurchaseOrderNo
+                    storeIn: poNumber
+                  - key: astroDetails.astro_info_automation.orderStatusInfo.MARKETPLACE_DELIVERY.statusDescription
+                    storeIn: currentOrderStatus
+            - if:
+                condition: ${getOrderStatus} == 'SUCCESS'
+                then:
+                  - log: Order ${orderNo} found
+                  - break: true
+                else:
+                  - log: Retry after 15 secs
+                  - sleep:
+                      duration: 15000
+      - if:
+          condition: ${getOrderStatus} != 'SUCCESS'
+          then:
+            - failTest:
+                message: "API_FAILURE - ASTRO - ${statusDescription}"
+
+  - name: sc.functions.utils.getMappingValue
+    flow:
+      - storeIn:
+          key: mappingData
+          value: ${mappingVariable}
+
+  ###########################################################################################
+  # Description : Function to set order status using astro API                              #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]     ${orderNo}      - (order # whose status needs to be set/moved)          #
+  # [mandatory]     ${orderType}    - (Fulfillment type in the order to be moved)           #
+  # [mandatory]     ${status}       - (To which status the order needs to be moved)         #
+  # --------------------------------------------------------------------------------------- #
+  # Valid orderType-status combinations :                                                   #
+  # MP_DELIVERY/MP_WFS_DELIVERY                     - [PO Acknowledged/Shipped/Delivered]   #
+  ###########################################################################################
+  - name: sc.functions.utils.astro.setOrderStatus
+    flow:
+      - log: -------[START-MOVE UTILITY] - Move order [ ${orderNo}-${orderType} ] to [ ${status} ] status-------
+
+      # Fetch wait time constant set in mapping file
+      - executeFunction:
+          name: sc.functions.utils.getMappingValue
+          params:
+            - name: mappingVariable
+              string: sc.data.sleep.time
+      # Order movement loop [Total re-attempt - 3 times incase of failure in order movement]
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: retryMovementCount
+          mode: increment
+          flow:
+            - log: ------------------------------------------------------------------------------------
+            - log: Order movement attempt - ${retryMovementCount}
+            - log: ------------------------------------------------------------------------------------
+
+            - arithmetic:
+                expression: ${mappingData} * 3
+                storeIn: mappingData
+
+            # Wait for 60/180/540(attempt-wise) secs before triggering the order movement if not successful in earlier attempt
+            - log: Waiting for ${mappingData} seconds before order movement trigger on attempt - ${retryMovementCount}
+            - sleep:
+                duration: ${mappingData}
+
+            # Trigger order movement for the required orderType
+            - executeFunction:
+                name: sc.functions.utils.astro.triggerOrderMovement
+
+            # Wait for 30(each attempt) secs before validating if order movement trigger is successful or not
+            - sleep:
+                duration: 30000
+
+            # Validating order movement for the required orderType
+            - executeFunction:
+                name: sc.functions.utils.astro.validateOrderMovement
+
+            # Break re-attempt loop if order movement is successful
+            - if:
+                condition: ${responseValidationStatus} == true
+                then:
+                  - log: Order [ ${orderNo} ] successfully moved to [ ${status} ] status for fulfillment type [ ${orderType} ]
+                  - break: true
+                else:
+                  - log: Retry after some wait time
+
+      # Fail with appropriate error if orderType is not moved to required status even after all re-attempts
+      - if:
+          condition: ${responseValidationStatus} == true
+          then:
+            - log: -------[END-MOVE UTILITY] - Move order [ ${orderNo}-${orderType} ] to [ ${status} ] status-------
+          else:
+            - executeFunction:
+               name: sc.functions.utils.getFailureMessage
+            - failTest:
+                message: "API_FAILURE - ASTRO - Order [ ${orderNo} ] movement failed due to ${responseDetails} ${failureMessage}"
+          
+  ###########################################################################################
+  # Description : Function to trigger order movement using Astro V3 API                     #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]     ${orderNo}      - (order # whose status needs to be set/moved)          #
+  # [mandatory]     ${orderType}    - (Fulfillment type in the order to be moved)           #
+  # [mandatory]     ${status}       - (To which status the order needs to be moved)         #
+  # --------------------------------------------------------------------------------------- #
+  # Valid orderType-status combinations :                                                   #
+  # MP_DELIVERY/MP_WFS_DELIVERY                     - [PO Acknowledged/Shipped/Delivered]   #
+  ###########################################################################################
+  - name: sc.functions.utils.astro.triggerOrderMovement
+    flow:
+      - log: -------[START-TRIGGER UTILITY] - Order [ ${orderNo}-${orderType} ] movement to [ ${status} ] status-------
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: retryTriggerCount
+          mode: increment
+          flow:
+            - callAPI:
+                url: http://astro.walmart.com/api/v3/teflon/order/${orderNo}
+                header:
+                  - key: segment
+                    value: oaoh
+                  - key: Content-Type
+                    value: application/json
+                readTimeout: 180000
+                requestMethod: PUT
+                verifyResponseCode: 200
+                retriesOnFail: 3
+                retryDelay: 180000
+                requestBody: '{"fulfillmentGroups": [{"orderType":"$orderType","status": "$status"}]}'
+                getValue:
+                  - key: status
+                    storeIn: responseTriggerStatus
+                  - key: astroDescription
+                    storeIn: failureReason
+            - if:
+                condition: ${responseTriggerStatus} == 'SUCCESS'
+                then:
+                  - log: -------[END-TRIGGER UTILITY] - Order movement triggered successfully-------
+                  - break: true
+                else:
+                  - if:
+                      condition: ${altOrderType} != null
+                      then:
+                        - if:
+                            condition: ${failureReason} == 'ORDER_FULFILLMENT_MISMATCH'
+                            then:
+                              - storeIn:
+                                  key: orderType
+                                  value: ${altOrderType}
+                  #- log: ------------------------------------------------------------------------------------
+                  - log: TRIGGER RETRY ${retryTriggerCount} - Triggering order movement again due to failure.
+                  #- log: ------------------------------------------------------------------------------------
+      - storeIn:
+          key: altOrderType
+          value: 'null'
+      - if:
+          condition: ${responseTriggerStatus} != 'SUCCESS'
+          then:
+            - failTest:
+                message: "API_FAILURE - ASTRO - [ ${orderNo} ] Unable to trigger order movement ${failureReason}"  
+
+  ###########################################################################################
+  # Description : Function to validate order movement status using Astro V3 API             #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]     ${orderNo}      - (order # whose status needs to be set/moved)          #
+  # [mandatory]     ${orderType}    - (Fulfillment type in the order to be moved)           #
+  # [mandatory]     ${status}       - (To which status the order has to be moved)           #
+  # --------------------------------------------------------------------------------------- #
+  # Valid orderType-status combinations :                                                   #
+  # MP_DELIVERY/MP_WFS_DELIVERY                     - [PO Acknowledged/Shipped/Delivered]   #
+  ###########################################################################################
+  - name: sc.functions.utils.astro.validateOrderMovement
+    flow:
+      - log: -------[START-VERIFY UTILITY] - Order [ ${orderNo}-${orderType} ] movement to [ ${status} ] status-------
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: retryValidationCount
+          mode: increment
+          flow:
+            - sleep:
+                duration: 10000
+            - callAPI:
+                url: http://astro.walmart.com/api/v3/db/astro/teflon/order?orderType=${orderType}&status=${status}&orderNo=${orderNo}
+                header:
+                  - key: segment
+                    value: oaoh
+                  - key: Content-Type
+                    value: application/json
+                readTimeout: 180000
+                requestMethod: GET
+                verifyResponseCode: 200
+                retriesOnFail: 3
+                retryDelay: 180000
+                getValue:
+                  - key: astroDetails[0].result
+                    storeIn: responseValidationStatus
+                  - key: astroDescription
+                    storeIn: responseDetails
+                  - key: astroDetails[0].status
+                    storeIn: responseStatus
+            - if:
+                condition: ${responseValidationStatus} == true
+                then:
+                  - break: true
+                else:
+                  #- log: -------------------------------------------------------------
+                  - log: VERIFY RETRY - ${retryValidationCount} - Rechecking after 10s
+                  #- log: -------------------------------------------------------------
+      - log: -------[END-VERIFY UTILITY] - Order [ ${orderNo}-${orderType} ] movement to [ ${status} ] status-------
+
+  - name: sc.functions.utils.getFailureMessage
+    flow:
+      - if:
+          condition: ${apiFetch}
+          then:
+            - if:
+                condition: ${itemFilter} != null
+                then:
+                  - storeIn:
+                      key: failureMessage
+                      value: '[ Details : FailureType - OrderMovement, FulfillmentType - ${itemType}, FilterType - ${itemFilter} ]'
+                else:
+                  - storeIn:
+                      key: failureMessage
+                      value: '[ Details : FailureType - OrderMovement, FulfillmentType - ${itemType} ]'
+          else:
+            - storeIn:
+                key: failureMessage
+                value: '[ Details : FailureType - OrderMovement ]'
+
+  ###########################################################################################
+  # Description : Function to create order using Astro V3 API                               #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]     ${payload}      - (curl request to create order thorugh astro API)      #
+  ###########################################################################################
+  - name: sc.functions.utils.astro.createOrder
+    flow:
+      - storeIn:
+          key: availableItems
+          value: sc.data.itemListForOrderCreation
+      - log: $availableItems
+      - loop:
+          each: ${availableItems}
+          storeElement: item1
+          storeIndex: itemIndex
+          flow:
+            - log: Create order
+            - loop:
+                begin: 0
+                end: 5
+                storeIndex: retryCount
+                mode: increment
+                flow:
+                  # ${errorCode} used to determine payload format issue
+                  # ${orderCreationStatus} used to determine order creation success/failure with valid payload
+                  - storeIn:
+                      key: payload
+                      value: sc.data.createOrderPayload
+                  - log: ${payload}
+                  - storeIn:
+                      key: errorCode
+                      value: 'null'
+                  - storeIn:
+                      key: orderCreationStatus
+                      value: 'null'
+                  - callAPI:
+                      url: http://astro.walmart.com/api/v2/teflon/order
+                      requestMethod: POST
+                      header:
+                        - key: segment
+                          value: oaoh
+                        - key: Content-Type
+                          value: application/json
+                        - key: payment_version
+                          value: smart_allocation
+                        - key: response_type
+                          value: omni
+                        - key: pretripping_auth
+                          value: true
+                      readTimeout: 180000
+                      requestBody: ${payload}
+                      getValue:
+                        - key: astroDetails.orderSummary.orderInfo.orderId
+                          storeIn: orderNo
+                        - key: astroStatus
+                          storeIn: orderCreationStatus
+                        - key: astroDescription
+                          storeIn: orderDetailsDescription
+                        - key: statusCode
+                          storeIn: errorCode
+                        - key: error
+                          storeIn: errorMessage
+                        - key: message
+                          storeIn: errorDetails
+                      retryDelay: 5000
+                  - if:
+                      condition: ${orderCreationStatus} == 'SUCCESS'
+                      then:
+                        - log: Order successfully created with item ${item1}.
+                        - break: true
+                      else:
+                        - log: Failure in order creation. Retrying after 30 secs
+                        - sleep:
+                            duration: 30000
+            - if:
+                condition: ${orderCreationStatus} == 'SUCCESS'
+                then:
+                  - log: Order creation successful
+                  - break: true
+      - if:
+          condition: ${errorCode} == null
+          then:
+            - if:
+                condition: ${orderCreationStatus} != 'SUCCESS'
+                then:
+                  - failTest:
+                      message: "API_FAILURE - ASTRO - CREATE ORDER FAILURE - Error: ${orderDetailsDescription} - Fetched Items: ${fetchedItemDataDetails}"
+          else:
+            - failTest:
+                message: "API_FAILURE - ASTRO - PAYLOAD ERROR. Error: ${errorMessage} - ${errorDetails}"
+      - log: ${orderNo}
+
+# Function for Driver returned back to store order status change. 
+     # [Utility to trigger order movement using Astro V3 API]
+  # [mandatory] ${orderNo}    - Order number that has to be moved
+  # [mandatory] ${orderType}  - Fulfillment type in the order to be moved
+  # [mandatory] ${status}     - To which status the order needs to be moved
+  - name: sc.functions.utils.astro.triggerDriverreturnedstatus
+    flow:
+      - log: -------[START-TRIGGER UTILITY] - Order [ ${orderNo}-${orderType} ] movement to [ ${status} ] status-------
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: retryTriggerCount
+          mode: increment
+          flow:
+            - callAPI:
+                url: http://astro.walmart.com/api/v2/teflon/order/${orderNo}/returned
+                header:
+                  - key: segment
+                    value: oaoh
+                  - key: Content-Type
+                    value: application/json
+                readTimeout: 180000
+                requestMethod: POST
+                verifyResponseCode: 200
+                retriesOnFail: 3
+                retryDelay: 180000
+                requestBody: '{"fulfillmentGroups": [{"orderType":"$orderType","status": "$status"}]}'
+                getValue:
+                  - key: status
+                    storeIn: responseTriggerStatus
+            - if:
+                condition: ${responseTriggerStatus} == 'SUCCESS'
+                then:
+                  - log: -------[END-TRIGGER UTILITY] - Order movement triggered successfully-------
+                  - break: true
+                else:
+                  #- log: ------------------------------------------------------------------------------------
+                  - log: TRIGGER RETRY ${retryTriggerCount} - Triggering order movement again due to failure.
+                  #- log: ------------------------------------------------------------------------------------
+      - if:
+          condition: ${responseTriggerStatus} != 'SUCCESS'
+          then:
+            - failTest:
+                message: "API_FAILURE - ASTRO - Unable to trigger order movement"
+
+  - name: sc.functions.utils.astro.dataCreation
+    flow:
+      - executeFunction:
+          name: sc.functions.utils.astro.createOrder
+          params:
+            - name: email
+              string: ${email}
+            - name: item
+              string: ${item}
+            - name: payload
+              string: ${payload}
+      
+      - if:
+          condition: ${moveOrder}
+          then:
+            - executeFunction:
+                name: sc.functions.utils.astro.getOrderStatus
+
+            - executeFunction:
+                name: sc.functions.utils.astro.setOrderStatus
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: MP_DELIVERY
+                  - name: status
+                    string: Delivered
+
+      - if:
+          condition: ${returnOrder}
+          then:
+            - executeFunction:
+                name: sc.functions.utils.astro.triggerDriverreturnedstatus
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: MP_DELIVERY
+                  - name: status
+                    string: Returned
+
+  - name: sc.functions.utils.getUserOrderDetails
+    flow:
+      - executeNode:
+          file: sellerCenter/e2e-tests/helpers/getOrderhelper.js
+          args:
+            - value: $email
+            - value: $orderStatus
+          getResponse:
+            storeIn: orderNo      
+      - log: $orderNo
+
+  #################################################################################################
+  # Description : Function to trigger order movement and validate order until order is Delivered  #
+  # ---------------------------------------- Params ----------------------------------------------#
+  # [mandatory]     ${orderNo}      -         (order # whose status needs to be Delivered)        #                          
+  #################################################################################################
+  - name: sc.functions.utils.astro.retryOrderMovementUntilDelivered
+    flow:
+      - loop:
+          begin: 0
+          end: 5
+          storeIndex: retryDeliveredTriggerCount
+          mode: increment
+          flow:
+            - executeFunction:
+                name: sc.functions.utils.astro.triggerOrderMovement
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: MP_DELIVERY
+                  - name: status
+                    string: Delivered
+            - executeFunction:
+                name: sc.functions.utils.astro.validateOrderMovement
+            - if:
+                condition: ${responseStatus} == 'Delivered'
+                then:
+                  - break: true
+                else:
+                  - log: TRIGGER RETRY ${retryDeliveredTriggerCount} - Triggering order movement validation again due to failure.
+      - if:
+          condition: ${responseStatus} == 'Delivered'
+          then:
+            - log: Order successfully moved to Delivered.
+          else:
+            - failTest:
+                message: "API_FAILURE - ASTRO - Order movement to Delivered status failed"
+
+  #################################################################################################
+  # Description : Function to trigger return order after it is Delivered                          # 
+  # ---------------------------------------- Params --------------------------------------------- #
+  # [mandatory]     ${orderNo}      - (order # which needs to be returned)                        #                         
+  #################################################################################################          
+  - name: sc.functions.utils.astro.returnOrder
+    flow:
+      - loop:
+          begin: 1
+          end: 4
+          storeIndex: retryTriggerCount
+          mode: increment
+          flow:
+            - storeIn:
+                key: payload
+                value: sc.data.returnOrderPayload
+            - callAPI:
+                url: http://astro.walmart.com/api/nextGen/teflon/order/${orderNo}/return
+                header:
+                  - key: segment
+                    value: oaoh
+                  - key: Content-Type
+                    value: application/json
+                readTimeout: 180000
+                requestMethod: POST
+                verifyResponseCode: 200
+                requestBody: ${payload}
+                retriesOnFail: 3
+                retryDelay: 180000
+                getValue:
+                  - key: astroStatus
+                    storeIn: returnInitiatedStatus
+                  - key: astroDetails.createReturnResp.createReturnDetails.returnOrderNo
+                    storeIn: rmaValue
+            - if:
+                condition: ${returnInitiatedStatus} == 'SUCCESS'
+                then:
+                  - log: -------[END-TRIGGER UTILITY] - Order movement triggered successfully-------
+                  - break: true
+                else:
+                  #- log: ------------------------------------------------------------------------------------
+                  - log: TRIGGER RETRY ${retryTriggerCount} - Triggering order movement again due to failure.
+                  #- log: ------------------------------------------------------------------------------------
+      - if:
+          condition: ${returnInitiatedStatus} != 'SUCCESS'
+          then:
+            - failTest:
+                message: "API_FAILURE - ASTRO - Unable to trigger order movement"

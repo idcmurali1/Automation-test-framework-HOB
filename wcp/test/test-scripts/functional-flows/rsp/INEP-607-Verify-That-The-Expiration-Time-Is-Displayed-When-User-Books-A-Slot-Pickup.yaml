@@ -1,0 +1,143 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-607
+#       Flow - MH: Verify that the expiration time is displayed when user books a slot - pickup.
+#    
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179349
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-607
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-605
+#
+#   PRE-REQUISITES: 
+#   - Registered User with Delivery Address and payment method attached.
+#
+#   NOTE: 
+#     * Some items and elements still WIP, validate after MH is completed.
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-607
+  tags: INEP-607, OPIF-179349, p1-mh-opif-teflon-d-feb, p1-mh-opif-teflon
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: "BEFORE SCENARIO"
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: TC01-Verify-That-The-Expiration-Time-Is-Displayed-When-User-Books-A-Slot"
+    flow:
+      
+      # NOTE: This may be consider as part of the pre-requisites.
+      # Create account using astro api.
+      - log:
+          message: PREREQUISITE — Creating user account using Astro API...
+          color: GREEN_BOLD
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa  # <- RETURNS: ${userEmail}, ${password}
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+    
+      # Login
+      - log:
+          message: "PERFORM LOGIN."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - log:
+          message: "ADD ITEM TO CART"
+          color: PURPLE_BRIGHT
+
+      # 1: Add to cart GO item
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.product1.itemsArray
+
+      # Open cart and continue to review-order Page (Pago).
+      - log:
+          message: "OPEN CART"
+          color: PURPLE_BRIGHT
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      # Select a time and date slot.    
+      - log:
+          message: "Reserving slot"
+          color: PURPLE_BRIGHT
+      - executeFunction:
+          name: functions.reserveATime.checkSlotAvailability
+      - executeFunction:
+          name: functions.reserveATime.tapFirstSlotBtn
+      - executeFunction:
+          name: function.reserveATime.assertCompleteSlotReserveLabelDisplayed 
+     
+#  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# #   A F T E R   S C E N A R I O
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"

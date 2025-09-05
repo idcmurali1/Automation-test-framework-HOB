@@ -1,0 +1,380 @@
+#======================================================================================================================
+#  AUTHOR: Belen Garcia (vn532ri)
+#  CREATED: Oct/23/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: purchase-walmart-ea-sanity-production-ios-003, purchase-bodega-ea-sanity-production-ios-003, purchase-walmart-ea-sanity-production-ios, purchase-bodega-ea-sanity-production-ios
+  testCaseId: MMP-5058
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE:
+#    TC Goal: Merge cart (new user), pick up, pay at store * TBD
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    TO-DO
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMP-5094
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMP-5058
+#
+#######################################################################################################################
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: MMP_5058_SUCCESSFUL_EXECUTION
+          value: false
+
+      - log: "BEFORE SCENARIO END"
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   M A I N   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: ios
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 1: OPEN PDP ---------------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 1: ADD ITEMS FROM SLP"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+          params:
+            - name: productArray
+              string: mx.data.qaa.purchase-001.firstProduct
+
+      # [VARIABLE] Product's name saved in ${purchase_5058_first_product_name}
+      - storeIn:
+          key: purchase_5058_first_product_name
+          value: ${productName}
+
+      - executeFunction:
+          name: functions.searchResultPage.getProductPrice   #returns -> productPrice, params <- productName
+          params:
+            - name: productName
+              string: ${purchase_5058_first_product_name}
+
+      - executeFunction:
+          name: functions.utils.javascript.cleanProductPrice  #returns -> cleanProductPrice, params <- productPrice
+          params:
+            - name: productPrice
+              string: ${productPrice}
+      # [VARIABLE] Product's price saved in ${purchase_5058_first_product_price}
+      - storeIn:
+          key: purchase_5058_first_product_price
+          value: ${cleanProductPrice}
+
+      - executeFunction:
+          name: mx.functions.pdp.getType # ---> ${returnedProductType}
+      # [VARIABLE] Product's type saved in ${purchase_5058_first_product_type}
+      - storeIn:
+          key: purchase_5058_first_product_type
+          value: ${returnedProductType}
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+          params:
+            - name: productArray
+              string: mx.data.qaa.purchase-001.secondProduct
+
+      # [VARIABLE] Product's name saved in ${purchase_5058_second_product_name}
+      - storeIn:
+          key: purchase_5058_second_product_name
+          value: ${productName}
+
+      - executeFunction:
+          name: functions.searchResultPage.getProductPrice   #returns -> productPrice, params <- productName
+          params:
+            - name: productName
+              string: ${purchase_5058_second_product_name}
+
+      - executeFunction:
+          name: functions.utils.javascript.cleanProductPrice  #returns -> cleanProductPrice, params <- productPrice
+          params:
+            - name: productPrice
+              string: ${productPrice}
+      # [VARIABLE] Product's name saved in ${purchase_5058_second_product_price}
+      - storeIn:
+          key: purchase_5058_second_product_price
+          value: ${cleanProductPrice}
+
+      - executeFunction:
+          name: mx.functions.pdp.getType # ---> ${returnedProductType}
+      # [VARIABLE] Product's name saved in ${purchase_5058_second_product_type}
+      - storeIn:
+          key: purchase_5057_second_product_type
+          value: ${returnedProductType}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 2: GO TO CART -------------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 2: GO TO CART"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.cartPage.scrollToTopOfCart
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails
+      - executeFunction:
+          name: functions.cartPage.validateMoneybox
+
+      - log: "Product - ${purchase_5058_first_product_name} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_5058_first_product_name}
+            - name: productType
+              string: ${purchase_5058_first_product_type}
+            - name: mx.data.qaa.purchase-003.productQty
+              string: ${purchase_5058_first_product_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_5058_first_product_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_5058_first_product_subtotal}
+
+      - log: "Product - ${purchase_5058_second_product_name} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_5058_second_product_name}
+            - name: productType
+              string: ${purchase_5058_second_product_type}
+            - name: mx.data.qaa.purchase-003.productQty
+              string: ${purchase_5058_second_product_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_5058_second_product_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_5058_second_product_subtotal}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 3: MOVE ITEM TO SAVE FOR LATER---------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 3: MOVE ITEM TO SAVE FOR LATER"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.cartPage.moveAndVerifyProductMoveToSFL
+          params:
+            - name: productName
+              string: ${purchase_5058_second_product_name}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 4: MOVE ITEM TO CART FROM SAVE FOR LATER---------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 4: MOVE ITEM TO CART FROM SAVE FOR LATER"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.cartPage.moveAndValidateProductToCartFromSFL
+          params:
+            - name: productName
+              string: ${purchase_5058_second_product_name}
+
+      - log: "Product - ${purchase_5058_second_product_name} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_5058_second_product_name}
+            - name: productType
+              string: ${purchase_5058_second_product_type}
+            - name: mx.data.qaa.purchase-003.productQty
+              string: ${purchase_5058_second_product_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_5058_second_product_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_5058_second_product_subtotal}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 5: MOVE ITEM TO SAVE FOR LATER---------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 5: MOVE ITEM TO SAVE FOR LATER"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.cartPage.moveAndVerifyProductMoveToSFL
+          params:
+            - name: productName
+              string: ${purchase_5058_first_product_name}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 6: DELETE ITEM IN SAVE FOR LATER---------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 6: DELETE ITEM IN SAVE FOR LATER"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.cart.deleteProductSaveForLaterByProductName
+          params:
+            - name: productName
+              string: ${purchase_5058_first_product_name}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 7: CONTINUE TO CHECKOUT ---------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 7: CONTINUE TO CHECKOUT"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 8: LOGIN AS EXISTING USER ---------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 8: LOGIN AS EXISTING USER"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication.forTraditionalFlow
+          params:
+            - name: userEmail
+              string: mx.data.purchase-003.userEmail
+            - name: userPassword
+              string: mx.data.purchase-user-data.userPassword
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 9 & 10: ADD NEW ADDRESS & CONTINUE TO CHECKOUT-----------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 9 & 10: ADD NEW ADDRESS & CONTINUE TO CHECKOUT"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.addAddressPage.isPageDisplayed
+
+      - if:
+          condition: ${returnedIsDisplayed} == true
+          then:
+            - executeFunction:
+                name: functions.addAddressPage.addAddress
+                params:
+                  - name: firstName
+                    string: mx.data.purchase-003.firstName
+                  - name: lastName
+                    string: mx.data.purchase-003.lastName
+                  - name: streetAddress
+                    string: mx.data.purchase-003.streetAddress
+                  - name: exteriorNumber
+                    string: mx.data.purchase-003.exteriorNumber
+                  - name: interiorNumber
+                    string: mx.data.purchase-003.interiorNumber
+                  - name: zipCode
+                    string: mx.data.purchase-003.zipCode
+                  - name: coloniaName
+                    string: mx.data.purchase-003.coloniaNameiOS
+                  - name: crossingStreets
+                    string: mx.data.purchase-003.crossingStreets
+                  - name: references
+                    string: mx.data.purchase-003.references
+                  - name: phoneNumber
+                    string: mx.data.purchase-user-data.userPhoneNumber
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 11: VALIDATE PRODUCT DETAILS ----------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "11: VALIDATE PRODUCT DETAILS"
+          color: ORANGE
+
+      - click:
+          identifier: mx.mappings.ea.review-order.products-details-popup.viewButton
+
+      - executeFunction:
+          name: functions.checkoutPage.validateItemDetails
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 12: OPEN WALLET -----------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 12: OPEN WALLET"
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.checkoutPage.tapAddPaymentMethodBtn
+
+      # End main -----------------------------------------------------------------------------------
+      - storeIn:
+          key: MMP_5058_SUCCESSFUL_EXECUTION
+          value: true
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   A F T E R   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMP_5058_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"

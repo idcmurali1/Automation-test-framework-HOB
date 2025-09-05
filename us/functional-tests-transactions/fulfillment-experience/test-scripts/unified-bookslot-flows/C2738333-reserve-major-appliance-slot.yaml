@@ -1,0 +1,139 @@
+general:
+  tags: C2738333, prod-functional-bookslot
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2717063 
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+ 
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+       # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: majorapplianceandroidtc1@cloudtest.org
+            - name: android.password
+              string: E2epassword$
+            - name: ios.email
+              string: us.data.prod.reserveSlot.majorAppliance.email
+            - name: ios.password
+              string: us.data.prod.reserveSlot.majorAppliance.password
+      
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: unified.us.functions.gic.expandIfCollapsed
+
+      # Deselect the selected pickup intent
+      - executeFunction:
+          name: unified.us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Pickup
+
+    # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+      
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.majorAppliance.item.deeplink
+
+      - executeFunction:
+          name: unified.us.functions.item.majorAppliance.itemPage
+
+      - executeFunction:
+          name: unified.us.functions.item.preAddToCartSteps
+
+      - executeFunction:
+          name: unified.us.functions.item.validateAndClickAddToCartButton
+
+      - executeFunction:
+          name: unified.us.functions.item.majorAppliance.deliveryoptions
+          params:
+            - name: DeliveryAndInstallation
+              string: true
+            - name: HaulAway
+              string: true
+
+      - executeFunction:
+          name: unified.us.functions.item.postAddToCartSteps
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.majorAppliance.scheduleDelivery
+
+      - executeFunction:
+          name: unified.us.functions.cart.verifyDeliveryCharges
+          params:
+            - name: HaulAway
+              string: true
+            - name: DeliveryAndInstallation
+              string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

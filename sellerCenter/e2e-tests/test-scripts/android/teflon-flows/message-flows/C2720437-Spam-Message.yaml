@@ -1,0 +1,88 @@
+general:
+  platform: android
+  tags: sc-e2e, sc-staging-feature-build, C2720437
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - storeIn:
+          key: identifierTextAttribute
+          value: text
+      - storeIn:
+          key: APP_PLATFORM
+          value: android
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Login
+      - executeFunction:
+          name: sc.functions.accounts.login
+          params:
+            - name: email
+              string: sc.partner2.email
+            - name: password
+              string: sc.partner2.password
+
+      # navigation to catalog view from the home menu
+      - executeFunction:
+          name: sc.functions.navigation.toInboxTab
+          params:
+            - name: deepLinkUrl
+              string: sellercenter://seller/inbox?status=unread
+
+      - executeFunction:
+          name: sc.functions.inbox.verifyMessageListDisplay
+      
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: sc.functions.inbox.filterSelection
+                params:
+                  - name: messageType
+                    string: Response needed
+                  - name: verifyFilterData
+                    string: false
+
+      - executeFunction:
+          name: sc.functions.inbox.selectFirstUnSpammedMessage
+
+      - executeFunction:
+          name: sc.functions.inbox.spamMessage
+          params:
+            - name: spamReason
+              string: Possible fraud
+
+      - executeFunction:
+          name: sc.functions.inbox.validateMessageisSpammed
+
+      - executeFunction:
+          name: sc.functions.navigation.navigateBackToListPage
+
+      - executeFunction:
+          name: sc.functions.inbox.filterSelection
+          params:
+            - name: messageType
+              string: Spam
+            - name: verifyFilterData
+              string: false
+
+      # - executeFunction:
+      #     name: sc.functions.global.search
+      #     params:
+      #       - name: searchValue
+      #         string: ${orderNumber}
+
+      - executeFunction:
+          name: sc.mappings.inbox.verifyFilterSelectionList
+          params:
+            - name: messageType
+              string: Spam
+
+      - storeIn:
+          key: testStatus
+          value: passed

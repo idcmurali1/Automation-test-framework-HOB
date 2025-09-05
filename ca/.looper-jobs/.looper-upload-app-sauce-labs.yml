@@ -1,0 +1,204 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr: disabled
+      - push:
+          manualOnly: true
+
+      # iOS Development Debug Build
+      - manual:
+          name: Upload iOS Development Latest
+          call: upload_build_to_sauce_labs(env_ios_development_latest)
+
+      - cron:
+          spec: H 0 * * *
+          call: upload_build_to_sauce_labs(env_ios_development_latest)
+
+      # iOS Release Build
+      - manual:
+          name: Upload iOS Release Latest
+          call: upload_build_to_sauce_labs(env_ios_release_latest)
+
+      - cron:
+          spec: H 16 * * 3
+          call: upload_build_to_sauce_labs(env_ios_release_latest)
+
+      # Android
+      - manual:
+          name: Upload Android Development Latest
+          call: upload_build_to_sauce_labs(env_android_development_latest)
+
+      - cron:
+          spec: H 0 * * *
+          call: upload_build_to_sauce_labs(env_android_development_latest)
+
+      # Android Release Build
+      - manual:
+          name: Upload Android Release Latest
+          call: upload_build_to_sauce_labs(env_android_release_latest)
+
+      - cron:
+          spec: H 16 * * 3
+          call: upload_build_to_sauce_labs(env_android_release_latest)
+
+      # - manual:
+      #     name: Upload iOS Development Latest - RDC
+      #     call: upload_build_to_sauce_labs(env_ios_development_latest_rdc)
+
+      # - cron:
+      #     spec: 7 0 * * *
+      #     call: upload_build_to_sauce_labs(env_ios_development_latest_rdc)
+
+  # - spec: us/release-latest
+  #   scheduling: concurrent
+
+  #   triggers:
+  #     - push:
+  #         manualOnly: true
+
+  #     # iOS
+  #     - manual:
+  #         name: Upload iOS Release Latest
+  #         call: upload_build_to_sauce_labs(env_ios_release_latest)
+
+  #     - cron:
+  #         spec: 10 0-23 * * *
+  #         call: upload_build_to_sauce_labs(env_ios_release_latest)
+
+  #     - manual:
+  #         name: Upload iOS Release Latest - RDC
+  #         call: upload_build_to_sauce_labs(env_ios_release_latest_rdc)
+
+  #     - cron:
+  #         spec: 15 0-23 * * *
+  #         call: upload_build_to_sauce_labs(env_ios_release_latest_rdc)
+
+  #     - manual:
+  #         name: Upload iOS by branch and app version
+  #         call: update_by_app_branch_ios(APP_BRANCH = 'glass-release-candidate-sim')
+
+  #     - cron:
+  #         spec: 5 7,19 * * *
+  #         call: update_by_app_branch_ios(APP_BRANCH = 'glass-release-candidate-sim')
+
+  #     - manual:
+  #         name: Upload Android by branch and app version
+  #         call: update_by_app_branch_android(APP_BRANCH = 'us-RC')
+
+  #     - cron:
+  #         spec: 5 7,19 * * *
+  #         call: update_by_app_branch_android(APP_BRANCH = 'us-RC')
+
+  #     - pr: disabled
+
+envs:
+  global:
+    variables:
+      MARKET: ca
+      SLACK_CHANNEL: r2-ca-glass-test-result
+      SLACK_TEST_RUN_MESSAGE: "${TEST_RUN_STATUS} *- Upload Sauce Labs Build*\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *Platform*: ${APP_PLATFORM}\n
+        *App Location on Sauce Labs*: storage:filename=${SAUCE_FILE_NAME}\n
+        *Build Link*: ${BUILD_URL}"
+      TEST_PLAN_PASSED: ":white_check_mark: *Build Success*"
+      TEST_PLAN_FAILED: ":x: *Build Failure*"
+
+  # iOS
+  env_ios_development_latest:
+    variables:
+      APP_PLATFORM: ios
+      SAUCE_FILE_NAME: ${MARKET}-glass-development-latest.zip
+      APP_VERSION: 22.48
+      FILE_TYPE: zip
+      APP_BRANCH: canada-glass-qa-nightly-sim
+
+  # env_ios_development_latest_rdc:
+  #   variables:
+  #     APP_PLATFORM: ios
+  #     SAUCE_FILE_NAME: ${MARKET}-glass-development-latest.ipa
+  #     FILE_TYPE: ipa
+  #     APP_BRANCH: glass-qa-nightly
+
+  env_ios_release_latest:
+    variables:
+      APP_PLATFORM: ios
+      SAUCE_FILE_NAME: ${MARKET}-glass-release-latest.zip
+      APP_VERSION: 22.41.3
+      FILE_TYPE: zip
+      APP_BRANCH: glass-release-candidate-sim
+
+  # env_ios_release_latest_rdc:
+  #   variables:
+  #     APP_PLATFORM: ios
+  #     SAUCE_FILE_NAME: ${MARKET}-glass-release-latest.ipa
+  #     FILE_TYPE: ipa
+  #     APP_BRANCH: glass-release-candidate
+
+  # Android
+  env_android_development_latest:
+    variables:
+      APP_PLATFORM: android
+      SAUCE_FILE_NAME: ${MARKET}-glass-development-latest.apk
+      APP_VERSION: 22.48
+      FILE_TYPE: apk
+      APP_BRANCH: ${MARKET}-development
+
+  env_android_release_latest:
+    variables:
+      APP_PLATFORM: android
+      SAUCE_FILE_NAME: ${MARKET}-glass-release-latest.apk
+      APP_VERSION: 22.41.3
+      FILE_TYPE: apk
+      APP_BRANCH: ${MARKET}-RC
+
+flows:
+  download_build:
+    - shell (name Download App Build): |
+        sh ca/scripts/download_build_looper.sh
+
+  upload_build:
+    - shell (name Upload Build to Sauce Labs): |
+        sh ca/scripts/upload_build_looper.sh
+
+  # get_app_versions:
+  #   - if: |
+  #       %{APP_PLATFORM == 'android'}
+  #     then:
+  #       - var(APP_VERSION):
+  #           - shell  (name Get App Version): head ${MARKET}/app-versions/ios.txt
+  #       - echo "I am INN ${APP_VERSION}"
+  #     else:
+  #       - var(APP_VERSION):
+  #           - shell  (name Get App Version): head ${MARKET}/app-versions/ios.txt
+
+  upload_build_to_sauce_labs:
+    - node(label = linux, isolation = except_project, ws = exclusive):
+        try:
+          # - call: get_app_versions
+          # - declare(APP_VERSION)
+          - call: download_build
+          - call: upload_build
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+          - call: post_slack_test_run
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - call: post_slack_test_run
+          - shell: exit 1
+
+  update_by_app_branch_ios:
+    call: upload_build_to_sauce_labs(env_ios_development_latest)
+
+  update_by_app_branch_android:
+    call: upload_build_to_sauce_labs(env_android_development_latest)
+
+  upload_android_release_build_to_sauce_labs:
+    call: upload_build_to_sauce_labs(env_android_release_latest)
+
+  upload_iOS_release_build_to_sauce_labs:
+    call: upload_build_to_sauce_labs(env_ios_release_latest)

@@ -1,0 +1,136 @@
+
+# ================================================================================================================================
+# TC: 001
+# Flow: TC-001: Items:  Regular account + 2 1P + Not Place Order
+# ================================================================================================================================
+general:
+  testCaseId: C2720127
+  tags: C2720127, p1-mx-ea-prod, p1-bodega-ea-prod, p1-us-prod, p1-ca-en-prod, p1-ca-en-teflon, p1-ca-fr-prod, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon, val_app_screenshots
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+  - name: Main
+    flow:
+
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Onboarding
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+
+      # Sign in
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp001.user.email.android
+          else:
+            - storeIn:
+                key: userEmail
+                value: data.wcp001.user.email.ios
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+    
+
+      # Clear cart
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+
+      # Add 2 1P item into cart
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails # --> RETURNS: ${productDetailsArray}, ${totalPrice} / GLOBAL VARS
+          params:
+            - name: productArray
+              string: data.wcp001.product1.1PItemsArray
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails # --> RETURNS: ${productDetailsArray}, ${totalPrice} / GLOBAL VARS
+          params:
+            - name: productArray
+              string: data.wcp001.product2.1PItemsArray
+
+
+      # Assert items added to Cart
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.cartPage.assertAllProductsDisplayed # <-- ${productDetailsArray} / GLOBAL VAR
+
+
+      # Cart page validation
+      - executeFunction:
+          name: functions.cartPage.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: data.global.item.2count
+
+      - executeFunction:
+          name: functions.cartPage.getMoneyBoxData
+          # params:
+          #   - name: expectedSubTotal
+          #     string: ${totalPrice} # GLOBAL VAR
+          #   - name: assertEstimatedTotal
+          #     string: 'true'
+
+
+      # Navigate to Check out page
+      - executeFunction:
+          name: functions.cartPage.tapDeliveryOption
+      - executeFunction:
+          name: functions.cartPage.tapOnAddressLink
+      - executeFunction:
+          name: functions.cartPage.saveAddressFromList # --> RETURNS: ${returnedSelectedAddressName}, ${returnedSelectedAddress}
+      - executeFunction:
+          name: functions.cartPage.fulfillmentAddress    # --> RETURNS: ${fulfillmentAddressText}         
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      
+
+
+      # Check out page validations
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded
+      - executeFunction: # Validate address details present in checkout
+          name: functions.checkoutPage.assertCorrectFulfillmentAddressIsDisplayed
+      
+
+      
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

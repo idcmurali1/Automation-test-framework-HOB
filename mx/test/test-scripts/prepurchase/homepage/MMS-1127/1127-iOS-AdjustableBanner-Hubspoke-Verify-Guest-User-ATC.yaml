@@ -1,0 +1,215 @@
+#======================================================================================================================
+#    AUTHOR: Osmar Juárez (vn56dce)
+#   CREATED: Nov/28/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    [Home][AdjustableBanner][Hubspokes] - Verify that a guest user can see and access to different componets from home.
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/GlassMX+-+OD+-+Smoke+-+Production+-+Android 
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-4936
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-1127
+#
+#######################################################################################################################
+
+  
+general:
+  tags: prepurchase-walmart-ea-smoke-production-ios-1127, prepurchase-walmart-ea-smoke-production-ios,
+        prepurchase-bodega-ea-smoke-production-ios-1127, prepurchase-bodega-ea-smoke-production-ios
+  testCaseId: MMS-4936
+  
+scenarios:
+
+  # BEFORE HOOK #######################################################################################################
+  - name: Before
+    before: true
+    flow:
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: MMS_1127_SUCCESSFUL_EXECUTION
+          value: false
+      - storeIn:
+          key: IS_HUBSPOKE_PRESENT
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  # MAIN HOOK #########################################################################################################
+  - name: Main
+    platform: ios
+    flow:
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN WALMART APP AND COMPLETE ONBOARDING. (2) OPEN THE EA BANNER."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+          
+      # STEP 3 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: OPEN ANY ADJUSTABLE BANNER OR CATEGORY DISPLAYED IN HOME UNTIL FIND A HUBSPOKE."
+         color: ORANGE
+      - loop:
+          begin: 0
+          end: 5
+          storeIndex: iHomeScroll
+          mode: increment
+          flow:
+            - log:
+                message: "Loop: Scroll number {${iHomeScroll}} in home until some adjustable banner, category, or triple pack"
+                color: PURPLE
+            - numberOfChildElements:
+                identifier: mx.mappings.home.pageContainer
+                storeIn: numberOfAdCardsDisplayedInHome
+                filterBy: mx.mappings.home.adjustableBannerOrTriplePackOrCategoriesCardsView
+            - if:
+                condition: "${numberOfAdCardsDisplayedInHome} == 0"
+                then: 
+                  - scroll:
+                     direction: down
+                     withinIdentifier: mx.mappings.home.pageContainer
+                else:
+                  - loop:
+                      begin: 0
+                      end: ${numberOfAdCardsDisplayedInHome}
+                      storeIndex: iAd
+                      mode: increment
+                      flow:
+                        - log:
+                            message: "Loop: Opening {${iAd}} adjustable banner to look for a Hubspoke"
+                            color: PURPLE
+                        - if:
+                            condition: ${IS_HUBSPOKE_PRESENT}
+                            then:
+                              - break: true
+                        - try:
+                            flow:
+                              - click:
+                                  identifier: mx.mappings.home.adjustableBannerOrTriplePackOrCategoriesCardsView
+                                  index: ${iAd}
+                            catch:
+                              flow:
+                                - log:
+                                   message: <TRY-CATCH> Something went wrong trying to open adjustable banner or validating if a Tempo module was present.
+                                   color: YELLOW
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: mx.mappings.home.categoryHubspokeModuleView
+                              timeout: 10000
+                            then:
+                              - log:
+                                  message: "Hubspoke is present in page"
+                                  color: GREEN_BOLD
+                              - storeIn:
+                                  key: IS_HUBSPOKE_PRESENT
+                                  value: true
+                            else:
+                              - scroll:
+                                  direction: down
+                              - if:
+                                  identifier:
+                                    present:
+                                      - identifier: mx.mappings.home.categoryHubspokeModuleView
+                                    timeout: 4000
+                                  then:
+                                    - storeIn:
+                                        key: IS_HUBSPOKE_PRESENT
+                                        value: true
+                        - if: 
+                            condition: ${IS_HUBSPOKE_PRESENT}
+                            then:                            
+                              - executeFunction:
+                                  name: mx.functions.home.tapCategoryHubspokeByIndex
+                                  params:
+                                    - name: categoryIndex
+                                      string: '1'
+                              - executeFunction:
+                                  name: mx.functions.home.plp.assertPageDisplayed
+                              - scroll:
+                                  direction: down
+                                  scrollLimit: 3
+                              - click:
+                                  identifier: searchPage.addToCartBtn # click on first ATC present
+                              - log: 
+                                  message: "[OK] Assertion success: Hubspoke configured as expected"
+                                  color: GREEN_BOLD
+                            else:
+                              - log:
+                                  message: No Hubspoke was founded.
+                                  color: YELLOW_BOLD
+                        - if: 
+                           identifier:
+                             notPresent:
+                               - identifier: mx.mappings.home.pageContainer
+                           then:
+                              - goBack: true
+            - if:
+                condition: ${IS_HUBSPOKE_PRESENT}
+                then:
+                  - log:
+                      message: "Assertion success for: Hubspoke-[OK]"
+                      color: GREEN_BOLD
+                  - break: true
+                else:
+                  - scroll:
+                      direction: down
+                      withinIdentifier: mx.mappings.home.pageContainer
+                  - scroll:
+                      direction: down
+                      withinIdentifier: mx.mappings.home.pageContainer
+                  - scroll:
+                      direction: down
+                      withinIdentifier: mx.mappings.home.pageContainer
+                  - scroll:
+                      direction: down
+                      withinIdentifier: mx.mappings.home.pageContainer
+                 
+      # End main -------------------------------------------------------------------------------------------------------
+      - if:
+          condition: ${IS_HUBSPOKE_PRESENT}
+          then:
+            - storeIn:
+                key: MMS_1127_SUCCESSFUL_EXECUTION
+                value: true
+
+  # AFTER HOOK #########################################################################################################
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+    
+      - if:
+          condition: ${MMS_1127_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. No need to reset data for next execution. [Guest User]"
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"
+  

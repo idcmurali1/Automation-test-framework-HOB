@@ -1,0 +1,180 @@
+general:
+  # tags: unified-prod-e2e, C2657132
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2657132
+  metadata:
+    - name: scenarioId
+      string: EC022
+      
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+    # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+    # Sign in with Existing account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: ivan.haidarli@walmart.com
+            - name: android.password
+              string: Password2!
+            - name: ios.email
+              string: prod.ios.wplusexplicitdelivery@cloudtest.org
+            - name: ios.password
+              string: us.data.prod.wplusexplicitdelivery.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+    # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?expo_preview=true&experiment_spec=0B_rr&variation_specs=xQQMk&experiment_count=0
+
+      - executeFunction:
+          name: unified.us.functions.utils.terminateApp
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: tshirt
+
+      # Verify w+ free delivery SLA on serach page
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.searchpage.deliveryBadgeSLA
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.item.verifyFreeDeliveryWithWalmartPlus
+          params: 
+            - name: item
+              string: sharedItem 
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # add shared delivery item to cart
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: Gerber Yellow Rice and Chicken with Vegetables
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.searchpage.deliveryBadgeSLA
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: us.functions.item.verifyFreeDeliveryWithWalmartPlus
+          params: 
+            - name: item
+              string: sharedItem       
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # Add frozen item to cart
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: Frozen chicken
+      - sleep:
+          duration: 5000 
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.searchpage.deliveryBadgeSLA
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: us.functions.item.verifyFreeDeliveryWithWalmartPlus
+          params: 
+            - name: item
+              string: frozenItem 
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Verify Delivery fulfillment in cart
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

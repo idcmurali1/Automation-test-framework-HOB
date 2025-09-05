@@ -1,0 +1,151 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function asserts the items listed in the Cart Page in the corresponding list by Fulfillment
+  #    Method. In Merge Hallways, a single order can have different type of fulfillment methods per the item types
+  #    (unscheduled delivery, scheduled delivery or scheduled pickup), so, the products will display in separate
+  #    sections/lists in the page depending on their fulfillment type.
+  #
+  #    NOTES: In Android, the page hierarchy is not well structured and so it doesn't have a parent element to hold
+  #           all the elements that represent a Fulfillment Group and the products grouped within, making the process
+  #           of asserting the products have been grouped correctly difficult. As per that, this function used the
+  #           following util to resolve the issue:
+  #
+  #              - functions.utils.json.CartFulfillmentGroupingBuilder.buildGroupsJson
+  #
+  # PARAMS:
+  #   ${fulfillmentMethod}  [Mandatory]
+  #        Defines in which category/list the items array will be validated.
+  #        Options: [ scheduledPickup | scheduledDelivery | unscheduledPickup | unscheduledDelivery ]
+  #
+  #   ${itemsArray}  [Mandatory]
+  #         List of items to be asserted.
+  #         Similar items array as the one obtained by the function 'searchPage.addToCartUsingItemArrayList-GetProductDetails'.
+  #
+  #   ${assertItemDetails}  [Mandatory]
+  #         Whether to assert the items details or only whether it's displayed or not.
+  #         Options: [ true | false | null ]. If null, it will be taken as true.
+  #
+  #   ${useExistingGroupsJson}  [Optional]
+  #         Controls whether to obtain the Groups Json out of the page structure or use the existing one in case you
+  #         already obtained it in a previous execution of the function. The recommendation is to use the existing one
+  #         only if the Cart has not changed in order to speed up the assertion process in subsequent function calls.
+  #         Options: [ true | false | null ]. If null, it will be taken as false.
+  #
+  - name: functions.cartPage.assertItemsArrayListed-byFulfillmentMethod
+    platform: android
+    flow:
+      # Check param fulfillmentMethod...
+      - if:
+          condition: ${fulfillmentMethod} != 'scheduledPickup' && ${fulfillmentMethod} != 'scheduledDelivery' && ${fulfillmentMethod} != 'unscheduledPickup' && ${fulfillmentMethod} != 'unscheduledDelivery'
+          then:
+            - failTest:
+                message: X Fulfillment method provided '${fulfillmentMethod}' is not correct. Use any of [ scheduledPickup | scheduledDelivery | unscheduledPickup | unscheduledDelivery ].
+          else:
+            - log:
+                message: "Fulfillment Method: '${fulfillmentMethod}'"
+                color: CYAN
+
+      # Check param itemsArray...
+      - if:
+          condition: ${itemsArray} == "null"
+          then:
+            - failTest:
+                message: X Items Array is empty.
+          else:
+            - log:
+                message: "Items Array: '${itemsArray}'"
+                color: CYAN
+
+      # Check param assertItemDetails...
+      - if:
+          condition: ${assertItemDetails} == "null"
+          then:
+            - storeIn:
+                key: assertItemDetails
+                value: true
+      - if:
+          condition: ${assertItemDetails} != true && ${assertItemDetails} != false
+          else:
+            - failTest:
+                message: X Assert Item Details value '${assertItemDetails}' is not correct. Use any of [ true | false | null ].
+          then:
+            - log:
+                message: "Assert Item Details value: '${assertItemDetails}'"
+                color: CYAN
+
+      # Check param useExistingGroupsJson...
+      - if:
+          condition: ${useExistingGroupsJson} == "null"
+          then:
+            - storeIn:
+                key: useExistingGroupsJson
+                value: false
+      - if:
+          condition: ${useExistingGroupsJson} != true && ${useExistingGroupsJson} != false
+          else:
+            - failTest:
+                message: X Use Existing Groups Json value '${useExistingGroupsJson}' is not correct. Use any of [ true | false | null ].
+          then:
+            - log:
+                message: "Use Existing Groups Json value: '${useExistingGroupsJson}'"
+                color: CYAN
+
+      # Collapse basket switching section...
+      - executeFunction:
+          name: functions.cartPage.collapseBasketSwitchingSectionIfExpanded
+
+      # Obtain the Groups Json if required...
+      - if:
+          condition: '!${useExistingGroupsJson}'
+          then:
+            - executeFunction:
+                name: functions.utils.json.CartFulfillmentGroupingBuilder.buildGroupsJson # RETURNS --> ${groupsJson}
+          else:
+            - log:
+                message: "Existing Groups Json: '${groupsJson}'"
+                color: CYAN
+
+      # Reset param obtainGroupsJson to false to ensure it always builds groupsJson by default, unless param is submitted in function call as true...
+      - storeIn:
+          key: useExistingGroupsJson
+          value: false
+
+      # Define which group to use for validations...
+      - if:
+          condition: ${fulfillmentMethod} == 'scheduledPickup' || ${fulfillmentMethod} == 'scheduledDelivery'
+          then:
+            - storeIn:
+                key: groupName
+                value: SCHEDULED
+          else:
+            - storeIn:
+                key: groupName
+                value: UNSCHEDULED
+
+      # Assert the group using the JS helper...
+      - executeNode:
+          file: wcp/test/helpers/CartPage/fulfillmentGroupingJsonTools-assertCorrectGrouping.js
+          args:
+            - value: ${groupsJson}
+            - value: ${groupName}
+            - value: ${itemsArray}
+            - value: ${assertItemDetails}
+          getValue:
+            - key: success
+              storeIn: successfulAssertion
+            - key: errorMessage
+              storeIn: errorMessage
+      - if:
+          condition: '!${successfulAssertion}'
+          then:
+            - failTest:
+                message: X ${errorMessage}
+      - log:
+          message: ✔︎ All products found in the corresponding ${fulfillmentMethod} group.
+          color: GREEN_BOLD
+
+      - log:
+          message: "End function: cartPage.assertItemsArrayListed-byFulfillmentMethod"
+          color: BLUE

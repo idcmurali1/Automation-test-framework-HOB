@@ -1,0 +1,940 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Oct/24/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  - name: mx.functions.utils.performActionSearch
+    platform: android
+    flow:
+      - executeAppiumScript:
+          method: "mobile: performEditorAction"
+          params:
+            - key: action
+              value: search
+      - log:
+          message: "End function: utils.performActionSearch"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+  
+  - name: mx.functions.utils.performActionDone
+    platform: android
+    flow: 
+      - executeAppiumScript:
+          method: "mobile: performEditorAction"
+          params:
+            - key: action
+              value: done
+      - log:
+          message: "End function: utils.performActionDone"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+  
+  - name: mx.functions.utils.performActionNext
+    platform: android
+    flow: 
+      - executeAppiumScript:
+          method: "mobile: performEditorAction"
+          params:
+            - key: action
+              value: next
+      - log:
+          message: "End function: utils.performActionNext"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+  
+  - name: mx.functions.utils.performActionPrevious
+    platform: android
+    flow: 
+      - executeAppiumScript:
+          method: "mobile: performEditorAction"
+          params:
+            - key: action
+              value: previous
+      - log:
+          message: "End function: utils.performActionPrevious"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------          
+  
+  # Description: This function tap on close keyboard button
+  - name: mx.functions.utils.tapCloseKeyboardButton
+    platform: android
+    flow: 
+      - executeFunction:
+          name: mx.functions.utils.performActionDone
+      - log:
+          message: "End function: utils.tapCloseKeyboardButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+  
+  # Description: This function extracts the 'bounds' attribute from ${element} and stores the X and Y coordinate values
+  #              in the variables ${x} and ${y} respectively.
+  # Param:       ${element}  [Mandatory]  Coordinates will be extracted from this element.
+  - name: mx.functions.utils.extractElementCoordinates
+    platform: android
+    flow: 
+      - log:
+          message: "Extracting bounds attribute from element..."
+          color: CYAN
+      - getString:
+          identifier: ${element}
+          storeIn: bounds
+          attribute: bounds
+      - log:
+          message: "Extracted bounds: ${bounds}"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: '${bounds}'
+            - value: 'Android'
+          getValue:
+            - key: x
+              storeIn: x
+            - key: y
+              storeIn: y
+            - key: x2
+              storeIn: x2
+            - key: y2
+              storeIn: y2
+      - log:
+          message: "Coordinates got: X: ${x} and Y: ${y}"
+          color: CYAN
+      - log:
+          message: 'End function: mx.functions.utils.extractElementCoordinates'
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+  
+  # Description: This function performs a click by coordinates relative to the specified element on ${relativeElement}
+  #              by modifying the values of the X and Y coordinates.
+  #              Note: The X coordinate is the horizontal axis and the Y coordinate is the vertical axis in appium.
+  #              Note: To only modify one axis, the one not to be modified must be set to '0'. I.E. to perform a click
+  #              to the right of the relative element you can assign the params like this: ${modifyValueX} = '150'
+  #              and ${modifyValueY} = '0'.
+
+  #              Note: +X,+Y = This will perform a diagonal click down and to the right of the relative element.
+  #              Note: -X,+Y = This will perform a diagonal click down and to the left of the relative element.
+  #              Note: +X,-Y = This will perform a diagonal click up and to the right of the relative element.
+  #              Note: -X,-Y = This will perform a diagonal click up and to the left of the relative element.
+
+  # Param:       ${relativeElement}   [Mandatory]  The click will be performed relative to this element.
+  # Param:       ${modifyValueX}      [Mandatory]  Integer: value that will be used to modify the X coordinate, can be negative.
+  # Param:       ${modifyValueY}      [Mandatory]  Integer: value that will be used to modify the Y coordinate, can be negative.
+  - name: mx.functions.utils.clickByCoordinatesRelativeToElement
+    platform: android
+    flow:
+        - executeFunction:
+            name: mx.functions.utils.extractElementCoordinates
+            params:
+              - name: element
+                string: ${relativeElement}
+        - log:
+            message: "Modifying coordinates of X and Y"
+            color: CYAN
+        - arithmetic:
+            expression: ${x} + ${modifyValueX}
+            storeIn: x1
+        - arithmetic:
+            expression: ${y} + ${modifyValueY}
+            storeIn: y1
+        - click:
+            coordinates: ${x1}, ${y1}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function toggles a checkbox
+  # Params: ${togglingElement}      [Mandatory]  Element to turn on/off
+  #         ${startMessage}         [Mandatory]  Start log
+  #         ${endMessage}           [Mandatory]  Successfull toggle log
+  #         ${alternateEndMessage}  [Mandatory]  No toggling action log
+  #         ${previousState}        [Mandatory]  Opposite desired on/off state. This state is true or false. If method 
+  #                                              wants to enable the checkbox, this state should be false to change 
+  #                                              from false to true. If method wants to unmark, this state should be 
+  #                                              true to change from true to false
+  - name: mx.functions.utils.togglingOption
+    platform: android
+    flow:
+      - log:
+          message: ${startMessage}
+          color: CYAN
+      - getString:
+          attribute: checked
+          identifier: ${togglingElement}
+          storeIn: checkedFlag
+      - if:
+          condition: ${checkedFlag} == ${previousState}
+          then: 
+            - click:
+                identifier: ${togglingElement}
+            - log:
+                message: ${endMessage}
+                color: CYAN
+          else:
+            - log:
+                message: ${alternateEndMessage}
+                color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function scrolls all the way to the top with a single click.
+   
+  - name: mx.functions.utils.scrollToTop
+    platform: android
+    flow:
+      - log:
+          message: "Scrolling to the top."
+          color: CYAN
+      - click:
+          coordinates: 50%,5%
+      - log:
+          message: "End function: utils.scrollToTop"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This method closes any instance of the black popup from different pages if it's displayed.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.closeBlackPopupIfDisplayed
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.utils.black-popup.container
+          then:
+            - log:
+                message: "Black popup found..."
+                color: GREEN_BOLD
+            - click:
+                identifier: mx.mappings.utils.black-popup.closeButton
+            - log:
+                message: "Black popup closed"
+                color: GREEN_BOLD
+          else:
+            - log:
+                message: "Black popup not displayed, process will continue"
+                color: GREEN_BOLD
+      - log:
+          message: "End function: utils.closeBlackPopupIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${packageName}  [Mandatory]  Android App Package to terminate.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Rodrigo Pacheco  (vn53p0i) - Osmar Juárez (vn56dce)
+  - name: mx.functions.utils.terminateApp
+    platform: android
+    flow:
+      - executeAppiumScript:
+          method: "mobile: terminateApp"
+          params:
+            - key: appId
+              value: ${packageName}
+      - log:
+          message: "End function: utils.terminateApp"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${packageName}  [Mandatory]  Android App Package to activate.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Rodrigo Pacheco  (vn53p0i) -  Osmar Juárez (vn56dce)
+  - name: mx.functions.utils.activateApp
+    platform: android
+    flow:
+      - activateApp:
+          packageName: ${packageName}
+      - log:
+          message: "End function: utils.activateApp"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${packageName}  [Optional]  App Package to re-launch. If this param is not set, the default value is 'com.walmart.mg.debug'
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITOR: Rodrigo Pacheco  (vn53p0i) - Osmar Juárez (vn56dce)
+  - name: mx.functions.utils.relaunchApp
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.utils.terminateApp
+          params:
+            - name: packageName
+              string: ${packageName:com.walmart.mg.debug}
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.utils.activateApp
+          params:
+            - name: packageName
+              string: ${packageName:com.walmart.mg.debug}
+      - sleep:
+          duration: 5000
+      - log:
+          message: "End function: utils.relaunchApp"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${element}  [Mandatory]  Element to check whether it is displayed or not in the visible area of the screen.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.isElementDisplayed
+    platform: android
+    flow:
+      - log:
+          message: "Element: '${element}'"
+          color: CYAN
+      - storeIn:
+          key: returnedIsDisplayed
+          value: false
+      - if:
+          identifier: 
+            present:
+              - identifier: ${element}
+          then:
+            - storeIn:
+                key: returnedIsDisplayed
+                value: true
+      - log:
+          message: "Is element displayed?: '${returnedIsDisplayed}'"
+          color: CYAN
+      - log:
+          message: "End function: utils.isElementDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Centers an element vertically within a container. This method first, looks for the element upwards or
+  #   downwards in case the element is not present in the view. If it finds it, it brings it into view, and then compares
+  #   the positions of the elements and the container to try to center the element the most accurate way possible right
+  #   in the middle of the container.
+  # PARAMS:
+  #     ${mappingOfContainer}        [Mandatory]  The mapping of the container to center within.
+  #     ${mappingOfElementToCenter}  [Mandatory]  The mapping of the element to be centered.
+  #     ${searchDirection}           [Mandatory]  The direction where the method will look for the element in case it is
+  #                                               not initially present in the view. Options: [ up | down ]
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.centerElementVerticallyWithinContainer
+    platform: android
+    flow:
+      - log:
+          message: "Container: ${mappingOfContainer}"
+          color: CYAN
+      - log:
+          message: "Element: ${mappingOfElementToCenter}"
+          color: CYAN
+      - log:
+          message: "Search Direction: ${searchDirection}"
+          color: CYAN
+
+      # Search for the element to center and bring it to view when it is not in view already...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ${mappingOfElementToCenter}
+          then:
+            - scroll:
+                direction: ${searchDirection}
+                untilIdentifier: ${mappingOfElementToCenter}
+                position: center
+                timeout: 30000
+                wait: 1000
+
+      # At this point the element to center is now present in the view either from the beginning or because the
+      # previous check performed a scroll to find it...
+
+      # Execute a process to center it properly within the provided container...
+
+      # Get Bounds of Container...
+      - getString:
+          identifier: ${mappingOfContainer}
+          attribute: bounds
+          storeIn: containerBounds
+      - executeNode:
+          file: mx/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: ${containerBounds}
+            - value: Android
+          getValue:
+            - key: x
+              storeIn: containerX
+            - key: y
+              storeIn: containerY
+            - key: y2
+              storeIn: containerY2
+            - key: height
+              storeIn: containerHeight
+            - key: width
+              storeIn: containerWidth
+          getResponse:
+            storeIn: containerBoundsJson
+      - log:
+          message: "Container Bounds Json: ${containerBoundsJson}"
+          color: GREEN
+
+      # Get Bounds of Element...
+      - getString:
+          identifier: ${mappingOfElementToCenter}
+          attribute: bounds
+          storeIn: elementBounds
+      - executeNode:
+          file: mx/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: ${elementBounds}
+            - value: Android
+          getValue:
+            - key: y
+              storeIn: elementY
+            - key: height
+              storeIn: elementHeight
+          getResponse:
+            storeIn: elementBoundsJson
+      - log:
+          message: "Element Bounds Json: ${elementBoundsJson}"
+          color: GREEN
+
+      # Calculate the Mid Y coordinate of the Container...
+      - arithmetic:
+          expression: (${containerHeight} / 2) + ${containerY}
+          asInt: true
+          storeIn: containerMidY
+
+      # Calculate the Mid Y coordinate of the Element...
+      - arithmetic:
+          expression: (${elementHeight} / 2) + ${elementY}
+          asInt: true
+          storeIn: elementMidY
+
+      # Determine the position of the Element with respect to the Container by comparing their MidY coordinates...
+      # Options: above | below | same
+      - storeIn:
+          key: elementPosition # Default position: same
+          value: same
+      - if:
+          condition: ${elementMidY} < ${containerMidY} # Position: above
+          then:
+            - storeIn:
+                key: elementPosition
+                value: above
+      - if:
+          condition: ${elementMidY} > ${containerMidY} # Position: below
+          then:
+            - storeIn:
+                key: elementPosition
+                value: below
+
+      # Scroll the Element into the Container to make their Mid Y positions match, based on the element's position...
+      - arithmetic:
+          expression: (${containerWidth} / 2) + ${containerX}
+          asInt: true
+          storeIn: dragX
+      - if:
+          condition: ${elementPosition} == 'above'
+          then:
+            - arithmetic:
+                expression: ${containerMidY} - ${elementMidY}
+                storeIn: dragDistance
+            - arithmetic:
+                expression: ${containerY} + 1
+                storeIn: dragFromY
+            - arithmetic:
+                expression: ${containerY} + ${dragDistance}
+                storeIn: dragToY
+            - drag:
+                from:
+                  x: ${dragX}
+                  y: ${dragFromY}
+                to:
+                  x: ${dragX}
+                  y: ${dragToY}
+                wait: 3000
+      - if:
+          condition: ${elementPosition} == 'below'
+          then:
+            - arithmetic:
+                expression: ${elementMidY} - ${containerMidY}
+                storeIn: dragDistance
+            - arithmetic:
+                expression: ${containerY2} - 1
+                storeIn: dragFromY
+            - arithmetic:
+                expression: ${containerY2} - ${dragDistance}
+                storeIn: dragToY
+            # In case the bottom menu is present, subtract 200 additional pixels to dragFromY and dragToY to fix the bottom menu overlap...
+            # (the approximate height of the bottom menu is 200px)
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.bottom-menu.bottomMenuContainer
+                  timeout: 1000
+                then:
+                  - arithmetic:
+                      expression: ${dragFromY} - 200
+                      storeIn: dragFromY
+                  - arithmetic:
+                      expression: ${dragToY} - 200
+                      storeIn: dragToY
+            - drag:
+                from:
+                  x: ${dragX}
+                  y: ${dragFromY}
+                to:
+                  x: ${dragX}
+                  y: ${dragToY}
+                wait: 3000
+      - log:
+          message: "End function: mx.functions.utils.centerElementVerticallyWithinContainer"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Scrolls vertically, upwards or downwards, the desired amount of times, using an scrollable element as
+  #   reference. The scrolls are performed within the scrollable element bounds only, so it is important to select an
+  #   appropriate scrollable element which is static in the page. i.e. in SLP, you can use the element which works as
+  #   container of the results list.
+  # PARAMS:  ${staticScrollableElementMapping}  [Mandatory]  Mapping of the static scrollable element to scroll within.
+  #          ${direction}                       [Mandatory]  Direction of the scroll. Options: [ up | down ]
+  #          ${scrollCount}                     [Mandatory]  Number of scrolls to perform.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.scrollVerticallyUsingStaticScrollableElement
+    platform: android
+    flow:
+      - log:
+          message: "Static Scrollable Element: ${staticScrollableElementMapping}"
+          color: CYAN
+      - log:
+          message: "Direction: ${direction}"
+          color: CYAN
+
+      - if:
+          condition: ${direction} != 'up' && ${direction} != 'down'
+          then:
+            - failTest:
+                message: "Function Error: given direction is not valid. Valid options: [ up | down ]."
+
+      - getString:
+          identifier: ${staticScrollableElementMapping}
+          attribute: bounds
+          storeIn: sseBounds
+
+      - executeNode:
+          file: mx/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: ${sseBounds}
+            - value: Android
+          getValue:
+            - key: x
+              storeIn: sseX
+            - key: y
+              storeIn: sseY
+            - key: y2
+              storeIn: sseY2
+            - key: width
+              storeIn: sseWidth
+          getResponse:
+            storeIn: sseBoundsJson
+      - log:
+          message: "Static Scrollable Element Bounds Json: ${sseBoundsJson}"
+          color: GREEN
+
+      - arithmetic:
+          expression: (${sseWidth} / 2) + ${sseX}
+          asInt: true
+          storeIn: dragX
+
+      - if:
+          condition: ${direction} == 'up'
+          then:
+            - storeIn:
+                key: dragFromY
+                value: ${sseY}
+            - storeIn:
+                key: dragToY
+                value: ${sseY2}
+      - if:
+          condition: ${direction} == 'down'
+          then:
+            - storeIn:
+                key: dragFromY
+                value: ${sseY2}
+            - storeIn:
+                key: dragToY
+                value: ${sseY}
+
+      - loop:
+          begin: 1
+          end: ${scrollCount}
+          storeIndex: lap
+          flow:
+            - log:
+                message: "Loop Cycle: ${lap}..."
+                color: GREEN
+            - drag:
+                from:
+                  x: ${dragX}
+                  y: ${dragFromY}
+                to:
+                  x: ${dragX}
+                  y: ${dragToY}
+                wait: 100
+
+      - log:
+          message: "End function: mx.functions.utils.scrollVerticallyUsingStaticScrollableElement"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${element}  Element to check whether is clickable or not.
+  # RETURNS:  ${returnedIsClickable}  Whether the given element is clickable or not.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.isElementClickable
+    platform: android
+    flow:
+      - log:
+          message: "Element: '${element}'"
+          color: CYAN
+      - storeIn:
+          key: returnedIsClickable # --RETURNS--${returnedIsClickable}-->
+          value: false
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ${element}
+          then:
+            - failTest:
+                message: "Element does not even exist"
+      - getString:
+          identifier: ${element}
+          attribute: clickable
+          storeIn: returnedIsClickable # --RETURNS--${returnedIsClickable}-->
+      - log:
+          message: "Element is clickable = ${returnedIsClickable}"
+          color: CYAN
+      - log:
+          message: "End function: mx.functions.utils.isElementClickable"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Checks whether the given element is behind the Bottom Menu or not. If the element does not exist, the
+  #   function should fail. This means, you must ensure the element exists before checking it.
+  # PARAMS:  ${element}  Element to check.
+  # RETURNS: ${returnedIsBehind}  Whether the given element is behind the Bottom Menu or not.
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.isElementBehindBottomMenu
+    platform: android
+    flow:
+      - log:
+          message: "Element: '${element}'"
+          color: CYAN
+      # Check if element exists...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: ${element}
+          then:
+            - failTest:
+                message: "Element does not even exist"
+      # Check if bottom menu exists...
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.bottom-menu.bottomMenuContainer
+          then:
+            # If not exists, then the element is not behind it...
+            - storeIn:
+                key: returnedIsBehind
+                value: false # --RETURNS--${returnedIsBehind}-->
+          else:
+            # If it exists, check the Y position of both elements and compare them...
+            - getString:
+                identifier: ${element}
+                attribute: bounds
+                storeIn: elementBounds
+            - executeNode:
+                file: mx/test/helpers/utils/extractElementCoordinates.js
+                args:
+                  - value: ${elementBounds}
+                  - value: Android
+                getValue:
+                  - key: y
+                    storeIn: elementY
+                  - key: height
+                    storeIn: elementHeight
+            - arithmetic:
+                expression: ${elementY} + (${elementHeight} / 2)
+                asInt: true
+                storeIn: elementFixedY
+            - getString:
+                identifier: mx.mappings.bottom-menu.bottomMenuContainer
+                attribute: bounds
+                storeIn: menuBounds
+            - executeNode:
+                file: mx/test/helpers/utils/extractElementCoordinates.js
+                args:
+                  - value: ${menuBounds}
+                  - value: Android
+                getValue:
+                  - key: y
+                    storeIn: menuY
+            - if:
+                condition: ${elementFixedY} >= ${menuY}
+                then:
+                  - storeIn:
+                      key: returnedIsBehind
+                      value: true # --RETURNS--${returnedIsBehind}-->
+                else:
+                  - storeIn:
+                      key: returnedIsBehind
+                      value: false # --RETURNS--${returnedIsBehind}-->
+      - log:
+          message: "Element is behind Bottom Menu = ${returnedIsBehind}"
+          color: CYAN
+      - log:
+          message: "End function: mx.functions.utils.isElementBehindBottomMenu"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function will center an element if it is displayed. This function assumes the expected
+  #                 element is displayed and not out of view.
+  # PARAM:        ${elementToPositionCenter}  [Mandatory] Element center, if this element contains a variable, you should make sure to
+  #                                                         set it before running this function by using a storeIn or something similar. Element
+  #                                                         must be visible before running this function.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.positionElementToTheCenter
+    platform: android
+    flow:
+      # Extracting Max Screen Size...
+      - log:
+          message: "Extracting Max Screen Size..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: mx.mappings.utils.genericPageContainer
+      - storeIn:
+          key: maxScreenSize
+          value: ${y2}
+      - log:
+          message: "Max Screen Size: '${maxScreenSize}'" # This is our 100%...
+          color: CYAN
+
+      # Getting Element current position (Height)...
+      - log:
+          message: "Getting Element Current Position (Height)..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: ${elementToPositionCenter}
+      - storeIn:
+          key: elementHeightPosition
+          value: ${y}
+      - log:
+          message: "Element Position (Height): '${elementHeightPosition}'"
+          color: CYAN
+
+      # Getting Element Position in (%)...
+      - log:
+          message: "Getting Element Position in (%)..."
+          color: CYAN
+      - arithmetic:
+          expression: (${elementHeightPosition} * 100) / ${maxScreenSize}
+          numberOfDecimalPlaces: 0
+          storeIn: elementHeightPosition
+      - log:
+          message: "Element Position (%): '${elementHeightPosition}%'"
+          color: CYAN
+
+      # Moving the element to the center if necessary...
+      - if:
+          condition: ${elementHeightPosition} > 60 || ${elementHeightPosition} < 20
+          then:
+            - drag:
+                from:
+                  x: 50%
+                  y: ${elementHeightPosition}%
+                to:
+                  x: 50%
+                  y: 45%
+                wait: 3000
+          else:
+            - log:
+                message: "Element is within visible range, there's no need to center it."
+                color: CYAN
+      - log:
+          message: "End function: utils.positionElementToTheCenter"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function will position the element at the top if it is displayed. This function assumes the expected
+  #                 element is displayed below 50% of the screen.
+  # PARAM:        ${elementToPositionUp}  [Mandatory] Element to position up, if this element contains a variable, you should make sure to
+  #                                          set it before running this function by using a storeIn or something similar. Element
+  #                                          must be visible before running this function.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.positionElementAtTheTop
+    platform: android
+    flow:
+      # Extracting Max Screen Size...
+      - log:
+          message: "Extracting Max Screen Size..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: mx.mappings.utils.genericPageContainer
+      - storeIn:
+          key: maxScreenSize
+          value: ${y2}
+      - log:
+          message: "Max Screen Size: '${maxScreenSize}'" # This is our 100%...
+          color: GREEN_BOLD
+
+      # Getting Element current position (Height)...
+      - log:
+          message: "Getting Element Current Position (Height)..."
+          color: GREEN_BOLD
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: ${elementToPositionUp}
+      - storeIn:
+          key: elementHeightPosition
+          value: ${y}
+      - log:
+          message: "Element Position (Height): '${elementHeightPosition}'"
+          color: GREEN_BOLD
+
+      # Getting Element Position in (%)...
+      - log:
+          message: "Getting Element Position in (%)..."
+          color: GREEN_BOLD
+      - arithmetic:
+          expression: (${elementHeightPosition} * 100) / ${maxScreenSize}
+          numberOfDecimalPlaces: 0
+          storeIn: elementHeightPosition
+      - log:
+          message: "Element Position (%): '${elementHeightPosition}%'"
+          color: GREEN_BOLD
+
+      # Moving the element to the top if necessary...
+      - if:
+          condition: ${elementHeightPosition} > 20
+          then:
+            - drag:
+                from:
+                  x: 50%
+                  y: ${elementHeightPosition}%
+                to:
+                  x: 50%
+                  y: 15%
+                wait: 3000
+      - log:
+          message: "End function: utils.positionElementAtTheTop"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This method scrolls up to top section, then scrolls down to search an element and asserts if is present.
+  # PARAMS: ${elementToFind}  [Mandatory]  Mapping of the element to find.
+  #         ${direction}      [Optional]   Direction where to scroll to try to find the element.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt), Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.searchItemInPage
+    platform: android
+    flow:
+      - log:
+          message: "Element to Find: '${elementToFind}'"
+          color: CYAN
+      - log:
+          message: "Direction: '${direction}'"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.isElementDisplayed
+          params:
+            - name: element
+              string: ${elementToFind}
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - log:
+                message: "Element Found"
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.utils.positionElementToTheCenter
+                params:
+                  - name: elementToPositionCenter
+                    string: ${elementToFind}
+          else:
+            - log:
+                message: "Element not currently visible on screen, process will scroll up to start search from top"
+                color: CYAN
+            - if:
+                condition: ${direction} == "null"
+                then:
+                  - scroll:
+                      direction: up
+                      position: center
+                      scrollLimit: 5
+                      wait: 1000
+                  - executeFunction:
+                      name: mx.functions.utils.isElementDisplayed
+                      params:
+                        - name: element
+                          string: ${elementToFind}
+                  - if:
+                      condition: ${returnedIsDisplayed}
+                      then:
+                        - log:
+                            message: "Element Found"
+                            color: CYAN
+                      else:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: ${elementToFind}
+                            position: center
+                            scrollLimit: 8
+                            wait: 1000
+                else:
+                  - scroll:
+                      direction: ${direction}
+                      untilIdentifier: ${elementToFind}
+                      position: center
+                      scrollLimit: 10
+            - executeFunction:
+                name: mx.functions.utils.isElementDisplayed
+                params:
+                  - name: element
+                    string: ${elementToFind}
+            - if:
+                condition: ${returnedIsDisplayed}
+                then:
+                  - log:
+                      message: "Element Found"
+                      color: CYAN
+                else:
+                  - failTest:
+                      message: "Element Not Found"
+      - log:
+          message: "End function: utils.searchItemInPage"
+          color: BLUE

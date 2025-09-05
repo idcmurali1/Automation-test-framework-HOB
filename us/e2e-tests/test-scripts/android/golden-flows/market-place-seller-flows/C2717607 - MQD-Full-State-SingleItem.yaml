@@ -1,0 +1,142 @@
+general:
+  platform: android
+  tags: us-golden-flows, P1, us-golden-flows-ecom-p1, C2717607, p0-ecomm-teflon-e2e, sss
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2717607
+
+  metadata:
+    - name: scenarioId
+      string: "415"
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      
+      - storeIn:
+          key: customerEmail
+          value: wplususers${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+      
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.visionFlow.createAccountPayload
+
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+     # Set store
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 5014492685 #5014301175
+
+      - sleep:
+          duration: 2000
+
+      # - executeFunction:
+      #     name: us.functions.search.verifyMQDDiscount
+
+      - executeFunction:
+          name: us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: us.functions.item.verifyMQDDiscountLabel
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # Go to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.item.increaseToMaxQty
+          params:
+            - name: maxQty
+              string: 2
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.cart.verifyMQDDisocuntAppliedorNot
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.Textupdates
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+
+
+      
+

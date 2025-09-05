@@ -1,0 +1,103 @@
+#======================================================================================================================
+#  AUTHOR: Isis Tolentino (vn53dge)
+#  CREATED: Nov/28/2024
+#  REVISION: ---
+#  JIRA MANUAL TEST CASE: MMPP-1055
+#  JIRA AUTOMATED TEST CASE: MMPP-3187
+#  FLOW: Navigate to EA Banner, Cancel an Order and Validate Cancellation.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: postpurchase-walmart-ea-sanity-production-ios-1055, postpurchase-bodega-ea-sanity-production-ios-1055
+
+  testCaseId: MMPP-3187
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: MMPP_1055_SUCCESSFUL_EXECUTION
+          value: false
+
+      - storeIn:
+          key: varTC_ORDER_CREATED
+          value: false
+
+      - log: BEFORE SCENARIO END
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+      
+      # STEP 1 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 1: OPEN APP, COMPLETE ONBOARDING AND SELECT BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.postpurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.postpurchase.onboarding.onlineExclusiveStore
+
+      # STEPS 2-4 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 2-4: (2-3) OPEN ACCOUNT AND SELECT SIGNIN. (4) LOGIN."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: mx.postpurchase.1055.userAccount_ios.email 
+            - name: userPassword
+              string: mx.postpurchase.1055.userAccount_ios.password
+
+  # EXTRA STEP: CREATE AN ORDER --------------------------------------------------------------------------------------
+      - log:
+         message: "EXTRA STEP: CREATE AN ORDER."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction: # Clear cart in case previous run failed and left products in the cart...
+          name: functions.cartPage.clearCart
+      - executeFunction:
+          name: mx.flows.od.order-creation.quickOrderCreation # RETURNS --> ${returnedOrderInfo}
+
+    # STEPS 5-6 --------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 5-6: (5) SELECT 'PEDIDOS' OPTION. (6) VALIDATE ORDER HISTORY LIST."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.thankYouPage.tapOnContinueShoppingButton
+      - executeFunction:
+          name: functions.accountPage.navigateToOrderHistoryPage
+      - executeFunction:
+          name: functions.orderHistoryPage.isPageDisplayed

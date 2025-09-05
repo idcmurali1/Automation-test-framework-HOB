@@ -1,0 +1,935 @@
+functions:
+
+  ###########################################################################################
+  # Description : Function to search for a specific order                                   #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${searchValue}          - order #, PO # to be searched                     #
+  ###########################################################################################
+  - name: sc.functions.orders.searchOrder
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.searchButton
+      - click:
+          identifier: sc.mappings.orders.searchButton
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.searchField
+      - click:
+          identifier: sc.mappings.orders.searchType
+      - enterText:
+          identifier: sc.mappings.orders.searchField
+          string: ${searchValue}
+          pressEnter: true
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.firstOrderCard
+      - click:
+          identifier: sc.mappings.orders.firstOrderCard
+
+  ###########################################################################################
+  # Description : Function to select the first order from the list                          #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]  ${validateData}   - true/false [Default false].                             #
+  #                                 If true, poNumber is mandatory.                         #
+  # [optional]  ${poNumber}       - [Previously fetched PO number to be validated against]  #
+  ###########################################################################################
+  - name: sc.functions.orders.selectFirstOrder
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.firstOrderCard
+      - sleep:
+          duration: 5000
+      - if:
+          condition: ${validateData}
+          then:
+            - storeIn:
+                key: index
+                value: 1
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: sc.mappings.orders.nthOrderCard
+                          contains: ${poNumber}
+                else:
+                  - getString:
+                      identifier: sc.mappings.orders.nthOrderCard
+                      attribute: name
+                      storeIn: poData
+                  - verifyValue:
+                      identifier: ${poData}
+                      contains: ${poNumber}
+      - click:
+          identifier: sc.mappings.orders.firstOrderCard
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.header
+      - storeIn:
+          key: validateData
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to load Order details bottom sheet                               #
+  ###########################################################################################
+  - name: sc.functions.orders.loadOrderDetailsBottomSheet
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.detailsLink
+      - click:
+          identifier: sc.mappings.orders.orderDetails.detailsLink
+
+  ###########################################################################################
+  # Description : Function to close Order details bottom sheet                              #
+  ###########################################################################################
+  - name: sc.functions.orders.closeOrderDetailsBottomSheet
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.bottomSheet.close
+      - click:
+          identifier: sc.mappings.orders.orderDetails.bottomSheet.close
+
+  ###########################################################################################
+  # Description : Function to verify if the searched order is displayed or not              #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]  ${validateData}  - true/false [Default false].                              #
+  #                                 If true, poNumber & orderNumber are mandatory.          #
+  # [optional]  ${poNumber}      - [Previously fetched PO number to be validated against]   #
+  # [optional]  ${orderNumber}   - [Previously fetched Order number to be validated against]#
+  ###########################################################################################
+  - name: sc.functions.orders.verifyOrder
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.header
+      - executeFunction:
+          name: sc.functions.orders.loadOrderDetailsBottomSheet
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.bottomSheet.orderTitle
+      - executeFunction:
+          name: sc.functions.orders.verifyOrderDetailsPage
+    
+  ###########################################################################################
+  # Description : Function to verify order details page display of a specifc order          #
+  ###########################################################################################
+  - name: sc.functions.orders.verifyOrderDetailsPage
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.bottomSheet.poNumber
+            - identifier: sc.mappings.orders.orderDetails.bottomSheet.orderNumber
+      - if:
+          condition: ${validateData}
+          then:
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - verifyIdentifier:
+                      text:
+                        - identifier: sc.mappings.orders.orderDetails.bottomSheet.poNumber
+                          equals: ${poNumber}
+                        - identifier: sc.mappings.orders.orderDetails.bottomSheet.orderNumber
+                          equals: ${orderNumber}
+                else:
+                  - verifyIdentifier:
+                      label:
+                        - identifier: sc.mappings.orders.orderDetails.bottomSheet.poNumber
+                          equals: ${poNumber}
+                        - identifier: sc.mappings.orders.orderDetails.bottomSheet.orderNumber
+                          equals: ${orderNumber}
+      - executeFunction:
+          name: sc.functions.orders.closeOrderDetailsBottomSheet
+      - storeIn:
+          key: validateData
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to apply filters for order display                               #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]  ${orderStatus}          - New / Acknowledge                                 #
+  # [optional]  ${orderShipByDate}      - Today / Tomorrow / Next 2 days ...                #
+  # [optional]  ${orderDate}            - Today / Since Yesterday / Last 3 days ...         #
+  # [optional]  ${fulfillmentType}      - Seller / WFS / Partner                            #
+  # NOTE : ANY ONE OF THE ABOVE FILTER IS MANDATORY                                         #
+  ###########################################################################################
+  - name: sc.functions.orders.filterOrders
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.filterButton
+      - click:
+          identifier: sc.mappings.orders.filterButton
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.filters.filterTitle
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.orders.filters.resetButton
+          then:
+            - click:
+                identifier: sc.mappings.orders.filters.resetButton
+      - if:
+          condition: ${orderStatus} != null
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.filters.orderStatus
+            - click:
+                identifier: sc.mappings.orders.filters.orderStatus
+      - if:
+          condition: ${orderShipByDate} != null
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.filters.shipByTab
+            - click:
+                identifier: sc.mappings.orders.filters.shipByTab
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.filters.orderShipByDate
+            - click:
+                identifier: sc.mappings.orders.filters.orderShipByDate
+          else:
+            - if:
+                condition: ${orderDate} != null
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: sc.mappings.orders.filters.orderDateTab
+                  - click:
+                      identifier: sc.mappings.orders.filters.orderDateTab
+                  - verifyIdentifier:
+                      present:
+                        - identifier: sc.mappings.orders.filters.orderDate
+                  - click:
+                      identifier: sc.mappings.orders.filters.orderDate
+      - click:
+          identifier: sc.mappings.orders.filters.viewResults
+      - verifyIdentifier:
+          notPresent:
+            - identifier: sc.mappings.navigation.spinner
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.firstOrderCardOrNoResult
+      - sleep:
+          duration: 5000
+      - storeIn:
+          key: orderStatus
+          value: 'null'
+      - storeIn:
+          key: orderShipByDate
+          value: 'null'
+      - storeIn:
+          key: orderDate
+          value: 'null'
+      - storeIn:
+          key: fulfillmentType
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to select quick filter                                           #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${quickFilter}          - Unshipped / Shipped / Cancelled / All            #
+  ###########################################################################################
+  - name: sc.functions.orders.quickFilterOrders
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.quickFilterSection
+      - if:
+          identifier:
+            notPresent:
+              - identifier: sc.mappings.orders.quickFilters
+          then:
+            - scroll:
+                direction: left
+                withinIdentifier: sc.mappings.orders.quickFilterSection
+            - sleep:
+                duration: 1000
+      - click:
+          identifier: sc.mappings.orders.quickFilters
+      - verifyIdentifier:
+          notPresent:
+            - identifier: sc.mappings.navigation.spinner
+      - executeFunction:
+          name: sc.functions.reloadPage
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.firstOrderCardOrNoResult
+            - identifier: sc.mappings.orders.selectedQuickFilter
+
+  ###########################################################################################
+  # Description : Function to verify if quick filter selection is proper                    #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]   ${quickFilter}          - Unshipped / Shipped / Canceled / All            #
+  # [optional]    ${validateOrder}        - true/false [default false]                      #
+  #                                         [If true, validates the order status as well]   #
+  # [optional]    ${validateOrderIndexes} - [default 1] Indexes of orders to be verified    # 
+  ###########################################################################################
+  - name: sc.functions.orders.verifyQuickFilters
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.selectedQuickFilter
+      - if:
+          condition: ${validateOrder}
+          then:
+            - if:
+                condition: ${validateOrderIndexes} == null
+                then:
+                  - storeIn:
+                      key: validateOrderIndexes
+                      value: 1
+            - executeNode:
+                file: sellerCenter/e2e-tests/helpers/generateR2Array.js
+                args:
+                  - value: ${validateOrderIndexes}
+                getResponse:
+                  storeIn: indexesToBeValidated
+            - loop:
+                each: ${indexesToBeValidated}
+                storeElement: index
+                flow:                
+                  - executeFunction:
+                      name: sc.functions.orders.fetchOrderStatus
+                  - if:
+                      condition: ${orderStatus} != 'NA'
+                      then:
+                        - executeFunction:
+                            name: sc.functions.orders.verifySingleOrderStatus
+                            params:
+                              - name: orderStatus
+                                string: ${orderStatus}
+                              - name: quickFilter
+                                string: ${quickFilter}
+      - storeIn:
+          key: validateOrder
+          value: false
+
+  ###########################################################################################
+  # Description : Function to acknowledge an order                                          #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order                             #
+  ###########################################################################################
+  - name: sc.functions.orders.acknowledgeOrder
+    flow:
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.header
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.moreActionsButton
+      - click:
+          identifier: sc.mappings.orders.orderDetails.moreActionsButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.acknowledgeOrder
+      - click:
+          identifier: sc.mappings.orders.orderDetails.acknowledgeOrder
+      - sleep:
+          duration: 15000
+      - try:
+          flow:
+            - verifyIdentifier:
+                value:
+                  - identifier: sc.mappings.orders.orderDetails.orderStatus
+                    equals: Acknowledged
+          catch:
+            flow:
+              - verifyIdentifier:
+                  text:
+                    - identifier: sc.mappings.orders.orderDetails.orderStatus
+                      equals: Acknowledged
+
+  ###########################################################################################
+  # Description : Function to cancel an order                                               #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]    ${cancelType}           - [ order / item ] [default 'order']              #
+  # [optional]    ${itemQty}              - Quantity of item to be cancelled [default '1']  # 
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order                             #
+  ###########################################################################################
+  - name: sc.functions.orders.cancelOrder
+    flow:
+      - if:
+          condition: ${cancelType} == 'order'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.orderDetails.orderOptions
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: sc.mappings.orders.orderDetails.orderOptions
+            - click:
+                identifier: sc.mappings.orders.orderDetails.orderOptions.cancel
+            - sleep:
+                duration: 3000
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.orderDetails.orderOptions.cancelOrder.title
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.orderDetails.itemOptions
+            - sleep:
+                duration: 3000
+            - click:
+                identifier: sc.mappings.orders.orderDetails.itemOptions
+            - click:
+                identifier: sc.mappings.orders.orderDetails.itemOptions.itemCancel
+            - sleep:
+                duration: 3000
+            - verifyIdentifier:
+                present:
+                  - identifier: sc.mappings.orders.orderDetails.itemOptions.cancelItem.title
+            - click:
+                identifier: sc.mappings.orders.orderDetails.itemOptions.qtyIncrement
+            - storeIn:
+                key: fetchItemStatus
+                value: true
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.orderOptions.cancelorder.selectReason
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: sc.mappings.orders.orderDetails.orderOptions.cancelorder.selectReason
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: sc.mappings.orders.orderDetails.orderOptions.cancelOrder.cancelButton
+      - executeFunction:
+          name: sc.functions.orders.orderDetails.fetchOrderStatus
+      - executeFunction:
+          name: sc.functions.orders.orderDetails.verifyOrderAndItemStatus
+          params:
+            - name: expectedOrderStatus
+              string: canceled
+            - name: expectedItemStatus
+              string: canceled
+
+  ###########################################################################################
+  # Description : Function to verify order status of an order in list view                  #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]  ${quickFilter}          - Unshipped / Shipped / Cancelled                  #
+  # [mandatory]  ${orderStatus}          - Fetched order status of an order                 #
+  ###########################################################################################  
+  - name: sc.functions.orders.verifySingleOrderStatus
+    flow:
+      - storeIn:
+          key: expectedStatus
+          value: 'null'
+      - if:
+          condition: ${quickFilter} == 'Unshipped'
+          then:
+            - if:
+                condition: ${orderStatus} == 'New' || ${orderStatus} == 'Acknowledged'
+                then:
+                  - log: Order status is proper. It is in status '${orderStatus}'.
+                else:
+                  - storeIn:
+                      key: expectedStatus
+                      value: 'New or Acknowledged'
+          else:
+            - if:
+                condition: ${quickFilter} == 'Shipped'
+                then:
+                  - if:
+                      condition: ${orderStatus} == 'Shipped' || ${orderStatus} == 'Delivered'
+                      then:
+                        - log: Order status is proper. It is in status '${orderStatus}'.
+                      else:
+                        - storeIn:
+                            key: expectedStatus
+                            value: 'Shipped or Delivered'
+                else:
+                  - if:
+                      condition: ${quickFilter} == 'Canceled'
+                      then:
+                        - if:
+                            condition: ${orderStatus} == 'Canceled'
+                            then:
+                              - log: Order status is proper. It is in status '${orderStatus}'.
+                            else:
+                              - storeIn:
+                                  key: expectedStatus
+                                  value: 'Canceled'
+      - if:
+          condition: ${orderStatus} == 'NA'
+          then:
+            - log: orderStatus is not applicable
+          else:
+            - if:
+                condition: ${expectedStatus} != null && ${orderStatus} != 'NA'
+                then:
+                  - failTest:
+                      message: Order status supposed to be in status ${expectedStatus} but in status '${orderStatus}'
+
+
+
+  ###########################################################################################
+  # Description : Function to validate order card status of the first item only                
+  ###########################################################################################
+  - name: sc.functions.orders.verifySingleUnshippedOrderStatus
+    flow:
+      - executeFunction:
+          name: sc.functions.orders.fetchOrderStatus
+      - if:
+          condition: ${orderStatus} != 'NA'
+          then:
+            - executeFunction:
+                name: sc.functions.orders.verifySingleOrderStatus
+                params:
+                  - name: orderStatus
+                    string: ${orderStatus}
+                  - name: quickFilter
+                    string: Unshipped
+
+
+
+  ###########################################################################################
+  # Description : Function to verify order status of an order in order details page         #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]   ${actualOrderStatus}    - [Order status displayed in order details]       #
+  # [mandatory]   ${expectedOrderStatus}  - [Order status expected for the order]           #
+  # [optional]    ${actualItemStatus}     - [Item status displayed in order details]        #
+  # [optional]    ${expectedItemStatus}   - [Item status expected for the item]             #
+  #                                         (Mandatory if actualItemStatus is available)    #
+  ###########################################################################################  
+  - name: sc.functions.orders.orderDetails.verifyOrderAndItemStatus
+    flow:
+      - if:
+          condition: ${actualOrderStatus} == ${expectedOrderStatus} || ${actualOrderStatus} == '2 statuses'
+          then:
+            - log: Order status is proper. It is in status '${actualOrderStatus}'.
+          else:
+            - storeIn:
+                key: orderStatusMismatch
+                value: true
+      - if:
+          condition: ${actualItemStatus} != null
+          then:
+            - if:
+                condition: ${actualItemStatus} == ${expectedItemStatus}
+                then:
+                  - log: Item status is proper. It is in status '${actualItemStatus}'.
+                else:
+                  - storeIn:
+                      key: itemStatusMismatch
+                      value: true
+      - if:
+          condition: ${orderStatusMismatch}
+          then:
+            - failTest:
+                message: Order status supposed to be in status ${expectedOrderStatus} or '2 statuses' but in status '${actualOrderStatus}'
+      - if:
+          condition: ${itemStatusMismatch}
+          then:
+            - failTest:
+                message: Item status supposed to be in status ${expectedItemStatus} but in status '${actualItemStatus}'
+
+  ###########################################################################################
+  # Description : Function to fetch status of an order. By default will fetch for 1st order #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]    ${index}                - [ Default 1 ] (order index to fetch status)     #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order list page either with search or quick filter results #
+  ###########################################################################################
+  - name: sc.functions.orders.fetchOrderStatus
+    flow:
+      - if:
+          condition: ${index} == null
+          then:
+            - storeIn:
+                key: index
+                value: 1
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.orders.noOrdersMessage
+          then:
+            - storeIn:
+                key: orderStatus
+                value: NA
+          else:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: sc.mappings.orders.orderCard
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: sc.mappings.orders.orderCard
+                      scrollLimit: 10
+            - if:
+                condition: ${APP_PLATFORM} == 'android'
+                then:
+                  - getString:
+                      identifier: sc.mappings.orders.orderCard
+                      attribute: text
+                      storeIn: orderStatus
+                else:
+                  - getString:
+                      identifier: sc.mappings.orders.orderCard
+                      attribute: label
+                      storeIn: orderStatus
+                  - executeNode:
+                      file: sellerCenter/e2e-tests/helpers/stringModules.js
+                      args:
+                        - value: ${orderStatus}
+                        - value: ','
+                      getResponse:
+                        storeIn: orderStatus
+      - log: ${orderStatus}
+      - storeIn:
+          key: index
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to fetch status of a single order & item from order details page #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]     ${fetchItemStatus}   - true / false [default 'false']                    #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order                             #
+  ###########################################################################################
+  - name: sc.functions.orders.orderDetails.fetchOrderStatus
+    flow:
+      - getString:
+          identifier: sc.mappings.orders.orderDetails.orderStatus
+          storeIn: actualOrderStatus
+      - if:
+          condition: ${fetchItemStatus}
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: sc.mappings.orders.orderDetails.itemSpecificStatus
+                then:
+                  - scroll:
+                      direction: down
+            - getString:
+                identifier: sc.mappings.orders.orderDetails.itemSpecificStatus
+                storeIn: actualItemStatus
+            - log: 'Item status : ${actualItemStatus}'
+      - log: 'Order status : ${actualOrderStatus}'
+
+  ###########################################################################################
+  # Description : Function to fetch PO no. of an order. By default will fetch for 1st order #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]    ${index}                - [ Default 1 ] (order index to fetch PO number)  #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order list page either with search or quick filter results #
+  ###########################################################################################
+  - name: sc.functions.orders.fetchOrderPO
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.firstOrderCard
+      - if:
+          condition: ${index} == null
+          then:
+            - storeIn:
+                key: index
+                value: 1
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - getString:
+                identifier: sc.mappings.orders.nthOrderCard
+                attribute: text
+                storeIn: poNumber
+          else:
+            - getString:
+                identifier: sc.mappings.orders.nthOrderCard
+                attribute: name
+                storeIn: poNumber
+            - executeNode:
+                file: sellerCenter/e2e-tests/helpers/stringModules.js
+                args:
+                  - value: ${poNumber}
+                  - value: '-'
+                getResponse:
+                  storeIn: poNumber
+      - log: ${poNumber}
+      - storeIn:
+          key: index
+          value: 'null'
+
+  ###########################################################################################
+  # Description : Function to fetch order details data and store it from details page       #
+  #               To be used for any search or filter validations as required               #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order                             #
+  ###########################################################################################
+  - name: sc.functions.orders.orderDetails.fetchOrderData
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.bottomSheet.orderTitle
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - getString:
+                identifier: sc.mappings.orders.orderDetails.bottomSheet.poNumber
+                attribute: text
+                storeIn: poNumber
+            - getString:
+                identifier: sc.mappings.orders.orderDetails.bottomSheet.orderNumber
+                attribute: text
+                storeIn: orderNumber
+          else:
+            - getString:
+                identifier: sc.mappings.orders.orderDetails.bottomSheet.poNumber
+                attribute: label
+                storeIn: poNumber
+            - getString:
+                identifier: sc.mappings.orders.orderDetails.bottomSheet.orderNumber
+                attribute: label
+                storeIn: orderNumber
+      - log: PO# - ${poNumber} / Order# - ${orderNumber}
+
+  ###########################################################################################
+  # Description : Function to select any Order with New Badge                               #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be under Unshipped in order page                                 #
+  ###########################################################################################
+  - name: sc.functions.orders.tapAnyOrder
+    flow:
+      - sleep:
+          duration: 3000
+      - log: Click filter button
+      - click:
+          identifier: sc.mappings.orders.filterButton
+          wait: 3000
+      - log: Select New status
+      - click:
+          identifier: sc.mappings.orders.unshipped.selectedNew
+          wait: 3000
+      - log: Confirm above selection via View results
+      - click:
+          identifier: sc.mappings.orders.confirmViewResults
+      # # Scroll down 5 levels of Pagination
+      # - sleep:
+      #     duration: 6000
+      
+      ## comment out if run Android or could not allow complete another part on iOS 
+      ## Scrolling down can work on iOS, but due to that it will cause other issue, so commit out
+      # - log: Scrolling down on iOS # comment out if run Android 
+      # - scroll:
+      #     direction: down  
+      
+      # - log: Scrolling down 5x now Android #  comment out if run iOS               
+      # - loop:                  
+      #     begin: 0
+      #     end: 5
+      #     mode: increment
+      #     flow:
+      #       - scroll:
+      #           direction: down
+      #           wait: 100
+
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - log: ${APP_PLATFORM} platform
+            - log: Scrolling down 5x on ${APP_PLATFORM}     
+            - loop:                  
+                begin: 0
+                end: 5
+                mode: increment
+                flow:
+                  - scroll:
+                      direction: down
+                      wait: 100
+          else:
+            - log: ${APP_PLATFORM} platform
+            - log: Scrolling down on ${APP_PLATFORM} is disabled, will updated soon
+            # - scroll:
+            #     direction: down
+
+      - log: Click any new item at this page
+      - storeIn:
+          key: index
+          value: 2
+      - click:  
+          identifier: sc.mappings.orders.selectAnyNewItem
+          wait: 6000
+          
+  ###########################################################################################
+  # Description : Function to Print packing slip                                            #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order after Acknowledge Order     #
+  ###########################################################################################
+  - name: sc.functions.orders.printpackingslip
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.printpackingslip
+      - click:
+          identifier: sc.mappings.orders.orderDetails.printpackingslip
+      - sleep:
+          duration: 15000
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.orders.orderDetails.printpackingslip.cancel
+          then:
+            - click:
+                identifier: sc.mappings.orders.orderDetails.printpackingslip.cancel
+          else:
+            - goBack: true
+      - try:
+          flow:
+            - verifyIdentifier:
+                value:
+                  - identifier: sc.mappings.orders.orderDetails.orderStatus
+                    equals: Acknowledged
+          catch:
+            flow:
+              - verifyIdentifier:
+                  text:
+                    - identifier: sc.mappings.orders.orderDetails.orderStatus
+                      equals: Acknowledged
+
+  ###########################################################################################
+  # Description : Function to identify acknowledge order before Acknowledge order           #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order                             #
+  ###########################################################################################       
+  - name: sc.functions.orders.preAcknowledgeOrder
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: sc.mappings.orders.acknowledgedOrderExist
+          then:
+            - log: Acknowledge order button exist
+            - executeFunction:
+                name: sc.functions.orders.acknowledgeOrder
+          else:
+            - log: There is no acknowledge order button exist
+            - if:
+                identifier:
+                  present:
+                    - identifier: sc.mappings.orders.orderDetails.printpackingslip
+                then:
+                  - log: Print packing slip button exist
+                  # - executeFunction:
+                  #     name: sc.functions.orders.printpackingslip # currently there is no soft button to allow print packing slip back
+                else:
+                  - log: There is no Acknowledge order or Print packing slip button exist
+
+  ###########################################################################################
+  # Description : Function to verify the Print order and Cancel order in menu options       #
+  # --------------------------------------------------------------------------------------- #
+  # Pre-requisite : Should be in order details page of an order                             #
+  ###########################################################################################    
+  - name: sc.functions.orders.verifyOrderMenuOptions
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.orderOptions
+      - click:
+          identifier: sc.mappings.orders.orderDetails.orderOptions
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.orderOptions.printOrder
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.orderOptions.cancel
+
+  ###########################################################################################
+  # Description : Function to retry Order status until PO created to fetch PO Number        #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [mandatory]     ${orderNo}      - (order # whose status needs to be fetched)            #
+  ###########################################################################################
+  - name: sc.functions.orders.getOrderPONumber
+    flow:
+      - loop:
+          begin: 0
+          end: 8
+          storeIndex: retryCount
+          mode: increment
+          flow:
+            - executeFunction:
+                name: sc.functions.utils.astro.getOrderStatus
+            - log: ${currentOrderStatus}
+            - if:
+                condition: ${currentOrderStatus} == 'PO Created'
+                then:
+                  - log: PO created for order.
+                  - break: true
+                else:
+                  - log: Order still in processing. Retrying after 60 secs
+                  - sleep:
+                      duration: 60000
+
+  ###########################################################################################
+  # Description : Function to mark order as shipped and verify staus                        #
+  # ---------------------------------------- Params --------------------------------------- #
+  # [optional]    ${carrierOption}        - One of carrier options Eg: "4PX", "AAA Cooper", #
+  #                                         "Aramax", "Asendia", "AxleHire", "CEVA", "CNE"  #
+  # [optional]    ${trackingNo}           - Any 10 digit number                             # 
+  ###########################################################################################
+  - name: sc.functions.orders.markOrderAsShipped
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.unshippedLabel
+      - if:
+          condition: ${trackingNo} == "null"
+          then:
+            - storeIn:
+                key: trackingNo
+                value: "9876543210"
+      - if:
+          condition: ${carrierOption} == "null"
+          then:
+            - storeIn:
+                key: carrierOption
+                value: "Aramex"
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.carrierLabel
+            - identifier: sc.mappings.orders.orderDetails.carrierDropdown
+      - click:
+          identifier: sc.mappings.orders.orderDetails.carrierDropdown
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - click:
+                identifier: sc.mappings.orders.orderDetails.carrierOption
+      # Clicking on any option for iOS now due to issue MPM-4389. Need to add the identifier after issue fix
+          else:
+            - click:
+                coordinates: 50%, 50%
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.trackingNoLabel
+            - identifier: sc.mappings.orders.orderDetails.trackingNoField
+      - enterText:
+          identifier: sc.mappings.orders.orderDetails.trackingNoField
+          string: ${trackingNo}
+      - hideKeyboard: true
+      - click:
+          identifier: sc.mappings.orders.orderDetails.markAsShippedCTA
+      - sleep:
+          duration: 10000
+      - verifyIdentifier:
+          present:
+            - identifier: sc.mappings.orders.orderDetails.shippedLabel

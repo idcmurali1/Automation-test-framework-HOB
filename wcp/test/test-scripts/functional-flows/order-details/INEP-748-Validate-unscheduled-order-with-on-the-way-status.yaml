@@ -1,0 +1,177 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS:
+#
+#   TC - INEP-748: Validate unscheduled order with on the way status is displayed correctly
+#
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF:
+#     https://jira.walmart.com/browse/OPIF-179447
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-748
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-746
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-748
+  tags: INEP-748,OPIF-179447,p1-mh-opif-teflon
+  combineScenarios: true
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# # #   M A I N   S C E N A R I O
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Validate unscheduled order with on the way status is displayed correctly"
+    flow:
+
+      # PREREQUISITE - Create account using astro.
+      - log:
+          message: "PREREQUISITE - Create account using astro."
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # Return --> ${userEmail}, ${userPassword}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa
+
+      # PREREQUISITE - Create order using astro.
+      - log:
+          message: "PREREQUISITE -  Create order using astro."
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createOrder # RETURNS --> ${returnedOrderNumber}
+          params:
+            - name: payload
+              string: data.mh.createOrderPayload.unscheduledDelivery.GMItem
+      
+      - log:
+          message: PREREQUISITE - Move order using Astro API -> PO Out for delivery
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.moveOrder
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+            - name: payload
+              string: data.moveOrder.fcDelivery.outForDelivery
+
+      # Onboard and log in to application.
+      - log:
+          message: "Onboard and log in to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # Params -> ${userEmail} and ${userPassword}
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+
+      # Go to order details.
+      - log:
+          message: "Go to order details."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+
+      # Validate order details.
+      - log:
+          message: "Validate order details."
+          color: PURPLE_BOLD_BRIGHT
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: functions.orderDetailPage.verifyAddressLabelIsDisplayed
+      - executeFunction:
+          name: functions.orderDetailsPage.tapReturnCta
+      - sleep:
+          duration: 3500
+      - executeFunction:
+          name: functions.returnWebPage.SubmitRequest.tapDone
+      - executeFunction:
+          name: functions.orderDetailPage.assertTrackOrderButtonDisplayed
+          params:
+            - name: expectedPrimaryButtonText
+              string: data.orderTracker.primaryMainButton.trackShipment
+      - executeFunction:
+          name: functions.orderDetailPage.tapOnOrderTrackerPrimaryButton
+      - executeFunction:
+          name: functions.trackerPage.assertTitle
+          params:
+            - name: trackerTitleLabel
+              string: data.orderTracker.primaryMainButton.trackShipment
+      - executeFunction:
+          name: functions.global.tapBackBtn
+      # TODO:  
+      # Add Validation for the following element is not displayed when MH supports:
+      #    Reorder all button
+      - executeFunction:
+          name: functions.orderDetailPage.validateATCButtonDisplayed
+          params:
+            - name: expectedATCDisplayed
+              string: 'false'
+      - executeFunction:
+          name: functions.orderDetailPage.verifyPaymentMethod
+          params:
+            - name: paymentType
+              string: 'Card'
+            - name: cardDescription
+              string: data.global.creditCard.visa.4242.endingLabelText
+
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

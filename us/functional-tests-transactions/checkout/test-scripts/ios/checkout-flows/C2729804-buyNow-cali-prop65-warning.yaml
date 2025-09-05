@@ -1,0 +1,96 @@
+# Validate California Prop 65 Warning in buy now flow
+
+general:
+  platform: ios
+  tags: C2729804, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2729804
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate California Prop 65 Warning in buy now flow
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate California Prop 65 Warning in buy now flow"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.buynow.caliprop65.ios.email
+            - name: password
+              string: us.data.prod.buynow.caliprop65.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+      
+      - executeFunction:
+          name: us.functions.home.changeStore
+          params:
+              - name: zipcode
+                string: 95122 
+              - name: storeName
+                string: San Jose Supercenter
+      
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.buynow.calip65warning.itemlink
+
+      # Verifying buynow overlay
+      - executeFunction:
+          name: us.functions.buyNow.existingUser.overlay
+
+      # Verifing there is cali prop65 warning shown in the buynow
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.verifyCaliProp65Warning.and.verifyP65WarningBottomSheet
+          params:
+            - name: itemsCount
+              string: 1
+            - name: caliP65WarningDescription
+              string: This product contains chemicals known to the State of California to cause cancer andbirth defects or other reproductive harm.
+
+      # Select non cali prop address to validate cali prop 65 warning is not showing
+      - executeFunction:
+          name: us.functions.functional.buyNow.select.nonCaliPropAddress.and.verifyCaliProp65Warning
+          params:
+            - name: index
+              string: 2
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

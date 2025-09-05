@@ -1,0 +1,151 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS:
+#
+#   TC - INEP-753
+#       Flow - User with mixed order Scheduled order in "Canceled" status (GO Cancelled & GM Preparing (1p + 3p))
+#
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF:
+#     https://jira.walmart.com/browse/OPIF-179447
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-753
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-746
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-753
+  tags: INEP-753,OPIF-179447,p1-mh-opif-teflon
+  combineScenarios: true
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# # #   M A I N   S C E N A R I O
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "User with mixed order Scheduled order in Canceled status (GO Cancelled & GM Preparing (1p + 3p))"
+    flow:
+
+      # PREREQUISITE - Create account using astro.
+      - log:
+          message: "PREREQUISITE - Create account using astro."
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail}, ${password}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa
+
+      # PREREQUISITE - Create order using astro.
+      - log:
+          message: "PREREQUISITE -  Create order using astro."
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createOrder # RETURNS --> ${returnedOrderNumber}
+          params:
+            - name: emailId
+              string: ${userEmail}
+            - name: payload
+              string: data.mh.inep753.createOrderPayload #TODO: CHANGE DATA: A GO PRODUCT
+      
+      # Onboard and log in to application.
+      - log:
+          message: "Onboard and log in to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      #Login in to the app
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      # Go to order History
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+
+      # Go to order details.
+      - log:
+          message: "Go to order details."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.orderHistoryPage.validateOrderCardBasedOnOrderId
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+
+      - executeFunction:
+          name: functions.orderHistoryPage.tapOnViewOrderDetailsBtn
+          params:
+            - name: orderId
+              string: ${returnedOrderNumber}
+    
+      # Cancel order Process 
+      - executeFunction:
+          name: functions.orderDetailsPage.cancelOrder
+          params:
+            - name: reasonIndex
+              string: data.global.orderCancellation.reasonIndex3
+            
+      # Validate ODP after order cancellation
+      - executeFunction:
+          name: functions.orderDetailsPage.validateAfterCancellation
+          params:
+            - name: orderCancelled
+              string: true
+              
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

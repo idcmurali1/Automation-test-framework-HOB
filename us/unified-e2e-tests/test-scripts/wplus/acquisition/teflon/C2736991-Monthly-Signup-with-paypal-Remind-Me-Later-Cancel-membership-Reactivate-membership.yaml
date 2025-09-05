@@ -1,0 +1,164 @@
+general:
+  tags:  unified-teflon-e2e, C2736991, unified-p0-wplus-teflon-e2e, wplus-optimize-flows
+  testCaseId: C2736991 
+  inherit:
+    filesRunAll:
+      - errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: C2736991
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      #Create Accountusing astro api - PayPal 
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount.versionTwo
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createAccountPayloadPayPal
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      #Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      #Sign In
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: $password
+
+
+      #Navigate to Accounts Tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+      #Click On Walmart Plus Banner on Account PAge and Navigate to next page
+      - executeFunction:
+          name: unified.us.functions.wplus.account.navigateToWalmartPlus
+
+      #Claim Wplus Offer
+      - executeFunction:
+          name: unified.us.functions.wplus.nonMemberClaimOffers
+
+      #Start Membership Trial/Monthly
+      - executeFunction:
+          name: unified.us.functions.wplus.startFree30daysTrailMembership 
+          params:
+            - name: tenure
+              string: monthly
+
+      # Navigate to Accounts Tab
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+      # Click On Walmart Plus Banner on Account PAge and Navigate to next page
+      - executeFunction:
+          name: unified.us.functions.wplus.account.navigateToWalmartPlus
+
+      # Navigate to Manage Membership Page
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+      
+      # Validate Paypal on Managemembership screen
+      - executeFunction:
+          name: unified.us.functions.paypalPaymentMethod
+      # Validate cancel membership screen
+      - executeFunction: 
+          name: unified.us.functions.wplus.manageMembership.navigateToCancelMemScreenFromManageMemScreen
+
+      - executeFunction: 
+          name: unified.us.functions.wplus.manageMembership.keepMembershipValidation
+          
+      # Validate Remind me later flow
+      - executeFunction: 
+          name: unified.us.functions.wplus.manageMembership.remindMeLaterValidation
+
+      # Cancel membership
+      - executeFunction:
+          name: unified.us.functions.wplus.managemembership.cancelFreeTrialMember
+
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.afterTrialMembershipCancellation
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.wplus.userAccountDeepLink
+  
+      # Navigate to Walmart+
+      - executeFunction:
+          name: unified.us.functions.account.navigateToWalmartPlusBenefits
+
+      # Choose monthly plan
+      - executeFunction:
+          name: unified.us.functions.wplus.account.chooseWplusPlan
+          params:
+            - name: plan
+              string: monthly
+            
+      #Navigate to Manage membership
+      - executeFunction:
+          name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage 
+ 
+      # Verify Monthly Plan Reactivation on Manage Membership
+      - executeFunction:
+          name: unified.us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: monthly
+            - name: membershipType
+              string: paid   
+
+      #Update the Status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

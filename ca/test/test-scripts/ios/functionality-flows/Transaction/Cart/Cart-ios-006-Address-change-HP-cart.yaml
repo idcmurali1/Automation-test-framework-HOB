@@ -1,0 +1,156 @@
+general:
+  platform: ios
+  tags: cart-006-ios, ca-function-run , cart_ios
+  testCaseId: cart-006-ios
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+
+  - name: Validate address shown in cart is same as HP. Then change the address in cart page and validate same is updated in HP.
+    flow:
+            - log:
+                message: Validate address shown in cart is same as HP. Then change the address in cart page and validate same is updated in HP.
+                color: CYAN_BOLD_BRIGHT
+
+           # Navigate onboarding to home
+            - executeFunction:
+                name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+            - log:
+                message: navigated from onboarding to home
+                color: YELLOW 
+
+            # Navigate to sign in page
+            - executeFunction:
+                name: ca.test.functions.home.navigateHomeToSignInIos
+            - log:
+                message: navigated to sign page
+                color: YELLOW 
+              
+            # Sign In to the account
+            - executeFunction:
+                name: ca.test.functions.global.authentication.signInAccountIos
+                params:
+                  - name: email
+                    string: ca.test.data.cart006.emailios
+                  - name: password
+                    string: ca.test.data.cart006.passwordios 
+            - executeFunction:
+                name: ca.test.functions.home.verifyUserNameInTopleft
+            - log:
+                message: signed in
+                color: YELLOW 
+
+          #Clear Cart
+            - executeFunction:
+                name:  ca.test.functions.cart.removeCartItems
+            - log:
+                message: cart cleared
+                color: YELLOW 
+
+            - executeFunction:
+                name: ca.functions.searchPage.searchItemArray
+                params:
+                  - name: items
+                    string: ca.test.data.cart006.gmItemArray
+                  - name: quantity
+                    string: ca.test.data.cart006.GMProductQty
+                  - name: checkNonPromotionBadges
+                    string: true
+
+ # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+          # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCartIos
+            - log:
+                message: Navigated to cart
+                color: YELLOW 
+            
+            # cart - add new address - Entering new address details
+            - executeFunction:
+                name: ca.test.functions.deliveryAddress.addAddressHomeIos
+                params:
+                  - name: firstName
+                    string: ca.test.data.cart006.firstName
+                  - name: lastName
+                    string: ca.test.data.cart006.lastName
+                  - name: streetAddress
+                    string: ca.test.data.cart006.streetAddress
+                  - name: city
+                    string: ca.test.data.cart006.city
+                  - name: state
+                    string: ca.test.data.cart006.state
+                  - name: zipcode
+                    string: ca.test.data.cart006.zipcode
+                  - name: phoneNumber
+                    string: ca.test.data.cart006.phoneNumber
+            - log:
+                message: Checking added address from GM cart page.
+                color: GREEN_BOLD          
+
+          #validate Address in cart
+            - executeFunction:
+                name: ca.test.functions.HP.validateAddressinCart
+                params:
+                  - name: address_Cart
+                    string: ca.test.data.HP.cart006.Address_1
+            - log:
+                message: Validated cart Address name
+                color: YELLOW   
+#------------------------------------------------------------------------------
+            - storeIn:
+                key: testStatus
+                value: passed
+                
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-006-ios
+          color: GREEN_BOLD
+      - log:
+          message: Navigating to my address page using deep link to cancel saved address.
+          color: GREEN_BOLD
+
+      # - executeFunction:
+      #     name: ca.test.functions.global.navigation.goToDeepLink - Deeplink issue - CAPREPURCH-2155
+      #     params:
+      #       - name: deepLinkUrl
+      #         string: https://www.walmart.ca/my-account
+      - log:
+          message: Opening addresses page in my account.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToAccountPage
+
+      - executeFunction:
+          name: ca.test.functions.accountPage.goToAddresses
+      - log:
+          message: Cancelling address saved from cart page.
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.accountPage.removeAddress
+          params:
+            - name: addressFirstLine
+              string: ca.test.android.data.deliveryAddress.Ottawa
+      - log:
+          message: Address removed from account!
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

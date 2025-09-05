@@ -1,0 +1,145 @@
+general:
+  tags: C2657244, unified-p0-wplus-teflon-e2e
+  testCaseId: C2657244
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: C2657244
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+     # Create Non Member Account
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmartstoretest.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flowinhome.createAccountPayload.annual
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+    # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.utils.handleTechnicalErrorPopup 
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+          - name: email
+            string: ${customerEmail}
+          - name: password
+            string: $password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToAccountFromTabBar
+
+    # Navigate to walmart plus
+      - executeFunction:
+          name: unified.us.functions.account.navigateToWalmartPlusBenefits
+
+    # Sign up for in-home through benefits hub
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.benefitshubsignup
+
+    # Confirm address for in-home
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.confirmAddress
+
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.validateStartInHomeFreeTrialPage
+
+    # Start in home free trial
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.startInHomeFreeTrial
+
+    # Explore Walmart+ benefits after signing up for free inhome trial
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.exploreW+BenefitsAfterInHomeFreeTrial
+
+    # Validate inHome tile on benefits screen after sign up
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.validatePlusUpsbenefitsDetails
+
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.goToTopOfBenefitsPage
+
+    # Navigate to manage membership screen
+      - executeFunction:
+           name: unified.us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+    # Verify inHome plusUp details on Manage Membership flow
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.validateMyPlusUpsDetailsOnManageMembershipPage
+          params:
+            - name: tenure
+              string: annual
+            - name: membershipType
+              string: trial
+
+    # Verify inHome plusUp details on Manage plusUps screen
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.managePlusUpsScreen.verifyPlusUpDetails
+          params:
+            - name: tenure
+              string: annual
+
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.validateCancelMemberManagePlusUps  
+
+      - executeFunction:
+          name: unified.us.functions.wplus.inHome.cancelmember.verifyReviewmembershipDetails
+
+      - executeFunction:
+         name: unified.us.functions.wplus.inHome.validateOnMMPafterInHomeCancelled
+    
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+
+

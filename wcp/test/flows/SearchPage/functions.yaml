@@ -1,0 +1,494 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: The function search for products based on the input criteria (SKU, keywords, name, or category) 
+  #              provided as an array. The function then iterates over each element in the array and adds the first 
+  #              product that has an 'Add to Cart' button to the cart it gets the product name, product price and
+  #              quantity added to cart. It also calculates the total price of the cart and it creates the array 
+  #              of the product details.
+  # Params:      ${productArray}         [Mandatory]  Search product using array.
+
+  - name: functions.searchPage.addToCartUsingItemArray
+    flow:
+      - storeIn:
+          key: additionalErrorMsg
+          value: ''
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - executeFunction:
+                name: functions.searchResultPage.addFirstAvailableItemToCart # RETURNS --> ${isAddToCartButtonDisplayed}, ${isAddtoCartErrorDisplayed}
+            - if:
+                condition: (${isAddToCartButtonDisplayed}) && (!${isAddtoCartErrorDisplayed})
+                then:
+                  - break: true
+                else:
+                  # Else added with the only purpose of constructing error message in case none of the products was able to be added to cart...
+                  - if:
+                      condition: ${index} == 0
+                      then:
+                        - storeIn:
+                            key: additionalErrorMsg
+                            value: '${additionalErrorMsg}{"searchText":"${searchText}","isAddToCartButtonDisplayed":${isAddToCartButtonDisplayed},"isAddtoCartErrorDisplayed":${isAddtoCartErrorDisplayed}}'
+                      else:
+                        - storeIn:
+                            key: additionalErrorMsg
+                            value: '${additionalErrorMsg},{"searchText":"${searchText}","isAddToCartButtonDisplayed":${isAddToCartButtonDisplayed},"isAddtoCartErrorDisplayed":${isAddtoCartErrorDisplayed}}'
+                #   - executeFunction:
+                #       name: functions.searchField.enterText   # <-- ${searchText}
+                #       params:
+                #         - name: searchText
+                #           string: ""
+      - if:
+          condition: (!${isAddToCartButtonDisplayed}) || ${isAddtoCartErrorDisplayed}
+          then:
+            - failTest:
+                message:  'X Add to cart failed: first available item (productArray: ${productArray}) - errorDetails: [ ${additionalErrorMsg} ]'
+      - executeFunction:
+          name: functions.searchResultPage.protectionPlan.isPageDisplayed
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - executeFunction:
+                name: functions.searchResultPage.protectionPlan.tapDecline
+      - executeFunction:
+          name: functions.global.closeUpdateItemQuantitySelectorIfDisplayed
+      - log:
+          message: "End Functions: searchPage.addToCartUsingItemArray"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: The function search for products based on the input criteria (SKU, keywords, name, or category) 
+  #              provided as an array. The function then iterates over each element in the array and adds the first 
+  #              product that has an 'Add to Cart' button to the Cart. It gets the Product Name, Product Price and
+  #              Quantity added to Cart. It also calculates the Total Price of the Cart and it creates the array 
+  #              of the product details.
+  #
+  # Params:      ${productArray}         [Mandatory]  Array containing the search criteria to loop over.
+  #
+  # Returns:     ${productName}          Product name of the product added to the cart.
+  #              ${productPrice}         Total price of the product added to the cart (product price * quantity).
+  #              ${productDetailsArray}  An array as JSON string with Product Name, Product Price and Product Quantity.
+  #                                         Each time this function is called, the info of the new product added to the cart
+  #                                         will be pushed into the array, resulting in an array containing the details of
+  #                                         all of the products that were added to the cart during the execution of the TC.
+  #              ${totalPrice}           Cart's subtotal.
+  #                                         Each time this function is called, the price of the product added to the cart will
+  #                                         be added to this variable to calculate the final cart subtotal during the execution
+  #                                         of the TC.
+  - name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+    flow:
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: ${productArray}
+      - executeFunction:
+          name: functions.searchResultPage.getProductName  #returns -> productName
+      - executeFunction:
+          name: functions.searchResultPage.getProductPrice   #returns -> productPrice, params <- productName
+      - executeFunction:
+          name: functions.utils.javascript.cleanProductPrice  #returns -> cleanProductPrice, params <- productPrice
+      - if:
+          condition: ${totalPrice} != "null"
+          then:
+            - arithmetic:
+                expression: ${totalPrice} + ${cleanProductPrice}
+                storeIn: totalPrice
+          else:
+            - arithmetic:
+                expression: ${cleanProductPrice}
+                storeIn: totalPrice
+      - log: 
+          message: "Cart subTotal: '${totalPrice}'"
+          color: CYAN
+      - executeNode:
+          file: wcp/test/helpers/SearchPage/createCartProductArray.js
+          args:
+            - value: ${productName}
+            - value: $${cleanProductPrice}
+            - value: data.global.item.1count
+            - value: ${promotionalProduct}
+            - value: ${productDetailsArray}
+          getResponse:
+            storeIn: productDetailsArray
+      - log: 
+          message: "Current product list in cart: ${productDetailsArray}"
+          color: CYAN
+      - log:
+          message: "End Functions: searchPage.addToCartUsingItemArrayList-GetProductDetails"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: The function search for the first available item and able to open the PDP
+  # Params:      ${productArray}         [Mandatory]  Search product using array.
+
+  - name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+    flow:
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - executeFunction:
+                name: functions.utils.handlePopUp
+            - executeFunction:
+                name: functions.searchResultPage.addFirstAvailableItemToCart
+            - if:
+                condition: (${isAddToCartButtonDisplayed}) && (!${isAddtoCartErrorDisplayed}) && ${isBadgesPresent})
+                then:
+                  - storeIn:
+                      key: continueExecution
+                      value: true
+                  - executeFunction:
+                      name: functions.global.closeUpdateItemQuantitySelectorIfDisplayed
+                  - executeFunction:
+                      name: functions.searchPage.tapProductDetails
+                  - executeFunction:
+                      name: functions.productDetailsPage.decreaseItemQuantity
+                  - break: true
+      - if:
+          condition: (!${continueExecution})
+          then:
+            - failTest:
+                message: ❌ Required product is **not** available in the array list.
+      - log:
+          message: "End Functions:searchPage.getTheFirstAvailableItemAndNavigateToPDP"
+          color: BLUE
+      
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions verify if add to cart error is displayed and close it
+  # No Param
+  - name: functions.searchResultPage.handleAddToCartError
+    flow:
+      - executeFunction:
+          name: functions.searchResultPage.validateAddToCartErrorDisplayed
+      - executeFunction:
+          name: functions.searchResultPage.closeAddToCartError
+      - log:
+          message: "End Functions: searchResultPage.handleAddToCartError"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Verify if the item is available
+  - name: functions.searchResultPage.getTheFirstAvailableItem
+    flow:
+      - sleep:
+          duration: 5000
+      - storeIn:
+          key: isAddToCartButtonDisplayed
+          value: false
+      - storeIn:
+          key: isAddtoCartErrorDisplayed
+          value: false
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: searchPage.addToCartBtn
+          then:
+            - storeIn:
+                key: isAddToCartButtonDisplayed
+                value: true
+            - executeFunction:
+                name: functions.searchResultPage.addItemToCart
+      - if:
+          condition: ${isAddToCartButtonDisplayed}
+          then:
+            - executeFunction:
+                name: functions.searchResultPage.handleAddToCartError
+      - log:
+          message: "End Functions: searchResultPage.getTheFirstAvailableItem"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+    # Description: This function adds the first available item into cart. 
+    # Params:
+    #   ${searchText} [Mandatory] Text to input in the text bar.
+    #   ${badges} [Optional] Badges name to check in the UI  [Value: PO, MC, AR, Rebaja]
+  - name: functions.searchResultPage.addFirstAvailableItemToCart
+    flow: 
+      - executeFunction:
+          name: functions.searchField.enterText # <-- ${searchText}
+      - executeFunction:
+          name: functions.searchPage.validateBadges # <-- ${badges} RETURNS --> ${isBadgesPresent}
+      - if:
+          condition: ${isBadgesPresent}
+          then:
+            - executeFunction:
+                name: functions.searchResultPage.getTheFirstAvailableItem # RETURNS --> ${isAddToCartButtonDisplayed}, ${isAddtoCartErrorDisplayed}
+            - log: 
+                message: 'Add to cart button is displayed: ${isAddToCartButtonDisplayed}'
+                color: CYAN
+            - log: 
+                message: 'Add to cart error pop up displayed: ${isAddtoCartErrorDisplayed}'
+                color: CYAN
+      - log:
+          message: "End Functions: searchResultPage.addFirstAvailableItemToCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function search for products based on the input criteria (SKU, keywords, name, or category) provided
+  #              as an array. The function then loops over each element in the array to search for it and try to add the
+  #              first product displaying the 'Add to Cart' button to the cart from the SLP.
+  #              Since the function asserts for an specific error to be displayed, if the product is able to be added to the
+  #              cart, the function will force a failure.
+  #
+  # Params:      ${productArray}  [Mandatory]  Array of products from which to add to cart.
+  #              ${errorCode}     [Mandatory]  Code of the error to be asserted.
+  - name: functions.searchPage.addToCartUsingItemArray-assertSpecificErrorDisplayed
+    flow:
+      - storeIn:
+          key: expectedErrorDisplayed
+          value: false
+      # Loop over the products array...
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - log:
+                message: "Loop ${index}: Search Text: '${searchText}'"
+                color: CYAN
+            # Search for the product...
+            - executeFunction:
+                name: functions.searchField.enterText # <-- ${searchText}
+            # Try to add the product to the cart...
+            - log:
+                message: Set default value for 'addToCartButtonFound'.
+                color: GREEN
+            - storeIn:
+                key: addToCartButtonFound
+                value: false
+            - try:
+                flow:
+                  - log:
+                      message: Trying to add item to cart...
+                      color: GREEN
+                  - executeFunction:
+                      name: functions.searchResultPage.addItemToCart
+                  - sleep:
+                      duration: 3000
+                  - log:
+                      message: Add to Cart button found.
+                      color: GREEN
+                  - storeIn:
+                      key: addToCartButtonFound
+                      value: true
+                catch:
+                  flow:
+                    - log:
+                        message: Add to Cart button not found.
+                        color: GREEN
+                    - sleep:
+                        duration: 1000
+            # Check if Add to Cart button was found and clicked...
+            - if:
+                condition: ${addToCartButtonFound}
+                then:
+                # If button was found and clicked...
+                  # Check if error displayed...
+                  - executeFunction:
+                      name: functions.searchResultPage.validateAddToCartErrorDisplayed-GetErrorType # --> RETURNS: ${isAddToCartErrorDisplayed}, ${errorCodeDisplayed}
+                  - if:
+                      condition: ${isAddToCartErrorDisplayed}
+                      then:
+                      # If error displayed...
+                        # Check if expected error displayed...
+                        - if:
+                            condition: ${errorCodeDisplayed} == ${errorCode}
+                            then:
+                              - storeIn:
+                                  key: expectedErrorDisplayed
+                                  value: true
+                              - executeFunction:
+                                  name: functions.searchResultPage.closeAddToCartError
+                                  params:
+                                    - name: isAddtoCartErrorDisplayed
+                                      string: 'true'
+                              - break: true
+                            else:
+                              - executeFunction:
+                                  name: functions.searchResultPage.closeAddToCartError
+                                  params:
+                                    - name: isAddtoCartErrorDisplayed
+                                      string: 'true'
+                      else:
+                      # If error not displayed (product was added successfully)...
+                        - failTest:
+                            message: Product was able to be added to Cart, function not able to assert error message.
+                else:
+                # If button was not found...
+                  - log:
+                      message: No product found to be added to cart. Loop will continue with the next element.
+                      color: CYAN
+      # After loop finished, perform final assertion...
+      - executeFunction:
+          name: functions.global.getErrorCodeTitle # <-- ${errorCode} / --> RETURNS: ${errorTitle}
+      - if:
+          condition: ${expectedErrorDisplayed}
+          then:
+            - log:
+                message: "✓ Expected Error Displayed Successfully: '${errorCode}' (Error Title: '${errorTitle}')"
+                color: CYAN
+          else:
+            - failTest:
+                message: "X Expected Error Never Displayed: '${errorCode}' (Error Title: '${errorTitle}')"
+      - log:
+          message: "End function: functions.searchPage.addToCartUsingItemArray-assertSpecificErrorDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Add sold by walmart filter
+  - name: functions.searchResultPage.addSoldByWalmartFilter
+    flow:
+        - executeFunction:
+            name: functions.searchPage.navigateToSortAndFilterPage
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.expandSoldBy
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.selectSoldByWalmart
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnSubmitButton
+        - log:
+            message: "End Functions: searchResultPage.addSoldByWalmartFilter"
+            color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: Add order by high price to low price filter
+  - name: functions.searchResultPage.addOrderByHighToLowPirceFilter
+    flow:
+        - executeFunction:
+            name: functions.searchPage.navigateToSortAndFilterPage
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.scrollDownToOrderByFilter
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.expandOrderBy
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.scrollDownToHighToLowPriceOption
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.selectOrderByHighToLowPrice        
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnSubmitButton
+        - log:
+            message: "End Functions: searchResultPage.addOrderByHighToLowPirceFilter"
+            color: BLUE
+ #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function will add order by Low price to High price filter.
+  # No Param
+  - name: functions.searchPage.addOrderByLowToHighPirceFilter
+    flow:
+        - executeFunction:
+            name: functions.searchPage.navigateToSortAndFilterPage
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.scrollDownToOrderByFilter
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.expandOrderBy
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.scrollDownToLowToHighPriceOption
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.selectOrderByLowToHighPrice        
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnSubmitButton
+        - log:
+            message: "End Functions: searchPage.addOrderByLowToHighPirceFilter"
+            color: BLUE      
+
+ #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function applies most relevant filter
+  # No Param
+  - name: functions.searchPage.mostRelevantFilter
+    flow:
+        - executeFunction:
+            name: functions.searchPage.navigateToSortAndFilterPage
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.scrollDownToOrderByFilter
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.expandOrderBy
+        - executeFunction:
+            name: functions.searchPage.sortAndFliterPage.selectOrderByMostRelevant        
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnSubmitButton
+        - log:
+            message: "End Functions: searchPage.mostRelevantFilter"
+            color: BLUE       
+
+ #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function applies filter by department
+  # Params:   ${departmentName} [Mandatory] Department to filter by
+  - name: functions.searchPage.filterByDepartment
+    flow:
+        - executeFunction:
+            name: functions.searchPage.navigateToSortAndFilterPage
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.scrollDownToOrderByFilter
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.expandDepartment
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.selectFilterByDepartment # <--- ${departmentName}
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnSubmitButton
+        - log:
+            message: "End Functions: functions.searchPage.filterByDepartment"
+            color: BLUE    
+
+#--------------------------------------------------------------------------------------------------------------------
+  # Description: This function clears the applied filters
+  # No Param
+  - name: functions.searchPage.clearFilter
+    flow:
+        - executeFunction:
+            name: functions.searchPage.navigateToSortAndFilterPage
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnClearFilter
+        - executeFunction:
+            name: functions.searchPage.sortAndFilterPage.tapOnSubmitButton
+        - log:
+            message: "End Functions: functions.searchPage.clearFilter"
+            color: BLUE                                       
+
+#--------------------------------------------------------------------------------------------------------------------
+  # Description: This functions gets the first item with variants in search Page and Navigates to PDP
+  # Params:     ${productArray}
+  - name: functions.searchPage.getFirstVariantItemAndNavigateToPDP
+    flow:
+      - loop:
+          each: ${productArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - executeFunction:
+                name: functions.utils.handlePopUp
+            - executeFunction:
+                name: functions.searchField.enterText
+            - executeFunction:
+                name: functions.searchPage.validateOptionsBtnIsDisplayed
+            - if:
+                condition: (${isOptionsBtnDisplayed}) 
+                then:
+                  - storeIn:
+                      key: continueExecution
+                      value: true
+                  - executeFunction:
+                      name: functions.global.closeUpdateItemQuantitySelectorIfDisplayed
+                  - executeFunction:
+                      name: functions.searchPage.tapProductDetails
+                  - break: true
+      - if:
+          condition: (!${continueExecution})
+          then:
+            - failTest:
+                message: ❌ Required product is **not** available in the array list.
+      - log:
+          message: "End Functions:searchPage.getFirstVariantItemAndNavigateToPDP"
+          color: BLUE

@@ -1,0 +1,126 @@
+general:
+  platform: android
+  tags: srp-002, ca-function-run
+  testCaseId: srp-002
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: false
+    flow:
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.orleansZipCode
+
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.srp002.email
+            - name: password
+              string: ca.test.data.srp002.password
+
+      - executeFunction:
+          name: ca.test.functions.home.selectStore
+          params:
+            - name: Zip_Code
+              string: ca.test.data.orleansZipCode
+            - name: storeName
+              string: ca.test.data.orleansStoreName
+
+      # Clear cart
+      - executeFunction:
+          name: ca.test.functions.productSearch.checkItemsInCartAndRemovingThem
+
+  - name: Search for a multi variant sku and validate if colors or options are displayed in SRP
+    flow:
+      - try:
+          flow:
+            - executeFunction:
+                name: ca.test.functions.productSearch.searchAProduct
+                params:
+                  - name: product
+                    string: ca.test.data.GMl2Category
+
+            - executeFunction:
+                name: ca.test.functions.productSearch.validatingMultiVariantProduct
+          catch:
+            flow:
+              - failTest: true
+
+  - name: For the above scenario, click on choose options which should open list of variants and add items to cart and verify sizes shown in cart.
+    flow:
+      - try:
+          flow:
+            - executeFunction:
+                name: ca.test.functions.productSearch.searchAProduct
+                params:
+                  - name: product
+                    string: ca.test.data.sku1 
+            - log: 
+                message: Extracting first product name from SRP.
+                color: GREEN_BOLD
+
+            - executeFunction:
+                name: ca.test.functions.productSearch.extractingFirstProductName
+
+            - log: 
+                message: Storing product name to a variable.
+                color: GREEN_BOLD
+
+            - storeIn:
+                key: go_item_1
+                value: ${productName}
+                    
+            - executeFunction:
+                name: ca.test.functions.productSearch.navigateToOptions
+            
+            - executeFunction:
+                name: ca.test.functions.pdp.extractingSize
+            - log:
+                message: Product Size is ${productSize}
+
+            - storeIn:
+               key: variant
+               value: ${productSize}
+
+            # Add to cart
+            - executeFunction:
+                name: ca.test.functions.PDPpage.addToCartPriceExtraction
+                params:
+                  - name: quantity
+                    string: ca.test.data.sku1_qty
+
+            # close
+            - executeFunction:
+                name: ca.test.functions.PDPpage.closePDPpage
+
+            # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCart
+            #
+            - executeFunction:
+               name: ca.test.functions.cart.validatingSize
+               params:
+                  - name: productName
+                    string: ca.test.data.multiVariant.productName
+                  - name: productSize
+                    string: ${variant}
+          catch:
+            flow:
+              - failTest: true
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

@@ -1,0 +1,176 @@
+functions:
+  # Verify petrx item prescription badge
+  - name: unified.us.functions.item.petrxItem.verifyPresent
+    flow:
+      # Verify petrx item prescription badge
+      - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.item.petrxEducationalBannerTitle
+              - name: direction
+                string: down
+              - name: scrollPosition
+                string: center
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: us.mappings.item.petrxEducationalBannerTitle
+            - identifier: us.mappings.item.petrxprescriptionBadge
+            - identifier: us.mappings.item.productPrimaryPrice
+
+      - executeFunction:
+            name: unified.us.functions.utils.scrollIfNotVisible
+            params:
+              - name: identifier
+                string: us.mappings.item.pickupNotAvailable
+              - name: direction
+                string: down
+              - name: scrollPosition
+                string: center
+      # Verify Pickup availability
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.item.pickupNotAvailable
+          then:
+            - log: "Pickup not available for petrx items"
+
+  - name: unified.us.functions.petrx.postAmendment.acceptReject
+    flow:
+      - sleep:
+          duration: 20000
+      - click:
+          identifier: us.mappings.orderConfirmation.ContinueShoppingButton
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo 
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.petRx.replacedWithText
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.petRx.replacedWithText
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.petRx.replacedWithText
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.petRx.orderedText
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.petRx.orderedText
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.petRx.orderedText
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.petRx.amend.reviewPrescriptionUpdates
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.petRx.amend.reviewPrescriptionUpdates
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.petRx.amend.reviewPrescriptionUpdates
+            - identifier: us.mappings.petRx.amend.reviewPrescriptionUpdates.reviewButton
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: us.mappings.petRx.amend.reviewPrescriptionUpdates.reviewButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.petRx.orderedText
+            - identifier: us.mappings.petRx.replacedWithText
+            - identifier: us.mappings.petRx.updatesDecline.button
+            - identifier: us.mappings.petRx.updatesAccept.button
+            - identifier: us.mappings.petRx.updatesConfirm.button
+
+      - if:
+          condition: ${acceptRejectPetrx} == true
+          then:
+            - click:
+                identifier: us.mappings.petRx.updatesAccept.button
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.petRx.updatesDeclineSecondItem.button
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.petRx.updatesDecline.button
+
+      - if:
+          condition: ${rejectPetrx} == true
+          then:
+            - click:
+                identifier: us.mappings.petRx.updatesDecline.button      
+
+      - click:
+          identifier: us.mappings.petRx.updatesConfirm.button
+      - sleep:
+          duration: 10000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.odp.closeInstallationDetail
+          then:
+            - click:
+                identifier: us.mappings.odp.closeInstallationDetail
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.petRx.amend.reviewUpdates.button
+          then:
+            - click:
+                identifier: us.mappings.navigation.backNavigationFrompurchasehistory
+            - sleep:
+                duration: 10000
+            - click:
+                identifier: us.mappings.tipping.order.view.detail.button
+      - sleep:
+          duration: 1000
+
+      - if:
+          condition: ${acceptRejectPetrx} == true
+          then:
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.myitems.CreateRegistry.TrackerView
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.petrxAcceptAmendQty
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.petrxAcceptAmendQty 
+            - log: Accept amend Petrx item successful
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.petRx.amendOrder.canceledUpdates.text
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.petRx.amendOrder.canceledUpdates.text
+      - log: Reject amend Petrx item successful

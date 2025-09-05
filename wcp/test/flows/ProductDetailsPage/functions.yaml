@@ -1,0 +1,574 @@
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: Makes the flow to go from details page to checkout with buy now button
+  # No Param
+  - name: functions.productDetailsPage.GoToCheckoutWithBuyNowOption
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.tapBuyNowOption
+      - if:
+          identifier: 
+            present:
+              - identifier: productDetailsPage.firstAvailableAddress
+            timeout: 5000
+          then: 
+            - click:
+                identifier: productDetailsPage.firstAvailableAddress
+            - click: 
+                identifier: reserveATime.saveAddress
+      - log: 
+          message: "End functions: productDetailsPage.GoToCheckoutWithBuyNowOption"
+          color: BLUE
+# Description: This function validates the multiseller page on the PDP.
+  # No Param
+  - name: functions.productDetailsPage.validateMultiSellerPage
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.tapCompareallSellers
+
+      - executeFunction:
+          name: functions.productDetailsPage.validateMultiSellerPagetitle
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapAddToCartMultiSellers 
+
+      - executeFunction:
+          name:  functions.checkoutPage.walletPopup.tapCloseBtn
+
+      - log: 
+          message: "End functions: productDetailsPage.validateMultiSellerPage"
+          color: BLUE
+ #--------------------------------------------------------------------------------------------------------------------
+  # Description:  This function validates item for rollback badge, reduced price and rating and review on PDP page.
+  # No params
+  - name: functions.productDetailsPage.validateRollbackItemDetail
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.validateRollBackAndReducedPrice
+      # TODO: Review section is missing in IOS bodega and Android (CEPG-220399). This validation will be added after the onboarding issue solved in IOS EA
+      - if:
+          condition: ${market} == 'MX'
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.validateRatingAndReview
+      - log:
+          message: "End functions: productDetailsPage.validateRollbackItemDetail"
+          color: BLUE 
+
+   #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function validates item for rollback badge and price saving.
+  # No params
+  - name: functions.productDetailsPage.validateRollBackAndReducedPrice
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.validateBadge
+          params:
+            - name: itemBadge
+              string: data.itemBadge.clearance
+      - executeFunction:
+          name: functions.productDetailsPage.validateReducedPrice
+      - log:
+          message: "End functions: productDetailsPage.validateRollBackAndReducedPrice"
+          color: BLUE 
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function validates share link is working fine.
+  # No params
+  - name: functions.productDetailsPage.validateShareLink
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.tapShareItemBtn
+      - executeFunction:
+          name: functions.productDetailsPage.assertShareOptionsPopupIsDisplayed
+      - executeFunction:
+          name: functions.productDetailsPage.shareItemsPopUp.tapCloseBtn
+      - log:
+          message: "End functions: productDetailsPage.validateShareLink"
+          color: BLUE 
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: validate bank promotion bottom sheet
+  - name: functions.productDetailsPage.validateBankPromotionBottomSheet
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.navigateToBankPromationBottomSheet      
+      - executeFunction:
+          name: functions.global.bankPromationBottomSheet.validateIsDisplayed
+      - log:
+            message: "End function: productDetailsPage.validateBankPromotionBottomSheet"
+            color: BLUE
+
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Verify if ATC button dispaly on the PDP and verify if error message display after click on ATC button on PDP
+  # No param 
+  - name: functions.productDetailsPage.isAddToCartButtonAndErrorDisplayed
+    flow:
+      - sleep:
+          duration: 5000
+      - storeIn:
+          key: isAddToCartButtonDisplayed
+          value: false
+      - storeIn:
+          key: isAddtoCartErrorDisplayed
+          value: false
+      - if:
+          identifier:
+            present:
+              - identifier: productDetailsPage.addToCartButton
+          then:
+            - storeIn:
+                key: isAddToCartButtonDisplayed
+                value: true
+            - executeFunction:
+                name: functions.productDetailsPage.tapAddToCart
+      - if:
+          condition: ${isAddToCartButtonDisplayed}
+          then:
+            - executeFunction:
+                name: functions.searchResultPage.handleAddToCartError # The logic behind hand ACT error on the PDP is identical to what we implemented on the search page.
+      - log:
+          message: "End Functions:productDetailsPage.isAddToCartButtonAndErrorDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validate badges in PDP. 
+  # Param        ${badge}    [Mandatory]   Badges to validate in PDP   [PO, PB, MC, AR]
+  # PO -> Preorder, AR -> Age restriction, PB -> Promotional badges, MC -> Manufacturing coupons
+  - name: functions.productDetailsPage.validateBadges
+    flow:
+      - if:
+          condition: ${badge} != 'PO' || ${badge} != 'AR' || ${badge} != 'PB' || ${badge} != 'MC'
+          then:
+            - failTest:
+                message: Invalid badges data provided from test scripts.
+      - if:
+          condition: ${badge} == 'PO'
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.validatePreOrderCta
+      - log:
+          message: ✓ ${badges} details in PDP validated sucessfully.
+          color: GREEN_BOLD
+      - log:
+          message: "End functions: productDetailsPage.validateBadges"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates financing options against all the four financing condition.
+  # No params
+  - name: functions.productDetailsPage.verifyFinancingOptions
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.getProductPrice # --> ${sanitizedPrice}, ${productPrice}
+      - if:
+          condition: ${sanitizedPrice} < 199 && ${sanitizedPrice} >= 50
+          then: 
+            - log: 
+                message: Product price is between $50-$199 | Validating only klarna details are displayed.
+                color: GREEN_BOLD
+            - executeFunction:
+                name: functions.productDetailsPage.validateKlarnaDetailsOnHeader
+      - if:
+          condition: ${sanitizedPrice} < 3000 && ${sanitizedPrice} >= 199
+          then:
+            - log:
+                message: Product price is between $199-$3000 | Validating both klarna and sales financing details are displayed.
+                color: GREEN_BOLD
+            - executeFunction:
+                name: functions.productDetailsPage.validateFinacingDetailsOnHeader
+            - executeFunction:
+                name: functions.productDetailsPage.tapLearnMoreLinkFinancing
+            - executeFunction:
+                name: functions.productDetailsPage.learnMore.salesFinancing
+            - executeFunction:
+                name: functions.productDetailsPage.learnMore.klarnaFinancing
+            - executeFunction:
+                name: functions.productDetailsPage.learnMore.tapCompareFinancingOptions
+            - executeFunction:
+                name: functions.productDetailsPage.validateCompareFinancingOptionsPopUp
+            - executeFunction:
+               name: functions.global.closePopUp
+      - if:
+          condition: ${sanitizedPrice} > 3000
+          then:
+            - log:
+                message: Product price is above $3000 | Validating only sales financing details are displayed.
+                color: GREEN_BOLD
+            - executeFunction:
+                name: functions.productDetailsPage.validateSalesFinancingDetailsOnHeader
+      - if:
+          condition: ${sanitizedPrice} < 50
+          then:
+            - log:
+                message: Product price is below $50 | Validating either klarna or sales financing details are displayed.
+                color: GREEN_BOLD
+            - executeFunction:
+                name: functions.productDetailsPage.validateNoFinancingDetailsDisplayed
+      - log:
+          message: "End functions: productDetailsPage.verifyFinancingOptions"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+  # Description: Validate Product Details Page Delivery Fulfillment 
+  # No param 
+  - name: functions.productDetailsPage.validateDeliveryFulfillment
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.getProductPrice
+      - executeFunction:
+          name: functions.productDetailsPage.scrollDownToSellerInformation
+      - if:
+          condition: ${sanitizedPrice} > 35
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.validateFreeDeliveryFulfillmentIsDisplayed
+          else:
+            - executeFunction:
+                name: functions.productDetailsPage.validatedeliveryForAPriceIsDisplayed
+      - log:
+          message: "End functions: productDetailsPage.validateDeliveryFulfillment"
+          color: BLUE 
+
+#--------------------------------------------------------------------------------------------------------------------
+  # Description: Validate Product Details Page Pickup Fulfillment
+  # No param 
+  - name: functions.productDetailsPage.validatePickupFulfillment
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.getProductPrice
+      - executeFunction:
+          name: functions.productDetailsPage.scrollDownToSellerInformation
+      - if:
+          condition: ${sanitizedPrice} > 25
+          then:
+            - executeFunction:
+                name: functions.productDetailsPage.validateFreePickupFulfillmentIsDisplayed
+          else:
+            - executeFunction:
+                name: functions.productDetailsPage.validateRegularPickupFulfillmentIsDisplayed
+      - log:
+          message: "End functions: productDetailsPage.validatePickupFulfillment"
+          color: BLUE 
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: The function navigate to product page based on the input criteria (SKU, keywords, name, or category) 
+  #              provided as an array. The function then iterates over each element in the array and adds the first 
+  #              product that has an 'Add to Cart' button to the Cart. It gets the Product Name, Product Price and
+  #              Quantity added to Cart. It also calculates the Total Price of the Cart and it creates the array 
+  #              of the product details.
+  #
+  # Params:      ${productArray}         [Mandatory]  Array containing the search criteria to loop over.
+  #
+  # Returns:     ${productName}          Product name of the product added to the cart.
+  #              ${productPrice}         Total price of the product added to the cart (product price * quantity).
+  #              ${productDetailsArray}  An array as JSON string with Product Name, Product Price and Product Quantity.
+  #                                         Each time this function is called, the info of the new product added to the cart
+  #                                         will be pushed into the array, resulting in an array containing the details of
+  #                                         all of the products that were added to the cart during the execution of the TC.
+  #              ${totalPrice}           Cart's subtotal.
+  #                                         Each time this function is called, the price of the product added to the cart will
+  #                                         be added to this variable to calculate the final cart subtotal during the execution
+  #                                         of the TC.
+  #             ${returnedSellerInformation} Seller of the product added to cart
+
+  - name: functions.productDetailsPage.addToCartUsingItemArrayList-GetProductDetails
+    flow:
+      - executeFunction:
+          name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+          params:
+            - name: productArray
+              string: ${productArray}
+      - executeFunction:
+          name: functions.utils.handlePopUp
+      - executeFunction:
+          name: functions.productDetailsPage.getProductName  #returns -> productName
+      - executeFunction:
+          name: functions.productDetailsPage.getProductPrice  #returns -> productPrice
+      - executeFunction:
+          name: functions.productDetailsPage.getProductQuantity #returns -> productQuantity
+      - executeFunction:
+          name: functions.productDetailsPage.getSellerInformation #returns -> returnedSellerInformation
+      - arithmetic:
+          expression: ${productPrice} * ${productQuantity}
+          storeIn: totalPrice
+      - log: 
+          message: "Cart subTotal: '${totalPrice}'"
+          color: CYAN
+      - executeNode:
+          file: wcp/test/helpers/SearchPage/createCartProductArray.js
+          args:
+            - value: ${productName}
+            - value: ${productPrice}
+            - value: ${productQuantity}
+            - value: ${returnedSellerInformation}
+            - value: ${promotionalProduct}
+            - value: ${productDetailsArray}
+          getResponse:
+            storeIn: productDetailsArray
+      - log: 
+          message: "Current product list in cart: ${productDetailsArray}"
+          color: CYAN
+      - log:
+          message: "End Functions: productDetailsPage.addToCartUsingItemArrayList-GetProductDetails"
+          color: BLUE
+#--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This flow will validate wether the Buy Now button is displayed or not displayed for all of the items
+  #              provided in the items array. If any of the items is not available (its Add to Cart button is not
+  #              displayed), it will be skipped from the validation, but, if none of the items were available, since
+  #              the flow will not be able to perform at least 1 validation, it will fail to force a TC failure.
+  # PARAMS: ${itemsArray}             [Mandatory]  Array of UPCs to be validated.
+  #         ${expectedToBeDisplayed}  [Mandatory]  Whether to expect the Buy Now button to be displayed or not displayed.
+  #                                                Options: [ true | false ]
+  - name: functions.productDetailsPage.validateBuyNowButton-forAllItemsInArray
+    flow:
+      - log:
+          message: "PARAM: itemsArray: '${itemsArray}'"
+          color: GREEN
+      - log:
+          message: "PARAM: expectedToBeDisplayed: '${expectedToBeDisplayed}'"
+          color: GREEN
+      - if:
+          condition: ${expectedToBeDisplayed} != true && ${expectedToBeDisplayed} != false
+          then:
+            - failTest:
+                message: "Incorrect value provided for expectedToBeDisplayed: '${expectedToBeDisplayed}'"
+      # Default control vars...
+      - storeIn:
+          key: atLeast1ItemValidated
+          value: false
+      # Loop through the items array...
+      - loop:
+          each: ${itemsArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - log:
+                message: "Checking item: '${searchText}'..."
+                color: CYAN
+            # Open PDP via deep link...
+            - executeFunction:
+                name: functions.utils.searchItemUsingDeepLink # <-- ${searchText}
+            - executeFunction:
+                name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed
+            # Verify if item is available...
+            - executeFunction:
+                name: functions.productDetailsPage.isAddToCartButtonDisplayed # RETURNS --> ${addToCarButtonDisplayed}
+            - if:
+                condition: ${addToCarButtonDisplayed}
+                then:
+                # If item is available count as at least 1 item was able to be validated and validate its Buy Now button...
+                  - storeIn:
+                      key: atLeast1ItemValidated
+                      value: true
+                  # Check Buy Now button status...
+                  - executeFunction:
+                      name: functions.productDetailsPage.isBuyNowButtonDisplayed # RETURNS --> ${buyNowButtonDisplayed}
+                  - if:
+                      condition: ${expectedToBeDisplayed} == ${buyNowButtonDisplayed}
+                      then:
+                        - log:
+                            message: "✔︎ Buy Now button for item '${searchText}' is correct (expectedToBeDisplayed==${expectedToBeDisplayed} && buyNowButtonDisplayed==${buyNowButtonDisplayed})."
+                            color: GREEN
+                      else:
+                        - failTest:
+                            message: "X Buy Now button for item '${searchText}' is not correct (expectedToBeDisplayed==${expectedToBeDisplayed} && buyNowButtonDisplayed==${buyNowButtonDisplayed})."
+                else:
+                # If item is not available do not count it and log warning message...
+                  - log:
+                      message: ⚠️ Cannot validate item '${searchText}' as PDP did not open or item is not available.
+                      color: GREEN
+                  - log:
+                      message: (Item will be skipped and not be counted for validation of the whole items array unless none of the items are able to be validated)
+                      color: GREEN
+      - if:
+          condition: '!${atLeast1ItemValidated}'
+          then:
+            - failTest:
+                message: X None of the items provided in the items array was available to perform at least 1 validation. The test will fail.
+      - if:
+          condition: ${expectedToBeDisplayed} == true
+          then:
+            - log:
+                message: ✔︎ Buy Now button was displaying correctly for all items.
+                color: GREEN_BOLD
+          else:
+            - log:
+                message: ✔︎ Buy Now button was not displaying correctly for all items.
+                color: GREEN_BOLD
+      - log:
+          message: 'End Function: functions.productDetailsPage.validateBuyNowButton-forAllItemsInArray'
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This flow will use an items array to open the PDP of the first product that is available and has the
+  #              Buy Now button displayed. If none of the items in the items array matched this criteria, the flow will
+  #              force a TC failure.
+  # PARAMS: ${itemsArray}  [Mandatory]  Array of UPCs to be validated.
+  - name: functions.productDetailsPage.openBuyNowPDP-usingItemsArray
+    flow:
+      - log:
+          message: "PARAM: itemsArray: '${itemsArray}'"
+          color: GREEN
+      # Default control vars...
+      - storeIn:
+          key: itemMatchingCriteriaFound
+          value: false
+      # Loop through the items array...
+      - loop:
+          each: ${itemsArray}
+          storeElement: searchText
+          storeIndex: index
+          flow:
+            - log:
+                message: "Checking item: '${searchText}'..."
+                color: CYAN
+            # Open PDP via deep link...
+            - executeFunction:
+                name: functions.utils.searchItemUsingDeepLink # <-- ${searchText}
+            - executeFunction:
+                name: functions.homePage.personalizedShoppingExperiencePopup.dismissIfDisplayed
+            # Verify if item is available...
+            - executeFunction:
+                name: functions.productDetailsPage.isAddToCartButtonDisplayed # RETURNS --> ${addToCarButtonDisplayed}
+            - if:
+                condition: ${addToCarButtonDisplayed}
+                then:
+                # If item is available check if Buy Now button is displayed...
+                  - executeFunction:
+                      name: functions.productDetailsPage.isBuyNowButtonDisplayed # RETURNS --> ${buyNowButtonDisplayed}
+                  - if:
+                      condition: ${buyNowButtonDisplayed}
+                      then:
+                        - storeIn:
+                            key: itemMatchingCriteriaFound
+                            value: true
+                        - log:
+                            message: ✔︎ Item '${searchText}' matches lookup criteria (item is available and Buy Now button is displayed).
+                            color: GREEN
+                        - log:
+                            message: ✔︎ PDP for item '${searchText}' was opened successfully.
+                            color: GREEN_BOLD
+                        - break: true
+                      else:
+                        - log:
+                            message: "Item '${searchText}' is available but its Buy Now button is not displayed."
+                            color: GREEN
+                else:
+                # If item is not available do not count it and log warning message...
+                  - log:
+                      message: Item '${searchText}' not available or it's PDP wasn't able to be opened.
+                      color: GREEN
+      # Check if PDP matching the criteria was able to be opened...
+      - if:
+          condition: '!${itemMatchingCriteriaFound}'
+          then:
+            - log:
+                message: X None of the items provided in the items array matched the lookup criteria (item were not available or their Buy Now buttons were not displayed).
+                color: RED
+            - failTest:
+                message: X No PDP displaying Buy Now button was able to be opened.
+      - log:
+          message: 'End Function: functions.productDetailsPage.openBuyNowPDP-usingItemsArray'
+          color: BLUE
+
+  - name: functions.productDetailsPage.validateDigitalItem
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.scrollDownToNotReturnableText
+      - executeFunction:
+          name: functions.productDetailsPage.validateDeliveredDigitallyTextIsDisplayed       
+      - log:
+          message: "End function: productDetailsPage.validateDigitalItem"
+          color: BLUE
+
+  # ----------------------------------------------------------------------------------------------------------------
+
+  # Description: This function clicks on the checkbox to apply manufacturer coupon if it is not applied yet
+  # No Param
+  - name: functions.productDetailsPage.applyManufacturerCoupon
+    flow:
+      - executeFunction:
+          name: functions.productDetailsPage.scrollDownToManufacturerCouponSection
+      - if:
+          identifier:
+            present:
+              - identifier: productDetailsPage.manufacturerCouponApplied
+          then:
+            - log:
+                message: "Manufactuer coupon is already Applied"
+                color: GREEN_BOLD
+          else:
+            - click:
+                identifier: productDetailsPage.manufacturerCouponCheckbox
+      - log:
+          message: "End function: productDetailsPage.applyManufacturerCoupon"
+          color: BLUE
+          
+ #--------------------------------------------------------------------------------------------------------------------
+  # Description: Search product And Add to Favourite
+  # Params: ${searchTerm} Array containing the search item
+
+  - name: functions.searchResultPage.searchItemAndAddtoFavourite
+    platform: android
+    flow:
+      - enterText:
+          identifier: searchPage.searchField
+          string: ${searchTerm}
+          pressEnter: true   
+      - click:
+         identifier: productDetailsPage.tapRemoveBtn
+      - getString:
+          identifier: productDetailsPage.productName
+          storeIn: productName
+          attribute: text
+      - verifyIdentifier:
+         present:
+           - identifier: productDetailsPage.heartButton
+      - click: 
+         identifier: productDetailsPage.closeButton
+      - log: 
+          message: "Product name saved in: ${productName}"
+          color: CYAN
+
+  # ----------------------------------------------------------------------------------------------------------------
+  # Description: Flow to validate Single Variants and Multi Variants
+  # Params: ${typeOfVariant}        Param to check if we are validating 'SingleVariant' or 'MultiVariant'
+  - name: functions.productDetailsPage.validateVariantsInformationIsDisplayed
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: productDetailsPage.productVariantsSection
+          position: center
+          scrollLimit: 1
+
+      - sleep:
+          duration: 10000
+
+      - numberOfChildElements:
+          identifier: productDetailsPage.productVariantsSection
+          storeIn: numberOfAvailableVariants
+          filterBy: productDetailsPage.variantOptions
+
+      - if:
+          condition: ${typeOfVariant} == 'SingleVariant'
+          then: 
+            - verifyCondition: "${numberOfAvailableVariants} == 1"
+      
+      - if:
+          condition: ${typeOfVariant} == 'MultiVariant'
+          then:
+            - verifyCondition: "${numberOfAvailableVariants} > 1"
+
+      - log:
+          message: "End functions: functions.productDetailsPage.validateSingleVariantIsDisplayed"
+          color: BLUE

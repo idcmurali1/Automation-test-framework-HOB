@@ -1,0 +1,39 @@
+tools:
+  jdk:
+    - 8
+
+gitShallowDepth: 10
+
+envs:
+  global:
+    variables:
+      BUILD_SUPPORT_PATH: $WORKSPACE/wcp/scripts
+
+triggers:
+  - pr: disabled
+  - push: disabled
+
+  # - manual:
+  #     name: Codefreeze Tasks
+  #     call: release_branch_and_update_appversion
+      
+  - cron:
+      spec: H 19 * * 5
+      call: release_branch_and_update_appversion
+
+  - manual:
+      name: Update Release Branch
+      call: update_release_branch
+
+flows:
+  update_release_branch:
+    - shell (Update Release Branch): |
+        flow_type='branching' $BUILD_SUPPORT_PATH/codefreeze-task.sh 2>&1
+
+  update_appversion:
+    - shell (Update Appversion): |
+        flow_type='versioning' $BUILD_SUPPORT_PATH/codefreeze-task.sh 2>&1
+
+  release_branch_and_update_appversion:
+    - call: update_release_branch
+    - call: update_appversion

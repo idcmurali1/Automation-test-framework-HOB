@@ -1,0 +1,215 @@
+# Place 3 seperate orders for Video Games per Shipping Address in 8 Hours, to trigger the pretransaction Item Policy prompt.
+general:
+  tags:  unified-p2-ecomm-teflon-e2e, C2696316
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2696316
+  metadata:
+    - name: scenarioId
+      string: FF005
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo    
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      # Astro clear cart
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+          - executeFunction:
+              name: unified.us.functions.utils.astro.clearCart
+              params:
+                - name: email
+                  string: us.data.android.flow.mip.email
+          - storeIn:
+              key: email
+              value: us.data.android.flow.mip.email                   
+
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+          - executeFunction:
+              name: unified.us.functions.utils.astro.clearCart
+              params:
+                - name: email
+                  string: us.data.ios.flow.mip.email
+          - storeIn:
+              key: email
+              value: us.data.ios.flow.mip.email  
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome              
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: us.data.mip.password  
+
+     # Navigate to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+     # Create Multiple orders to a given shipping address 
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.flowMip.createOrderPayload
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.flowMip.createOrderPayload              
+
+     #Add Video Game item to cart using deeplink or use Search fx.
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.teflon.mipItem.videoGame
+
+      # add item to the cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+                
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # validate switch to shipping on cart
+      - executeFunction:
+          name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+    
+      # Verify cart page
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+    
+      # Go to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder          
+
+      # Validate on Review order screen
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      # Click on place order, verify Moving Item Policy Prompt and save item for later
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.mip.confirmItemPolicy.editItems
+
+      # Fetch stock available items using fetch API
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: FC_DELIVERY
+            - name: store
+              string: 32144
+            - name: backupItem
+              string: 732383650
+      - storeIn:
+          key: nonmipitem
+          value: $itemFetched
+
+      #Add a non Video Game item to cart using deeplink
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string:  walmart://ip/$nonmipitem
+
+      # add item to the cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar          
+
+      # validate switch to shipping on cart
+      - executeFunction:
+          name: unified.us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+
+      # Verify cart page
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+    
+      # Go to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckoutOrNewOrder 
+
+      # Validate on Review order screen
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.checkout.confirmCvvAndPlaceOrder
+          params:
+            - name: cvv
+              string: 111
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.ratings
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.getOrderNumber
+
+      - log: Successfully placed order ${orderNo} after removing mipItem
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

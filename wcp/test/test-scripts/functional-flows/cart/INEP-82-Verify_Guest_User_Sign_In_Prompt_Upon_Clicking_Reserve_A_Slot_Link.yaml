@@ -1,0 +1,136 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-34
+#       Flow - MH: Bookslot - Verify guest user prompted to login while loading BAS page.
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-179345
+#     https://jira.walmart.com/browse/OPIF-179348
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-82
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-79
+#
+#######################################################################################################################
+
+
+general:
+  testCaseId: INEP-82
+  tags: INEP-82, OPIF-179345, OPIF-179348, p1-mh-opif-teflon-d-feb, INEP-79, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: "MH: Book Slot - Verify guest user prompted to login while loading BAS page."
+    flow:
+
+      # Onboard to application
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+  #TO-DO: REMOVE - ADDED TO CHANGE STORE TO A ONE WHERE THE ITEMS ARE AVAILABLE. 
+      #Select store without selecting intent..
+      - log:
+          message: "Select store without selecting intent.."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+      - executeFunction:
+          name: functions.homePage.selectStore
+          params:
+            - name: noIntent
+              string: true
+            - name: Zipcode
+              string: true              
+            - name: Zip_Code
+              string: data.global.gic.zipCode2
+            - name: storeName
+              string: data.global.gic.storeNameScToreo
+
+      # Add a GR item to cart.
+      - log:
+          message: "Add a GR item to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.itemsArray.groceryByPieces
+
+      # Navigate to cart.
+      - log:
+          message: "Navigate to cart"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.global.gic.selectPickupIntent
+          params:
+            - name: page
+              string: cart
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+      - executeFunction:
+          name: functions.cartPage.validateGuestUserReserveTimePage
+      - executeFunction:
+          name: functions.cartPage.reserveTime.signInBtn.isDisplayed
+
+  #  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  # #   A F T E R   S C E N A R I O
+  # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed Successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

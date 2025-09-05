@@ -1,0 +1,285 @@
+# ================================================================================================================================
+# TC: 009
+# Flow: TC-009: Unschedueled Pick up + 1P 3P WFS + CC
+# ================================================================================================================================
+general:
+  testCaseId: C2720132
+  tags: C2720132, p1-mx-ea-teflon, p1-bodega-ea-teflon, p1-mx-ea-prod, p1-bodega-ea-prod, p1-ca-en-teflon, p1-ca-en-prod, p1-ca-fr-prod, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon
+  combineScenarios: true
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp009.android.email
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp009.ios.email
+
+      # Navigate to HomePage and validate HomePage is Loaded
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      #  Click on login and select sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - if:
+          condition: ${market} == 'CA'
+          then:
+            # Select Store Name From GIC Pickup Intent
+            - executeFunction:
+                name: functions.global.gic.selectPickupIntent
+                params:
+                  - name: page
+                    string: home
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            # Search for a 1P pick up item has reduced/strikethrough price
+            - executeFunction:
+                name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+                params:
+                  - name: productArray
+                    string: data.wcp09.pickupItem.array
+                  - name: badge
+                    string: data.itemBadge.clearance
+
+            # Validate item for rollback badge, reduced price and rating and review.
+            - executeFunction:
+                name: functions.productDetailsPage.validateRollbackItemDetail
+
+            # Add item quantity by 2 in PDP page
+            - executeFunction:
+                name: functions.productDetailsPage.tapAddToCart
+                params:
+                  - name: quantity
+                    string: data.global.item.2count
+
+            - executeFunction:
+                name: functions.productDetailsPage.verifyItemCount
+                params:
+                  - name: itemCount
+                    string: data.global.item.2count
+
+            - executeFunction:
+                name: functions.productDetailsPage.tapClose
+
+            # Adding following condition to CA to clean badge validation in script
+            - if:
+                condition: ${market} == 'CA'
+                then:
+                  - storeIn:
+                      key: badge
+                      value: ''
+
+
+          else:
+              # Teflon, add item to cart, skip PDP validation which covered by Production
+              - executeFunction:
+                  # name: functions.searchPage.addToCartUsingItemArray
+                  name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                  params:
+                    - name: productArray
+                      string: data.wcp09.pickupItem.array
+
+              - executeFunction:
+                  name: functions.productDetailsPage.tapClose
+
+      - executeFunction:
+          # name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+          name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+          params:
+            - name: productArray
+              string: data.wcp09.3pWFS.array
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapClose
+
+      # Navigate to cart and ensure Items are added to cart.     
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      # Get the fufillment type
+      - executeFunction:
+          name: functions.cartPage.getFulfillmentType  # << return cartPage.fulfillmentType
+
+      # Execute following function to proof Pickup to delivery functionality is working
+      - executeFunction:
+          name: functions.cartPage.switchPickupToDelivery
+
+      - if: # Condition added due to open issue CEPG-242399 Remove when issue is fixed
+          condition: ${platform} == 'Android' && ${market} == 'MX-Bodega'
+          then:
+            - executeFunction:
+                name: functions.cartPage.tapOnAddressLink
+            - executeFunction:
+                name: functions.cartPage.saveAddressFromList
+
+      # Switch to pickup if fulfillment is delivery
+      - executeFunction:
+          name: functions.cartPage.switchDeliveryToPickup   # << return cartPage.fulfillmentType
+
+      - executeFunction:
+          name: functions.cartPage.getFulfillmentType
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction:
+                name: functions.cartPage.fulfillmentAddress  # << return fulfillmentAddressText
+
+            # Validate reduced prices/strikethrough price
+            - executeFunction:
+                name: functions.cartPage.validateReducedPrice
+
+            #Pickup Free text missing on cart & checkout Page will uncomment once issue resolved
+            - executeFunction:
+                name: functions.cartPage.validateReducedPriceAndNoShippingCharge
+
+      # Continue to checkout and navigate to CXO
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      - if:
+          condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+          then:
+            - executeFunction:
+                name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+                params:
+                  - name: invoiceColoniaName
+                    string: data.pickup.coloniaName
+
+      # CheckOut Page
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            - executeFunction:
+                name: functions.checkout.validateFufillmentType
+                params:
+                  - name: expectedFulfillmentType
+                    string: ${cartPage.fulfillmentType}
+
+            # - executeFunction:
+            #     name: functions.checkoutPage.verifyPickupAddress
+
+            - executeFunction:
+                name: functions.checkoutPage.updatePickupPersonInformation
+                params:
+                  - name: pickupPersonName
+                    string: data.defaultAddress.firstName
+                  - name: pickupPersonLastName
+                    string: data.defaultAddress.lastName
+                  - name: pickupPersonPhoneNumber
+                    string: data.wcp009.pickupPersonPhoneNumber
+                    
+            # Pickup Free text missing on cart & checkout Page will uncomment once issue resolved
+            - executeFunction:
+                name: functions.checkoutPage.validateReducedPriceAndPickUpFreeShipping
+      
+      - if:
+          condition: ${environment} == 'Teflon' && (${market} == 'MX' || ${market} == 'MX-Bodega')
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.scrollToCVVTextfield
+
+            - executeFunction:
+                name: functions.checkoutPage.addCVV
+                params:
+                  - name: CVV
+                    string: data.global.card.cvv.123
+        
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            #Click Place Order
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+            - executeFunction:
+                name: functions.utils.terminateApp
+
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            # - executeFunction:
+            #     name: functions.thankYouPage.navigateToLastOrderFromThankYouPage
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifySectionDisplayed
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyDeliveryType
+                params:
+                  - name: expectedDeliveryType
+                    string: data.global.deliveryText.pickup
+
+# Commenting this verification, because the payment card details might change and that will cause script to fail.
+#            - executeFunction:
+#                name: functions.orderDetailPage.verifyCardPayment
+#                params:
+#                  - name: expectedCardLastFourDigit
+#                    string: data.global.creditCard.visa.6949.last4DigitsOnly
+
+            # - executeFunction:
+            #     name: functions.orderDetailPage.validateReducedPriceAndPickUpFreeShipping
+
+      - storeIn:
+          key: testStatus
+          value: passed          
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

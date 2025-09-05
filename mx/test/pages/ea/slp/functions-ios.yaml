@@ -1,0 +1,390 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Mar/07/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.functions.ea.slp.assertPageDisplayed
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.ea.slp.filtersContainer
+          then:
+              - executeFunction:
+                  name: mx.functions.utils.scrollToTop
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.ea.slp.resultsText
+            - identifier: mx.mappings.ea.slp.resultsSection
+            - identifier: mx.mappings.ea.slp.filtersContainer
+      - log:
+          message: "Success: Page is Displayed."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: slp.assertPageDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This function asserts results displayed and returns the results number in ${returnedElementsResults}.
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.functions.ea.slp.assertResultsDisplayed
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present: 
+            - identifier: mx.mappings.ea.slp.filtersContainer
+            - identifier: mx.mappings.ea.slp.resultsSection
+            - identifier: mx.mappings.ea.slp.resultsText
+      - getString:
+          identifier: mx.mappings.ea.slp.resultsText
+          storeIn: elementsResults
+      - executeNode:
+          file: mx/test/helpers/slp/getElementsResults.js
+          args:
+            - value: ${elementsResults}
+          getResponse:
+            storeIn: returnedElementsResults
+      - log: 
+          message: "${returnedElementsResults} results found"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: slp.assertResultsDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.slp.tapSortAndFilterButton
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.ea.slp.sortAndFilterButton
+      - log:
+          message: "End function: slp.tapSortAndFilterButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function scrolls down to a product with the specified combination of characteristics provided
+  #                 by params. If it finds it, it returns its name [returnedProductName], if product container is not
+  #                 found with the specified characteristics, function fails.
+  # PARAMS:
+  #   withMSI       [Mandatory] options: [ With | Without | Disregard ]
+  #   withDiscount  [Mandatory] options: [ With | Without | Disregard ]
+  # RETURNS:
+  #   ${returnedProductName}
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.ea.slp.findProductByCharacteristics
+    platform: ios
+    flow:
+      # Checking inputs...
+      - log:
+          message: "Checking inputs..."
+          color: GREEN
+      - if:
+          condition: ${withMSI} != 'With' && ${withMSI} != 'Without' && ${withMSI} != 'Disregard'
+          then:
+            - failTest:
+                message: "Invalid 'withMSI' input, valid options: [ With | Without | Disregard ]... provided: '${withMSI}'"
+      - if:
+          condition: ${withDiscount} != 'With' && ${withDiscount} != 'Without' && ${withDiscount} != 'Disregard'
+          then:
+            - failTest:
+                message: "Invalid 'withDiscount' input, valid options: [ With | Without | Disregard ]... provided: '${withDiscount}'"
+      - log:
+          message: "Looking for a Product with the next characteristics: 'withDiscount' = '${withDiscount}' | 'withMSI' = '${withMSI}'"
+          color: CYAN
+
+      # Find a Product with MSI and Discount...
+      - if:
+          condition: ${withMSI} == 'With' && ${withDiscount} == 'With'
+          then:
+            - log:
+                message: "Looking for a Product With MSI and With Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithMsiAndDiscount
+
+      # Find a Product with MSI and No Discount...
+      - if:
+          condition: ${withMSI} == 'With' && ${withDiscount} == 'Without'
+          then:
+            - log:
+                message: "Looking for a Product With MSI and No Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithMsiAndNoDiscount
+
+      # Find a Product with MSI disregarding Discount...
+      - if:
+          condition: ${withMSI} == 'With' && ${withDiscount} == 'Disregard'
+          then:
+            - log:
+                message: "Looking for a Product With MSI Disregarding Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithMsi
+
+      # Find a Product with No MSI that has Discount...
+      - if:
+          condition: ${withMSI} == 'Without' && ${withDiscount} == 'With'
+          then:
+            - log:
+                message: "Looking for a Product with No MSI that Has Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithDiscountAndNoMsi
+
+      # Find a Product with No MSI and No Discount...
+      - if:
+          condition: ${withMSI} == 'Without' && ${withDiscount} == 'Without'
+          then:
+            - log:
+                message: "Looking for a Product with No MSI and No Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithNoMsiAndNoDiscount
+
+      # Find a Product with No MSI Disregarding Discount...
+      - if:
+          condition: ${withMSI} == 'Without' && ${withDiscount} == 'Disregard'
+          then:
+            - log:
+                message: "Looking for a Product with No MSI Disregarding Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithoutMsi
+
+      # Find a Product Disregarding MSI with Discount...
+      - if:
+          condition: ${withMSI} == 'Disregard' && ${withDiscount} == 'With'
+          then:
+            - log:
+                message: "Looking for a Product Disregarding MSI With Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithDiscount
+
+      # Find a Product Disregarding MSI without Discount...
+      - if:
+          condition: ${withMSI} == 'Disregard' && ${withDiscount} == 'Without'
+          then:
+            - log:
+                message: "Looking for a Product Disregarding MSI Without Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.productContainerWithoutDiscount
+
+      # Find a Product Disregarding MSI and Disregarding Discount...
+      - if:
+          condition: ${withMSI} == 'Disregard' && ${withDiscount} == 'Disregard'
+          then:
+            - log:
+                message: "Looking for a Product Disregarding MSI and Disregarding Discount..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.slp.getProductNameByMappingFilter
+                params:
+                  - name: mappingFilter
+                    string: mx.mappings.ea.slp.firstAvailableProductContainer
+      - log:
+          message: "End function: slp.findProductByCharacteristics"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function is a helper for mx.functions.ea.slp.findProductByCharacteristics but can be used anywhere else.
+  #               It searches for a product container that has the specific characteristics defined by the xpath.
+  # PARAM:        ${mappingFilter}  [Mandatory] This mapping will be used as a filter to find the desired product, it is very
+  #                                               important and REQUIRED that this mapping does not include variables and
+  #                                               the mappings must point to a product container on SLP.
+  # RETURNS:      ${returnedProductName}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.slp.getProductNameByMappingFilter
+    platform: ios
+    flow:
+      - log:
+          message: "Mapping filter: '${mappingFilter}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: ${mappingFilter}
+          then:
+            - executeFunction:
+                name: mx.functions.utils.positionElementToTheCenter
+                params:
+                  - name: elementToPositionCenter
+                    string: ${mappingFilter}
+            - log:
+                message: "Product has been found, retrieving name..."
+                color: GREEN_BOLD
+          else:
+            - log:
+                message: "Product not found, scrolling down to product..."
+                color: GREEN_BOLD
+            - scroll:
+                direction: down
+                wait: 1000
+                untilIdentifier: ${mappingFilter}
+                scrollLimit: 15
+                position: center
+      - getString:
+          identifier: ${mappingFilter}//*[@name="GlassProductTile_title"]
+          storeIn: returnedProductName
+      - log:
+          message: "Returned Product Name: '${returnedProductName}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: slp.getProductNameByMappingFilter"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM:  ${productName}  [Mandatory]  Product to open its PDP.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.functions.ea.slp.openProductDetailsByName
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - click:
+          identifier: mx.mappings.ea.slp.productContainerByName #<--PARAM--${productName}
+          coordinates: 5%,5%
+      - log:
+          message: "End function: slp.openProductDetailsByName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Params:   ${productName}  [Mandatory]  Name of the Product to return its Price.
+  # RETURNS:  ${returnedQuantity}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.slp.getProductQuantity
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.slp.productQuantityByProductName #<--PARAM--${productName}
+          storeIn: returnedQuantity
+      - log:
+          message: "Quantity got: '${returnedQuantity}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: slp.getProductQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   Gets the price of the given product. It returns only the number, without '$' symbol or text at the end
+  #     (like '/kg', '/pza', etc.).
+  # PARAMS:
+  #   ${productName}  [Mandatory]  Name of the product.
+  # RETURNS:
+  #   ${returnedPrice}
+  #   ${returnedOriginalPrice} If available, if not, the same value as '${returnedPrice}' will be returned.
+  #   ${returnedDiscountAmount} This is the amount that the user will save by purchasing the product. Only if product has discount.
+  # AUTHOR:
+  #   Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.ea.slp.getProductPrice
+    platform: ios
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.ea.slp.productPrice # <--VARIABLE--${productName}
+          storeIn: productPrice
+      - executeNode:
+          file: mx/test/helpers/utils/getNumberFromPriceString.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: returnedPrice
+      # Verifying if product has a discount...
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.slp.savingsBadgeByProductName # <--VARIABLE--${productName}
+          then:
+            # Extraction of the Original Price...
+            - log:
+                message: "Discount found, extracting Original Price value..."
+                color: CYAN
+            - getString:
+                identifier: mx.mappings.ea.slp.productPrice # <--VARIABLE--${productName}
+                storeIn: originalPrice
+            - executeNode:
+                file: mx/test/helpers/slp/getOriginalPrice.js
+                args:
+                  - value: ${originalPrice}
+                getResponse:
+                  storeIn: returnedOriginalPrice
+            # Extraction of the Discount Amount (used later for Order Details)...
+            - getString:
+                identifier: mx.mappings.ea.slp.savingsBadgeByProductName # <--VARIABLE--${productName}
+                storeIn: returnedDiscountAmount
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceString.js
+                args:
+                  - value: ${returnedDiscountAmount}
+                getResponse:
+                  storeIn: returnedDiscountAmount
+          else:
+            - log:
+                message: "Discount not found, returning Current Price..."
+                color: CYAN
+            - storeIn:
+                key: returnedOriginalPrice
+                value: ${returnedPrice}
+            - storeIn:
+                key: returnedDiscountAmount
+                value: '0.00'
+      - log:
+          message: "Price Got: '${returnedPrice}'"
+          color: GREEN_BOLD
+      - log:
+          message: "Original Price Got: '${returnedOriginalPrice}'"
+          color: GREEN_BOLD
+      - log:
+          message: "Discount Amount Got: '${returnedDiscountAmount}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: slp.getProductPrice"
+          color: BLUE

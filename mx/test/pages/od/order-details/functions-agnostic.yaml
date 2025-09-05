@@ -1,0 +1,1107 @@
+#======================================================================================================================
+#  AUTHOR: Isis Rojas Tolentino (vn53dge)
+#  CREATED: Mar/13/2023
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions: 
+
+  - name: mx.functions.order-details.tapBack
+    flow:
+      - click:
+          identifier: mx.mappings.order-details.backButton
+      - log:
+          message: "End function: order-details.tapBack"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function asserts the correct order has been opened.
+  # Params:  ${orderNumber}  [Mandatory]  Order number to assert.
+  # AUTHOR:  ???
+  # EDITOR:  Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertCorrectOrderDisplayed
+    flow:
+      - log:
+          message: "Order Number: '${orderNumber}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.orderNumberLabel
+          extractNumbers: true
+          storeIn: displayedOrderNumber
+      - log:
+          message: "Current order number displayed: '${displayedOrderNumber}'"
+          color: GREEN_BOLD
+      - if:
+          condition: ${orderNumber} == ${displayedOrderNumber}
+          then:
+            - log:
+                message: '✓ Successful Assertion: Order displayed.'
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "X Failed Assertion: ('${orderNumber}' != '${displayedOrderNumber}')"
+      - log: 
+          message: "End function: order-details.assertCorrectOrderDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${fulfillmentType}  [Mandatory]  Expected Fulfillment Type. Options: [ pickup | delivery ].
+  # AUTHOR:  ???
+  # EDITOR:  Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertOrderFulfillmentType
+    flow:
+      - log:
+          message: "Expected Fulfillment Type: '${fulfillmentType}'"
+          color: CYAN
+      - if:
+          condition: ${fulfillmentType} != 'pickup' && ${fulfillmentType} != 'delivery'
+          then:
+            - failTest:
+                message: "X ERROR: param <fulfillmentType>: Invalid value '${fulfillmentType}'."
+      - if:
+          condition: ${fulfillmentType} == 'pickup'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.order-details.orderFulfillmentTypeLabel.pickup
+                then:
+                  - failTest:
+                      message: "X Failed Assertion: Fulfillment Type is not 'pickup'."
+      - if:
+          condition: ${fulfillmentType} == 'delivery'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.order-details.orderFulfillmentTypeLabel.delivery
+                then:
+                  - failTest:
+                      message: "X Failed Assertion: Fulfillment Type is not 'delivery'."
+      - log:
+          message: "✓ Successful Assertion: Fulfillment Type is '${fulfillmentType}'."
+          color: GREEN_BOLD
+      - log:
+          message: "End function: order-details.assertOrderFulfillmentType"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Verifies if the expected product is listed in the page. This function first scrolls to top and then
+  #   starts searching for the product downwise.
+  # PARAMS:  ${productName}  [Mandatory]  Product to find.
+  # AUTHOR: ?????
+  # EDITOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.findProductInPage
+    flow:
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: mx.mappings.order-details.productsSection
+                then:
+                  - scroll:
+                      direction: up
+                      untilIdentifier: mx.mappings.order-details.productsSection
+                      scrollLimit: 8
+                      wait: 1000
+                      position: center
+                  # In case this scrolls reloads the Order-Details page, this will give it time to reload properly.
+                  - sleep:
+                      duration: 5000
+                  # And this will re-open the Product Details section again in case it collapses after the reload.
+                  - executeFunction:
+                      name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+          else:
+            - executeFunction:
+                name: mx.functions.utils.scrollToTop
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.order-details.productContainerByProductName
+          then:
+            - log: 
+                message: "Expected product is not present... Scrolling down for a full scan."
+                color: CYAN
+            - scroll:
+                direction: down
+                untilIdentifier: mx.mappings.order-details.productContainerByProductName
+                scrollLimit: 20
+                wait: 1000
+                position: center
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.order-details.productContainerByProductName
+      - log: 
+          message: "The product has been found."
+          color: CYAN
+      - log:
+          message: "End function: order-details.findProductInPage"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # AUTHOR: Rodrigo PC - vn53p0i
+  # EDITOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertOrderedFulfillmentDate
+    flow:
+      - executeNode:
+          file: mx/test/helpers/utils/getTodaysDateAsStringForAssertion.js
+          getResponse:
+            storeIn: expectedFulfillmentDate
+      - log:
+          message: "Expected date: ${expectedFulfillmentDate}"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.orderedDate
+          storeIn: displayedOrderedDate
+      - if:
+          condition: ${expectedFulfillmentDate} == ${displayedOrderedDate}
+          then:
+            - log:
+                message: " ✓ Successful Assertion: Ordered date is correct."
+                color: GREEN_BOLD
+            - log:
+                message: "End function: order-details.assertOrderedDate"
+                color: BLUE
+          else:
+            - failTest: 
+                message: "Expected ordered date: ${expectedFulfillmentDate}, != displayed: ${displayedOrderedDate}"
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This method asserts the fulfillment address.
+  # PARAMS:  ${fulfillmentAddressRaw} [Mandatory]  A string with the store address with every section divided by commas.
+  # AUTHOR: ?????
+  # EDITORS: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertFulfillmentAddress
+    flow:
+      - getString:
+          identifier: mx.mappings.order-details.storeAddress
+          storeIn: displayedStoreAddress
+      - executeNode:
+          file: mx/test/helpers/utils/sanitizeAddressForOrderDetails.js
+          args:
+            - value: ${fulfillmentAddressRaw}
+          getResponse:
+            storeIn: fulfillmentAddressRaw
+      - log:
+          message: "Expected Store Address: '${fulfillmentAddressRaw}'"
+          color: CYAN
+      - log:
+          message: "Displayed Store Address: '${displayedStoreAddress}'"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/order-details/compareAddresses.js
+          args:
+            - value: ${displayedStoreAddress}
+            - value: ${fulfillmentAddressRaw}
+          getResponse:
+            storeIn: addressCheck
+      - if:
+          condition: ${addressCheck} == true
+          then:
+            - log:
+                message: "✓ Successful Assertion: Store Address is correct!"
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "X Failed Assertion: Store Address is incorrect"
+      - log:
+          message: "End function: order-details.assertFulfillmentAddress"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # PARAMS:
+  #     ${expectedOrderStatus}   [Mandatory]
+  #         Expected Orders Status. Options: [ Received | Preparing | Ready4Pickup | OnTheWay | Delivered ]
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertStatus
+    flow:
+      - storeIn:
+          key: statusOption
+          value: ${expectedOrderStatus}
+      - executeNode:
+          file: mx/test/helpers/orders-history/parseToOrderStatusText.js
+          args:
+            - value: ${statusOption}
+          getResponse:
+            storeIn: expectedOrderStatus
+      - if:
+          condition: ${expectedOrderStatus} == 'null'
+          then:
+            - failTest:
+                message: "Failure: Incorrect expectedOrderStatus provided (${statusOption})"
+      - log:
+          message: "Expected Order Status: '${statusOption}' (${expectedOrderStatus})"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.orderStatusForAssertion
+      - log:
+          message: "End function: order-details.assertStatus"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the store banner.
+  # Params: ${expectedBanner}  [Mandatory] Can be either 'Walmart' (OD store) or 'WalmartExpress'.
+  - name: mx.functions.order-details.assertBanner
+    flow: 
+      - log: 
+          message: "Expected banner: ${expectedBanner}"
+          color: CYAN
+      - if:
+          condition: ${expectedBanner} != 'Walmart' && ${expectedBanner} != 'WalmartExpress'
+          then:
+            - failTest:
+                message: "Wrong input, verify banner supplied: ${expectedBanner}"
+      - if:
+          condition: ${expectedBanner} == 'WalmartExpress'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.order-details.walmartExpressBanner
+      - if:
+          condition: ${expectedBanner} == 'Walmart'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.order-details.walmartODBanner
+      - log: 
+          message: "Correct banner."
+          color: CYAN
+      - log:
+          message: "End function: order-details.assertBanner"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Asserts the displayed Order's Delivery Slot is correct.
+  # Params:      ${expectedDeliverySlot}  [Mandatory]  Expected delivery slot to be displayed. The value passed in this
+  #              param must be the string value returned by the 'delivery-slot-extraction/parseDeliverySlotForAssertion.js'
+  #              helper (see helper's documentation).
+  #
+  #   Flags used:
+  #     ${ASSERT_DELIVERY_SLOT_IN_ORDER_DETAILS}
+  #         If set to 'true', the flow will perform assertion for the Delivery Slot in Order Details page.
+  #         If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+  #
+  - name: mx.functions.order-details.assertDeliverySlot
+    flow:
+      - if:
+          condition: ${ASSERT_DELIVERY_SLOT_IN_ORDER_DETAILS} == true
+          then:
+            - log:
+                message: "Expected Delivery Slot: ${expectedDeliverySlot}"
+                color: CYAN
+            - getString:
+                identifier: mx.mappings.order-details.deliverySlotLabel
+                storeIn: displayedDeliverySlot
+            - executeNode:
+                file: mx/test/helpers/delivery-slot/order-details/parseDisplayedSlotForOrderDetails.js
+                args:
+                  - value: ${displayedDeliverySlot}
+                getResponse:
+                  storeIn: displayedDeliverySlot
+            - log: 
+                message: "Currently Displayed Delivery Slot: ${displayedDeliverySlot}"
+                color: CYAN
+            - if:
+                condition: ${displayedDeliverySlot} == ${expectedDeliverySlot}
+                then:
+                  - log:
+                      message: Delivery slot is correct.
+                      color: CYAN
+                else:
+                  - failTest:
+                      message: "'${expectedDeliverySlot}' did not match '${displayedDeliverySlot}'"
+          else:
+            - log:
+                message: "Delivery Slot Assertion has been turned off by flag:'ASSERT_DELIVERY_SLOT_IN_ORDER_DETAILS'"
+                color: YELLOW
+      - log:
+          message: "End function: order-details.assertDeliverySlot"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the delivery home address name.
+  # Params:  ${expectedHomeAddressName}  [Mandatory]  Home address name.
+  - name: mx.functions.order-details.assertHomeDeliveryAddressName
+    flow:
+      - log: 
+          message: "Expected home address name: ${expectedHomeAddressName}"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.homeAddressName
+          storeIn: displayedHomeAddressName
+      - if:
+          condition: ${displayedHomeAddressName} == ${expectedHomeAddressName}
+          then:
+            - log:
+                message: Home address name is correct.
+                color: CYAN
+          else:
+            - failTest:
+                message: Addresses don't match
+      - log: 
+          message: "End function: order-details.assertHomeDeliveryAddressName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the delivery home address by checking if every section of the user address (divided
+  #                by commas) is present inside the displayed user address.
+  # Params: ${expectedUserAddressWithCommas} [Mandatory]  A string with the user address with every section divided by commas. 
+  #                                  The order of the values is not important. Example: 'street, ext.num, city, zip code'
+  #                                  Just make sure the string contains all the values you want to validate.
+  - name: mx.functions.order-details.assertHomeDeliveryAddress
+    flow:
+      - log: 
+          message: "Expected home address: ${expectedUserAddressWithCommas}"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.homeAddress
+          storeIn: displayedUserAddress
+      - executeNode:
+          file: mx/test/helpers/order-details/assertStoreUserAddressForOrderDetails.js
+          args:
+            - value: ${expectedUserAddressWithCommas}
+            - value: ${displayedUserAddress}
+          getResponse:
+            storeIn: returnedIsUserAddressCorrect
+      - if:
+          condition: ${returnedIsUserAddressCorrect} == true
+          then:
+            - log:
+                message: User address is correct.
+                color: CYAN
+            - log: 
+                message: "End function: order-details.assertHomeDeliveryAddress"
+                color: BLUE
+          else:
+            - failTest:
+                message: "The provided user address: ${userAddressWithCommas}, is not correct, verify string and try again."
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method verifies the selected delivery address.
+  # NOTE: this assertion must be performed with the returned value of mx.functions.reserve-slot.getSelectedAddress
+  # Params  ${streetName}     [Mandatory]   Name of the street to be validated.
+  #         ${exteriorNumber} [Mandatory]   Exterior number to be validated.
+  #         ${city}           [Mandatory]   City to be validated.
+  #         ${state}          [Mandatory]   State to be validated.
+  #         ${zipCode}        [Mandatory]   ZIP Code to be validated.
+  - name: mx.functions.order-details.assertHomeDeliveryAddressByIndividualValues
+    flow:
+      # Using '\e[36m' to print in CYAN and '\e[0m' to reset color, to simplify logs.
+      - log: "\e[36mExpected StreetName: '${streetName}'\e[0m"
+      - log: "\e[36mExpected ExteriorNumber: '${exteriorNumber}'\e[0m"
+      - log: "\e[36mExpected City: '${city}'\e[0m"
+      - log: "\e[36mExpected State: '${state}'\e[0m"
+      - log: "\e[36mExpected ZipCode: '${zipCode}'\e[0m"
+      - getString:
+          identifier: mx.mappings.order-details.homeAddress
+          storeIn: displayedAddress
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAll.js
+          args:
+            - value: ${displayedAddress}
+            - value: ${streetName}, ${exteriorNumber}, ${city}, ${state}, ${zipCode}
+          getResponse:
+            storeIn: isAddressCorrect
+      - if:
+          condition: ${isAddressCorrect} == true
+          then:
+            - log:
+                message: "Address is correct."
+                color: CYAN
+          else:
+            - failTest:
+                message: "Expected address not contained in: '${displayedAddress'}"
+      - log: 
+          message: "End function: order-details.assertHomeDeliveryAddressByIndividualValues"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the total products count.
+  # Params:  ${productsCount}  [Mandatory]  Expected total quantity of purchased products (does not count how many times
+  #                                         a product was added, only how many different products were purchased).
+  #                                         Example: for 5 apples and 3 carrots ${productsCount} would be equal to 2.
+  - name: mx.functions.order-details.assertOrderProductsCount
+    flow:
+      - log:
+          message: "Expected Products Count: '${productsCount}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.totalProductsCount
+          storeIn: displayedCount
+      - executeNode:
+          file: mx/test/helpers/utils/sanitizeQuantity.js
+          args:
+            - value: ${displayedCount}
+          getResponse:
+            storeIn: displayedCount
+      - log:
+          message: "Displayed Products Count: '${displayedCount}'"
+          color: CYAN
+      - if:
+          condition: ${productsCount} == ${displayedCount}
+          then:
+            - log:
+                message: "✓ Successful Assertion: Order Products Count correct."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "X Failed Assertion: Order Products Count not correct."
+      - log:
+          message: "End function: mx.functions.order-details.assertOrderProductsCount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${paymentMethod}  [Mandatory]  Expected payment method. Values: [ CC/DC | payAtStore | Paypal ].
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt), Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertPaymentMethod
+    flow:
+      - if:
+          condition: ${paymentMethod} != 'CC/DC' && ${paymentMethod} != 'payAtStore' && ${paymentMethod} != 'Paypal'
+          then:
+            - failTest:
+                message: "Invalid Expected Payment Method provided: '${paymentMethod}'"
+      - storeIn:
+          key: originalInput
+          value: ${paymentMethod}
+      - if:
+          condition: ${originalInput} == 'CC/DC'
+          then:
+            - storeIn:
+                key: paymentMethod
+                value: Credito / Debito
+      - if:
+          condition: ${originalInput} == 'payAtStore'
+          then:
+            - storeIn:
+                key: paymentMethod
+                value: Pagar al recibir | Pago en tienda
+      - if:
+          condition: ${originalInput} == 'Paypal'
+          then:
+            - storeIn:
+                key: paymentMethod
+                value: Paypal
+      - log:
+          message: "Expected Payment Method: '${originalInput}' (${paymentMethod})"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.order-details.scrollToBottom
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: attribute
+                value: text
+          else:
+            - storeIn:
+                key: attribute
+                value: label
+      - getString:
+          identifier: mx.mappings.order-details.paymentMethodLabel
+          attribute: ${attribute}
+          storeIn: displayedPaymentMethod
+      - log:
+          message: "Displayed Payment Method: '${displayedPaymentMethod}'"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/utils/stringContainsAny
+          args:
+            - value: ${displayedPaymentMethod}
+            - value: ${paymentMethod}
+          getResponse:
+            storeIn: isDisplayedPaymentMethodCorrect
+      - if:
+          condition: ${isDisplayedPaymentMethodCorrect}
+          then:
+            - log:
+                message: "✓ Successful Assertion: Displayed Payment Method is correct"
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "X Failed Assertion: Displayed Payment Method is not correct"
+      - log:
+          message: "End function: order-details.assertPaymentMethod"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${expectedSubtotal}  [Mandatory]  Expected amount to assert. This value must not include the '$' sign and
+  #                                            must include two decimals.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertSubtotal
+    flow: 
+      - log:
+          message: "[ PARAM: Expected Subtotal: '${expectedSubtotal}' ]"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.subtotalValue
+      - log:
+          message: "Correct Subtotal"
+          color: GREEN_BOLD
+      - log:  
+          message: "End function: mx.functions.order-details.assertSubtotal"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:
+  #     ${expectedDeliveryFee}  [Mandatory]
+  #         Expected amount to assert. This value should not include the '$' sign and must contain two decimals.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertDeliveryFee
+    flow: 
+      - log:  
+          message: "Expected Delivery Fee: '${expectedDeliveryFee}'"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.deliveryFeeForAssertion
+      - log:
+          message: "Correct Delivery Fee."
+          color: CYAN
+      - log:  
+          message: "End function: order-details.assertDeliveryFee"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This method asserts the Total value in order details page.
+  # Param:  ${orderTotal}  [Mandatory]  Expected amount to assert. This value should not include the '$' sign.
+  #                                and must contain two decimals.
+  - name: mx.functions.order-details.assertOrderTotal
+    flow: 
+      - log:  
+          message: "Expected total: ${orderTotal}"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.order-details.totalValueForAssertion # <-- ${orderTotal}
+          then:
+            - failTest:
+                message: "X Failed Assertion: Total is not '${orderTotal}' or element was not found."
+      - log:
+          message: "✓ Successful Assertion: Total is '${orderTotal}'."
+          color: GREEN_BOLD
+
+      - log:  
+          message: "End function: order-details.assertOrderTotal"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the product price in order details.
+  # Param  ${productName}    [Mandatory]  Product to find.
+  # Param  ${expectedPrice}  [Mandatory]  Expected quantity to assert (no need to add the cash symbol "$").
+  - name: mx.functions.order-details.assertProductPrice
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Price: '${expectedPrice}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.productPriceByProductName
+          storeIn: displayedPrice
+      - log:
+          message: "Displayed Price: '${displayedPrice}'"
+          color: CYAN
+      - executeNode:
+         file: mx/test/helpers/utils/cleanPriceString.js
+         args:
+           - value: ${displayedPrice}
+         getResponse:
+           storeIn: cleanedDisplayedPrice
+      - log:
+          message: "Displayed Price (cleaned): '${cleanedDisplayedPrice}'"
+          color: CYAN
+      - if:
+          condition: ${expectedPrice} != ${cleanedDisplayedPrice}
+          then:
+            - failTest:
+                message: "Product Price is not correct ('${expectedPrice}' != '${cleanedDisplayedPrice}')"
+      - log:  
+          message: "End function: order-details.assertProductPrice (Success: Product Price Correct)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: This method asserts the product quantity as pieces.
+  # Param: ${productName}                      [Mandatory]  Name of the product to assert.
+  # Param: ${expectedOrderedQuantityAsPieces}  [Mandatory]  Quantity to assert as pieces.
+  - name: mx.functions.order-details.assertProductOrderedQuantityAsPieces
+    flow:
+      - log:
+          message: "Expected ordered quantity as pieces: ${expectedOrderedQuantityAsPieces}"
+          color: CYAN
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.orderedQuantityAsPiecesByProductName
+      - log:
+          message: "Correct product ordered quantity."
+          color: CYAN
+      - log:
+          message: "End function: order-details.assertProductOrderedQuantityAsPieces"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates and confirms if the product specified on param is available or not
+  # and returns a boolean value in the global variable ${returnedIsProductAvailable}.
+  # Param  ${productName}  [Mandatory] Product to find
+  - name: mx.functions.order-details.isProductAvailable
+    flow:
+      - log: 
+          message: "Checking availability for product: ${productName}"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.order-details.addToCartButtonByProductName
+          then:
+            - storeIn:
+                key: returnedIsProductAvailable
+                value: true
+          else:
+            - storeIn:
+                key: returnedIsProductAvailable
+                value: false
+      - log:
+          message: "Product availability: ${returnedIsProductAvailable}"
+          color: CYAN
+      - log:
+          message: "End function: order-details.isProductAvailable"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function validates and confirms if the product specified on param is available or not
+  # and returns a boolean value in the global variable ${returnedIsProductAddedToCart}.
+  # Param  ${productName}  [Mandatory] Product to find
+  - name: mx.functions.order-details.isProductAddedToCart
+    flow:
+      - log: 
+          message: "Checking if product is in cart: ${productName}"
+          color: CYAN
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.order-details.addToCartTextByProductName
+          then:
+            - storeIn:
+                key: returnedIsProductAddedToCart
+                value: true
+          else:
+            - storeIn:
+                key: returnedIsProductAddedToCart
+                value: false
+      - log:
+          message: "Is the product in cart: ${returnedIsProductAddedToCart}"
+          color: CYAN
+      - log:
+          message: "End function: order-details.isProductAddedToCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+
+  # Description: Asserts the displayed subtotal of the given product is the same as the expected one.
+  # Params:  ${productName}       [Mandatory]  Product to perform the assertion for.
+  #          ${expectedSubtotal}  [Mandatory]  Expected Subtotal to be displayed.
+  - name: mx.functions.order-details.assertProductSubtotal
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:  
+          message: "Expected Subtotal: '${expectedSubtotal}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.productSubtotalByProductName
+          storeIn: displayedSubtotal
+      - log:  
+          message: "Displayed Subtotal: '${displayedSubtotal}'"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/utils/cleanPriceString.js
+          args:
+            - value: ${displayedSubtotal}
+          getResponse:
+            storeIn: cleanedDisplayedSubtotal
+      - log:
+          message: "Displayed Subtotal (cleaned): '${cleanedDisplayedSubtotal}'"
+          color: CYAN
+      - if:
+          condition: ${expectedSubtotal} != ${cleanedDisplayedSubtotal}
+          then:
+            - failTest:
+                message: "Product Subtotal is not correct ('${expectedSubtotal}' != '${cleanedDisplayedSubtotal}')"
+      - log:  
+          message: "End function: order-details.assertProductSubtotal (Success: Product Subtotal is Correct)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts the product price in order details.
+  # Param  ${productName}        [Mandatory]  Product to find.
+  # Param  ${expectedUnitPrice}  [Mandatory]  Expected quantity to assert (no need to add the cash symbol "$").
+  - name: mx.functions.order-details.assertProductUnitPrice
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Expected Price: '${expectedUnitPrice}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.productUnitPriceByProductName
+          storeIn: displayedPrice
+      - log:
+          message: "Displayed Price: '${displayedPrice}'"
+          color: CYAN
+      - executeNode:
+         file: mx/test/helpers/utils/cleanPriceString.js
+         args:
+           - value: ${displayedPrice}
+         getResponse:
+           storeIn: cleanedDisplayedPrice
+      - log:
+          message: "Displayed Price (cleaned): '${cleanedDisplayedPrice}'"
+          color: CYAN
+      - if:
+          condition: ${expectedUnitPrice} != ${cleanedDisplayedPrice}
+          then:
+            - failTest:
+                message: "Product Price is not correct ('${expectedUnitPrice}' != '${cleanedDisplayedPrice}')"
+      - log:  
+          message: "End function: order-details.assertProductPrice (Success: Product Price Correct)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${expectedDiscount}  [Mandatory] Expected amount to assert. This value should not include the '$' sign.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.assertDiscount
+    flow:
+      - log:
+          message: "Expected Discount: '${expectedDiscount}'"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.order-details.discountValue
+          storeIn: displayedDiscount
+      - executeNode:
+          file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+          args:
+            - value: ${displayedDiscount}
+          getResponse:
+            storeIn: displayedDiscount
+      - log:
+          message: "Displayed Discount: '${displayedDiscount}'"
+          color: CYAN
+      - if:
+          condition: ${expectedDiscount} == ${displayedDiscount}
+          then:
+            - log:
+                message: "Successful Assertion: Discount is correct"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Failed Assertion: Discount is not correct (${displayedDiscount})"
+      - log:  
+          message: "End function: order-details.assertDiscount"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Checking if product not deleted from cart has the correct data
+  # PARAMS:  ${productName}         [Mandatory] Expected amount to assert. This value should not include the '$' sign.
+  #          ${expectedUnitPrice}   [Mandatory] Expected price
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+
+  - name: mx.functions.order-details.assertProductNotDeletedIsPresent
+    flow:
+      - executeNode:
+          file: mx/test/helpers/cart/isNamePresentInArray.js
+          args:
+            - value: ${productName}
+            - value: ${oosNamesArray}
+          getResponse:
+            storeIn: presentFlag 
+      - executeNode:
+          file: mx/test/helpers/cart/isNamePresentInArray.js
+          args:
+            - value: ${productName}
+            - value: ${expensiveProductNamesArray}
+          getResponse:
+            storeIn: presentFlag 
+      - if:
+          condition: ${presentFlag}
+          then:
+            - log:
+                message: ${productName} not to be asserted.
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.order-details.assertProductListed
+            - executeFunction:
+                name: mx.functions.order-details.assertProductUnitPrice
+            - executeFunction:
+                name: mx.functions.order-details.assertProductSubtotal
+      - log:  
+          message: "End function: order-details.assertProductNotDeletedIsPresent"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+ 
+  # Description:
+  #   This method retrieves the discount value from the totals section.
+  # RETURNS:
+  #   ${returnedDiscount}  Final discount value (if available, else this equals '-0.00').
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.order-details.getDiscountFromTotalsSection
+    flow:
+      - log:
+          message: Retrieving displayed discount value...
+          color: CYAN
+      - try:
+          flow:
+            - getString:
+                identifier: mx.mappings.order-details.discountValue
+                storeIn: returnedDiscount
+            - executeNode:
+                file: mx/test/helpers/utils/cleanPriceStringIncludingCommas.js
+                args:
+                  - value: ${returnedDiscount}
+                getResponse:
+                  storeIn: returnedDiscount
+          catch:
+            flow:
+              - log:
+                  message: "Discount Value not Found... Returning '-0.00'"
+              - storeIn:
+                  key: returnedDiscount
+                  value: "-0.00"
+      - log:
+          message: "Discount got: '${returnedDiscount}'"
+          color: CYAN
+      - log:
+          message: "End function: order-details.getDiscountFromTotalsSection"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if order details displayed correctly
+    # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertOrderDetailsDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.orderNumberLabel
+            - identifier: mx.mappings.order-details.deliveryMethodLabel
+            - identifier: mx.mappings.order-details.statusMessageLabel
+            - identifier: mx.mappings.order-details.orderDeliveryInfoLabel
+            - identifier: mx.mappings.order-details.orderProductsQuantityLabel
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.order-details.totalLabel
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.paymentMethodLabel
+            - identifier: mx.mappings.order-details.subtotalLabel
+            - identifier: mx.mappings.order-details.discountLabel
+            - identifier: mx.mappings.order-details.deliveryFeeLabel
+            - identifier: mx.mappings.order-details.totalLabel
+      - log:
+          message: "End function: order-details.assertOrderDetailsDisplayed (Order Details displayed)"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts order cancelled label was displayed correctly
+    # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertCancelledOrderDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.cancelledOrderStatusLabel
+      - log:
+          message: "End function: order-details.assertCancelledOrderDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertReorderButtonDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.reorderButton
+      - log:
+          message: "End function: order-details.assertReorderButtonDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+    # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.tapReorderButton
+    flow:
+      - click:
+          identifier: mx.mappings.order-details.reorderButton
+      - log:
+          message: "End function: order-details.tapReorderButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedProductQuantity}
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.getProductQuantity
+    flow:
+      - getString:
+          identifier: mx.mappings.order-details.productQuantityLabel
+          storeIn: returnedProductQuantity
+      - executeNode:
+          file: mx/test/helpers/utils/sanitizeQuantity.js
+          args:
+            - value: ${returnedProductQuantity}
+          getResponse:
+            storeIn: returnedProductQuantity
+      - log:
+          message: "Quantity Got: '${returnedProductQuantity}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: order-details.getProductQuantity"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertReturnsAndCancellationLinkDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.returnsAndCancellationsLink
+      - log:
+          message: "End function: order-details.assertReturnsAndCancellationLinkDisplayed"
+          color: BLUE
+          
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.tapReturnsAndCancellationLink
+    flow:
+      - click:
+          identifier: mx.mappings.order-details.returnsAndCancellationsLink
+      - log:
+          message: "End function: order-details.tapReturnsAndCancellationLink"
+          color: BLUE
+  
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAM: ${productName} product name to tap on and open PDP
+  # AUTHOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.order-details.openPDPByProductName
+    flow:
+      - click: 
+          identifier: mx.mappings.order-details.productNameLabelByName # PARAM: --${productName}--
+      - log:
+          message: "End function: order-details.openPDPByProductName"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.tapCancelOrder
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.order-details.cancelOrderButton
+            timeout: 5000
+          then:
+            - scroll:
+                direction: down
+                scrollLimit: 10
+                wait: 300
+      - click:
+          identifier: mx.mappings.order-details.cancelOrderButton
+      - log:
+          message: "End function: mx.functions.order-details.tapCancelOrder"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.cancel-order-popup.assertPopupDisplayed
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.cancel-order-popup.popupTitle
+            - identifier: mx.mappings.order-details.cancel-order-popup.anyReasonRadioButton
+          timeout: 15000
+      - log:
+          message: "End function: mx.functions.order-details.cancel-order-popup.assertPopupDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${reason}  [Mandatory]  Reason to select.
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.cancel-order-popup.selectReason
+    flow:
+      - click:
+          identifier: mx.mappings.order-details.cancel-order-popup.reasonRadioButton # <-- ${reason}
+      - log:
+          message: "End function: mx.functions.order-details.cancel-order-popup.selectReason"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.order-details.cancel-order-popup.tapConfirmCancelButton
+    flow:
+      - click:
+          identifier: mx.mappings.order-details.cancel-order-popup.cancelOrderButton
+      - log:
+          message: "End function: mx.functions.order-details.cancel-order-popup.tapConfirmCancelButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.order-details.assertInvoiceNotAvailable
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.order-details.invoiceNotAvailableLabel
+      - log:
+          message: "End function: order-details.assertInvoiceNotAvailable"
+          color: BLUE

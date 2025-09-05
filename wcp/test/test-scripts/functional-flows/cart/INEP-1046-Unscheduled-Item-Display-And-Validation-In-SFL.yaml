@@ -1,0 +1,190 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS:
+#
+#   TC - INEP-1046
+#       Flow - Unscheduled Item Display And Validation In SFL
+#
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF:
+#     https://jira.walmart.com/browse/OPIF-179342
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-1046
+#
+#   JIRA Test Plan ID:
+#     https://jira.walmart.com/browse/INEP-1044
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-1046
+  tags: INEP-1046, OPIF-179342, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: "BEFORE SCENARIO"
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - log: "BEFORE SCENARIO END"
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+# # #   M A I N   S C E N A R I O
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "Unscheduled Item Display And Validation In SFL"
+    flow:
+
+      # PREREQUISITE - Create account using astro.
+      - log:
+          message: "PREREQUISITE - Create account using astro."
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createNewAccountWithCreatePayload # RETURNS --> ${userEmail}, ${password}
+          params:
+            - name: paymentMethod
+              string: data.default.astroAPI.createAccount.paymentMethod.CCVisa
+
+      # PREREQUISITE - Add items to cart using astro.
+      - log:
+          message: "PREREQUISITE -  Add items to cart using astro."
+          color: BLUE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.astroApi.createOrder
+          params:
+            - name: payload
+              string: data.mh.inep-1046.createCartPayload #TODO: Review data
+
+      # Onboard, log in to application and go to cart.
+      - log:
+          message: "Onboard, log in to application and go to cart."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${password}
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      - executeFunction:
+          name: function.cartPage.tapSeeDetails
+
+      # Moving unscheduled item to SFL.
+      - log:
+          message: "Moving unscheduled item to SFL."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.moveAndVerifyProductMoveToSFL
+          params:
+            - name: productName
+              string: data.mh.inep-1046.unscheduled.productName
+
+      # Validate unscheduled item details in SFL.
+      - log:
+          message: "Validate unscheduled item details in SFL."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateProductDetailsInSFL
+          params:
+            - name: productName
+              string: data.mh.inep-1046.unscheduled.productName
+            - name: productPrice
+              string: data.mh.inep-1046.unscheduled.productPrice
+            - name: productQty
+              string: data.itemCount.qty1
+
+      # Validate scheduled item is displayed in scheduled basket.
+      - log:
+          message: "Validate scheduled item is displayed in scheduled basket."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.assertItemsArrayListed-byFulfillmentMethod
+          params:
+            - name: fulfillmentMethod
+              string: scheduledDelivery
+            - name: itemsArray
+              string: data.mh.inep-1046.scheduled.productDetails
+            - name: assertItemDetails
+              string: 'false'
+
+      # Moving unscheduled item from save for later to cart.
+      - log:
+          message: "Moving unscheduled item from save for later to cart."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.moveAndValidateProductToCartFromSFL
+          params:
+            - name: productName
+              string: data.mh.inep-1046.unscheduled.productName
+
+      # Validate unscheduled item details in cart are the same as in SFL.
+      - log:
+          message: "Validate unscheduled item details in cart are the same as in SFL."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateProductDetails
+          params:
+            - name: productName
+              string: data.mh.inep-1046.unscheduled.productName
+            - name: productPrice
+              string: data.mh.inep-1046.unscheduled.productPrice
+            - name: productQty
+              string: data.itemCount.qty1
+
+      # Validate SFL is not displayed.
+      - log:
+          message: "Validate SFL is not displayed."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.cartPage.validateSFLSectionIsNotDisplayed
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: "AFTER SCENARIO"
+
+      - log:
+          message: "Main Scenario passed successfully."
+          color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"

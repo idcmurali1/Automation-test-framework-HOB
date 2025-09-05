@@ -1,0 +1,171 @@
+#======================================================================================================================
+#  AUTHOR: Jorge Carrillo (vn575hp)
+#  CREATED: May/14/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+
+general:
+  tags: qaa-purchase-sanity-walmart-od-production-ios-006, qaa-purchase-sanity-walmart-od-production-ios
+
+scenarios:
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+
+      - storeIn:
+          key: PURCHASE_TEST_CASE_NAME
+          value: "GMX_PURCHASE_SANITY_WOD_IOS_006"
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+      - storeIn:
+          key: WOD_006_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  - name: Main
+    platform: ios
+    flow:
+      - log: "TEST START: ${PURCHASE_TEST_CASE_NAME}"
+
+      ## STEP 1: NAVIGATE THROUGH ONBOARDING AND SELECT OD BANNER AND LOGIN FROM PROFILE SCREEN.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1: NAVIGATE THROUGH ONBOARDING AND SELECT OD BANNER AND LOGIN FROM PROFILE SCREEN."
+            - name: squadNames
+              string: CORE | QAA
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.purchase.sanity.wod-006.zipCode
+            - name: banner
+              string: "OD"
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.purchase.sanity.wod-006.userEmail
+            - name: userPassword
+              string: mx.data.qaa.purchase.sanity.wod-006.userPassword
+            - name: userName
+              string: mx.data.qaa.purchase.sanity.wod-006.userName
+
+      ## STEP 2: SELECT PICKUP DELIVERY IN GIC.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 2: SELECT PICKUP IN GIC."
+            - name: squadNames
+              string: PURCHASE
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.flows.od.delivery-method-selector.selectPickupDeliveryWithCurrentStore
+
+      ## STEP 3: SELECT A STORE FOR PICKUP.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3: SELECT A STORE FOR PICKUP."
+            - name: squadNames
+              string: PURCHASE
+
+      - storeIn:
+          key: compareStoreForPickupDelivery
+          value: mx.data.qaa.purchase.sanity.wod-006.ios.storeAddressSelected
+
+      - if:
+          condition: ${returnedStoreAddress} == ${compareStoreForPickupDelivery}
+          then:
+            - executeFunction:
+                name: mx.flows.od.delivery-method-selector.selectPickupOdStoreByZipCode
+                params:
+                  - name: zipCode
+                    string: mx.data.qaa.purchase.sanity.wod-006.zipCode1
+                  - name: storeName
+                    string: mx.data.qaa.purchase.sanity.wod-006.storeName1
+          else:
+            - executeFunction:
+                name: mx.flows.od.delivery-method-selector.selectPickupOdStoreByZipCode
+                params:
+                  - name: zipCode
+                    string: mx.data.qaa.purchase.sanity.wod-006.zipCode2
+                  - name: storeName
+                    string: mx.data.qaa.purchase.sanity.wod-006.storeName2
+
+      ## STEP 4: SEARCH AND ADD ITEMS TO CART.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4: SEARCH AND ADD ITEMS TO CART."
+            - name: squadNames
+              string: PURCHASE
+
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.purchase.sanity.wod-006.searchTerm
+      - executeFunction:
+          name: mx.functions.slp.addProductToCart
+          params:
+            - name: productName
+              string: mx.data.qaa.purchase.sanity.wod-006.productName
+      - executeFunction:
+          name: mx.functions.slp.assertProductAddedToCart
+          params:
+            - name: productName
+              string: mx.data.qaa.purchase.sanity.wod-006.productName
+
+      ## STEP 5: OPEN CART.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5: OPEN CART."
+            - name: squadNames
+              string: PURCHASE
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+
+      - storeIn:
+          key: WOD_006_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${PURCHASE_TEST_CASE_NAME}"
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..."
+
+      - if:
+          condition: ${WOD_006_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. No need to reset data."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"

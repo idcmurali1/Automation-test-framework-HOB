@@ -1,0 +1,231 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Feb/28/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION:  This flow performs all the assertions necessary for this page that are not related to individual product assertions.
+  # NOTE:         This flow is ONLY for Home Delivery.
+  # PARAMS:
+  #   ${expectedTotal}            [Mandatory]   Expected (cleaned) amount to assert.
+  #
+  #   ${isMultipleDelivery}       [Mandatory]   This value defines if the Order is divided by multiple delivery sections, and
+  #                                               determines if Delivery Date and Products count assertions should be
+  #                                               performed or not. Options: [ 'true' | 'false' ]
+  #                                               - If 'true' that means that the order has multiple delivery sections and
+  #                                                   needs individual assertions to correctly validate. Assertions will be skipped.
+  #                                               - If 'false' then you are sure the order does not have multiple delivery sections
+  #                                                   and the previously mentioned assertions will be performed.
+  #
+  #   ${expectedProductsCount}    [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected products count quantity to be displayed.
+  #
+  #   ${expectedDeliveryDate}     [Optional]    (Only if 'isMultipleDelivery' == false).
+  #                                               Expected Delivery date to assert (the one from Cart page).
+  #                                               NOTE: Remember that the delivery date changes after selecting a payment method in Review-Order Page.
+  #
+  #   ${assertBy}                 [Mandatory]   How to verify the desired address. Options: [ 'FullString' | 'Values' ]
+  #                                               If 'FullString' function validates by using 'addressFullString'.
+  #                                               If 'Values' function validates by individual values using the address related parameters.
+  #
+  #   ${addressFullString}        [Optional]    (Used only when ${assertBy} == 'FullString')
+  #                                               Full String containing the complete home delivery address.
+  #
+  #   ${streetName}               [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home Street to be displayed.
+  #
+  #   ${exteriorNumber}           [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home Exterior Number to be displayed.
+  #
+  #   ${city}                     [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home City to be displayed.
+  #
+  #   ${state}                    [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home State to be displayed.
+  #
+  #   ${zipCode}                  [Optional]    (Used only when ${assertBy} == 'Values')
+  #                                                Expected Home ZIP Code to be displayed.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.order-confirmation.assertConfirmationForHomeDelivery
+    platform: ios
+    flow:
+      - log:
+          message: "Performing Confirmation Page Assertions For Home Delivery..."
+          color: GREEN_BOLD
+
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: 'HomeDelivery'
+
+      # Order Total Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertTotal
+          params:
+            - name: expectedTotal
+              string: ${expectedTotal}
+
+      # Delivery Date and Products Count Assertions...
+      - log:
+          message: "Does the order have multiple delivery sections?: '${isMultipleDelivery}'..."
+          color: GREEN_BOLD
+      - if:
+          condition: ${isMultipleDelivery} != true && ${isMultipleDelivery} != false
+          then:
+            - failTest:
+                message: "Invalid 'isMultipleDelivery' Option provided: '${isMultipleDelivery}'"
+      - if:
+          condition: ${isMultipleDelivery} == true
+          then:
+            - log:
+                message: "Delivery Date and Products Count assertions cannot be performed for orders with multiple delivery sections, these steps will be skipped."
+                color: GREEN_BOLD
+      - if:
+          condition: ${isMultipleDelivery} == false
+          then:
+            - log:
+                message: "The Order does not have multiple delivery sections, Delivery Date and Products Count assertions will be performed."
+                color: GREEN_BOLD
+            # Delivery Date Assertion...
+            - executeFunction:
+                name: mx.functions.ea.order-confirmation.assertSingleDeliveryDate
+                params:
+                  - name: expectedDeliveryDate
+                    string: ${expectedDeliveryDate}
+
+            # Total Products Count Assertion...
+            - executeFunction:
+                name: mx.functions.ea.order-confirmation.assertProductsCount
+                params:
+                  - name: expectedProductsCount
+                    string: ${expectedProductsCount}
+
+      # Home Address Name Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertHomeAddressName
+          params:
+            - name: expectedHomeAddressName
+              string: ${expectedHomeAddressName}
+
+      # Home Address Assertion...
+      - if:
+          condition: ${assertBy} != 'FullString' && ${assertBy} != 'Values'
+          then:
+            - failTest:
+                message: "Invalid 'assertBy' Option provided: '${assertBy}'"
+      - log:
+          message: "Performing Address Assertion by: '${assertBy}'..."
+          color: GREEN_BOLD
+      - if:
+          condition: ${assertBy} == 'FullString'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.order-confirmation.assertHomeAddressByFullString
+                params:
+                  - name: addressFullString
+                    string: ${addressFullString}
+      - if:
+          condition: ${assertBy} == 'Values'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.order-confirmation.assertHomeAddressByIndividualValues
+                params:
+                  - name: streetName
+                    string: ${streetName}
+                  - name: exteriorNumber
+                    string: ${exteriorNumber}
+                  - name: city
+                    string: ${city}
+                  - name: state
+                    string: ${state}
+                  - name: zipCode
+                    string: ${zipCode}
+
+      # Payment Method Assertion...
+      - scroll:
+          direction: down
+          scrollLimit: 1
+          wait: 1000
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertInStorePaymentMethodIsSelected
+      - log:
+          message: "End flow: order-confirmation.assertConfirmationForHomeDelivery"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This flow performs all the assertions necessary for this page that are not related to individual product assertions.
+  # NOTE:         This flow is ONLY for Pickup Delivery.
+  # PARAMS:
+  #   ${assertBy}                 [Mandatory]   How to verify the desired address. Options: [ 'FullString' | 'Values' ]
+  #                                               If 'FullString' function validates by using 'addressFullString'.
+  #                                               If 'Values' function validates by individual values using the address related parameters.
+  #
+  #   ${expectedProductsCount}    [Mandatory]   Expected products count quantity to be displayed.
+  #
+  #   ${expectedTotal}            [Mandatory]   Expected (cleaned) amount to assert.
+  #
+  #   ${expectedDeliveryDate}     [Mandatory]   Expected Delivery date to assert (the one from Cart page).
+  #                                               NOTE: Remember that the delivery date changes after selecting a payment method in Review-Order Page.
+  #
+  #   ${addressFullString}        [Optional]    (Used only when ${assertBy} == 'FullString')
+  #                                               Full String containing the complete home delivery address.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.order-confirmation.assertConfirmationForPickupDelivery
+    platform: ios
+    flow:
+      - log:
+          message: "Performing Confirmation Page Assertions For Pickup Delivery..."
+          color: CYAN
+
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: 'PickupDelivery'
+
+      # Order Total Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertTotal
+          params:
+            - name: expectedTotal
+              string: ${expectedTotal}
+
+      # Delivery Date Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertSingleDeliveryDate
+          params:
+            - name: expectedDeliveryDate
+              string: ${expectedDeliveryDate}
+
+      # Total Products Count Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertProductsCount
+          params:
+            - name: expectedProductsCount
+              string: ${expectedProductsCount}
+
+      # Store Address Assertion...
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertStoreAddressByFullString
+          params:
+            - name: addressFullString
+              string: ${addressFullString}
+
+      # Payment Method Assertion...
+      - scroll:
+          direction: down
+          scrollLimit: 1
+          wait: 1000
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertInStorePaymentMethodIsSelected
+      - log:
+          message: "End flow: order-confirmation.assertConfirmationForPickupDelivery"
+          color: BLUE

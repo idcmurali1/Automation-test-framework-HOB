@@ -1,0 +1,228 @@
+#*****************************************************************************************
+## Registered user - Single SKU GM >$199 - Fulfilment S2H - CC WMC
+# Sales Financing links in PDP and cart, Emi information in PDP and Cart.
+# Sales financing checkbox and details on checkout page, Sales financing details in checkout subtotal session.
+# scenarios covered:
+# Navigate onboarding to home, clear cart through astro
+# Navigate to sign in page and signin, Checking and selecting Store
+# Search product and go to PDP, validate presence of SF options and links
+# A2C the product and go to cart, Product price validation >199
+# validate presence of SF options and links (now checking links function is commented due to the locator issue)
+# proceed checkout, add CVV, Validate Walmart Reward Financing options and checkbox
+# validate SF under Subtotal, place the order
+#*****************************************************************************************
+general:
+  platform: ios
+  tags: flow-077, ca_authpoc, E2E-iOS-English 
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+          
+      #temporary#
+      - executeFunction:
+          name: ca.test.functions.utils.avoidTestPopup
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.store.zipCode
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.ios.data.flow077.email
+            - name: password
+              string: ca.test.ios.data.flow077.password
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.signIn    
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.ios.data.flow077.email
+            - name: password
+              string: ca.test.ios.data.flow077.password
+
+      # Validating home page customer greeting
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameHomePage
+          params:
+            - name: usergreeting
+              string: Walmart
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: ca.test.data.onboarding.storeName
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:           
+            - name: product
+              string: ca.test.data.flow077.product_1_sku
+
+      # Navigating to PDP from SRP
+      - executeFunction:
+          name: ca.test.functions.productSearch.srpToPdpPage
+          params:
+            - name: productName
+              string: ca.test.data.flow077.product_1_name
+
+      - executeFunction:
+          name: ca.test.functions.productDetailsPage.saleFinancing
+          params:
+            - name: productName
+              string: ca.test.data.flow077.product_1_name
+            - name: monthlyFinancing
+              string: $77
+            - name: weeklyFinancing
+              string: $115.00
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.PDPpage.addToCart
+          params:
+            - name: quantity
+              string: ca.test.data.flow077.product_1_Qty
+          
+      #close PDP page
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage
+
+      # Validate cart quantity
+      - executeFunction:
+           name: ca.test.functions.cart.assertCartQuantity
+           params:
+            - name: cartQuantity
+              string: ca.test.data.flow077.cartQuantity
+
+      # Asserting cart total
+      - executeFunction:
+          name: ca.test.functions.cart.assertCartTotal
+          params:
+            - name: subTotal
+              string: ca.test.data.flow077.assertCartTotal
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # # Navigate to cart
+      # - executeFunction:
+      #     name: ca.test.functions.global.navigation.goToCartIos
+
+      # # Cart product details validation
+      # - executeFunction:
+      #     name: ca.test.functions.cart.verifyProductDetails
+      #     params:
+      #       - name: productName
+      #         string: ca.test.data.flow077.product_1_name
+      #       - name: productPrice
+      #         string: ca.test.data.flow007.product_p1_first_variant_price
+      #       - name: productQty
+      #         string: ca.test.data.flow077.product_1_Qty
+
+      # # Verify cart subTotal
+      # - executeFunction:
+      #     name: ca.test.functions.cart.cartSubTotal
+      #     params: 
+      #       - name: subTotal
+      #         string: ca.test.data.flow077.ios.subtotal
+
+      # # validate the slaes financing options
+      # - executeFunction:
+      #     name: ca.test.functions.cart.verifySFPresence
+      #     params:
+      #       - name: priceAndDate
+      #         string: ca.test.data.cart077.priceandDate_cart
+
+      # # Proceed to Checkout
+      # - executeFunction:
+      #     name: ca.test.functions.cart.proceedToCheckOutIos
+
+      # # CheckOut page order review validation
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+      #     params:
+      #       - name: fulfillment
+      #         string: ca.test.data.flow077.fulfillmentType
+
+      # # Add Card Cvv
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.payment.addCvvIos
+      #     params:
+      #       - name: CVV
+      #         string: ca.test.data.flow077ios.Cvv
+      
+      # # Validate the Walmart Reward Financing
+      # - executeFunction:
+      #     name:  ca.test.functions.checkout.validateCheckbox
+      #     params:
+      #       - name: priceAndDate
+      #         string: ca.test.data.cart077.priceandDate_co
+
+      # # check the checkbox of Walmart Reward Financing
+      # - executeFunction:
+      #     name: ca.test.functions.checkout.checkTheCheckbox
+
+      # # Sales financing details in checkout subtotal session.
+      # - executeFunction:
+      #     name: ca.test.functions.checkout.validateSFunderSubtotal
+
+      # # Order placement
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.PlacingOrder
+
+      # # Order Confirmation screen validation
+      # - executeFunction:
+      #     name: ca.test.functions.checkOut.orderConfirmationValidationIos  
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps     
+   

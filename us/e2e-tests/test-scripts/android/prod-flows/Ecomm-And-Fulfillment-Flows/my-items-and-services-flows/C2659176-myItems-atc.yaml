@@ -1,0 +1,173 @@
+#====================================================Author: Selvamani (vn51gdp)======================================================
+
+general:
+  platform: android
+  tags: C2659176, prod-e2e, p1-ecomm-prod-e2e, p1-spanish-prod-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2659176
+  metadata:
+    - name: scenarioId
+      string: 98, EC047
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+#   clear cart
+    #   - executeFunction:
+    #       name: us.functions.utils.prod.cart.clearCart
+    #       params:
+    #         - name: cartId
+    #           string: fbdc0aef-22ce-409f-9512-215e70c4756c
+    #         - name: customerId
+    #           string: d1f6c37c-bca5-4722-aeba-b5a7a54b0422
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      - executeFunction:
+          name: us.functions.utils.restartapp
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      #Navigate to MyItems Page
+      - executeFunction:
+          name: us.functions.global.navigation.goToMyItemsFromTabBar
+      - executeFunction:
+          name: us.functions.myItems.verifyGuestMyItem
+
+      #Signin from Myitems page
+      - executeFunction:
+          name: us.functions.myItems.clickSignInButton
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.myitemsEmpty.newUser.android.email
+            - name: password
+              string: us.data.android.prod.password.myitems.newUser
+
+      #checking new user myitems message
+      - executeFunction:
+          name: us.functions.myItems.verifyNewUserMyItem
+        
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      #signout from new user
+      #####change in purchaseHistory card id#######
+      - executeFunction:
+          name: us.functions.account.signOutAccount
+          
+      - goBack: true   
+      #Signin from Myitems page to existing user
+      - executeFunction:
+          name: us.functions.myItems.navigation.goToMyItemsFromTabBar
+
+      - executeFunction:
+          name: us.functions.myItems.clickSignInButton
+      
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: afroz.testing@gmail.com
+            - name: password
+              string: Anjum@12
+
+    # Remove Cart itemss
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.myItems.verifyPage
+
+      - executeFunction:
+          name: us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: us.functions.item.boughtBefore.verifyPresent
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+
+      # Verify cart page
+      - executeFunction:
+          name: us.functions.myItems.cart.verify
+
+      # Book slot
+      - executeFunction:
+          name: us.functions.cart.checkoutWithSlotBooking
+          params:
+            - name: tab
+              string: pickup
+            - name: slotDay
+              string: dayAfter #tomorrow
+            - name: slotIndex
+              string: 3
+              
+      - executeFunction:
+          name: us.functions.cart.missingAnything.clickContinueButton
+
+      # Verify review order page
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: us.data.fulfillment.pickup
+            - name: altFulfillmentText
+              string: us.data.fulfillment.reviewOrderPickup
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,139 @@
+general:
+  platform: ios
+  tags: us-golden-flows-wplus, C2657246, p0-wplus-teflon-e2e
+  #Combined with C2663433
+  testCaseId: C2657246
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 192, WP014
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+      - storeIn:
+          key: firstName
+          value: NativeTest
+
+    # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flowinhome.createAccountPayload
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+    
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+    # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+    # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+      
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+          
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+    
+    # Opt in for in-home trial monthly
+      - executeFunction:
+          name: us.functions.wplwplus.inHome.via.manage.MembershipPlan
+          params:
+            - name: membership
+              string: Monthly plan
+
+    # Cancel In-Home trial Membership 
+      - executeFunction:
+          name: us.functions.wplus.inHome.via.manage.cancelMembershipPlan
+          params:
+            - name: membership
+              string: Trial Monthly
+              
+    # Verify memebership details after cancelation on In-home Review Membership page
+      - executeFunction:
+          name: us.functions.wplus.inHome.cancelmember.verifyReviewmembershipDetails
+          params:
+            - name: membership
+              string: Trial Monthly
+
+      - executeFunction:
+          name: us.functions.wplus.inHome.cancelmember.selectCancelReason
+
+    # Verify memebership details after cancelation on manage membership page
+      - executeFunction:
+          name: us.functions.wplus.inHome.validatecancelmemberPlusUpsOnManageMembershipPage
+
+    # Reactivate in-home
+      - executeFunction:
+          name: us.functions.wplus.inHome.managePlusUps
+
+      - executeFunction:
+          name: us.functions.wplus.inHome.reactivateInHomeAfterFreeTrialCancellation
+      
+    # Validate In-home reactivation to check inhome reactivated into paid inhome monthly
+      -  executeFunction:
+           name: us.functions.wplus.inHomeReactivation.validateOnManageMembershipScreen
+    
+    # Cancel in-home monthly paid membership
+      - executeFunction:
+          name: us.functions.wplus.inHome.managePlusUps
+
+      - executeFunction:
+          name: us.functions.wplus.inHome.validateCancelMemberManagePlusUpsAfterReactivation 
+          params:
+            - name: membership
+              string: Paid Monthly
+
+      - executeFunction:
+          name: us.functions.wplus.inHome.cancelmember.selectCancelReason
+
+    # Verify memebership details after cancelation on manage membership page
+      - executeFunction:
+          name: us.functions.wplus.inHomePaidCancellation.validateOnManageMembershipScreen
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+

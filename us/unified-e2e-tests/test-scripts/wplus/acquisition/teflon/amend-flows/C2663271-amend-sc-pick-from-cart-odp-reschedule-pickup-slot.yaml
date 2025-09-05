@@ -1,0 +1,186 @@
+
+general:
+  tags: C2663271, unified-p0-ecomm-teflon-e2e, p1-fulcrum-teflon-e2e, us-golden-flows, us-golden-flows-ecom-p1, p0-fulfillment
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2663271
+  metadata:
+    - name: scenarioId
+      string: EC011
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: ios.email
+              string: us.data.flow002m.ios.email
+            - name: ios.password
+              string: us.data.teflon.password
+            - name: android.email
+              string: us.data.flowamend.android.email
+            - name: android.password
+              string: us.data.teflon.password
+
+      - executeFunction:
+         name: unified.us.functions.utils.fetchFulcrumAvailableItem
+         params:
+           - name: itemType
+             string: STORE_SCHEDULED_PICKUP
+            
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.amendsflow002.createOrderPayload
+
+      - log: orderNo - $orderNo        
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.verifyAmendsBanner
+
+      - executeFunction:
+          name: unified.us.functions.orderDetails.verifyPickupInstructionsOnODP
+
+      # Verify the Store name and address
+      - executeFunction:
+          name: unified.us.functions.orderHistory.verifyStoreNameandAddress
+          params:
+            - name: storeName
+              string: San jose Supercenter
+
+      - executeFunction:
+          name: unified.us.functions.amend.editPickupSlot
+  
+      # Edit pickup person details and verify
+      - executeFunction:
+          name: unified.us.functions.amend.verify.altPickupPerson
+          params:
+            - name: fname
+              string: us.data.flowamendintent.fname
+            - name: lname
+              string: us.data.flowamendintent.lname
+            - name:  pickupEmail
+              string: us.data.flowamendintent.email
+
+      # Edit pickup store 
+      - executeFunction:
+          name: unified.us.functions.orderDetails.editPickupStore       
+          params:
+            - name: editStoreAlertMessage
+              string: us.data.orderDetails.editStoreAlertMessage    
+
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: $email
+            - name: itemType
+              string: STORE_SCHEDULED_PICKUP
+            - name: itemList
+              string: us.data.flow.amentIntent.itemLists    
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string:  ${deeplinkURl}
+
+      - executeFunction:
+          name: unified.us.functions.item.tappingPickupDeliverShippingFullfilmentInItempage
+          params:
+            - name: fulfillmentText
+              string: Pickup
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Add cart to existing order
+      - executeFunction:
+          name: unified.us.functions.amend.addToExistingOrderFlow
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      #Amend order by adding quantity
+      - executeFunction:
+          name: unified.us.functions.amend.addQuantityFromOrderDetailsPage
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

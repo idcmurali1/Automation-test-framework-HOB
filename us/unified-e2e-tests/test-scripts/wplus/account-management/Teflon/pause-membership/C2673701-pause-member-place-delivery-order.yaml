@@ -1,0 +1,180 @@
+
+general:
+  tags:  unified-us-golden-flows-wplus, C2673701-1, unified-p2-wplus-teflon-e2e
+  testCaseId: C2673701
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: WP029
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flowinhome.createAccountPayload 
+      
+      - executeFunction:
+          name: unified.us.functions.utils.astro.convertTrialtoPaidMember
+          params:
+            - name: payload
+              string: us.data.flow079b.addMembershipPayloadPause
+
+      # Pause membership
+      - executeFunction:
+          name: unified.us.functions.utils.astro.pauseMembershipWithPastOrFutureDate
+          params:
+            - name: payload
+              string: us.data.pauseFlow.pauseMembershipWithPastDate
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      # Navigate to walmart plus
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToHomeFromTabBar
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: storeId
+              string: 32144
+
+          # Add item to cart from deeplink
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Select delivery time slot with address addition
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      - executeFunction:
+          name: unified.us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery from store
+
+      - executeFunction:
+          name: unified.us.functions.pause.cart.verifyDeliveryFromStoreCharge 
+
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery from store
+
+      - executeFunction:
+          name: unified.us.functions.pause.reviewOrder.verifyDeliveryFromStoreCharge 
+      # Place Order
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      # Verify order confirmation field
+      - executeFunction:
+          name: unified.us.functions.orderConfirmation.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery from store
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

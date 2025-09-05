@@ -1,0 +1,142 @@
+#######################################################################################################################
+#
+# TEST CASE DETAILS: 
+#
+#   TC - INEP-773
+#       Flow - MH: Validate see similar link is displayed from ERO Page and user able to add products from there
+#    
+#   CONFLUENCE TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#     https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF TC:
+#     https://jira.walmart.com/browse/OPIF-187054
+#
+#   JIRA STORY ID:
+#     https://jira.walmart.com/browse/INEP-780
+#
+#   JIRA TEST PLAN ID:
+#     https://jira.walmart.com/browse/INEP-783
+#
+#   JIRA TEST ID:
+#     https://jira.walmart.com/browse/INEP-773
+#
+#   JIRA SUB-TASK ID:
+#     https://jira.walmart.com/browse/INEP-1040
+# 
+#   PRE-REQUISITE: Registered Account with order history for Easy Reorder Page. (ERO)
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-773
+  tags: INEP-773, INEP-783, OPIF-187054, p1-mh-opif-teflon, native-apps-opif-test-case, p1-mh-opif-prod
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - log: 'INEP-773: BEFORE SCENARIO START'
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+      - log: 'INEP-773: BEFORE SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: "MH: Validate see similar link is displayed from ERO Page and user able to add products from there"
+    flow:
+      - log: 'INEP-773: MAIN SCENARIO START'
+
+      # Onboard to application.
+      - log:
+          message: "Onboard to application."
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      
+      # Perform login
+      # TODO: Use an existing account with purchase history instead of ${userEmail}, ${userPassword}
+      - log:
+          message: "Perform Login"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction: 
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: data.mh.inep-773.user.email # this may change once specific test data available
+            - name: userPassword
+              string: data.global.password.Password3 # this may change once specific test data available
+          
+      # Navigate to ERO page.
+      - log:
+          message: "Navigate to My Items (Easy to Re-Order - ERO)"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.tapMyItemsBtn
+      
+      # Validate that user can open 'See Similar' from ERO.
+      - log:
+          message: "Validate user can open 'See Similar' (Shop Similar) carousel"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.tapFirstSeeSimilarLinkDisplayed
+
+      # Validate: User can add item from see similar to cart
+      - log:
+          message: "Validate user can add product from 'See Similar'(Shop Similar) carousel"
+          color: PURPLE_BOLD_BRIGHT
+      - executeFunction:
+          name: functions.myItemsPage.seeSimilar.assertSeeSimilarCarousel
+      - executeFunction:
+          name: functions.myItemsPage.seeSimilar.addFirstElementAvailable
+
+      # TC completed.    
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-773: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #              
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-773: AFTER SCENARIO START'
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+      - log: 'INEP-773: AFTER SCENARIO END'

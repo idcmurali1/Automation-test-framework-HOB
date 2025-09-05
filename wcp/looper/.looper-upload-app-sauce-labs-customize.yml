@@ -1,0 +1,107 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - push:
+          manualOnly: true
+
+      # iOS
+      - manual:
+          name: Upload iOS Development MX/BO
+          call: upload_build_to_sauce_labs(env-ios-dev)  
+
+      - manual:
+          name: Upload iOS Release MX/BO
+          call: upload_build_to_sauce_labs(env-ios-rc)  
+
+      - manual:
+          name: Upload iOS Development Arm CA/US
+          call: upload_build_to_sauce_labs(env-ios-dev-arm)  
+
+      - manual:
+          name: Upload iOS Release Arm CA/US
+          call: upload_build_to_sauce_labs(env-ios-rc-arm)  
+
+
+      # Android
+      - manual:
+          name: Upload Android Development
+          call: upload_build_to_sauce_labs(env_android_dev)
+      
+      - manual:
+          name: Upload Android Release
+          call: upload_build_to_sauce_labs(env_android_rc)
+
+      - pr: disabled
+
+
+envs:
+  global:
+    variables:
+      SAUCE_USERNAME: wcp-apps-e2e
+      SAUCE_ACCESS_KEY: ENC[rnmbZWq+9q4Y2NblUl3yKduKKFO9zq86fEbKAl0j4lm4uh5bgYho+//5ZRtDYEqx]
+      TEST_PLAN_PASSED: ":white_check_mark: *Build Success*"
+      TEST_PLAN_FAILED: ":x: *Build Failure*"
+
+  #iOS
+  env-ios-dev:
+    variables:
+      APP_PLATFORM: ios
+      APP_BRANCH: glass-qa-intel-nightly-x86_64-sim
+
+  env-ios-rc:
+    variables:
+      APP_PLATFORM: ios
+      APP_BRANCH: glass-release-candidate-x86_64-sim
+
+  
+  #iOS Arm
+  env-ios-dev-arm:
+    variables:
+      APP_PLATFORM: ios
+      APP_BRANCH: glass-qa-nightly-arm64-sim
+
+  env-ios-rc-arm:
+    variables:
+      APP_PLATFORM: ios
+      APP_BRANCH: glass-release-candidate-arm64-sim
+
+
+  #Android
+  env_android_dev:
+    variables:
+      APP_PLATFORM: android
+      APP_BRANCH: ${MARKET}-development
+
+  env_android_rc:
+    variables:
+      APP_PLATFORM: android
+      APP_BRANCH: ${MARKET}-RC
+
+
+flows:
+  download_build:
+    - shell (name Download App Build): |
+        sh wcp/scripts/download_build_looper.sh
+
+  upload_build:
+    - shell (name Upload Build to Sauce Labs): |
+        sh wcp/scripts/upload_build_looper.sh
+
+  upload_build_to_sauce_labs:
+    - node(label = linux, isolation = except_project, ws = exclusive):
+        try:
+          - (name APP_VERSION) echo "${APP_VERSION}"
+          - (name Environment dump) printenv|sort
+          - call: download_build
+          - call: upload_build
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+

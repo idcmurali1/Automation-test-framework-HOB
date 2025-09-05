@@ -1,0 +1,317 @@
+general:
+  tags: C2737208  , MP009, unified-prod-e2e, unified-prod-e2e-mp, unified-teflon-e2e-mp, unified-teflon-e2e
+
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2737208
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      # Get Environment Values and Setting Platform
+      - executeFunction:
+          name: unified.us.function.utils.getEnvironmentValueAndSetPlatformInfo      
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.authentication.signInInfo
+                params:
+                  - name: android.email
+                    string: us.data.teflon.localfinds.BYOD.android.email 
+                  - name: android.password
+                    string: us.data.teflon.localfinds.BYOD.android.password 
+                  - name: ios.email
+                    string: us.data.teflon.localfinds.BYOD.ios.email 
+                  - name: ios.password
+                    string: us.data.teflon.localfinds.BYOD.ios.password 
+
+            - executeFunction:
+                name: unified.us.functions.utils.astro.clearCart
+
+      # Need to be removed once the BYOD feature is moved to production add the param at home.localMarketPlaceLandingPageValidations
+      - if:
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.authentication.signInInfo
+                params:
+                  - name: android.email
+                    string: lfBYODandroid@cloudtest.org
+                  - name: android.password
+                    string: E2epassword$
+                  - name: ios.email
+                    string: lfBYODios@cloudtest.org
+                  - name: ios.password
+                    string: E2epassword$
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.home.setStore
+                params:
+                  - name: store
+                    string: 75231
+                  - name: storeName
+                    string: Dallas
+
+            # Deselect the selected pickup intent
+            - executeFunction:
+                name: us.functions.gic.deselectFulfillment
+                params:
+                  - name: option
+                    string: Pickup
+
+      - if:
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.home.setStore
+                params:
+                  - name: store
+                    string: 30093
+                  - name: storeName
+                    string: Norcross
+
+            - executeFunction:
+                name: unified.us.functions.utils.prod.clearCart
+
+            - executeFunction:
+                name: unified.us.functions.home.localmarketplace.entrypoints
+
+            - executeFunction:
+                name: unified.us.functions.home.localMarketPlaceLandingPageValidations
+                params:
+                  - name: BYOD
+                    string: true  
+
+            - executeFunction:
+                name: unified.us.functions.search.localMarketPlaceLandingPageValidations
+                params:
+                  - name: fulfillment
+                    string: Delivery
+                  - name: searchTerm
+                    string: flowers
+                  - name: BYOD
+                    string: true                     
+
+            # DeepLink to Seller page
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://global/seller/ # LF BYOD seller id
+
+            - executeFunction:
+                name: unified.us.functions.home.localmarketplace.sellerPageValidations     
+
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://global/seller/ # BYOD seller id
+
+            - executeFunction:
+                name: unified.us.functions.home.localmarketplace.sellerPageValidations               
+                params:
+                  - name: BYOD
+                    string: true  
+            # Deeplink to home
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://home
+
+            - executeFunction:
+                name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+# Navigating LF item page
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://ip/LMPSeller3Company3/5017448065
+
+      - if:
+          condition: ${env} == 'production'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://ip/9129450379 # 9132953221 #9112608189 #9122066534
+
+      - executeFunction:
+          name: unified.us.functions.item.localMarketPlace.itemPageValidations
+          params:
+            - name: fulfillment
+              string: Delivery
+            - name: Spark
+              string: true                    
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # Deeplink to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+# Navigating LF BYOD item page          
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+            - executeFunction:
+                name: unified.us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://ip/LMPSeller13Company13-109/5017945474
+
+      # once feature is in Prod , also add prod item data here                     
+
+            - executeFunction:
+                name: unified.us.functions.item.localMarketPlace.itemPageValidations
+                params:
+                  - name: fulfillment
+                    string: Delivery                
+                  - name: BYOD
+                    string: true              
+
+            - executeFunction:
+                name: unified.us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.localMarketPlace.cartPageValidations
+          params:
+            - name: fulfillment
+              string: Delivery
+            - name: BYOD
+              string: true
+            - name: Spark
+              string: true                        
+
+      - executeFunction:
+          name: unified.us.functions.reserveTime.localFinds.BYODSeller
+
+      #Continue to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: unified.us.functions.reviewOrder.localMarketPlace.reviewOrderPageValidations
+          params:
+            - name: fulfillment
+              string: Delivery
+            - name: BYOD
+              string: true
+            - name: Spark
+              string: true                      
+
+      - if:
+          condition: ${env} == 'teflon'
+          then:
+        # Place order
+          - executeFunction:
+              name: unified.us.functions.checkout.placeOrder
+
+          - executeFunction:
+              name: unified.us.functions.orderConfirmation.ratings
+
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+          - log: 'R2_SUBFLOW_POST_TRANSACTION'
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+          - executeFunction:
+              name: unified.us.functions.orderConfirmation.getOrderNumber
+
+          - log: ${orderNo}
+
+          - executeFunction:
+              name: unified.us.functions.thankyou.localMarketPlace.OrderConfirmationPageValidations
+              params:
+                - name: fulfillment
+                  string: Delivery
+                - name: BYOD
+                  string: true
+                - name: Spark
+                  string: true                          
+
+          # Deeplink into order details page
+          - executeFunction:
+              name: unified.us.functions.global.navigation.goToDeepLink
+              params:
+                - name: deepLinkUrl
+                  string: walmart://orders/$orderNo
+
+          - executeFunction:
+              name: unified.us.functions.orderDetails.localMarketPlace.OrderConfirmationPageValidations
+              params:
+                - name: fulfillment
+                  string: Delivery
+                - name: BYOD
+                  string: true
+                - name: Spark
+                  string: true                          
+
+          - storeIn:
+              key: testStatus
+              value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps         

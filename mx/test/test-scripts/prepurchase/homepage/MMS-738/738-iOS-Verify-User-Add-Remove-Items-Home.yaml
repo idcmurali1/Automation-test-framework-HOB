@@ -1,0 +1,210 @@
+#======================================================================================================================
+#  AUTHOR: Fenrnada Peruyero (vn54e7a)
+#  CREATED: Dec/17/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: prepurchase-walmart-ea-smoke-production-ios-738, prepurchase-walmart-ea-smoke-production-ios,
+        prepurchase-bodega-ea-smoke-production-ios-738, prepurchase-bodega-ea-smoke-production-ios
+  testCaseId: MMS-4821
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE: 
+#    
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MX+Mobile+-+Test+Suite+-+PrePurchase+-+EA+-+Smoke+-+Production
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMS-4821 
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMS-738 
+#
+#######################################################################################################################
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+       - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+            
+       - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+       - storeIn:
+          key: MMS_738_SUCCESSFUL_EXECUTION
+          value: false
+
+      # setting GMX_PP_APP_NAME variable for department selection
+       - if:
+          condition: ${BUNDLE_ID} == 'com.walmartmexico.WalmartMG.qa'
+          then:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: ''
+          else:
+            - storeIn:
+                key: GMX_PP_APP_NAME
+                value: '_bodega'
+
+       - log: "BEFORE SCENARIO END"
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: ios
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+ 
+      # STEPS 1-2 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1-2: (1) OPEN APP AND COMPLETE ONBOARDING. (2) OPEN THE EA BANNER."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.prepurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.prepurchase.onboarding.onlineExclusiveStore
+      
+     # STEP 3 LOG IN BY GOING TO "CUENTA" > "INICIAR SESIÓN"--------------------------------------------------------------
+      - log:
+         message: "STEP 3: LOG IN BY GOING TO 'Cuenta' > 'Iniciar sesión'"
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: mx.data.prepurchase-738.userEmail
+            - name: userPassword
+              string: mx.prepurchase.login.userPassword
+
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+
+      # STEP 4 GO TO HOME SCREEN AND FIND THE FIRST AVAILABLE CAROUSEL------------------------------------------------------
+      - log:
+         message: "STEP 4: Go to home screen and find the first available carousel "
+         color: ORANGE   
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+          
+      
+      # STEP 5 ADD THE FIRST AVAILABLE ITEM TO CART ===================------------------------------------------------------
+      - log:
+         message: "STEP 5: Add the first available item to cart"
+         color: ORANGE   
+      
+      - executeFunction:
+          name: mx.functions.home.scrollToSectionByMapping
+          params:
+            - name: mapping
+              string: mx.mappings.home.carousel.productsContainer
+            - name: direction
+              string: mx.data.prepurchase-738.scrollDirection
+      
+      - executeFunction:
+          name: functions.searchResultPage.getTheFirstAvailableItem
+      
+      - executeFunction:
+          name: mx.functions.department-l1-l2.getInCartProductIndexPathByQuantity
+          params:
+            - name: itemQuantity
+              string: mx.data.prepurchase-738.itemQuantity
+
+      - executeFunction: 
+          name: mx.functions.slp.getProductNameByIndexPath
+          params:
+            - name: indexPath
+              string: ${returnedProductIndexPath}
+      #STEP 5.1 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 5.1: VERIFY THAT THE QUANTITY IN THE STEPPER IS THE EXPECTED ONE."
+         color: ORANGE
+ 
+      - executeFunction:
+          name: mx.functions.slp.assertItemQuantity
+          params:
+            - name: expectedQuantity
+              string: mx.data.prepurchase-738.itemQuantity
+
+        
+      # STEP 6 Delete the selected item by tapping in the "-" icon on the stepper ----------------------------------------
+      - log:
+         message: "STEP 6: DELETE THE SELECTED ITEM BY TAPPING IN THE '-' ICON ON THE STEPPER."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.slp.decreaseProductQuantityBy
+          params:
+            - name: productName
+              string: ${returnedProductName}
+            - name: quantity
+              string: mx.data.prepurchase-738.itemQuantity
+ 
+       # STEPS 6.1 -----------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 6.1: VERIFY THAT NO ITEMS APPEAR IN THE STEPPER."
+      
+      - executeFunction:
+          name: mx.functions.slp.assertNoItemsInStepper
+          params:  
+            - name: productName
+              string: ${returnedProductName}
+
+      # End main -------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMS_738_SUCCESSFUL_EXECUTION
+          value: true
+
+ # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMS_738_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+
+      - log: "AFTER SCENARIO ENDED"
+  

@@ -1,0 +1,1298 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: May/23/2023
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-od-sanity-production-android-010, qaa-od-sanity-production-android
+  testCaseId: MXMOB-1363
+
+scenarios:
+#######################################################################################################################
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MXMOB-QAA%3A+Tracking%3A+Test+Suite%3A+GlassMX+-+OD+-+Sanity+-+Production+-+Android
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MXMOB-1363
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MXMOB-1942
+#
+#   - Flags used:
+#
+#       ${ORDER_DETAILS_AND_HISTORY_DELIVERY_SLOT_ASSERTION_WORKAROUND}  -  Values: [true | false]
+#       ${IOS_LOGIN_AS_REGISTERED_USER_WORKAROUND}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_CART}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_REVIEW_ORDER}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDER_CONFIRMATION}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDERS_HISTORY}  -  Values: [true | false]
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDER_DETAILS}  -  Values: [true | false]
+#       ${ASSERT_PAGE_TITLE}  -  Values: [true | false]
+#
+  #####################################################################################################################
+
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      - log:
+          message: "WORKAROUND: RELAUNCHING APP TO FIX ISSUE REGARDING INTERNAL APP FLAGS"
+          color: YELLOW
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_OD_Sanity_PROD_Android_010
+      - storeIn:
+          key: OD_010_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  #####################################################################################################################
+
+  - name: Main
+    platform: android
+    flow:
+      - log: TEST START - E2E REGRESSION - OD-010
+      
+    ## STEP 1: OPEN APP AND COMPLETE ONBOARDING AS GUEST - PRE-HOME SCREEN IS DISPLAYED.
+    ## STEP 2: SELECT OD BANNER - HOME SCREEN IS DISPLAYED
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1-2: COMPLETE ONBOARDING AND SELECT OD BANNER."
+            - name: squadNames
+              string: CORE | QAA
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-010.zipCode
+            - name: banner
+              string: OD
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 3: GO TO SEARCH AND FIND PRODUCTS BY NAME - SLP SCREEN SHOULD BE DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3: GO TO SEARCH AND FIND PRODUCTS BY NAME."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      # Searching for product 1 (Pieces)...............................................................................
+      - log: Searching for product 1 (Pieces)...
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.sanity.od-010.searchTerm1
+      
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 4: ADD ITEMS TO CART - ITEMS ARE ADDED TO CART.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4: ADD ITEMS TO CART."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      # Adding product 1 (Pieces)......................................................................................
+      - log: Adding product 1 (Pieces) to cart...
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductWithoutBadgesToCartInSLP
+          params:
+            - name: previousList
+              string: 'null'
+      - executeFunction:
+          name: mx.functions.slp.getProductPrice
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.slp.getProductQuantityAsPieces
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - storeIn:
+          key: qaa_od010_product_1_name
+          value: ${returnedProductName}
+          # [VARIABLE] Product Name 1 saved in ${qaa_od010_product_1_name}
+      - storeIn:
+          key: qaa_od010_product_1_price
+          value: ${returnedPrice}
+          # [VARIABLE] Price of product 1 saved in ${qaa_od010_product_1_price}
+      - storeIn:
+          key: qaa_od010_product_1_added_quantity
+          value: ${returnedProductPieces}
+          # [VARIABLE] Added quantity of product 1 saved in ${qaa_od010_product_1_added_quantity}
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 5: OPEN CART AND RUN VALIDATIONS - PRODUCT ADDED IS DISPLAYED IN CART AND QUANTITY IS CORRECT.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5: OPEN CART AND RUN VALIDATIONS."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      # Retrieving Total products quantity.............................................................................
+      - log: Retrieving Total products quantity...
+      - arithmetic:
+          expression: ${qaa_od010_product_1_added_quantity}
+          storeIn: qaa_od010_total_products_quantity
+          # [VARIABLE] Total products quantity saved in ${qaa_od010_total_products_quantity}
+      - log:
+          message: "Total Products Quantity got: ${qaa_od010_total_products_quantity}"
+          color: CYAN
+
+      # Navigating to Cart.............................................................................................
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${qaa_od010_total_products_quantity}
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+      # Running assertions for product 1 (Pieces)......................................................................
+      - log: Running assertions for product 1 (Pieces)...
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions #--[RETURNS]--${returnedProductType}-->
+          params:
+            - name: productName
+              string: ${qaa_od010_product_1_name}
+            - name: productType
+              string: 'null'
+            - name: expectedQuantity
+              string: ${qaa_od010_product_1_added_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${qaa_od010_product_1_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${qaa_od010_product_1_price}
+      - storeIn:
+          key: qaa_od010_product_1_type
+          value: ${returnedProductType}
+          # [VARIABLE] Type of product 1 saved in ${qaa_od010_product_1_type}
+      
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 6: HIT RESERVAR HORARIO - LOGIN SCREEN SHOULD DISPLAY
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 6: HIT 'RESERVAR HORARIO' (LOGIN SCREEN SHOULD DISPLAY)."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+      - executeFunction:
+          name: mx.functions.login.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 7: CREATE ACCOUNT - USER ACCOUNT IS CREATED AND TAKEN TO SHIPPING DETAILS SCREEN.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 7: CREATE ACCOUNT."
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.flows.od.login.createAccountFromLoginPopup
+          params:
+            - name: userFirstName
+              string: mx.data.qaa.sanity.od-010.userFirstName
+            - name: userLastName
+              string: mx.data.qaa.sanity.od-010.userLastName
+            - name: userPassword
+              string: mx.data.qaa.sanity.od-010.userPassword
+            - name: testCaseNum
+              string: '010'
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 8: SELECT PICKUP AND CHOOSE A DIFFERENT STORE - STORE IS SELECTED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 8: SELECT PICKUP AND CHOOSE A DIFFERENT STORE."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      # Changing store.................................................................................................
+      - log: Changing store...
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapChange
+      - executeFunction:
+          name: mx.functions.store-selector-popup.assertPageDisplayed
+      - sleep:
+          duration: 4000
+      - executeFunction:
+          name: mx.flows.od.store-selector-popup.changeStoreFromPopup
+          params:
+            - name: storeName
+              string: mx.data.qaa.sanity.od-010.storeNameToChange
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+      - storeIn:
+          key: qaa_od010_store_banner
+          value: ${returnedBanner}
+          # [VARIABLE] Selected store banner saved in ${qaa_od010_store_banner}
+      - storeIn:
+          key: qaa_od010_selected_store_name
+          value: ${returnedStoreName}
+          # [VARIABLE] Selected store name saved in ${qaa_od010_selected_store_name}
+      
+      # In case product is OOS.........................................................................................
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.oos.pageTitle
+          then:
+            - log: "Product '${qaa_od010_product_1_name}' is Out of Stock after store changed, adding new product..."
+            - executeFunction:
+                name: mx.functions.oos.assertProductDisplayed
+                params:
+                  - name: productName
+                    string: ${qaa_od010_product_1_name}
+            # Deleting OOS product...
+            - log: Deleting OOS product...
+            - executeFunction:
+                name: mx.functions.oos.tapDeleteLinkByProductName
+                params:
+                  - name: productNameOOS
+                    string: ${qaa_od010_product_1_name}
+            - executeFunction:
+                name: mx.functions.reserve-slot.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.reserve-slot.tapClose
+            - executeFunction:
+                name: mx.functions.cart.assertCartIsEmpty
+            - executeFunction:
+                name: mx.functions.cart.tapBack
+            
+            # Searching for a new product (Pieces)
+            - log: Searching for a new product (Pieces)...
+            - executeFunction:
+                name: mx.flows.od.search.performSuccessfulSearch
+                params:
+                  - name: searchTerm
+                    string: mx.data.qaa.sanity.od-010.searchTerm1
+
+            # Adding new product 1 (Pieces)............................................................................
+            - log: Adding new product 1 (Pieces) to cart...
+            - executeFunction:
+                name: mx.flows.od.add-to-cart.addProductWithoutBadgesToCartInSLP
+                params:
+                  - name: previousList
+                    string: 'null'
+            - executeFunction:
+                name: mx.functions.slp.getProductPrice
+                params:
+                  - name: productName
+                    string: ${returnedProductName}
+            - executeFunction:
+                name: mx.functions.slp.getProductQuantityAsPieces
+                params:
+                  - name: productName
+                    string: ${returnedProductName}
+            - storeIn:
+                key: qaa_od010_product_1_name
+                value: ${returnedProductName}
+                # [VARIABLE] Product Name 1 saved in ${qaa_od010_product_1_name}
+            - storeIn:
+                key: qaa_od010_product_1_price
+                value: ${returnedPrice}
+                # [VARIABLE] Price of product 1 saved in ${qaa_od010_product_1_price}
+            - storeIn:
+                key: qaa_od010_product_1_added_quantity
+                value: ${returnedProductPieces}
+                # [VARIABLE] Added quantity of product 1 saved in ${qaa_od010_product_1_added_quantity}
+
+            # Navigating to Cart.......................................................................................
+            - executeFunction:
+                name: mx.functions.top-menu.assertCartQuantity
+                params:
+                  - name: expectedQuantity
+                    string: ${qaa_od010_total_products_quantity}
+            - executeFunction:
+                name: mx.functions.top-menu.tapCartIcon
+            - executeFunction:
+                name: mx.functions.utils.closeBlackPopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.cart.assertPageDisplayed
+
+            # Running assertions for product 1 (Pieces)................................................................
+            - log: Running assertions for product 1 (Pieces)...
+            - executeFunction:
+                name: mx.flows.od.cart.quickPerformProductAssertions #--[RETURNS]--${returnedProductType}-->
+                params:
+                  - name: productName
+                    string: ${qaa_od010_product_1_name}
+                  - name: productType
+                    string: 'null'
+                  - name: expectedQuantity
+                    string: ${qaa_od010_product_1_added_quantity}
+                  - name: expectedWeightQuantity
+                    string: "null"
+                  - name: expectedUnitPrice
+                    string: ${qaa_od010_product_1_price}
+                  - name: expectedOriginalPrice
+                    string: "null"
+                  - name: expectedSubtotal
+                    string: ${qaa_od010_product_1_price}
+            - storeIn:
+                key: qaa_od010_product_1_type
+                value: ${returnedProductType}
+                # [VARIABLE] Type of product 1 saved in ${qaa_od010_product_1_type}
+
+            # Navigate to Reserve-Slot Page............................................................................
+            - log: Navigate to Reserve-Slot Page...
+            - executeFunction:
+                name: mx.functions.cart.tapReserveSlot
+            - executeFunction:
+                name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.reserve-slot.assertPageDisplayed
+            - executeFunction:
+                name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.reserve-slot.tapPickupDeliveryMethod
+            - sleep:
+                duration: 3000
+          else:
+            - log:
+                message: "Out of Stock Popup did not display, test will continue..."
+                color: CYAN
+      
+      # Confirm Selected Store.........................................................................................
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertSelectedStore
+          params:
+            - name: storeName
+              string: ${qaa_od010_selected_store_name}
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 9: CLOSE SHIPPING DETAILS AND CONTINUE CHECKOUT - RESERVE SLOT PAGE SHOULD BE DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: CLOSE SHIPPING DETAILS AND CONTINUE CHECKOUT."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapClose
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      - executeFunction:
+          name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 10: SELECT ENVIO A DOMICILIO AND ADD A NEW DELIVERY ADDRESS - ADDRESS ADDED AND TIME SLOTS LIST DISPLAYS.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: SELECT 'ENVIO A DOMICILIO' AND ADD A NEW DELIVERY ADDRESS"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapAddAddress
+
+      # Adding First Address...........................................................................................
+      - log: Adding first Address...
+      - executeFunction:
+          name: mx.flows.od.addresses.addHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: mx.data.qaa.sanity.od-010.userFirstName
+            - name: userLastName
+              string: mx.data.qaa.sanity.od-010.userLastName
+            - name: userStreet
+              string: mx.data.qaa.sanity.od-010.userStreet
+            - name: userExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumber
+            - name: userZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+            - name: userNeighborhood
+              string: mx.data.qaa.sanity.od-010.userNeighborhood
+            - name: expectedUserState
+              string: mx.data.qaa.sanity.od-010.userState
+            - name: expectedUserCity
+              string: mx.data.qaa.sanity.od-010.userCity
+            - name: expectedUserMunicipality
+              string: mx.data.qaa.sanity.od-010.userMunicipality
+            - name: userPhoneNumber
+              string: mx.data.qaa.sanity.od-010.userPhoneNumber
+            - name: markAsFavorite
+              string: 'true'
+            - name: userFullAddress
+              string: mx.data.qaa.sanity.od-010.userFullAddress
+      - executeFunction:
+          name: mx.functions.oos.closePopupIfDisplayed
+      - sleep:
+          duration: 5000
+          
+      # Validating new Address and Slots displayed correctly...........................................................
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertSelectedAddressByIndividualValues
+          params:
+            - name: streetName
+              string: mx.data.qaa.sanity.od-010.userStreet
+            - name: exteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumber
+            - name: city
+              string: mx.data.qaa.sanity.od-010.userCity
+            - name: state
+              string: mx.data.qaa.sanity.od-010.userState
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 11: GET BACK TO HOME PAGE - HOME SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11: GET BACK TO HOME PAGE"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapBack
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 12: GO TO PROFILE SCREEN AND SELECT ADDRESSES - ADDRESSES SCREEN AND PREVIOUSLY ADDED ADDRESS ARE DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12: GO TO PROFILE SCREEN AND SELECT ADDRESSES"
+            - name: squadNames
+              string: CUSTOMER | QAA
+    
+      # Navigating to Addresses list in Account Page...................................................................
+      - log: Navigating to Addresses list in Account Page...
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+          params:
+            - name: userName
+              string: mx.data.qaa.sanity.od-010.userFirstName
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+      
+      # Validating Address 1 displayed.................................................................................
+      - log: Validating Address 1 displayed...
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressByIndividualValues
+          params:
+            - name: userFullName
+              string: mx.data.qaa.sanity.od-010.userFullName
+            - name: expectedStreetName
+              string: mx.data.qaa.sanity.od-010.userStreet
+            - name: expectedExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumber
+            - name: expectedCity
+              string: mx.data.qaa.sanity.od-010.userCity
+            - name: expectedState
+              string: mx.data.qaa.sanity.od-010.userState
+            - name: expectedZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+
+    #------------------------------------------------------------------------------------------------------------------
+    
+    ## STEP 13: ADD A NEW ADDRESS WITHOUT MARKING IT AS FAVORITE - NEW ADDRESS IS ADDED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 13: ADD A NEW ADDRESS WITHOUT MARKING IT AS FAVORITE"
+            - name: squadNames
+              string: CUSTOMER | QAA
+      
+      - executeFunction:
+          name: mx.functions.addresses.tapAddAddress
+
+      # Adding Second Address..........................................................................................
+      - log: Adding Second Address...
+      - executeFunction:
+          name: mx.flows.od.addresses.addHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: mx.data.qaa.sanity.od-010.userFirstName2
+            - name: userLastName
+              string: mx.data.qaa.sanity.od-010.userLastName2
+            - name: userStreet
+              string: mx.data.qaa.sanity.od-010.userStreet2
+            - name: userExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumber2
+            - name: userInteriorNumber
+              string: 'null'
+            - name: userZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+            - name: userNeighborhood
+              string: mx.data.qaa.sanity.od-010.userNeighborhood2
+            - name: expectedUserState
+              string: mx.data.qaa.sanity.od-010.userState2
+            - name: expectedUserCity
+              string: mx.data.qaa.sanity.od-010.userCity2
+            - name: expectedUserMunicipality
+              string: mx.data.qaa.sanity.od-010.userMunicipality2
+            - name: userPhoneNumber
+              string: mx.data.qaa.sanity.od-010.userPhoneNumber
+            - name: markAsFavorite
+              string: 'false'
+      - executeFunction:
+          name: mx.functions.oos.closePopupIfDisplayed
+      - sleep:
+          duration: 5000
+
+      # Validating Second Address displayed............................................................................
+      - log: Validating Second Address displayed...
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressByIndividualValues
+          params:
+            - name: userFullName
+              string: mx.data.qaa.sanity.od-010.userFullName2
+            - name: expectedStreetName
+              string: mx.data.qaa.sanity.od-010.userStreet2
+            - name: expectedExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumber2
+            - name: expectedCity
+              string: mx.data.qaa.sanity.od-010.userCity2
+            - name: expectedState
+              string: mx.data.qaa.sanity.od-010.userState2
+            - name: expectedZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+
+      # Validating Address 1 is marked as favorite.....................................................................
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressIsMarkedAsFavorite
+          params:
+            - name: userFullName
+              string: mx.data.qaa.sanity.od-010.userFullName
+
+      # Validating Address 2 is not marked as favorite.................................................................
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressIsNotMarkedAsFavorite
+          params:
+            - name: userFullName
+              string: mx.data.qaa.sanity.od-010.userFullName2
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 14: GO TO CART - CART SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 14: GO TO CART"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.addresses.tapBack
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+    
+    ## STEP 15: HIT 'RESERVAR HORARIO' - SHIPPING DETAILS IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 15: HIT 'RESERVAR HORARIO'"
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+
+    # ------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 16: SELECT 'ENVIO A DOMICILIO' AND SELECT THE NEW ADDED ADDRESS - DELIVERY ADDRESS IS SELECTED AND TIME SLOTS DISPLAY.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 16: SELECT 'ENVIO A DOMICILIO' AND SELECT THE NEW ADDED ADDRESS"
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+      - sleep:
+          duration: 3000
+
+      # Validating Second Address and Slots displayed correctly........................................................
+      - log:  Validating Second Address and Slots displayed correctly...
+      - executeFunction:
+          name: mx.flows.od.reserve-slot.changeDeliveryAddress
+          params:
+            - name: addressName
+              string: mx.data.qaa.sanity.od-010.userFullName2
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+
+    #------------------------------------------------------------------------------------------------------------------
+      
+    ## STEP 17: GET BACK TO PROFILE SCREEN - PROFILE SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 17 - GET BACK TO PROFILE SCREEN"
+            - name: squadNames
+              string: CUSTOMER | QAA
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapBack
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+          params:
+            - name: userName
+              string: mx.data.qaa.sanity.od-010.userFirstName
+
+    #------------------------------------------------------------------------------------------------------------------
+    
+    ## STEP 18: SELECT ADDRESSES - ADDRESSES SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 18 - SELECT ADDRESSES"
+            - name: squadNames
+              string: CUSTOMER | QAA
+    
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+    
+    ## STEP 19: EDIT SECOND ADDRESS PREVIOUSLY ADDED - ADDRESS IS UPDATED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 19 - EDIT SECOND ADDRESS PREVIOUSLY ADDED"
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.functions.addresses.tapEditAddress
+          params:
+            - name: userFullName
+              string: mx.data.qaa.sanity.od-010.userFullName2
+
+      # Editing Second Address.........................................................................................
+      - log: Editing Second Address...
+      - executeFunction:
+          name: mx.flows.od.addresses.editHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: 'null'
+            - name: userLastName
+              string: mx.data.qaa.sanity.od-010.userLastNameEdit
+            - name: userStreet
+              string: mx.data.qaa.sanity.od-010.userStreetEdit
+            - name: userExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumberEdit
+            - name: userInteriorNumber
+              string: 'null'
+            - name: clearInteriorNumberOption
+              string: 'false'
+            - name: userZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+            - name: userNeighborhood
+              string: mx.data.qaa.sanity.od-010.userNeighborhood2
+            - name: expectedUserState
+              string: mx.data.qaa.sanity.od-010.userStateEdit
+            - name: expectedUserCity
+              string: mx.data.qaa.sanity.od-010.userCityEdit
+            - name: expectedUserMunicipality
+              string: mx.data.qaa.sanity.od-010.userMunicipalityEdit
+            - name: userPhoneNumber
+              string: mx.data.qaa.sanity.od-010.userPhoneNumberEdit
+            - name: markAsFavorite
+              string: 'false'
+      - executeFunction:
+          name: mx.functions.oos.closePopupIfDisplayed
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+      
+      # Validating Second Address changes applied correctly............................................................
+      - log:  Validating Second Address changes applied correctly...
+      - executeFunction:
+          name: mx.functions.addresses.assertAddressByIndividualValues
+          params:
+            - name: userFullName
+              string: mx.data.qaa.sanity.od-010.userFullNameEdit
+            - name: expectedStreetName
+              string: mx.data.qaa.sanity.od-010.userStreetEdit
+            - name: expectedExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumberEdit
+            - name: expectedCity
+              string: mx.data.qaa.sanity.od-010.userCityEdit
+            - name: expectedState
+              string: mx.data.qaa.sanity.od-010.userStateEdit
+            - name: expectedZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 20: GO TO CART - CART SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 20: GOT TO CART"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.addresses.tapBack
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 21: TAP RESERVE A SLOT - SHIPPING DETAILS IS DISPLAYED.
+    ## STEP 22: SELECT 'ENVIO A DOMICILIO' AND CHOOSE DELIVERY ADDRESS PREVIOUSLY UPDATED - RECENTLY UPDATED DELIVERY 
+    #           ADDRESS IS SELECTED.
+    ## STEP 23: SELECT TIME SLOT - CART SCREEN IS DISPLAYED AND DATE AND HOUR SELECTED ARE DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 21-23: RESERVE A SLOT AND CHOOSE DELIVERY ADDRESS PREVIOUSLY UPDATED."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.flows.od.cart.reserveSlot
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.sanity.od-010.deliveryMethod
+            - name: addressName
+              string: mx.data.qaa.sanity.od-010.userFullNameEdit
+            - name: deliveryPlaceAction
+              string: 'Change'
+            - name: slotDate
+              string: 'dayAfterTomorrow'
+            - name: slotTime
+              string: 'lastAvailable'
+
+    # Retrieving values for totals Assertions..........................................................................
+      - log: "Retrieving values for totals Assertions..."
+      - storeIn:
+          key: qaa_od010_delivery_fee
+          value: mx.data.qaa.sanity.od-010.deliveryFee # <-- Business rule
+          # [VARIABLE] Delivery fee saved in ${qaa_od010_delivery_fee}
+      - storeIn:
+          key: qaa_od010_subtotal
+          value: ${qaa_od010_product_1_price}
+          # [VARIABLE] Cart subtotal saved in ${qaa_od010_subtotal}
+      - arithmetic:
+          expression: ${qaa_od010_subtotal} + ${qaa_od010_delivery_fee}
+          numberOfDecimalPlaces: 2
+          storeIn: qaa_od010_total
+          # [VARIABLE] Cart estimated total saved in ${qaa_od010_total}
+      
+    # Validating totals and continuing to Review-Order.................................................................
+      - log: "Validating totals and continuing to Review-Order..."
+      - executeFunction:
+          name: mx.flows.od.cart.assertTotals
+          params:
+            - name: expectedDeliveryFee
+              string: ${qaa_od010_delivery_fee}
+            - name: expectedSubtotal
+              string: ${qaa_od010_subtotal}
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 24: CONTINUE TO CHECKOUT - ORDER REVIEW SCREEN IS DISPLAYED AND DELIVERY ADDRESS IS ALREADY SELECTED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 24: CONTINUE TO CHECKOUT"
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      - executeFunction:
+          name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+
+    # Running Delivery Information Assertions..........................................................................
+      - log: "Running Delivery Information Assertions..."
+      - executeFunction:
+          name: mx.flows.od.review-order.assertDeliveryInformation
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.sanity.od-010.deliveryMethod
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedStoreOrHomeName
+              string: mx.data.qaa.sanity.od-010.userFullNameEdit
+            - name: expectedStoreOrHomeAddress
+              string: 'null'
+            - name: expectedUserStreet
+              string: mx.data.qaa.sanity.od-010.userStreetEdit
+            - name: expectedUserExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumberEdit
+            - name: expectedUserCity
+              string: mx.data.qaa.sanity.od-010.userCityEdit
+            - name: expectedUserState
+              string: mx.data.qaa.sanity.od-010.userStateEdit
+            - name: expectedUserZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+
+    # Enter Test Order Disclaimer............................................................................................
+      - log: "Enter Test Order Disclaimer..."
+      - executeFunction:
+          name: mx.flows.od.review-order.enterTestOrderDisclaimer
+      
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 25: GO TO PAYMENT SECTION AND SELECT PAY AT DELIVERY - PAYMENT METHOD SHOULD BE UPDATED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 25: GO TO PAYMENT SECTION AND SELECT PAY AT DELIVERY."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Pago"
+      - executeFunction:
+          name: mx.flows.od.review-order.forceSelectPayAtDeliveryMethod
+          params:
+            - name: payAtDeliveryOption
+              string: mx.data.qaa.sanity.od-010.payAtDeliveryFormat
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Número telefónico"
+      - executeFunction:
+          name: mx.flows.od.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.qaa.sanity.od-010.userPhoneNumberEdit
+
+    # Running Totals Assertions........................................................................................
+      - log: "Running Totals Assertions..."
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: Total
+      - executeFunction:
+          name: mx.flows.od.review-order.assertTotalsInformation
+          params:
+            - name: expectedSubtotalProductsCount
+              string: ${qaa_od010_total_products_quantity}
+            - name: expectedSubtotal
+              string: ${qaa_od010_subtotal}
+            - name: assertDeliveryFee
+              string: 'true'
+            - name: expectedDeliveryFee
+              string: ${qaa_od010_delivery_fee}
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 26: PLACE ORDER - ORDER REVIEW FINAL ASSERTIONS, ORDER CONFIRMATION ASSERTIONS AND DELIVERY METHOD IS HOME 
+    ## DELIVERY, DELIVERY ADDRESS AND DELIVERY SLOT ARE CORRECT.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 26: PLACE ORDER"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+    # Place Order......................................................................................................
+      - log: "Place Order..."
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+      - storeIn:
+          key: qaa_od010_ordered_date
+          value: ${returnedOrderedDate}
+          # [VARIABLE] Ordered Date saved in ${qaa_od010_ordered_date}
+      - sleep:
+          duration: 10000
+
+    # Running Confirmation Page Assertions.............................................................................
+      - log: "Running Confirmation Page Assertions..."
+      - executeFunction:
+          name: mx.flows.od.order-confirmation.assertConfirmation
+          params:
+            - name: expectedTotal
+              string: ${qaa_od010_total}
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedProductsCount
+              string: ${qaa_od010_total_products_quantity}
+            - name: expectedDeliveryMethod
+              string: mx.data.qaa.sanity.od-010.deliveryMethod
+            - name: expectedHomeAddressName
+              string: mx.data.qaa.sanity.od-010.userFullNameEdit
+            - name: expectedUserStreet
+              string: mx.data.qaa.sanity.od-010.userStreetEdit
+            - name: expectedUserExteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumberEdit
+            - name: expectedUserCity
+              string: mx.data.qaa.sanity.od-010.userCityEdit
+            - name: expectedUserState
+              string: mx.data.qaa.sanity.od-010.userStateEdit
+            - name: expectedUserZipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+      - storeIn:
+          key: qaa_od010_order_number
+          value: ${returnedOrderNumber}
+          # [VARIABLE] Order number saved in ${qaa_od010_order_number}"
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 27: HIT 'DESCUBRIR MAS PRODUCTOS' BUTTON - HOME SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 27: HIT 'DESCUBRIR MAS PRODUCTOS' BUTTON"
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 28: GO TO PROFILE AND SELECT 'PEDIDOS' - ORDERS HISTORY IS DISPLAYED AND ORDERS ARE DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 28: GO TO PROFILE AND SELECT 'PEDIDOS'"
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+
+    # Running Orders History assertions................................................................................
+      - log: "Running Orders History assertions..."
+      - executeFunction:
+          name: mx.flows.od.orders-history.assertOrder
+          params:
+            - name: orderNumber
+              string: ${qaa_od010_order_number}
+            - name: expectedDeliveryMethod
+              string: mx.data.qaa.sanity.od-010.deliveryMethod
+            - name: expectedTotal
+              string: ${qaa_od010_total}
+            - name: expectedBanner
+              string: ${qaa_od010_store_banner}
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedOrderStatus
+              string: mx.data.qaa.sanity.od-010.expectedOrderStatus
+            - name: expectedProductsCount
+              string: ${qaa_od010_total_products_quantity}
+      
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 29: SELECT THE NEWEST PLACED ORDER - ORDER ID IS DISPLAYED AND ORDER-CONFIRMATION ASSERTIONS.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 29: SELECT THE NEWEST PLACED ORDER"
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.orders-history.openOrder
+          params:
+            - name: orderNumber
+              string: ${qaa_od010_order_number}
+      - sleep:
+          duration: 5000
+
+      # Performing Order Details assertions............................................................................
+      - log: Performing Order Details assertions...
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderDetailsWithoutDeliveryLocationAssertion
+          params:
+            - name: orderNumber
+              string: ${qaa_od010_order_number}
+            - name: expectedOrderedDate
+              string: ${qaa_od010_ordered_date}
+            - name: expectedDeliveryMethod
+              string: mx.data.qaa.sanity.od-010.deliveryMethod
+            - name: expectedOrderStatus
+              string: mx.data.qaa.sanity.od-010.expectedOrderStatus
+            - name: expectedBanner
+              string: ${qaa_od010_store_banner}
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedProductsCount
+              string: ${qaa_od010_total_products_quantity}
+            - name: expectedPaymentMethod
+              string: mx.data.qaa.sanity.od-010.paymentMethod
+            - name: expectedSubtotal
+              string: ${qaa_od010_subtotal}
+            - name: assertDiscount
+              string: 'false'
+            - name: expectedDiscount
+              string: "0.00"
+            - name: expectedDeliveryFee
+              string: ${qaa_od010_delivery_fee}
+            - name: expectedTotal
+              string: ${qaa_od010_total}
+
+      # Performing Order Details - Home Delivery assertions............................................................
+      - log: Performing Order Details - Home Delivery assertions...
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.order-details.elementAtTheTop
+      - executeFunction:
+          name: mx.functions.order-details.assertHomeDeliveryAddressName
+          params:
+            - name: expectedHomeAddressName
+              string: mx.data.qaa.sanity.od-010.userFullNameEdit
+      - executeFunction:
+          name: mx.functions.order-details.assertHomeDeliveryAddressByIndividualValues
+          params:
+            - name: streetName
+              string: mx.data.qaa.sanity.od-010.userStreetEdit
+            - name: exteriorNumber
+              string: mx.data.qaa.sanity.od-010.userExteriorNumberEdit
+            - name: city
+              string: mx.data.qaa.sanity.od-010.userCityEdit
+            - name: state
+              string: mx.data.qaa.sanity.od-010.userStateEdit
+            - name: zipCode
+              string: mx.data.qaa.sanity.od-010.zipCode2
+
+      # Performing assertions for Product 1............................................................................
+      - log: "Performing assertions for Product 1..."
+      - executeFunction:
+          name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+      - executeFunction:
+          name: mx.flows.od.order-details.assertProductDetails
+          params:
+            - name: productName
+              string: ${qaa_od010_product_1_name}
+            - name: expectedPrice
+              string: ${qaa_od010_product_1_price}
+            - name: expectedSubtotal
+              string: ${qaa_od010_product_1_price}
+            - name: productType
+              string: ${qaa_od010_product_1_type}
+            - name: expectedOrderedQuantityAsPieces
+              string: ${qaa_od010_product_1_added_quantity}
+            - name: expectedOrderedQuantityAsWeight
+              string: ""
+      
+    #------------------------------------------------------------------------------------------------------------------
+
+    # ## STEP 30: GO TO ACCOUNT AND SELECT ADDRESSES - ADDRESSES SCREEN IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 30 - GO TO ACCOUNT AND SELECT ADDRESSES"
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.functions.order-details.tapBack
+      - executeFunction:
+          name: mx.functions.orders-history.tapBack
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+      - executeFunction:
+          name: mx.functions.addresses.assertPageDisplayed
+
+    #------------------------------------------------------------------------------------------------------------------
+
+    ## STEP 31: REMOVE ADDRESS - ADDRESS IS REMOVED SUCCESSFULLY.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 31: REMOVE ADDRESS"
+            - name: squadNames
+              string: CUSTOMER | QAA
+      
+      - executeFunction:
+          name: mx.flows.od.addresses.deleteAddressByName
+          params:
+            - name: expectedAddressName
+              string: mx.data.qaa.sanity.od-010.userFullName
+      - executeFunction:
+          name: mx.flows.od.addresses.deleteAddressByName
+          params:
+            - name: expectedAddressName
+              string: mx.data.qaa.sanity.od-010.userFullNameEdit
+
+    #------------------------------------------------------------------------------------------------------------------
+    
+      - storeIn:
+          key: OD_010_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: END OF TEST - E2E REGRESSION - OD-010
+
+  #####################################################################################################################
+
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START"
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${OD_010_SUCCESSFUL_EXECUTION}
+      - log:
+          message: "Account Creation: No need to reset data..."
+          color: GREEN_BOLD
+      - if:
+          condition: ${OD_010_SUCCESSFUL_EXECUTION} != true
+          then:
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+      - log: "AFTER SCENARIO END"

@@ -1,0 +1,126 @@
+# Validate Guided Delivery Instructions (Shipping) in checkout page
+
+general:
+  platform: ios
+  tags: C2714085, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714085
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate Guided Delivery Instructions (Shipping) in checkout page
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate Guided Delivery Instructions (Shipping) in checkout page"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.sc.bagpreference.ios.email
+            - name: password
+              string: us.data.prod.checkout.sc.bagpreference.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.changeStore
+          params:
+              - name: zipcode
+                string: 95122 
+              - name: storeName
+                string: San Jose Supercenter
+      
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+      
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search item and add to cart
+      - executeFunction:
+          name: us.functions.search.addItemtoCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.shippingOnly.item
+            - name: expectedItemCount
+              string: 1
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: us.data.fulfillment.shipping
+
+      # Continue to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      # Add guided delivery instructions
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.addDeliveryInstructions
+          params:
+            - name: houseType
+              string: House
+            - name: gateCode
+              string: '560'
+            - name: deliveryNotes
+              string: Leave at front door
+            - name: doorStepType
+              string: Front door
+
+      # Verify guided delivery instructions
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.verifyGuidedDeliveryInstructions
+          params:
+            - name: deliveryInstructions
+              string: 'House, 560, Front door, Leave at front door'
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

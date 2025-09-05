@@ -1,0 +1,171 @@
+general:
+  tags: unified-prod-e2e, p2-ecomm-prod-e2e, C2659234
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2659234
+  metadata:
+    - name: scenarioId
+      string: EC001
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Accoount info
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.prod.walmartLive.android.email
+            - name: android.password
+              string: us.data.prod.walmartLive.android.password
+            - name: ios.email
+              string: us.data.prod.walmartLive.ios.email
+            - name: ios.password
+              string: us.data.prod.walmartLive.ios.password
+
+      # Verify Signin Nudge before Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.homePage.verifySigninNudge 
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: data.storeId
+            - name: storeName
+              string: data.storeName
+            - name: storeOnly
+              string: true
+
+      # Sorting and filtering functionality 
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.search.varientItemForSearchShelfResults1
+
+      - executeFunction:
+          name: unified.us.functions.search.verifySortandFilterPage
+          params:
+            - name: SortandFilterOptions
+              string: us.data.sortAndFilter.sortByCollapsed
+            - name: filterRadioOption
+              string: Sort, Best Match
+
+      - executeFunction:
+          name: unified.us.functions.search.sort.applybestMatchFilter
+      
+      - executeFunction:
+          name: unified.us.functions.search.applyRetailerFilter
+          params:
+            - name: option
+              string: Walmart
+
+      - executeFunction:
+          name: unified.us.functions.search.clickSortandFilterWhenTwoFiltersApplied 
+
+      - executeFunction:
+          name: unified.us.functions.search.clearSortandFilterApplied
+
+      # Deselect the selected pickup intent
+      - executeFunction:
+          name: unified.us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.search.applyAndVerifyInStoreFilter
+
+      - executeFunction:
+          name: unified.us.functions.search.clearInstoreFilter
+  
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.search.varientItemForSearchShelfResults
+
+# Badging functionality
+      # Verify all badges when no intent is selected 
+      - executeFunction:
+          name: unified.us.functions.search.verifyBadgingSLA
+          params:
+            - name: option
+              string: onIntent
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      # Verify Pickup badges with Pickup Intent
+      - executeFunction:
+          name: unified.us.functions.search.verifyBadgingSLA
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Pickup
+
+      # Verify Delivery badges with Delivery Intent
+      - executeFunction:
+          name: unified.us.functions.search.verifyBadgingSLA
+          params:
+            - name: option
+              string: Pickup     
+
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+      
+      # Verify Shipping badges with Shipping Intent
+      - executeFunction:
+          name: unified.us.functions.search.verifyBadgingSLA       
+          params:
+            - name: option
+              string: Shipping
+ 
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

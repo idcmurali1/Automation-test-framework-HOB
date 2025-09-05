@@ -1,0 +1,953 @@
+#======================================================================================================================
+#    AUTHOR: Francisco Javier Ramírez Hernández
+#   CREATED: Oct/19/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: batch-2-qaa-od-sanity-production-ios-016a, batch-2-qaa-od-sanity-production-ios
+  testCaseId: MXMOB-1377
+
+scenarios:
+
+#######################################################################################################################
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    https://confluence.walmart.com/display/MXGECMEX/MXMOB-QAA%3A+Tracking%3A+Test+Suite%3A+GlassMX+-+OD+-+Sanity+-+Production+-+iOS
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MXMOB-1377
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MXMOB-1950
+#
+#  Flags Used:
+#       
+#       ${ORDER_DETAILS_AND_HISTORY_DELIVERY_SLOT_ASSERTION_WORKAROUND}  -  Values: [true | false]
+#           Turns on/off the execution of the workaround to perform (or not) the delivery slot assertions on 
+#           order-details and orders-history pages due to an error that displays a different time slot from the selected 
+#           during the booking phase.
+#
+#       ${IOS_LOGIN_AS_REGISTERED_USER_WORKAROUND}  -  Values: [true | false]
+#           Turns on/off the execution of the workaround to log in after finishing the onboarding steps due to iOS not
+#           having the login button inside the onboarding aside from Android. Turn on to log in in Account page after
+#           the onboarding steps, turn off to log in inside the onboarding as usual.
+#
+#       ${ASSERT_DELIVERY_SLOT_IN_CART}  -  Values: [true | false]
+#           If set to 'true', the flow will perform assertion for the Delivery Slot in Cart page.
+#           If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+#  
+#       ${ASSERT_DELIVERY_SLOT_IN_REVIEW_ORDER}  -  Values: [true | false]
+#           If set to 'true', the flow will perform assertion for the Delivery Slot in Review Order page.
+#           If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+#  
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDER_CONFIRMATION}  -  Values: [true | false]
+#           If set to 'true', the flow will perform assertion for the Delivery Slot in Order Confirmation page.
+#           If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+#  
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDERS_HISTORY}  -  Values: [true | false]
+#           If set to 'true', the flow will perform assertion for the Delivery Slot in Orders History page.
+#           If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+#  
+#       ${ASSERT_DELIVERY_SLOT_IN_ORDER_DETAILS}  -  Values: [true | false]
+#           If set to 'true', the flow will perform assertion for the Delivery Slot in Order Details page.
+#           If set to 'false' or not set at all, it will perform the Delivery Slot assertion as expected.
+#
+#######################################################################################################################
+  
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: GMX_OD_Sanity_PROD_iOS_016_a
+      - storeIn:
+          key: OD_016A_SUCCESSFUL_EXECUTION
+          value: false
+      - storeIn:
+          key: OD_016a_IS_CART_EMPTY
+          value: true
+      - log: "BEFORE SCENARIO END"
+
+#######################################################################################################################
+  
+  - name: Main
+    flow:
+      - log: "TEST START: QAA - OD - PRODUCTION SANITY - OD-016-A"
+      
+      #----------------------------------------------------------------------------------------------------------------
+      # Step 1: Open App and Complete Onboarding
+      # Step 2: Select OD Banner
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1-2: Navigate through Onboarding and select OD Banner..."
+            - name: squadNames
+              string: CORE | QAA
+      
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.e2e-regression.od-016.zipCode
+            - name: banner
+              string: "OD"
+      
+      #----------------------------------------------------------------------------------------------------------------
+      # Step 3: Search item (item sold by pieces)
+      # Step 4: Open PDP and add to cart (item sold by pieces)
+      # Step 5: Search item (item sold by weight)
+      # Step 6: Open PDP and add item to Cart (item sold by weight)
+      # Step 7: Search Item (item sold by both pieces/weight)
+      # Step 8: Open PDP and add item to Cart (item sold by both pieces/weight)
+      - executeFunction: 
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 3: Select store and search for products to add to cart."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction:
+         name: mx.functions.delivery-method-selector.tapStoreSelector
+      
+      - executeFunction:
+          name: mx.functions.store-selector-popup.enterZipCode
+          params:
+            - name: zipCode
+              string: "59670"
+      
+      - executeFunction:
+          name: mx.functions.store-selector-popup.selectStoreByPosition
+          params:
+            - name: storeIndex
+              string: "0" # Plaza Anna
+      
+      - executeFunction: 
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4-8: Add Pieces Product to Cart from PLP..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      # Search product, open PDP and Add product to cart
+      - executeFunction:
+            name: mx.flows.od.search.performSuccessfulSearch
+            params:
+              - name: searchTerm
+                string: mx.data.e2e-regression.od-016.slp.searchTermPieces
+
+      - executeFunction:
+            name: mx.functions.slp.scrollDownToProductByName
+            params:
+              - name: productName
+                string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+     
+      - executeFunction:
+            name: mx.functions.slp.openProductDetailsByName
+            params:
+              - name: productName
+                string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+      - sleep:
+          duration: 3000
+      
+      - executeFunction:
+          name: mx.functions.pdp.addToCart
+      
+      - executeFunction:
+          name: mx.functions.pdp.assertAddedToCart
+      
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+      
+      - storeIn:
+          key: OD_016a_IS_CART_EMPTY
+          value: false
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: Open Cart..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: mx.data.e2e-regression.qaa.od-016.productsCount
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      
+      # Product assertions before increments...
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+    
+      - executeFunction:
+          name: mx.functions.cart.assertProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+            - name: expectedQuantity
+              string: mx.data.e2e-regression.od-016.pdp.product1InitialQuantity
+      
+      - executeFunction:
+          name: mx.functions.cart.assertProductsCountInSubtotalLabel
+          params:
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.qaa.od-016.productsCount
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: Validate the Max Quantity Limit for Pieces Products (in PLP)..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.flows.od.cart.increaseProductToMaxQuantity
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+            - name: productType
+              string: Pieces
+            - name: productWeightConversionRate
+              string: ""
+      
+      #----------------------------------------------------------------------------------------------------------------
+      # Step 11: Hit "Continuar" button
+      # Step 12: Login existing account
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11: Hit continuar button and login into existing account."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+         name: mx.functions.cart.tapContinue
+      
+      - executeFunction:
+          name: mx.flows.od.login.loginFromPopup
+          params:
+            - name: userEmail
+              string: mx.data.e2e-regression.od-016.login.userEmailiOS
+            - name: userPassword
+              string: mx.data.e2e-regression.od-016.userPassword
+
+      - executeFunction:
+          name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapBack
+      
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12.A: Assert Cart not empty and product is listed after login..."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind
+              string: mx.mappings.cart.reserveSlotButton
+            - name: direction
+              string: up
+      
+      - executeFunction:
+          name: mx.functions.cart.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+      
+      - log: 
+          message: "MAX PRODUCT QUANTITY WORKAROUND INITIALIZED...."
+          color: CYAN
+      
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12.B: MAX PRODUCT QUANTITY WORKAROUND INITIALIZED...."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      
+      - executeFunction:
+          name: mx.functions.cart.tapBack
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      
+      - executeFunction: 
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12.C: Add Pieces Product to Cart from PLP..."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+            name: mx.flows.od.search.performSuccessfulSearch
+            params:
+              - name: searchTerm
+                string: mx.data.e2e-regression.od-016.slp.searchTermPieces
+      
+      - executeFunction:
+            name: mx.functions.slp.scrollDownToProductByName
+            params:
+              - name: productName
+                string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+     
+      - executeFunction:
+            name: mx.functions.slp.openProductDetailsByName
+            params:
+              - name: productName
+                string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+      - sleep:
+          duration: 3000
+      
+      - executeFunction:
+          name: mx.functions.pdp.addToCart
+      
+      - executeFunction:
+          name: mx.functions.pdp.assertAddedToCart
+      
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+      
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12.D: Open Cart..."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+
+      - storeIn:
+          key: tc_product1Price
+          value: ${returnedProductPrice}
+          
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${tc_product1Price}
+      
+      #----------------------------------------------------------------------------------------------------------------
+      # Step 13: Hit "Reservar un horario"
+      # Step 14: Select "Envio a domicilio" and select time slot
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 13: Reserve a Home Delivery Slot..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed      
+      
+      - executeFunction:
+          name:  mx.functions.reserve-slot.tapHomeDeliveryMethod
+      
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+
+      - log:
+          message: There are available dates
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectDayAfterTomorrowSlot
+
+      - log:
+          message: Checking if there are available time slots
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+
+      - log:
+          message: There are slots available
+          color: CYAN
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectRandomVisibleTimeSlot
+
+      - executeFunction:      
+          name: mx.functions.reserve-slot.getSelectedDaySlot
+      
+      - storeIn:
+          key: tc_returnedSelectedDaySlot
+          value: ${returnedSelectedDaySlot}
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlot
+      
+      - storeIn:
+          key: tc_returnedSelectedTimeSlot
+          value: ${returnedSelectedTimeSlot}
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlotDeliveryFee
+      
+      - storeIn:
+          key: tc_timeSlotDeliveryFee
+          value: ${returnedDeliveryFee}
+      
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'Cart'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+
+      - storeIn:
+          key: deliverySlotCart
+          value: ${returnedDeliverySlot}
+      
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapAddAddress
+      
+      - executeFunction:
+          name: mx.functions.address-selector-popup.selectAddressByPosition
+          params:
+            - name: addressPosition
+              string: "1"
+      
+      - executeFunction:
+          name: mx.functions.address-selector-popup.getSelectedAddress
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+         name:  mx.functions.address-selector-popup.tapSave
+      
+      - sleep:
+          duration: 5000
+      
+      - getString:
+          identifier: mx.mappings.reserve-slot.userAddress
+          storeIn: returnedAddress
+
+      - executeNode:
+          file: mx/test/helpers/reserve-slot/getShortAddress.js
+          args:
+            - value: ${returnedAddress}
+          getResponse:
+            storeIn: returnedShortAddress
+            
+      - storeIn:
+          key: tc_shortAddress
+          value: ${returnedShortAddress}
+      
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 14: Tap Reserve slot"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapReserve
+      
+      - sleep:
+          duration: 6000
+      
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+
+      - executeFunction:
+          name: mx.functions.cart.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${deliverySlotCart}
+
+      # Adding delivery fee to the expected subtotal after selecting delivery slot...
+      - arithmetic:
+          expression: ${expectedSubtotal} + 44.00
+          storeIn: tc_EstimatedTotal
+      
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromBottom
+          params:
+            - name: expectedEstimatedTotal
+              string: ${tc_EstimatedTotal}
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 15.A: Continue purchase..."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      
+      - executeFunction:
+          name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+      
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 15.B: Validate Delivery Information in Checkout..."
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.review-order.tapAddDeliveryInstructions
+      
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.enterTestOrderDisclaimer
+      
+      - executeFunction:
+          name: mx.functions.general-comments-pop-up.tapSave
+      
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+      
+      - storeIn:
+          key: deliverySlotReviewOrder
+          value: ${returnedDeliverySlot}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${deliverySlotReviewOrder}
+    
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-016.deliveryMethod
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 16: Select Pay At Delivery (Scenario for PROD)"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Pago"
+      
+      - executeFunction:
+          name: mx.flows.od.review-order.selectPayAtDeliveryMethodIfNotSelected
+          params:
+            - name: payAtDeliveryOption
+              string: 'cash'
+
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 17.A: Fill out Phone Information and place order..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      # This is a required extra step in order to place order.
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Número telefónico"
+
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.od-016.review-order.cellphoneNumber
+       
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Total"
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${tc_EstimatedTotal}
+      
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+      
+      - sleep:
+          duration: 4000
+      
+      - executeFunction:
+          name: mx.functions.utils.closeRateWalmartPopupIfDisplayed
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 17.B: Order confirmation Assertions"
+            - name: squadNames
+              string: PURCHASE | QAA
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertPageDisplayed
+      
+      # If this screen displayed, it means that the order has been place successfully, which also means that cart is already empty...
+      # ----------------------------------------------------------------------------
+      - storeIn:
+          key: OD_016a_IS_CART_EMPTY
+          value: true
+      # ----------------------------------------------------------------------------
+        
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-016.deliveryMethod
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertHomeDeliveryAddressName
+          params:
+            - name: expectedHomeAddressName
+              string: mx.data.e2e-regression.od-016.order-confirmation.addressName
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'OrderConfirmation'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertDeliverySlot
+          params:
+            - name: expectedDeliverySlot
+              string: ${returnedDeliverySlot}
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertHomeDeliveryAddress
+          params:
+            - name: expectedHomeAddress
+              string: mx.data.od-016a.order-confirmation.expectedHomeAddressInOrderDetailsiOS
+            
+      #  Get order number
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+
+      - storeIn:
+          key: tc_OrderNumber
+          value: ${returnedOrderNumber}
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 18: Hit Discover more Products button..."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+      
+      - executeFunction:
+          name: mx.functions.home.scrollToTop
+      
+      - executeFunction:
+          name: mx.functions.delivery-method-selector.closeSelectorIfExpanded
+      
+      - executeFunction:
+          name: mx.functions.home.assertPageDisplayed
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 19.A: Go to Profile screen and select Pedidos"
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+
+      - executeFunction:
+          name: mx.functions.orders-history.assertPageDisplayed
+      
+      - arithmetic:
+          expression: ${tc_product1Price} + 44.00
+          storeIn: tc_EstimatedTotal
+          numberOfDecimalPlaces: 2
+      
+      - storeIn:
+          key: position
+          value: 1
+      
+      # #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 19.B: Validate Order Information..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.orders-history.assertOrderDeliveryMethodByPosition # <--PARAMS--${expectedDeliveryMethod}--${position}
+          params:
+            - name: position
+              string: ${position}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-016.deliveryMethod
+
+      - executeFunction:
+          name: mx.functions.orders-history.assertOrderTotalByPosition # <--PARAMS--${expectedTotal}--${position}
+          params:
+            - name: position
+              string: ${position}
+            - name: expectedTotal
+              string: ${tc_EstimatedTotal}
+
+      - executeFunction:
+          name: mx.functions.orders-history.assertOrderBannerByPosition # <--PARAMS--${expectedBanner}--${position}
+          params:
+            - name: position
+              string: ${position}
+            - name: expectedBanner
+              string: mx.data.e2e-regression.qaa.od-016.banner
+      
+      - executeFunction:
+                name: mx.functions.orders-history.assertOrderDeliverySlotByPosition # <--PARAMS--${expectedDeliverySlot}--${expectedBanner}--${position}
+                params:
+                  - name: expectedDeliverySlot
+                    string: ${returnedDeliverySlot}
+
+      - executeFunction:
+                name: mx.functions.orders-history.assertOrderDeliverySlotByPosition # <--PARAMS--${expectedDeliverySlot}--${expectedBanner}--${position}
+                params:
+                  - name: expectedDeliverySlot
+                    string: "test"
+      
+      - executeFunction:
+                name: mx.functions.orders-history.assertOrderProductsCountByPosition # <--PARAMS--${expectedProductsCount}--${position}
+                params:
+                  - name: position
+                    string: ${position}
+                  - name: expectedProductsCount
+                    string: mx.data.e2e-regression.qaa.od-016.productsCount
+      
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: orderNumber
+              string: ${position} # <- PARAMS--${position}
+      
+      #----------------------------------------------------------------------------------------------------------------
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 20: Validate Order Information..."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+      
+      - log: 
+          message: "Performing Order Details assertions..."
+          color: GREEN
+
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderDetailsWithoutDeliveryLocationAssertion
+          params:
+            - name: orderNumber
+              string: ${tc_OrderNumber}
+            - name: expectedOrderedDate
+              string: ${returnedOrderedDate}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-016.deliveryMethod
+            - name: expectedOrderStatus
+              string: mx.data.e2e-regression.qaa.od-016.expectedOrderStatus
+            - name: expectedBanner
+              string: mx.data.e2e-regression.qaa.od-016.banner
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.qaa.od-016.productsCount
+            - name: expectedPaymentMethod
+              string: mx.data.e2e-regression.qaa.od-016.orderDetailsPaymentMethod
+            - name: expectedSubtotal
+              string: ${tc_product1Price}
+            - name: assertDiscount
+              string: 'false'
+            - name: expectedDiscount
+              string: "0.00"
+            - name: expectedDeliveryFee
+              string: "44.00"
+            - name: expectedTotal
+              string: ${tc_EstimatedTotal}
+
+      - log: Performing Order Details - Home Delivery assertions...
+      
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.order-details.elementAtTheTop
+      
+      - executeFunction:
+          name: mx.functions.order-details.assertHomeDeliveryAddressName
+          params:
+            - name: expectedHomeAddressName
+              string: mx.data.e2e-regression.od-016.order-confirmation.addressName
+      
+      - executeFunction:
+          name: mx.functions.order-details.assertHomeDeliveryAddressByIndividualValues
+          params:
+            - name: streetName
+              string: ${returnedStreetName}
+            - name: exteriorNumber
+              string: ${returnedExteriorNumber}
+            - name: city
+              string: ${returnedCity}
+            - name: state
+              string: ${returnedState}
+            - name: zipCode
+              string: ${returnedZipCode}
+      
+      - log: "Assert product(s) listed and its price..."
+      - executeFunction:
+          name: mx.functions.order-details.expandProductsDetailsIfNotExpanded
+
+      - executeFunction:
+          name: mx.functions.order-details.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.od-016.pdp.piecesProduct
+      
+      - executeFunction:
+          name: mx.flows.od.order-details.cancelOrderWithSetOption
+      
+      #--------------------------------------------------------------------------------------------------------------------
+      - storeIn:
+          key: OD_016a_SUCCESSFUL_EXECUTION
+          value: true
+      - log: "TEST END: QAA - OD - PRODUCTION SANITY - OD-016"
+
+ #####################################################################################################################
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: mx.squad-reporting.logTestCaseFailure
+          params:
+            - name: testCaseExecutionStatus
+              string: ${OD_016a_SUCCESSFUL_EXECUTION}
+      - if:
+          condition: ${OD_016a_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed: Resetting data for the next execution if necessary..."
+                color: CYAN
+            - executeFunction:
+                name: mx.flows.od.after-scenario-exclusive.emptyCart
+                params:
+                  - name: userEmail
+                    string: mx.data.e2e-regression.od-016.login.userEmailiOS
+                  - name: userPassword
+                    string: mx.data.e2e-regression.od-016.userPassword
+                  - name: isCartEmpty
+                    string: ${OD_016a_IS_CART_EMPTY}
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: CYAN
+      - log: "AFTER SCENARIO END"

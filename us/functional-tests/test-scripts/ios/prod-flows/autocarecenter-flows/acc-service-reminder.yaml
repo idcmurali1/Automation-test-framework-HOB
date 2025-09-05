@@ -1,0 +1,84 @@
+# Author: Esayas Kiros
+# Vehicle Details Page
+
+general:
+  platform: ios
+  tags: acc-service-reminder,acc-dailly
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main Vehicle Details Page
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with ios test account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.teflon.flow.acc.ios.servicereminder.email
+            - name: password
+              string: us.data.acc.ios.teflon.email.password
+
+      # Navigete to Acc landing page
+      - executeFunction:
+          name: us.functions.services.naviagteToServices
+          params:
+            - name: servicesName
+              string: us.mapping.acc.ios.service.name
+
+      # Go to virtual garage
+      - executeFunction:
+          name: us.functions.services.acc.gotoVirtualGarage
+
+      # Select a Vehcile with Service Reminder
+      - executeFunction:
+          name: us.functions.services.acc.selectVehicleWithServiceReminder
+
+      # Identify Service Reminder View Details button
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.services.autoCareCenter.accServiceReminder.viewDetailsButton
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+
+        # Select View Details Button 
+      - click:
+         identifier: us.mappings.services.autoCareCenter.accServiceReminder.viewDetailsButton
+
+        # Validate the Service Reminder bottom sheet title
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.services.autoCareCenter.accServiceReminder.viewDetails.title
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

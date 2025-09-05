@@ -1,0 +1,664 @@
+functions:
+         
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow Validate all elements in payment bottom sheet pages and select payment type
+  # Param  ${payment}  [Mandatory] User to add payment method
+  # Param  ${cardLast4Digits} [Optional] Only used for 'creditCard' payment option 
+  # Param Examples: ['payAtStore','payPal', 'cashi','creditCard']
+  - name: functions.checkoutPage.selectPaymentMethod
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.tapAddPaymentMethodBtn
+      - executeFunction:
+          name: functions.checkoutPage.isWalletTileDisplayed
+      - if:
+          condition: "!${returnedIsDisplayed}"
+          then:
+            - failTest:
+                message: "Wallet page not displayed."
+      - if:
+          condition: ${isWalletPageValidationReq}
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.walletPopup.assertDisplayed.basic
+      - if:
+          condition: ${payment} == 'payAtStore'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapPayAtStoreButton
+      - if:
+          condition: ${payment} == 'payPal'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapPayPalButton
+      - if: 
+          condition: ${payment} == 'cashi'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapPayWithCashiRadioButton                
+      - if: 
+          condition: ${payment} == 'creditCard'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.walletPopup.assertDisplayed.cardsSection
+            - executeFunction:
+               name: functions.checkoutPage.walletPopup.selectCardByLast4Digits
+               params:
+                 - name: cardLast4Digits
+                   string: ${cardLast4Digits}
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: functions.checkoutPage.wallet.tapContinueButton
+      - sleep:
+          duration: 3000
+      - log:
+          message: "End flow: checkoutPage.selectPaymentMethod"
+          color: GREEN_BOLD_BRIGHT
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow selects paypal and enter user credentials and select one credit card to make payment.
+  # Param  ${payment}  [Mandatory] User to add payment method
+  #        ${lastFourDigits}   [Optional]   Credit card last digit to select
+  #        ${payPalEmailId}         [Mandatory]  Paypal email id.
+  #        ${isPageValidationReq}   [Optional]   True to validate the page element.
+  #        ${payPalPassword}        [Mandatory]  Paypal password.
+  - name: functions.checkoutPage.paymentMethod.applyPayPalPayment
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.paymentMethod.isPaypalAlreadyAuthenticated
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.paymentMethod.selectAttachedPaypalPayment
+          else: 
+            - executeFunction:
+                name: functions.checkoutPage.tapAddPaymentMethodBtn  
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapPayPalButton
+            - executeFunction:
+                name: functions.payPalPage.getCurrentUIView
+            - if:
+                condition: ${currentView} == 'returningUser'
+                then:
+                    - executeFunction:
+                        name: functions.checkOutPage.paymentMethod.authenticateReturningPayPalUser   #<---- ${lastFourDigits}, ${payPalEmailId}, ${payPalPassword}
+            - if:
+                condition: ${currentView} == 'newUser'
+                then:
+                    - executeFunction:
+                        name: functions.checkOutPage.paymentMethod.initiateNewPayPalAuthentication    #<---- ${lastFourDigits}, ${payPalEmailId}, ${payPalPassword}, ${isPageValidationReq}
+            - executeFunction:
+                name: functions.payPalPage.handleSavePasswordPopUp
+            - executeFunction:
+                name: functions.payPalPage.tapExpandCreditCardList
+            - executeFunction:
+                name: functions.payPalPage.selectCard.checkPaymentExists
+            - if:
+                condition: ${isCreditCardPresent}
+                then:
+                  - executeFunction:
+                      name: functions.payPalPage.selectCreditCartByLast4Digits
+            - executeFunction:
+                name: functions.payPalPage.paymentPage.tapAgree$Continuebutton
+            - executeFunction:
+                name: functions.checkoutPage.wallet.tapContinueButton
+      - executeFunction:
+          name: functions.checkoutPage.paymentMethod.validatePaypalModule
+      - log:
+          message: "End flow: checkoutPage.paymentMethod.applyPayPalPayment"
+          color: GREEN_BOLD_BRIGHT
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow authenticate paypal for first time paypal login from application.
+  # Param:  ${payPalEmailId}         [Mandatory]  Paypal email id.
+  #         ${isPageValidationReq}   [Optional]   True to validate the page element.
+  #         ${payPalPassword}        [Mandatory]  Paypal password.
+  - name: functions.checkOutPage.paymentMethod.initiateNewPayPalAuthentication
+    flow:
+      - executeFunction:
+          name: functions.payPalPage.isPayPalEmailPageDisplayed
+      - if:
+          condition: "!${returnedIsDisplayed}"
+          then:
+            - failTest:
+                message: "PayPal email page not displayed."
+      - if:
+          condition: ${isPageValidationReq}
+          then:
+            - executeFunction:
+                name: functions.payPalPage.emailPage.validatePayPalEmailPage
+      - executeFunction:
+          name: functions.payPalPage.paymentPage.handleCookiesPopup
+      - executeFunction:
+          name: functions.payPalPage.emailPage.enterEmail
+          params:
+            - name: payPalEmailId
+              string: ${payPalEmailId}
+      - executeFunction:
+          name: functions.payPalPage.emailPage.tapNextBtn
+      - executeFunction:
+          name: functions.payPalPage.isPayPalPasswordPageDisplayed
+      - if:
+          condition: "!${returnedIsDisplayed}"
+          then:
+            - failTest:
+                message: "PayPal password page not displayed."
+      - if:
+          condition: ${isPageValidationReq}
+          then:
+            - executeFunction:
+                name: functions.payPalPage.passwordPage.validatePayPalPasswordPage
+      - executeFunction:
+          name: functions.payPalPage.passwordPage.enterPassword
+          params:
+            - name: payPalPassword
+              string: ${payPalPassword}
+      - executeFunction:
+          name: functions.payPalPage.passwordPage.tapLoginbutton
+      - log:
+          message: "End flow: checkOutPage.paymentMethod.initiateNewPayPalAuthentication"
+          color: GREEN_BOLD_BRIGHT
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow authenticate paypal for returning users.
+  # Param:  ${payPalEmailId}         [Mandatory]  Paypal email id.
+  #         ${isPageValidationReq}   [Optional]   True to validate the page element.
+  #         ${payPalPassword}        [Mandatory]  Paypal password.
+  - name: functions.checkOutPage.paymentMethod.authenticateReturningPayPalUser
+    flow:
+      - if:
+          condition: ${isPageValidationReq}
+          then:
+            - executeFunction:
+                name: functions.payPalPage.validatePayPalPage
+      - executeFunction:
+          name: functions.payPalPage.assertPayPalEmailId
+      - if:
+          condition: "!${isEmailMatches}"
+          then:
+            - executeFunction:
+                name: functions.payPalPage.emailPage.enterEmail
+                params:
+                  - name: payPalEmailId
+                    string: ${payPalEmailId}
+      - executeFunction:
+          name: functions.payPalPage.paymentPage.handleCookiesPopup
+      - executeFunction:
+          name: functions.payPalPage.passwordPage.enterPassword
+          params:
+            - name: payPalPassword
+              string: ${payPalPassword}
+      - executeFunction:
+          name: functions.payPalPage.passwordPage.tapLoginbutton
+      - log:
+          message: "End flow: checkOutPage.paymentMethod.authenticateReturningPayPalUser"
+          color: GREEN_BOLD_BRIGHT
+        
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function will apply Promo Code and assert it applied correctly.
+  # Params:  ${promoCode}      [Mandatory]  Promo Code to be applied.
+  #          ${promoCodeText}  [Mandatory]  Promo Code Text expected to be displayed after applied.
+  - name: functions.checkoutPage.applyValidPromoCodeFlow
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.isPromoCodeDisplayed
+      - if:
+          condition: '!${returnedIsDisplayed}'
+          then: 
+            - failTest:
+                message: "Promo Code Section Not Displayed"
+      - executeFunction:
+          name: functions.checkoutPage.enterPromoCode # <-- ${promoCode}
+      - executeFunction:
+          name: functions.checkoutPage.tapApplyPromoCodeBtn
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: functions.checkoutPage.assertCorrectPromoCodeDisplayed # <-- ${promoCodeText}
+      - log:
+          message: "End flow: functions.checkoutPage.applyValidPromoCodeFlow"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This functions executes the flow to edit pickup person information
+  # Params:     ${pickupPersonName} [optional] Pickup Person Name to enter
+  #             ${pickupPersonLastName} [optional] Pickup Person Last Name to enter
+  #             ${pickupPersonPhoneNumber} [optional] Pickup Person Phone Number to enter
+  - name: functions.checkoutPage.updatePickupPersonInformation
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.tapEditPickupPersonInformation
+      - executeFunction:
+          name: functions.checkoutPage.enterPickupPersonName # <-- ${pickupPersonName}
+      - executeFunction:
+          name: functions.checkoutPage.enterpickupPersonLastName # <-- ${pickupPersonLastName}
+      - if:
+          condition: ${environment} == 'Teflon' && (${market} == 'MX' || ${market} == 'MX-Bodega')
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.enterPickupPersonPhoneNumber # <-- ${pickupPersonPhoneNumber}
+      - if:
+          condition: (${market} == 'MX' || ${market} == 'MX-Bodega' || ${market} == 'CA')
+          then:
+            - executeFunction:
+               name: functions.utils.hideKeyboard
+      - executeFunction:
+          name: functions.checkoutPage.tapSavePickupPersonInformation
+      - log: 
+          message: "End flow: checkoutPage.updatePickupPersonInformation"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------  
+
+  # Description: This function add CVV for the deafult card
+  - name: functions.checkoutPage.addCVV
+    flow:
+      - loop:
+          begin: 0
+          end: 2
+          mode: increment
+          flow:
+            - executeFunction:
+                name: functions.checkoutPage.isCVVFieldDisplayed
+            - log:
+                message: Is credit card ccv view visual on UI - ${returnedIsDisplayed}
+                color: GREEN_BOLD
+            - if:
+                condition: '${returnedIsDisplayed}'
+                then:
+                  - sleep:
+                      duration: 2000
+                  - enterText:
+                      identifier: checkoutPage.addCvvTextField
+                      string: ${CVV}
+                      pressEnter: true
+                      clickFirst: true
+                  - executeFunction:
+                      name: functions.checkout.hideKeyboard
+                  - break: true
+                else:
+                  - try:
+                      flow:
+                        - log:
+                            message: "Scrolling down to bring cvv in current view."
+                            color: GREEN_BOLD
+                        - scroll:
+                            direction: up
+                            untilIdentifier: checkoutPage.addCvvTextField
+                            position: center
+                            timeout: 10000
+                        - verifyIdentifier:
+                            present:
+                            - identifier: checkoutPage.addCvvTextField    
+                      catch:
+                        flow:
+                          - log:
+                              message: "CVV field is already added."
+                              color: GREEN_BOLD
+      - log:
+          message: "End functions: checkoutPage.addCVV"
+          color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------  
+
+  # Description: This function scroll to cvv text field
+  - name: functions.checkoutPage.scrollToCVVTextfield
+    flow: 
+      # - executeFunction:
+      #     name: functions.utils.scrollToElement
+      #     params:
+      #       - name: scrollToElement
+      #         string: checkoutPage.addCvvTextField
+
+      - scroll:
+          direction: down
+          untilIdentifier: checkoutPage.addCvvTextField
+          scrollLimit: 4
+
+      - if:
+          identifier:
+            present:
+                - identifier: checkoutPage.addCvvTextField
+          then:
+            - log: Add CVV textfield is displayed
+          else:
+            - executeFunction:
+                name: functions.utils.scrollToElement
+                params:
+                  - name: scrollToElement
+                    string: checkoutPage.addCvvTextField
+      - log:
+          message: "End functions: checkoutPage.scrollToCVVTextfield"
+          color: BLUE
+#--------------------------------------------------------------------------------------------------------------------  
+# Description: This function add CVV for the deafult card
+  - name: functions.checkoutPage.addCVVIfCVVisDisplayed
+    flow:
+        - if:
+            identifier:
+              present:
+                - identifier: checkoutPage.addCvvTextField
+            then:
+                - executeFunction:
+                    name: functions.checkoutPage.addCVV
+        - log:
+            message: "End functions: checkoutPage.addCVVIfCVVisDisplayed"
+            color: BLUE
+#--------------------------------------------------------------------------------------------------------------------  
+  # Description: This function scrolls down to the moneybox section from top and validte the reduced/strikethrough price and no shipping charge
+  - name: functions.checkoutPage.validateReducedPriceAndPickUpFreeShipping
+    flow: 
+       - executeFunction:
+          name: functions.checkoutPage.scrollToPOS
+       - executeFunction:
+          name: functions.checkoutPage.validateReducedPrice
+       - executeFunction:
+          name: functions.checkoutPage.validatePickUpFreeShipping
+       - log:
+          message: "End functions: checkoutPage.validateReducedPriceAndPickUpFreeShipping"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  - name: functions.checkoutPage.validateReducedPriceAndDeliveryFreeShipping
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.scrollToPOS
+      - executeFunction: 
+          name: functions.checkoutPage.validateReducedPrice
+      - executeFunction: 
+          name: functions.checkoutPage.validateNoShippingCharge
+      - log:
+          message: "End Function: checkoutPage.validateReducedPriceAndDeliveryFreeShipping"
+          color: BLUE
+  
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # Description: Select existing CC as payment method.
+  # No Params
+  # Returns:  ${cardLast4Digits}  The last 4 digits of the selected card.
+  - name: flows.checkoutPage.selectFirstCardListed
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.tapAddPaymentMethodBtn
+      - executeFunction:
+          name: functions.walletPage.scrollIntoCardsSection
+      - executeFunction:
+          name: functions.walletPage.cardsSection.areCardsListed # --> RETURNS: ${areCardsListed}
+      - if:
+          condition: (!${areCardsListed})
+          then:
+            - failTest:
+                message: X Not able to find a card listed in Checkout/Wallet.
+      - executeFunction:
+          name: functions.walletPage.cardsSection.selectFirstCard
+      - executeFunction:
+          name: functions.walletPage.cardsSection.getLast4DigitsOfFirstCardListed # --> RETURNS: ${cardLast4Digits}
+    #   - executeFunction:
+    #       name: functions.walletPage.cardsSection.enterCVV
+      - if:
+           condition: ${platform} == 'iOS' 
+           then:          
+            - executeFunction:
+                name: functions.utils.hideKeyboard
+      - executeFunction:
+          name: functions.checkoutPage.wallet.tapContinueButton
+      - log:
+          message: "✓ First Card selected in Checkout/Wallet: *${cardLast4Digits}"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: flows.checkoutPage.selectFirstCardListed"
+          color: BLUE
+
+#-------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function will apply Promo Code and assert it applied correctly.
+  # Params:  ${promoCode}      [Mandatory]  Promo Code to be applied.
+  #          ${promoCodeText}  [Mandatory]  Promo Code Text expected to be displayed after applied.
+  - name: functions.checkoutPage.applyPromoCode
+    flow:
+      - if:
+          condition: ${accountType} == 'associateUser'
+          then:
+            - executeFunction:
+                name:  functions.checkoutPage.applyValidPromoCodeFlow
+                params:
+                  - name: promoCode
+                    string: data.global.associatePromoCode
+                  - name: promoCodeText
+                    string: data.global.associatePromoCode.label
+          else:
+            - executeFunction:
+                name:  functions.checkoutPage.applyValidPromoCodeFlow
+                params:
+                  - name: promoCode
+                    string: data.global.promoCode
+                  - name: promoCodeText
+                    string: data.global.promoCode.label
+#-------------------------------------------------------------------------------------------------------------------
+# Description: This function verifies delivery instructions displayed on checkout page
+  - name: functions.checkoutPage.addDeliveryInstructions
+    flow:
+      - if:
+          condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+          then:
+            - log:
+                message: Add Delivery Instructions process not avialble Mexico and Bodega. Enable when required.
+                color: GREEN_BOLD
+          else:
+            - executeFunction:
+                name: functions.checkoutPage.deliveryInstructions.tapAddInstructionsBtn
+            - executeFunction:
+                name: functions.checkoutPage.deliveryInstructions.assertEnterInstructionsPopupDisplayed
+            - if:
+                condition: ${market} == 'US' || ${market} == 'CA'
+                then:
+                    - executeFunction:
+                       name: functions.checkoutPage.addDeliveryInstructions.clear                    
+                    - executeFunction:
+                       name: functions.checkoutPage.addDeliveryInstructions.propertyTypeText.displayed
+                    - executeFunction:
+                        name: functions.checkoutPage.addDeliveryInstructions.propertyTypeHouse
+                    -  executeFunction:
+                         name: functions.checkoutPage.addDeliveryInstructions.dropoffLocation
+                    - executeFunction:
+                       name: functions.checkoutPage.addDeliveryInstructions.dropoffLocationType
+                    - executeFunction:
+                       name: functions.checkoutPage.addDeliveryInstructions.accessCode                     
+                    - executeFunction:
+                        name: functions.checkoutPage.deliveryInstructions.enterDeliveryInstructions 
+                    - executeFunction:
+                        name: functions.checkoutPage.deliveryInstructions.tapSaveBtn
+                    - executeFunction:
+                         name: functions.checkoutPage.deliveryInstructions.assertCorrectDeliveryInstructionsDisplayed # <-- ${deliveryInstructions}
+      - log:
+          message: "End function: functions.checkoutPage.addDeliveryInstructions"
+          color: BLUE
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This function determines the tip percentages based on the order total. The logic is as     
+  #  follows:
+  #     Order total less than $35: 6%, 10%, 14%, 18%
+  #     Order total between $35 and $80: 6%, 8%, 10%, 12%
+  #     Order total between $80 and $200: 2%, 4%, 6%, 8%
+  #     Order total greater than $200: 1%, 2%, 4%, 6%
+  #   The driverTipPercentage.js file validates these conditions and returns an array of applicable tip 
+  #   percentages. These percentages are then compared to the values displayed on the UI.
+  #   Additionally, a custom tip can be applied by passing a customTip value. If no custom tip is desired, 
+  #   customTip can be set to null. To specify a 0% tip, pass customTip as 0. 
+  #   Note that attempting to apply a custom tip above $100 will result in an error, which can be tested by 
+  #   passing customTip as 100.
+  # Params: ${orderTotal} [Mandatory] -  Subtotal for determining suggested tip.
+  #         ${customTip}  [Optional]  -  If the value is provided to this variable then custom tip will be 
+  #                                      applied else custom tip flow will not get executed.
+  - name: functions.checkoutPage.validateTipPercentagesAgainstOrderTotalAndApplyCustomTip
+    flow:
+      - if:
+          identifier:
+            notPresent:
+              - identifier: checkoutPage.driverTip.title
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: checkoutPage.driverTip.title
+                scrollLimit: 4
+                timeout: 10000
+      - executeNode:
+          file: wcp/test/helpers/checkoutPage/driverTipPercentage.js
+          args:
+            - value: ${orderTotal}
+          getResponse:
+            storeIn: driverTipPercentage
+      - log: 
+          message: "Based on the $${orderTotal}, suggested tip %: ${driverTipPercentage}"
+          color: BLUE
+      - loop:
+          each: ${driverTipPercentage}
+          storeElement: tipPercentage
+          storeIndex: j
+          flow:
+            - arithmetic:
+                expression: ${j} + 1
+                storeIn: i
+            - executeFunction:
+                name: functions.checkoutPage.driverTip.validateSuggestTipPercentage
+                params:
+                  - name: suggestTipCount
+                    string: ${i}
+                  - name: tipPercentage
+                    string: ${tipPercentage}
+            - log:
+                message: ${i} suggested tip percentage  is ${tipPercentage}
+                color: CYAN
+      - if:
+          condition: ${customTip} != null
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.enterCustomTip
+                params:
+                  - name: customTip
+                    string: ${customTip}
+            - if:
+                condition: ${customTip} > 100
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: checkoutPage.driverTip.customTipMaxErrorMsg
+                  - click:
+                      identifier: checkoutPage.driverTip.defaultDriverTip
+                else:
+                  - executeFunction:
+                      name: functions.checkoutPage.driverTip.validateTipAmount
+                      params:
+                        - name: tipAmount
+                          string: ${customTip}
+                        
+      - log:
+          message: "End function: checkoutPage.validateTipPercentagesAgainstOrderTotalAndApplyCustomTip"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------  
+  # Description: This function scrolls down to the moneybox section from top and validte the reduced/strikethrough price and no shipping charge
+  # Params: No params
+  - name: functions.checkoutPage.chooseASubstitutionItem
+    flow: 
+      - executeFunction:
+          name: functions.checkoutPage.validateChooseSubstitutionPreferencesIsDisplayed
+      - executeFunction:
+          name: functions.checkoutPage.tapChooseSubstitutionPreferencesBtn
+      - if: 
+          condition: ${market} == 'MX'
+          then:
+            - executeFunction:
+                name: functions.substitutionsPage.validateSubstitutes
+          else:             
+            - executeFunction:
+                name: functions.substitutionsPage.validateFiltersAreDisplayed
+            - if:
+                identifier:
+                  present:
+                     - identifier: substitutionsPage.currentSubstitutionItem 
+                then:
+                  - if: 
+                      condition: ${market} == 'US' && ${platform} == 'iOS'
+                      then:
+                        - log: 
+                           message: TODO, Validations for iOS US needs to be updated 
+                           color: GREEN_BOLD
+                      else:
+                         - executeFunction:
+                            name: functions.substitutionsPage.tapCurrentSubstitutionItemEditBtn
+                         - executeFunction:
+                             name: functions.substitutionsPage.tapBestMatchRoundBtn
+                         - executeFunction:
+                             name: functions.substitutionsPage.scrollDownToSelectBtn
+                         - executeFunction:
+                              name: functions.substitutionsPage.tapSelectBtn
+            - executeFunction:
+                  name: functions.substitutionsPage.tapReplaceWithBestMatchEditBtn
+            - executeFunction:
+                  name: functions.substitutionsPage.scrollDownToReplaceWithRoundBtn
+            - executeFunction:
+                  name: functions.substitutionsPage.tapReplaceWithRoundBtn
+            - executeFunction:
+                   name: functions.substitutionsPage.tapFirstItemToReplaceWith
+      - executeFunction:
+            name: functions.global.tapDoneBtn      
+      - log:
+          message: "End functions: checkoutPage.chooseASubstitutionItem"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description: This function validates the express in POS 
+  # Params expectedbelowOrderMinFee
+  - name: functions.checkoutPage.validatebelowMinFeeAndExpressSlotFee
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.scrollToPOS
+      - executeFunction:
+          name: functions.checkout.validateBelowMinimumFee
+      # Prod Pending: Validate express delivery fee when change to DP accounts
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.DPuserValidateExpressScheduleDeliveryFee
+      - log: 
+          message: "End function: checkout.validatebelowMinFeeAndExpressSlotFee"
+          color: BLUE
+
+  - name: functions.checkoutPage.ValidateDigitalDeliveryInRop
+    flow: 
+      - executeFunction:
+          name: functions.checkoutPage.validateDigitalDeliveryArrivaltext
+      - executeFunction:
+          name: functions.checkoutPage.validateDigitalDeliveryViewDetails          
+
+  #--------------------------------------------------------------------------------------------------------------------   
+  # Description: This function validate view details section for item 
+  # No params
+  - name: functions.checkoutPage.viewDetails.verifyDetails
+    flow:
+      - executeFunction:
+          name: functions.checkoutPage.tapViewDetailsSecondBtn
+      - executeFunction:
+          name: functions.checkoutPage.viewDetails.verifyItemDetailSection
+      - if:
+          condition: ${validateSavingDetails}
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.viewdDetails.validateSavingDetails
+      - executeFunction:
+          name: functions.checkoutPage.viewDetails.tapDone
+      - log: 
+          message: "End function: checkoutPage.viewDetails.verifyDetails"
+          color: BLUE
+  #--------------------------------------------------------------------------------------------------------------------   

@@ -1,0 +1,149 @@
+general:
+  platform: ios
+  tags: sanityios-003, iOS-Development-Build-Sanity
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      #temporary#
+      - executeFunction:
+          name: ca.test.functions.utils.avoidTestPopup    
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome
+
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.astro.createAccount
+          params:
+            - name: payLoad
+              string: ca.test.ios.data.sanity003.astroRequestBody    
+
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.global.authentication.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: ca.test.data.onboarding.storeName         
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos 
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.sanity003.emailios
+            - name: password
+              string: ca.test.data.sanity003.passwordios  
+            - name: validateSignInPage
+              string: true
+
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameInTopleft   
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmartapp://ip/6000191270293
+
+      # Product Details Validation 
+      - executeFunction:
+          name: ca.test.functions.pdp.productDetailsValidationIos
+          params:
+            - name: productType
+              string: GO
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.pdp.pdpAddToCart 
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *          
+
+      # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartHomeIos
+
+      # Book a delivery slot
+      - executeFunction:
+          name: ca.test.functions.cart.deliverySlotIos              
+
+      # Cart product details validation  
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.sanity003ios.item_1     
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos
+      
+      # CheckOut page order review validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+          params:
+            - name: fulfillment
+              string: ca.test.data.flowios.fullfillmentType2
+
+      # Add Card Cvv
+      - executeFunction:
+          name: ca.test.functions.checkOut.payment.addCvvIos
+          params:
+            - name: CVV
+              string: ca.test.data.checkout.Cvv_1 
+
+      # Adding mobile number
+      - executeFunction:
+          name: ca.test.functions.checkout.mobileNumberIos
+          params:
+            - name: phoneNumber
+              string: ca.test.data.checkout.phoneNumber_1        
+      
+      # Order placement 
+      - executeFunction:
+          name: ca.test.functions.checkOut.PlacingOrder          
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: sanityios-003
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps     
+                

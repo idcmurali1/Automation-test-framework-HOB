@@ -1,0 +1,153 @@
+general:
+  platform: ios
+  # tags: us-golden-flows-wplus, P1, C2690898, p1-wplus-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2690898
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.monthly
+
+      - executeFunction:
+          name: us.functions.utils.astro.convertTrialtoPaidMember
+          params:
+            - name: payload
+              string: us.data.flow079b.addMembershipPayloadPause
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+     # Navigate to home
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+
+     # Set store
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://expo?expo_preview=true&experiment_spec=1G56l&variation_specs=s9NFj&experiment_count=0
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      # Search for Subscription eligible item
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.flow.itemId.subscription.regularItem
+
+      - executeFunction:
+          name: us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: us.functions.subs.SubscriptionItempage
+
+       # Subscription Regular Item confirmation page
+      - executeFunction:
+          name: us.functions.subs.addSubscriptionToCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.sub.validateTheSubscriptionFrequencyInCartPage
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+          name: us.functions.subs.validateSubscriptionInReviewOrderPage
+
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvAndPlaceOrder
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      - executeFunction:
+          name: us.functions.tippingAndFeedback.click.continueShopping.button
+
+      - executeFunction:
+          name: us.functions.global.navigation.toTab
+          params:
+            - name: tabName
+              string: Account
+
+     # Navigate to Item Subscription
+      - executeFunction:
+          name:  us.functions.account.navigateToItemSubs
+
+     # Verify Item Subscription
+      - executeFunction:
+          name: us.functions.subs.validateSubsciptionPage
+
+      - executeFunction:
+          name: us.functions.subscriptions.editSubscriptions
+
+      - storeIn:                                                   
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+
+      

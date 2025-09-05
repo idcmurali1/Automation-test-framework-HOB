@@ -1,0 +1,137 @@
+general:
+  tags: C2716595, us-golden-flows, unified-teflon-e2e, unified-p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2716595
+
+  # metadata:
+  #   - name: scenarioId
+  #     string: 
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+ #***************************************************************************************************************
+  # Astro - Clear cart
+ #***************************************************************************************************************
+      - executeFunction:
+          name: unified.us.functions.utils.astro.clearCart
+          params:
+            - name: email
+              string: us.data.flowACCSelfCheckin.email
+
+  - name: Main
+    flow:
+      - log: Start main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.flowACCSelfCheckin.email
+            - name: password
+              string: us.data.flowACCSelfCheckin.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createOrder
+          params:
+            - name: payload
+              string: us.data.flowACC.createOrderPayload          
+
+      - log: ${orderNo}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+     # Astro - Scheduling tire installation appointment
+      - executeFunction:
+          name: us.functions.utils.astro.ACCSchedulingTireInstallation
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: STORE_SCHEDULED_PICKUP_ACC
+            - name: status
+              string: Customer Picked
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink  
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Validate Express Check-In on ODP
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.ACCExpressCheckin.getStarted
+
+     # Select vehicle
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.ACCExpressCheckin.selectVehicle
+
+     # ACC Express checkin - select no locking lug nuts option
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.ACCExpressCheckin.lockingLugNuts 
+
+     # ACC Express checkin - sign service agreement
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.ACCExpressCheckin.serviceAgreement
+
+     # ACC Express checkin - review and confirm appointment
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.ACCExpressCheckin.reviewAndConfirm
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo   
+
+     # Verify ACC Express checkin confirmation on ODP
+      - executeFunction:
+          name: unified.us.functions.oderDetailPage.ACCExpressCheckin.confirmation
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps
+

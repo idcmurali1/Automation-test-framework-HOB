@@ -1,0 +1,90 @@
+#=================================================================== Amar Kumar (a0k05n4) ================================================================
+
+general:
+  platform: ios
+  #Removed the Wplus tag as walmart customers don't have this funtionality.
+  tags: '' # (Deprecated as this is NOT an active PROD flow) C2673460  C2673460 
+  testCaseId: C2673460
+  inherit:
+    filesRunAll:
+     - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.monthly
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: $customerEmail
+              - name: password
+                string: E2epassword$
+
+      - executeFunction:
+          name: us.functions.utils.astro.convertTrialtoPaidMember
+          params:
+            - name: payload
+              string: us.data.flow079b.addMembershipPayloadPause
+
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      - executeFunction:
+          name: us.functions.pause.pauseMembershipInCancellationFlow
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

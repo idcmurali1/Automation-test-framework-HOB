@@ -1,0 +1,252 @@
+# ================================================================================================================================
+# TC: 004
+# Flow: TC-004: Items:  Prod Regular account/ Teflon Associate account + 1P, 3P WFS, 3P SOS + Paypal 
+# ================================================================================================================================
+general:
+  testCaseId: C2720129
+  tags: C2720129, p1-mx-ea-prod, p1-bodega-ea-prod, p1-us-prod, p1-mx-ea-teflon, p1-bodega-ea-teflon, p1-ca-en-teflon, p1-ca-en-prod, p1-ca-fr-prod, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon
+  combineScenarios: true
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+
+  - name: Main
+    flow:
+
+      # Onboard to aplication and select EA options.
+      #Production: Regular account, apply regular promo code
+      #Teflon: Associate account, apply associate promo code
+      - if: 
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp004.android.email 
+      - if: 
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp004.ios.email
+
+
+      # Onboard to aplication and select EA options. Then sign in
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      # Search for item and validate if search results are displayed.
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            - if:
+                condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+                then:
+                  - executeFunction:
+                      name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+                      params:
+                        - name: productArray
+                          string: data.global.1PItems              
+                  - executeFunction:
+                      name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+                      params:
+                        - name: productArray
+                          string: data.globalShared_3PSOSItems
+                  - executeFunction:
+                      name: functions.searchPage.addToCartUsingItemArrayList-GetProductDetails
+                      params:
+                        - name: productArray
+                          string: data.globalShared_3PWFSItems
+
+                  # Navigate to cart and ensure items are added to cart and validate subTotal.
+                  - executeFunction:
+                      name: functions.global.validateCartQuantity
+                      params:
+                        - name: cartQuantity
+                          string: data.tc-004.totalQuantity
+
+                  - executeFunction:
+                      name: functions.global.validateCartSubTotal
+                      params:
+                        - name: totalPrice
+                          string: ${totalPrice}
+                  - executeFunction:
+                      name: functions.global.tapCartIcon
+                  - executeFunction:
+                      name: function.cartPage.tapSeeDetails
+                  - executeFunction:
+                      name: functions.cartPage.validateProductDetailsUsingShoppingListArray
+                  - executeFunction:
+                      name: functions.cartPage.validateShippingCharge
+            - if:
+                condition: ${market} == 'CA' || ${market} == 'US'
+                then: 
+                    - if:
+                        condition: ${market} == 'US' # US market select shipping intent to skip reserving time
+                        then:
+                          - executeFunction:
+                              name: functions.global.gic.selectShippingIntent
+                              params:
+                                - name: page
+                                  string: 'home'
+                    - executeFunction:
+                        name: functions.searchPage.addToCartUsingItemArray
+                        params:
+                          - name: productArray
+                            string: data.global.1PItems              
+                    - executeFunction:
+                        name: functions.searchPage.addToCartUsingItemArray
+                        params:
+                            - name: productArray
+                              string: data.globalShared_3PSOSItems
+                    - executeFunction:
+                        name: functions.global.tapCartIcon
+
+          else:
+              - executeFunction:
+                  name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                  params:
+                    - name: productArray
+                      string: data.global.1PItems
+              # - executeFunction:
+              #     name: functions.productDetailsPage.tapClose
+              - executeFunction:
+                  name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                  params:
+                    - name: productArray
+                      string: data.globalShared_3PSOSItems
+                    - name: quantity
+                      string: '2'
+              - executeFunction:
+                  name: functions.productDetailsPage.tapClose
+              - executeFunction:
+                  name: functions.global.tapCartIcon
+
+
+      # Navigate to review order page.
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+          params:
+            - name: coloniaName
+              string: data.defaultAddress.coloniaName
+
+      - if: 
+          condition: ${environment} == 'Production' # Prod: Validate PayPal website is displayed(not linking a new PayPal account)
+          then:
+            - if: 
+                condition: ${market} == 'US' 
+                then:
+                  - executeFunction:
+                      name: functions.checkoutPage.navigateToPayPalPage
+                else:
+                  - executeFunction:
+                      name: functions.checkoutPage.tapAddPaymentMethodBtn
+                  - executeFunction:
+                      name: functions.checkoutPage.wallet.tapPayPalButton
+                  - executeFunction:
+                      name: functions.payPalPage.paymentPage.handleCookiesPopup
+            - executeFunction:
+                name: functions.payPalPage.emailPage.validatePayPalEmailPage
+            - executeFunction:
+                name: function.checkout.navigateBackFromPayPalPage
+
+          else:
+            # Teflon: Select Paypal as payment method 
+            - if:
+                condition: ${market} == 'CA'
+                then:
+                  - executeFunction:
+                      name: functions.checkoutPage.clickOnAddPaymentMethodBtn
+                  - executeFunction:
+                      name: functions.checkoutPage.paymentMethod.applyPayPalPayment
+                      params:
+                        - name: payPalEmailId
+                          string: data.default.payPalEmailId
+                        - name: payPalPassword
+                          string: data.default.payPalPassword
+                else:
+                  - executeFunction:
+                      name: functions.checkoutPage.scrollDownToAddPaymentMethodBtn
+                  - executeFunction:
+                      name: functions.checkoutPage.selectPayPal
+
+
+      - if:
+          condition: ${market} == 'MX' || ${market} == 'MX-Bodega'
+          then:
+            # Shipping Charge validation
+            - executeFunction:
+                name: functions.checkoutPage.validateShippingCharge
+            - executeFunction:
+                name: functions.checkoutPage.enterPhoneNumber
+            - executeFunction:
+                name: functions.checkoutPage.applyPromoCode
+                params:
+                    - name: accountType
+                      string: data.global.accountType
+            - executeFunction:
+                name: functions.checkoutPage.validateMoneyBoxField
+                params:
+                  - name: moneyBoxFieldName
+                    string: ${promoCodeText}
+
+      # Click Place Order
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+            
+            - executeFunction:
+                name: functions.thankYouPage.verifyPromoCodeTextIsDisplayed
+      
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

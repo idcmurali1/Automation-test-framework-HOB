@@ -1,0 +1,1091 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Jan/31/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+# Test Case Additional Information:
+#
+#   - The TC uses the following flags:
+#
+#       ORDERS_HISTORY_WORKAROUND  -  Values: [true | false]
+#           Turns on/off the execution of the workaround to verify the information of the last order placed with the
+#           order that is displayed at the top. This is because currently there is an issue where the Orders History is
+#           not displaying the Order Number so it is not possible to identify the orders by number.
+#
+#       DISPLAY_ORDER_IN_ORDERS_HISTORY_WORKAROUND  -  Values: [true | false]
+#           Turns on/off the execution of the workaround to wait for the placed order to be displayed in the Orders
+#           History. This is because currently the orders take a while to display in the orders list. The workaround
+#           consists of opening the Orders History, wait 5 seconds, close it and reopen it again to allow the list to
+#           refresh, up to 3 times. Then the scenario continues trying to perform the proper assertions.
+#
+#======================================================================================================================
+
+general:
+  tags: qaa-od-e2e-regression-staging-001
+  debug: true
+
+scenarios:
+
+  #--------------------------------------------------------------------------------------------------------------------
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO: Test Preparation..."
+      - storeIn:
+          key: isScriptInsideOrdersHistoryPage
+          value: false
+      - storeIn:
+          key: isScriptInsideOrderDetailsPage
+          value: false
+      - log: "BEFORE SCENARIO FINISHED"
+
+  #--------------------------------------------------------------------------------------------------------------------
+  - name: Main
+    flow:
+      - log: TEST START - E2E REGRESSION - OD-001
+      
+    ## STEP 1: LAUNCH AND LOGIN IN ONBOARDING SCREEN - PRE-HOME SHOULD BE SHOWN.
+    ## STEP 2: SELECT OD BANNER - HOME SCREEN IS DISPLAYED.
+      - log: "STEP 1-2: LOGIN DURING ONBOARDING NAVIGATION AND LAUNCH OS BANNER."
+
+      # Step 1 and 2 main objectives check.
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateOnboardingToHomeAsRegisteredUser
+          params:
+            - name: userEmail
+              string: mx.data.e2e-regression.qaa.od-001.userEmail
+            - name: userPassword
+              string: mx.data.e2e-regression.qaa.od-001.userPassword
+            - name: zipCode
+              string: mx.data.e2e-regression.qaa.od-001.zipCode
+            - name: banner
+              string: mx.data.e2e-regression.qaa.od-001.onboardingBanner
+
+    ## STEP 3: GO TO PROFILE SCREEN - USER INFORMATION SHOULD BE LOADED ON ACCOUNT TAB.
+      - log: "STEP 3: GO TO PROFILE SCREEN."
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      # Step 3 main objective check.
+      - executeFunction:
+          name: mx.functions.account.assertUserLogged
+          params:
+            - name: userName
+              string: mx.data.e2e-regression.qaa.od-001.userName
+
+      - log: "Change Selected Store from Home."
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.home.scrollUpToLocationBanner
+      - executeFunction:
+          name: mx.functions.home.tapStoreSelector
+      - executeFunction:
+          name: mx.functions.store-selector-popup.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.store-selector-popup.enterZipCode
+          params:
+            - name: zipCode
+              string: mx.data.e2e-regression.qaa.od-001.zipCode
+      - executeFunction:
+          name: mx.functions.store-selector-popup.selectStore
+          params:
+            - name: storeName
+              string: mx.data.e2e-regression.qaa.od-001.storeName
+      - executeFunction:
+          name: mx.functions.store-selector-popup.tapSave
+      - executeFunction:
+          name: mx.functions.home.assertPageLoaded
+
+    
+    ## STEP 4: SEARCH PRODUCTS - SLP SHOULD SHOW.
+      - log: "STEP 4: SEARCH PRODUCTS."
+
+      # - executeFunction:
+      #     name: mx.functions.bottom-menu.tapHome
+      # Step 4 main objective check.
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.e2e-regression.qaa.od-001.searchTerm1
+
+    ## STEP 5: ADD PRODUCT TO FAVORITES FROM SLP - PRODUCT SHOULD BE ADDED CORRECTLY
+      - log: "STEP 5: ADD PRODUCT TO FAVORITES FROM SLP."
+      
+      - executeFunction:
+          name: mx.functions.slp.scrollDownToProductByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      
+      # Step 5 main objective check (this function verifies if the product is marked or not).
+      - executeFunction:
+          name: mx.functions.slp.markProductAsFavorite
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+
+    ## STEP 6: GO TO DEPARTMENT/SUBDEPARTMENT - SUBDEPARTMENTS SHOULD BE SHOWN CORRECTLY.
+      - log: "STEP 6: GO TO DEPARTMENT/SUBDEPARTMENT."
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapDepartments
+
+    #   # Step 6 main objective check.
+      - executeFunction:
+          name: mx.flows.od.taxonomy.openDepartment
+          params:
+            - name: L1
+              string: mx.data.e2e-regression.qaa.od-001.departmentL1
+            - name: L2
+              string: mx.data.e2e-regression.qaa.od-001.departmentL2
+            - name: L3
+              string: mx.data.e2e-regression.qaa.od-001.departmentL3
+
+    ## STEP 7: ADD PRODUCT TO FAVORITES FROM SUBDEPARTMENTS - PRODUCT SHOULD BE ADDED CORRECTLY.
+      - log: "STEP 7: ADD PRODUCT TO FAVORITES FROM SUBDEPARTMENTS."
+      
+      - executeFunction:
+          name: mx.functions.department-l3.scrollDownToProduct
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      
+      # Step 7 main objective check (this function verifies if the product is marked or not).
+      - executeFunction:
+          name: mx.functions.department-l3.markProductAsFavorite
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+
+    ## STEP 8: OPEN PDP - PRODUCT DETAILS SHOULD BE DISPLAYED.
+      - log: "STEP 8: OPEN PDP."
+
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.e2e-regression.qaa.od-001.searchTerm2
+      
+      - executeFunction:
+          name: mx.functions.slp.scrollDownToProductByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+      
+      - executeFunction:
+          name: mx.functions.slp.openProductDetailsByName
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+
+      # Step 8 main objective check.
+      - executeFunction:
+          name: mx.functions.pdp.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.pdp.assertCorrectProductDisplayed
+          params:
+            - name: expectedProductName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+
+    ## STEP 9: ADD PRODUCT TO FAVORITES FROM PDP - PRODUCT SHOULD BE ADDED CORRECTLY.
+      - log: "STEP 9: ADD PRODUCT TO FAVORITES FROM PDP."
+      
+      # Step 9 main objective check.
+      - executeFunction:
+          name: mx.functions.pdp.markAsFavorite
+
+    ## STEP 10: CLOSE PDP - SLP SHOULD SHOW.
+      - log: "STEP 10: CLOSE PDP."
+
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+      
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.slp.filtersContainer
+      
+      # Step 10 main objective check.
+      - executeFunction:
+          name: mx.functions.slp.assertPageDisplayed
+
+    ## STEP 11: GO TO MY ITEMS - ORDER AGAIN AND LISTS SHOULD SHOW.
+      - log: "STEP 11: GO TO MY ITEMS."
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      
+      # Step 11 main objective check.
+      - executeFunction:
+          name: mx.functions.products-and-lists.assertPageDisplayed
+
+    ## STEP 12: GO TO LISTS - VERIFY FAVORITES LIST.
+      - log: "STEP 12: GO TO LISTS."
+      
+      - executeFunction:
+          name: mx.functions.products-and-lists.tapLists
+      
+      - executeFunction:
+          name: mx.functions.products-and-lists.assertListsTabIsSelected
+      
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+      
+      # Step 12 main objective check.
+      - executeFunction:
+          name: mx.functions.lists.assertListDisplayed
+          params:
+            - name: listName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+      
+    ## STEP 13: OPEN FAVORITES LIST - VERIFY THE ADDED PRODUCTS EXIST.
+      - log: "STEP 13: OPEN FAVORITES LIST."
+      
+      - executeFunction:
+          name: mx.functions.lists.openFavoritesList
+      
+      - executeFunction:
+          name: mx.functions.list.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params:
+            - name: expectedListName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+      
+      # Step 13 main objective check.
+      - executeFunction:
+          name: mx.functions.list.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - executeFunction:
+          name: mx.functions.list.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - executeFunction:
+          name: mx.functions.list.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+    
+    ## STEP 14: REMOVE 1 PRODUCT - VERIFY PRODUCT WAS REMOVED.
+      - log: "STEP 14: REMOVE 1 PRODUCT."
+      
+      # Step 14 main objective check (assertion is included inside the flow).
+      - executeFunction:
+          name: mx.flows.od.list.deleteProductFromList
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+    
+    ## STEP 15: CLOSE FAVORITES LIST - USER SHOULD GO TO LISTS.
+      - log: "STEP 15: CLOSE FAVORITES LIST."
+      
+      - executeFunction:
+          name: mx.functions.list.tapBack
+      
+      # Step 15 main objective check.
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+    
+    ## STEP 16: REOPEN FAVORITES LIST - VERIFY REMOVED PRODUCT IS NOT LISTED.
+      - log: "STEP 16: REOPEN FAVORITES LIST."
+
+      - executeFunction:
+          name: mx.functions.lists.openFavoritesList
+      
+      - executeFunction:
+          name: mx.functions.list.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params:
+            - name: expectedListName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+      
+      # Step 16 main objective check.
+      - executeFunction:
+          name: mx.functions.list.assertProductNotListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+    
+    ## STEP 17: ADD ALL PRODUCTS TO CART - CART COUNTER SHOULD BE UPDATED.
+      - log: "STEP 17: ADD ALL PRODUCTS TO CART."
+
+      # Product 2 interactions:
+      - executeFunction:
+          name: mx.functions.list.addProductToCart
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - executeFunction:
+          name: mx.functions.list.assertProductAddedToCart
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - executeFunction:
+          name: mx.functions.list.increaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+            - name: quantity
+              string: mx.data.e2e-regression.qaa.od-001.increaseQuantity
+      - executeFunction:
+          name: mx.functions.list.getProductType
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - storeIn:
+          key: productTypeOfProduct2
+          value: ${returnedProductType}
+          # [VARIABLE] Type of product 2 saved in ${productTypeOfProduct2}
+      - executeFunction:
+          name: mx.functions.list.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - storeIn:
+          key: priceOfProduct2
+          value: ${returnedProductPrice}
+          # [VARIABLE] Price of product 2 saved in ${priceOfProduct2}
+      - executeFunction:
+          name: mx.functions.list.getProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - storeIn:
+          key: addedQuantityForProduct2
+          value: ${returnedProductQuantityAsPieces}
+          # [VARIABLE] Added quantity of product 1 saved in ${addedQuantityForProduct2}
+      - arithmetic:
+          expression: ${priceOfProduct2} * ${addedQuantityForProduct2}
+          numberOfDecimalPlaces: 2
+          storeIn: subtotalOfProduct2
+          # [VARIABLE] Subtotal price of product 2 saved in ${subtotalOfProduct2}
+
+      # Product 1 interactions:
+      - executeFunction:
+          name: mx.functions.list.addProductToCart
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - executeFunction:
+          name: mx.functions.list.assertProductAddedToCart
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - executeFunction:
+          name: mx.functions.list.increaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+            - name: quantity
+              string: mx.data.e2e-regression.qaa.od-001.increaseQuantity
+      - executeFunction:
+          name: mx.functions.list.decreaseProductQuantityBy
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+            - name: quantity
+              string: mx.data.e2e-regression.qaa.od-001.decreaseQuantity
+      - executeFunction:
+          name: mx.functions.list.getProductType
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - storeIn:
+          key: productTypeOfProduct1
+          value: ${returnedProductType}
+          # [VARIABLE] Type of product 1 saved in ${productTypeOfProduct1}
+      - executeFunction:
+          name: mx.functions.list.getProductPrice
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - storeIn:
+          key: priceOfProduct1
+          value: ${returnedProductPrice}
+          # [VARIABLE] Price of product 1 saved in ${priceOfProduct1}
+      - executeFunction:
+          name: mx.functions.list.getProductQuantityAsPieces
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - storeIn:
+          key: addedQuantityForProduct1
+          value: ${returnedProductQuantityAsPieces}
+          # [VARIABLE] Added quantity of product 1 saved in ${addedQuantityForProduct1}
+      - arithmetic:
+          expression: ${priceOfProduct1} * ${addedQuantityForProduct1}
+          numberOfDecimalPlaces: 2
+          storeIn: subtotalOfProduct1
+          # [VARIABLE] Subtotal price of product 1 saved in ${subtotalOfProduct1}
+      
+      # Getting the total quantity of products added to cart...
+      - arithmetic:
+          expression: ${addedQuantityForProduct1} + ${addedQuantityForProduct2}
+          storeIn: totalProductsCount
+          # [VARIABLE] Total products count saved in ${totalProductsCount}
+
+      # Step 17 main objective check.
+      - executeFunction:
+          name: mx.functions.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: mx.data.e2e-regression.qaa.od-001.top-menu.cartBadgeQuantity
+      
+    ## STEP 18: GO TO CART - VALIDATE PRODUCTS WERE ADDED AND CART VALIDATIONS.
+      - log: "STEP 18: GO TO CART."
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.cart.assertCartNotEmpty
+      - executeFunction:
+          name: mx.functions.cart.assertTotalProductsCount
+          params:
+            - name: expectedProductsQuantity
+              string: ${totalProductsCount}
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+          params:
+            - name: elementAtTheTop
+              string: mx.mappings.cart.reserveSlotButton
+      
+      # Step 18 main objective check.
+      # Product 1 assertions.
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${addedQuantityForProduct1}
+            - name: expectedWeightQuantity
+              string: 'null'
+            - name: expectedPrice
+              string: ${priceOfProduct1}
+            - name: expectedSubtotal
+              string: ${subtotalOfProduct1}
+      
+      # Product 2 assertions.
+      - executeFunction:
+          name: mx.flows.od.cart.performProductAssertions
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+            - name: productListed
+              string: "listed"
+            - name: availability
+              string: "available"
+            - name: expectedQuantity
+              string: ${addedQuantityForProduct2}
+            - name: expectedWeightQuantity
+              string: 'null'
+            - name: expectedPrice
+              string: ${priceOfProduct2}
+            - name: expectedSubtotal
+              string: ${subtotalOfProduct2}
+    
+    ## STEP 19: SELECT HOME DELIVERY METHOD - AVAILABLE TIME SLOTS SHOULD SHOW.
+      - log: "STEP 19: SELECT HOME DELIVERY METHOD."
+      
+      - executeFunction:
+          name: mx.functions.cart.tapReserveSlot
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+      - executeFunction:
+          name: mx.flows.od.reserve-slot.changeDeliveryAddress
+          params:
+            - name: addressName
+              string: mx.data.e2e-regression.qaa.od-001.userAddressName
+            - name: expectedUserAddress
+              string: mx.data.e2e-regression.qaa.od-001.userAddress
+      
+      # Step 19 main objective check.
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableDateSlots
+      - executeFunction:
+          name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+    
+    ## STEP 20: SELECT ANY AVAILABLE SLOT AND CONTINUE TO CHECKOUT - ORDER REVIEW SHOULD SHOW.
+      - log: "STEP 20: SELECT ANY AVAILABLE SLOT AND CONTINUE TO CHECKOUT."
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedDaySlot
+          # [VARIABLE] Day slot saved in ${returnedSelectedDaySlot}
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlot
+          # [VARIABLE] Time slot saved in ${returnedSelectedTimeSlot}
+    
+      - executeFunction:
+          name: mx.functions.reserve-slot.getSelectedTimeSlotDeliveryFee
+          # [VARIABLE] Delivery fee saved in ${returnedDeliveryFee}
+    
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'Cart'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+          # [VARIABLE] Delivery slot saved in ${returnedDeliverySlot}
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapReserve
+
+      - executeFunction:
+          name: mx.flows.od.cart.assertDeliveryMethodSlot
+          params:
+            - name: deliveryMethod
+              string: mx.data.e2e-regression.qaa.od-001.deliveryMethod
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+            - name: userShortAddress
+              string: mx.data.e2e-regression.qaa.od-001.userShortAddress
+            - name: expectedDeliveryFee
+              string: ${returnedDeliveryFee}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertDeliveryFee
+          params:
+            - name: deliveryFee
+              string: ${returnedDeliveryFee}
+
+      - arithmetic:
+          expression: ${subtotalOfProduct1} + ${subtotalOfProduct2}
+          numberOfDecimalPlaces: 2
+          storeIn: cartSubtotal
+          # [VARIABLE] Cart subtotal saved in ${cartSubtotal}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${cartSubtotal}
+
+      - arithmetic:
+          expression: ${cartSubtotal} + ${returnedDeliveryFee}
+          numberOfDecimalPlaces: 2
+          storeIn: cartEstimatedTotal
+          # [VARIABLE] Cart estimated total saved in ${cartEstimatedTotal}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${cartEstimatedTotal}
+      
+      - executeFunction:
+          name: mx.functions.cart.assertEstimatedTotalFromBottom
+          params:
+            - name: totalBottom
+              string: ${cartEstimatedTotal}
+      
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+      
+      # Step 20 main objective check.
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+    
+    ## STEP 21: OPEN REVIEW ORDER PAGE - ORDER DETAILS SHOULD BE AS THEY WERE PLACED.
+      - log: "STEP 21: OPEN REVIEW ORDER PAGE."
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-001.deliveryMethod
+      
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'ReviewOrder'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+          # [VARIABLE] Delivery slot saved in ${returnedDeliverySlot}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliverySlot
+          params:
+            - name: deliverySlot
+              string: ${returnedDeliverySlot}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertHomeDeliveryAddressName
+          params:
+            - name: expectedAddressName
+              string: mx.data.e2e-regression.qaa.od-001.userAddressName
+      
+      # Step 21 main objective check.
+      - executeFunction:
+          name: mx.functions.review-order.assertHomeDeliveryAddress
+          params:
+            - name: expectedUserAddress
+              string: mx.data.e2e-regression.qaa.od-001.userAddress
+      
+    ## STEP 22: SELECT PAY AT DELIVERY - PAYMENT METHOD SHOULD BE UPDATED.
+      - log: "STEP 22: SELECT PAY AT DELIVERY."
+      
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: mx.data.e2e-regression.qaa.od-001.sectionNamePago
+      
+      # Step 22 main objective check.
+      - executeFunction:
+          name: mx.flows.od.review-order.selectPayAtDeliveryMethod
+          params:
+            - name: payAtDeliveryFormat
+              string: mx.data.e2e-regression.qaa.od-001.payAtDeliveryFormat
+      
+    ## STEP 23: REVIEW ORDER - VERIFY EVERYTHING IS AS PLACED.
+      - log: "STEP 23: REVIEW ORDER."
+      
+      - executeFunction:
+          name: mx.functions.review-order.enterCellphoneNumber
+          params:
+            - name: userPhoneNumber
+              string: mx.data.e2e-regression.qaa.od-001.userPhoneNumber
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertIncompleteCellphoneNumberErrorMessageNotDisplayed
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertSubtotalProductsCount
+          params:
+            - name: expectedProductsCount
+              string: ${totalProductsCount}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertSubtotal
+          params:
+            - name: subtotal
+              string: ${cartSubtotal}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertDeliveryFee
+          params:
+            - name: deliveryFee
+              string: ${returnedDeliveryFee}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotal
+              string: ${cartEstimatedTotal}
+      
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotal
+              string: ${cartEstimatedTotal}
+      
+      # Step 23 main objective check.
+      - log: "All Review Order page assertions were successful."
+      
+    ## STEP 24: PLACE ORDER - ORDER CONFIRMATION SHOULD SHOW WITH ALL DETAILS SET CORRECTLY.
+      - log: "STEP 24: PLACE ORDER."
+
+      - executeFunction:
+          name: mx.functions.review-order.tapPlaceOrder
+
+      - executeFunction:
+          name: mx.functions.utils.getDeliverySlot
+          params:
+            - name: forPage
+              string: 'OrderConfirmation'
+            - name: selectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: selectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+          # [VARIABLE] Delivery slot saved in ${returnedDeliverySlot}
+      
+      - executeFunction:
+          name: mx.flows.od.order-confirmation.assertConfirmation
+          params:
+            - name: expectedTotal
+              string: ${cartEstimatedTotal}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-001.deliveryMethod
+            - name: expectedDeliverySlot
+              string: ${returnedDeliverySlot}
+            - name: expectedHomeAddressName
+              string: mx.data.e2e-regression.qaa.od-001.userAddressName
+            - name: expectedHomeAddress
+              string: mx.data.e2e-regression.qaa.od-001.userAddress
+            - name: expectedProductsCount
+              string: ${totalProductsCount}
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertProductImageDisplayed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.assertProductImageDisplayed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.getOrderNumber
+          # [VARIABLE] Order number saved in ${returnedOrderNumber}"
+      
+      # Step 24 main objective check.
+      - log: "All Order Confirmation page assertions were successful."
+
+    ## STEP 25: GO TO ORDER HISTORY - PREVIOUS ORDER SHOULD BE SHOWN.
+      - log: "STEP 25: GO TO ORDER HISTORY."
+      
+      - executeFunction:
+          name: mx.functions.order-confirmation.tapFindMoreProducts
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      
+      - executeFunction:
+          name: mx.functions.account.assertPageDisplayed
+      
+      - if:
+          condition: ${DISPLAY_ORDER_IN_ORDERS_HISTORY_WORKAROUND} == true
+          then:
+            - log:
+                message: "Executing Workaround: DISPLAY_ORDER_IN_ORDERS_HISTORY_WORKAROUND"
+                color: CYAN
+            - loop:
+                begin: 1
+                end: 4
+                flow:
+                  - executeFunction:
+                      name: mx.functions.account.openOrdersHistory
+                  - sleep:
+                      duration: 5000
+                  - executeFunction:
+                      name: mx.functions.orders-history.tapBack
+            - log:
+                message: "Workaround Finished: DISPLAY_ORDER_IN_ORDERS_HISTORY_WORKAROUND"
+                color: CYAN
+      - executeFunction:
+          name: mx.functions.account.openOrdersHistory
+
+      - storeIn:
+          key: isScriptInsideOrdersHistoryPage
+          value: true
+
+      # TURN ON WORKAROUND, EXPORT VARIABLE ORDERS_HISTORY_WORKAROUND AND SET IT TO TRUE, DELETE THIS WHEN ORDER ID APPEARS ON ORDERS HISTORY PAGE.
+      # Step 25 main objective check.
+      - executeFunction:
+          name: mx.flows.od.orders-history.assertOrder
+          params:
+            - name: position
+              string: mx.data.e2e-regression.qaa.od-001.orderPosition
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-001.deliveryMethod
+            - name: expectedTotal
+              string: ${cartEstimatedTotal}
+            - name: banner
+              string: mx.data.e2e-regression.qaa.od-001.banner
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: orderStatus
+              string: mx.data.e2e-regression.qaa.od-001.expectedOrderStatus
+            - name: productsCount
+              string: mx.data.e2e-regression.qaa.od-001.differentProductsCount
+      
+    ## STEP 26: GO TO PREVIOUS ORDER DETAIL - VALIDATE DETAILS ARE AS PLACED.
+      - log: "STEP 26: GO TO PREVIOUS ORDER DETAIL."
+      
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: position
+              string: mx.data.e2e-regression.qaa.od-001.orderPosition
+
+      - storeIn:
+          key: isScriptInsideOrderDetailsPage
+          value: true
+      
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderDetails
+          params:
+            - name: expectedOrderNumber
+              string: ${returnedOrderNumber}
+            - name: expectedDeliveryMethod
+              string: mx.data.e2e-regression.qaa.od-001.deliveryMethod
+            - name: expectedOrderStatus
+              string: mx.data.e2e-regression.qaa.od-001.expectedOrderStatus
+            - name: expectedBanner
+              string: mx.data.e2e-regression.qaa.od-001.banner
+            - name: expectedDaySlot
+              string: ${returnedSelectedDaySlot}
+            - name: expectedTimeSlot
+              string: ${returnedSelectedTimeSlot}
+            - name: homeAddressName
+              string: mx.data.e2e-regression.qaa.od-001.userAddressName
+            - name: expectedUserAddressWithCommas
+              string: mx.data.e2e-regression.qaa.od-001.userAddressWithCommas
+            - name: expectedProductsCount
+              string: mx.data.e2e-regression.qaa.od-001.differentProductsCount
+            - name: expectedPaymentMethod
+              string: mx.data.e2e-regression.qaa.od-001.orderDetailsPaymentMethod
+            - name: expectedSubtotal
+              string: ${cartSubtotal}
+            - name: expectedDeliveryFee
+              string: ${returnedDeliveryFee}
+            - name: expectedTotal
+              string: ${cartEstimatedTotal}
+
+      # Product 2 assertions.
+      - executeFunction:
+          name: mx.flows.od.order-details.assertProductDetails
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+            - name: expectedPrice
+              string: ${priceOfProduct2}
+            - name: expectedSubtotal
+              string: ${subtotalOfProduct2}
+            - name: productType
+              string: ${productTypeOfProduct2}
+            - name: expectedOrderedQuantityAsPieces
+              string: mx.data.e2e-regression.qaa.od-001.orderedQuantityAsPiecesProduct2
+      
+      # Product 1 assertions.
+      - executeFunction:
+          name: mx.flows.od.order-details.assertProductDetails
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+            - name: expectedPrice
+              string: ${priceOfProduct1}
+            - name: expectedSubtotal
+              string: ${subtotalOfProduct1}
+            - name: productType
+              string: ${productTypeOfProduct1}
+            - name: expectedOrderedQuantityAsPieces
+              string: mx.data.e2e-regression.qaa.od-001.orderedQuantityAsPiecesProduct1
+
+      # Step 26 main objective check.
+      - log: "All Order Details page assertions were successful."
+      
+    ## STEP 27: GO TO MY ITEMS > LISTS - FAVORITES AND CREATED LISTS SHOULD BE SHOWN.
+      - log: "STEP 27: GO TO MY ITEMS > LISTS."
+
+      - executeFunction:
+          name: mx.functions.order-details.tapBack
+
+      - storeIn:
+          key: isScriptInsideOrderDetailsPage
+          value: false
+
+      - executeFunction:
+          name: mx.functions.orders-history.tapBack
+
+      - storeIn:
+          key: isScriptInsideOrdersHistoryPage
+          value: false
+      
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+          
+      # Step 27 main objective check.
+      - executeFunction:
+          name: mx.functions.lists.assertListDisplayed
+          params:
+            - name: listName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+
+    ## STEP 28: GO TO FAVORITES LIST - PRODUCTS ADDED SHOULD BE THERE.
+      - log: "STEP 28: GO TO FAVORITES LIST."
+      
+      - executeFunction:
+          name: mx.functions.lists.openFavoritesList
+      
+      - executeFunction:
+          name: mx.functions.list.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params:
+            - name: expectedListName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+      
+      # Step 28 main objective check.
+      - executeFunction:
+          name: mx.functions.list.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - executeFunction:
+          name: mx.functions.list.assertProductListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      
+    ## STEP 29: EMPTY LIST - PRODUCTS SHOULD BE CORRECTLY DELETED FROM LIST.
+      - log: "STEP 29: EMPTY LIST."
+      
+      # Step 29 main objective check (assertions included inside the flow).
+      - executeFunction:
+          name: mx.flows.od.list.deleteProductFromList
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - executeFunction:
+          name: mx.flows.od.list.deleteProductFromList
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      
+    ## STEP 30: CLOSE FAVORITES LIST - LISTS SHOULD BE SHOWN.
+      - log: "STEP 30: CLOSE FAVORITES LIST."
+
+      - executeFunction:
+          name: mx.functions.list.tapBack
+
+      - executeFunction:
+          name: mx.functions.lists.assertPageDisplayed
+      
+      # Step 30 main objective check.
+      - executeFunction:
+          name: mx.functions.lists.assertListDisplayed
+          params:
+            - name: listName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+      
+    ## STEP 31: REOPEN FAVORITES LIST - VERIFY FAVORITES LIST KEEPS EMPTY.
+      - log: "STEP 31: REOPEN FAVORITES LIST."
+
+      - executeFunction:
+          name: mx.functions.lists.openFavoritesList
+      
+      - executeFunction:
+          name: mx.functions.list.assertPageDisplayed
+      
+      - executeFunction:
+          name: mx.functions.list.assertCorrectListOpened
+          params:
+            - name: expectedListName
+              string: mx.data.e2e-regression.qaa.od-001.expectedListName
+      
+      # Step 31 main objective check.
+      - executeFunction:
+          name: mx.functions.list.assertProductNotListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName1
+      - executeFunction:
+          name: mx.functions.list.assertProductNotListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName2
+      - executeFunction:
+          name: mx.functions.list.assertProductNotListed
+          params:
+            - name: productName
+              string: mx.data.e2e-regression.qaa.od-001.piecesProductName3
+      
+    ## STEP 32: LOGOUT - USER DATA SHOULD NOT BE AVAILABLE.
+      - log: "STEP 31: LOGOUT."
+
+      # Step 32 main objective check.
+      - executeFunction:
+          name: mx.flows.od.login.userLogout
+          params:
+            - name: userName
+              string: mx.data.e2e-regression.qaa.od-001.userName
+      
+      - log: "END OF TEST - E2E REGRESSION - OD-001"
+
+  #--------------------------------------------------------------------------------------------------------------------
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO: Test Data Reset..."
+
+      - log: "(1) Navigating back to Account Page in case TC remained in Orders History or Order Details Page..."
+      - if:
+          condition: ${isScriptInsideOrderDetailsPage} == true
+          then:
+            - executeFunction:
+                name: mx.functions.order-details.tapBack
+      - if:
+          condition: ${isScriptInsideOrdersHistoryPage} == true
+          then:
+            - executeFunction:
+                name: mx.functions.orders-history.tapBack
+      
+      - log: "(2) Empty Cart in case it is not empty..."
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      
+      - log: "(3) Delete Favorites in case there are displayed..."
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapProductsAndLists
+      - executeFunction:
+          name: mx.functions.products-and-lists.tapLists
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.lists.loginButton
+          then:
+            - log:
+                message: User already logged off
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.lists.openFavoritesList
+            - executeFunction:
+                name: mx.functions.list.emptyList
+
+      - log: "AFTER SCENARIO FINISHED"

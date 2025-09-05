@@ -1,0 +1,122 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: DFTB
+# User:  Registered User
+# Order Type: GM
+# Fulfillment: S2H
+# Payment Type: CC
+# Experience: A2C Using API
+# Validation: Validate DFTB not shown for GM Only Orders
+#
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  platform: ios
+  tags: flow-083, exp_go, GO/MX-Express-Slot-English-iOS-Flow
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome 
+      
+      # Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateIosHomePage
+      - executeFunction:    
+          name: ca.test.functions.home.livingDesign.validateIosBottomNavigation
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.data.flow083.emailios
+            - name: password
+              string: ca.test.data.flow083.passwordios          
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos
+
+      # Sign In Page verification from account
+      - executeFunction:
+           name: ca.test.functions.signIn.fromAccountPageValidationIos      
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.flow083.emailios
+            - name: password
+              string: ca.test.data.flow083.passwordios
+            - name: validateSignInPage
+              string: true
+
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameInTopleft  
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp       
+
+      # Workaround done for cart issue due to location       
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: ca.test.data.onboarding.storeName   
+
+      - executeFunction:
+          name: ca.test.functions.astro.addToCart
+          params:
+            - name: payLoad
+              string: ca.test.data.flowDftbGM.addToCartPayLoad        
+
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartHomeIos
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.DftbNotVisibleValidation
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow083-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps 

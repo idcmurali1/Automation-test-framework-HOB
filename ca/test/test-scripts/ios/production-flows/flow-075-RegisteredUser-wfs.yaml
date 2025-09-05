@@ -1,0 +1,359 @@
+general:
+  platform: ios
+  tags: flow075-ios, prodSanity
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome 
+      
+      # Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateIosHomePage
+      - executeFunction:    
+          name: ca.test.functions.home.livingDesign.validateIosBottomNavigation       
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos
+
+      # Sign In Page verification from account
+      - executeFunction:
+           name: ca.test.functions.signIn.fromAccountPageValidationIos      
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: flow075-prodios@test.com
+            - name: password
+              string: Test@123 
+            - name: validateSignInPage
+              string: true
+
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameInTopleft  
+
+      # Remove items from cart
+      - executeFunction:
+          name: ca.test.functions.cart.verifyItemInCart      
+
+      # Workaround done for cart issue due to location       
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: 3900 Innes Rd, Innes Road & Mer Bleue Road, Orleans, ON K1W1K9  
+
+      # Selecting address at home page
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: address
+              string: 3345 Innes Rd, Ottawa, ON K1C 7L5       
+
+      # Product Search
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmartapp://ip/18K1Z2879XZH
+      
+      # Product Details Page Validation
+      - executeFunction:
+          name: ca.test.functions.pdp.productDetailsValidationIos
+          params:
+            - name: productType
+              string: GM     
+
+      - executeFunction:
+          name: ca.test.functions.PDPpage.validatingFulfillmentDetailswfs
+          params:
+            - name: storeName
+              string: ORLEANS, OTTAWA, ON
+            - name: addressFirstLine
+              string: 3345 Innes Rd
+
+      - executeFunction:
+          name: ca.test.functions.pdp.extractingsellerInfo
+        
+      - storeIn:
+          key: product_1_sellerInfo
+          value: ${sellerInfo}
+     
+      - executeFunction:
+          name: ca.test.functions.cart.assertingFulfillmentForWFSItem
+      
+      - executeFunction:
+          name: ca.test.function.pdp.extractingFulfillmentDateIos
+          params:
+            - name: productName
+              string: ca.test.data.flow075ios.wfsItem
+      
+      - storeIn:
+          key: product_1_shipping
+          value: ${shipping}
+
+      - storeIn:
+          key: product_1_pickup
+          value: ${pickup}
+
+      - executeFunction:
+         name: ca.test.functions.PDPpage.validatingSoldBySwfs
+
+      - executeNode:
+          file: ca/test/helpers/sanitizeSellerInfo.js
+          args:
+            - value: ${soldBy}    
+          getResponse:
+            storeIn: sold
+      - log: ${sold}         
+
+    # Product more details page 
+      - executeFunction:
+          name: ca.test.functions.pdp.MoreDetails
+
+    # Add to cart
+      - executeFunction:
+          name: ca.test.functions.pdp.pdpAddToCart            
+
+    # Product Search
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmartapp://ip/6000198098612
+      
+      # Product Details Page Validation
+      - executeFunction:
+          name: ca.test.functions.pdp.productDetailsValidationIos
+          params:
+            - name: productType
+              string: Digital      
+
+      - executeFunction:
+          name: ca.test.functions.PDPpage.validatingFulfillmentDetailswfs
+          params:
+            - name: storeName
+              string: ORLEANS, OTTAWA, ON
+            - name: addressFirstLine
+              string: 3345 Innes Rd
+
+      - executeFunction:
+          name: ca.test.functions.pdp.extractingsellerInfo
+        
+      - storeIn:
+          key: product_2_sellerInfo
+          value: ${sellerInfo}
+      - log: ${sellerInfo}
+
+      - executeFunction:
+          name: ca.test.function.pdp.extractingFulfillmentDateIos
+          params:
+            - name: productName
+              string: ca.test.data.flow075ios.digitalItem  
+      
+      - storeIn:
+          key: product_2_shipping
+          value: ${shipping}
+      - log: ${product_2_shipping}
+
+      - storeIn:
+          key: product_2_pickup
+          value: ${pickup}
+      - log: ${product_2_pickup}    
+
+      - executeNode:
+          file: ca/test/helpers/sanitizeSellerInfo.js
+          args:
+            - value: ${sellerInfo}    
+          getResponse:
+            storeIn: sellerInfo
+      - log: ${sellerInfo}       
+
+      - executeFunction:
+         name: ca.test.functions.PDPpage.validatingSoldBySwfs        
+    
+    # Product more details page 
+      - executeFunction:
+          name: ca.test.functions.pdp.MoreDetails
+  
+      # Verfying product is Digital
+      - executeFunction:
+          name: ca.test.functions.pdp.validatingProductTypeIos 
+          params:
+            - name: productType
+              string: Digital                 
+
+      # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos   
+
+      # Selecting pickup or shipping
+      - executeFunction:
+          name: ca.test.functions.cart.selectShippingOptionsIos 
+
+       # Verifying address in cart
+      - executeFunction:
+          name: ca.test.functions.cart.fulfillmentAddressIos
+          params:
+            - name: addressFirstLine
+              string: ca.test.data.cart.flowIos.Address  
+
+      # Cart fulfillment verification
+      - executeFunction:
+          name: ca.test.functions.cart.deliveryS2H.verifyCard
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow075ios.digitalItem 
+
+      # Cart product details validation
+      - executeFunction:
+          name: ca.test.functions.cart.verifyProductTitle
+          params:
+            - name: productName
+              string: ca.test.data.flow075ios.wfsItem          
+
+      - executeFunction:
+          name: ca.test.functions.cart.assertingSellerinfoInCart
+          params:
+            - name: productName
+              string: ca.test.data.flow075ios.digitalItem 
+            - name: sellerandshipping
+              string: ${sellerInfo}
+            - name: sold_1
+              string: $sold     
+
+      - executeFunction:
+          name: ca.test.functions.cart.assertingDeliveryTime
+          params:
+            - name: product1
+              string: ${product_2_shipping} 
+            - name: product2
+              string: ${product_1_shipping}           
+
+      - executeFunction:
+         name: ca.test.functions.cart.assertingSellerinfoInCartFulfilled
+         params:
+           - name: fulfilledByCart
+             string: ${fulfilledBy}
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos
+
+      # CheckOut page order review validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+          params:
+            - name: fulfillment
+              string: ca.test.data.flowios.fullfillmentType1
+
+      # Asserting delivery address
+      - executeFunction:
+          name: ca.test.functions.checkOut.assertingDeliveryAddress
+          params:
+            - name: fulfillmentType
+              string: ca.test.data.flowios.fullfillmentType
+            - name: addressFirstLine
+              string: 3345 Innes Rd, Ottawa, ON K1C7L5         
+
+      - executeFunction:
+          name: ca.test.functions.checkout.assertingFulfillmentDate
+          params:
+            - name: product1fulfillment
+              string: ${product_2_shipping}
+            - name: product2fulfillment
+              string: ${product_1_shipping}
+ 
+      # Navigate back to cart
+      - executeFunction:
+          name: ca.test.functions.checkout.navigateToCart
+
+      # Selecting pickup instead
+      - executeFunction:
+          name: ca.test.functions.cart.selectPickupOptionsIos  
+
+      - executeFunction:
+          name: ca.test.functions.cart.assertingSellerinfoInCartPickUp
+          params:
+            - name: productName
+              string: ca.test.data.flow075ios.digitalItem   
+            - name: sellerandshipping
+              string: ${sellerInfo}
+            - name: sold_1
+              string: $sold     
+
+      - executeFunction:
+          name: ca.test.functions.cart.assertingDeliveryTimePickUp
+          params:
+            - name: product1
+              string: ${product_2_pickup} 
+            - name: product2
+              string: ${product_1_pickup}           
+
+      - executeFunction:
+         name: ca.test.functions.cart.assertingSellerinfoInCartFulfilledPickUp
+         params:
+           - name: fulfilledByCart
+             string: ${fulfilledBy}
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos
+
+      # CheckOut page order review validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.validateCheckOutOrderCartIos
+          params:
+            - name: fulfillment
+              string: ca.test.data.flowios.fullfillmentType        
+
+      - executeFunction:
+          name: ca.test.functions.checkout.assertingFulfillmentDatePickUp
+          params:
+            - name: product1fulfillment
+              string: ${product_2_pickup}
+            - name: product2fulfillment
+              string: ${product_1_pickup}                
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps        

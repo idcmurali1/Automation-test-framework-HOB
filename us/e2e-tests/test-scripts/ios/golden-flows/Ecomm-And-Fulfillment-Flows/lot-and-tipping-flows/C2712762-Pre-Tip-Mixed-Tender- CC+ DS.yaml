@@ -1,0 +1,309 @@
+general:
+  platform: ios
+  tags: #p1-ecomm-teflon-e2e, C2712762, us-golden-flows-wplus , Tipping , us-golden-flows-ecom-p1, p1-fulcrum-teflon-e2e,faultboard 
+  testCaseId: C2712762
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: EC132
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+## * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'Delivery TIPPING FOR ORDERS < 35$- IOS'
+## * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      # Create Wplus Trial Account and convert to Paid using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createTrialAccountConvertToPaid
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+
+      - executeFunction:
+          name: us.functions.utils.checkGiftDSCardBalanceAndBalanceifLessThanFive
+          params:
+            - name: balance
+              string: 10
+            - name: PID
+              string: c682ef32-f7af-46cb-ba81-6b344362cea7.7996
+              
+  - name: Main  
+    flow:
+      - log: Start Main
+      - try:
+          flow:
+            # onboarding
+            - executeFunction:
+                name: us.functions.global.onboarding.navigateOnboardingToHome
+
+            # signing in to the account
+            - executeFunction:
+                name: us.functions.home.navigateHomeToSignIn
+
+            - executeFunction:
+                name: us.functions.global.authentication.signInAccount
+                params:
+                  - name: email
+                    string: ${customerEmail}
+                  - name: password
+                    string: E2epassword$
+
+            # Navigate to home page
+            - executeFunction:
+                name: us.functions.global.navigation.accountToHome
+
+            # Close W+ splash bottom screen
+            - executeFunction:
+                name: us.test.functions.utils.closeWplusPrompt.homeScreen
+
+            - executeFunction:
+                name: us.functions.home.setStore
+                params:
+                  - name: store
+                    string: 32144
+                  - name: storeName
+                    string: San Jose Supercenter
+
+            # Select Delivery Intent
+            - executeFunction:
+                name: us.functions.gic.changeFulfillment
+                params:
+                  - name: option
+                    string: Delivery
+         # NOTE : Fetching healthy items from Astro instead of using static list,
+            #Pleas use astro to fetch healthy items
+            # # Add item to cart from deeplink
+            - executeFunction:
+                name: us.functions.utils.fetchFulcrumAvailableItem
+                params:
+                  - name: itemType
+                    string: STORE_SCHEDULED_DELIVERY
+                  - name: storeId
+                    string: 32144
+                  - name: itemFilter
+                    string: lessThan35
+
+            - storeIn:
+                key: item1
+                value: $itemFetched
+
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://item/$item1
+
+            # - executeFunction:
+            #     name: us.functions.utils.fetchFromDataList
+            #     params:
+            #       - name: email
+            #         string: us.data.C2657139.android.email
+            #       - name: itemType
+            #         string: STORE_SCHEDULED_DELIVERY
+            #       - name: itemList
+            #         string: us.data.tippingflow.less35itemsList
+
+            # - executeFunction:
+            #     name: us.functions.global.navigation.goToDeepLink
+            #     params:
+            #       - name: deepLinkUrl
+            #         string: ${deeplinkURl}
+
+            - executeFunction:
+                name: us.functions.item.addItemToCart
+
+            # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'Navigating to cart and scheduling a delivery slot as a wplus member'
+            # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+            - executeFunction:
+                name: us.functions.global.navigation.toCartFromNavBar
+
+            - executeFunction:
+                name: us.functions.cart.checkoutWithSlotBooking
+                params:
+                  - name: tab
+                    string: delivery
+                  - name: page
+                    string: cart
+                  - name: addAddress
+                    string: true
+                  - name: addExistingAddress
+                    string: true
+                  - name: slotDay
+                    string: tomorrow
+                  - name: slotIndex
+                    string: 4
+
+
+            # Add the DirectSpend card to the account after adding the bank.
+            - executeFunction:
+                name: us.functions.cart.addDirectSpendCard
+                params:
+                  - name: directSpendCardNumber
+                    string: us.data.teflon.directSpend.cardNumber.tipping.lessThan35
+                  - name: directSpendCardPin
+                    string: us.data.teflon.directSpend.pin.tipping.lessThan35
+
+            - sleep:
+                duration: 5000
+
+
+      # Driver percentage tip validation
+            - executeFunction:
+                name: us.functions.tippingAndFeedback.driverTipAmountVerification.on.orderReviewPage
+                params:
+                  - name: custTip
+                    string: true
+                  - name: custTipAmount
+                    string: 5
+
+            # placing order and navigating to order confirmation page
+            - executeFunction:
+                name: us.functions.checkout.confirmCvvBeforePlaceOrder
+                params:
+                  - name: cvv
+                    string: 123
+
+            - executeFunction:
+                name: us.functions.checkout.placeOrder
+
+            - executeFunction:
+                name: us.functions.checkout.placeOrderAgainIfError
+
+            - executeFunction:
+                name: us.functions.reviewOrder.SubstitutionPreferencePopup
+
+            - executeFunction:
+                name: us.functions.orderConfirmation.ratings
+
+            - executeFunction:
+                name: us.functions.orderConfirmation.getOrderNumber
+
+            - log: ${orderNo}
+
+            # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'Post order confirmation validation for Drivers Deliver tip selection on the Order details page'
+            # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+            # Move to PO Acknowledged
+            - executeFunction:
+                name: us.functions.utils.astro.setOrderStatus
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: STORE_SCHEDULED_DELIVERY
+                  - name: status
+                    string: PO Acknowledged
+
+            # Validate Driver Tip when the Order is in PO Acknowledged status
+            - executeFunction:
+                name: us.functions.utils.astro.validateDriverTip
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: STORE_SCHEDULED_DELIVERY
+                  - name: status
+                    string: PO Acknowledged
+                  - name: driverTipAmt
+                    string: ${custTipAmount}
+
+
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+
+            - sleep:
+                duration: 3000
+
+            - executeFunction:
+                name: us.functions.tippingAndFeedback.verification.for.inProgressODP
+                params:
+                  - name: tipAmount
+                    string: $5.00
+
+            - executeFunction:
+                name: us.functions.utils.astro.getOrderStatus
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+
+            - executeFunction:
+                name: us.functions.utils.astro.setOrderStatus
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: STORE_SCHEDULED_DELIVERY
+                  - name: status
+                    string: Delivered
+
+            # Validate Driver Tip when the Order is in Delivered status
+            - executeFunction:
+                name: us.functions.utils.astro.validateDriverTip
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+                  - name: orderType
+                    string: STORE_SCHEDULED_DELIVERY
+                  - name: status
+                    string: Delivered
+                  - name: driverTipAmt
+                    string: ${custTipAmount}              
+
+            # Deeplink into order details page
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: walmart://orders/$orderNo
+
+            # Verify order status in order details page
+            - executeFunction:
+                name: us.functions.orderDetails.ost.scheduledDelivery.verifyOrderStatus
+                params:
+                  - name: fulfillmentType
+                    string: Delivery from store
+                  - name: orderStatus
+                    string: Delivered
+
+            # Drivers Deliver tip selection on the Order details page.
+            - executeFunction:
+                name: us.functions.tippingAndFeedback.verification.for.driverTip.onODP
+                params:
+                  - name: tipAmount
+                    string: $5.00
+
+            # storing testrun result as passed
+            - storeIn:
+                key: testStatus
+                value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,123 @@
+#=======================================================================================================
+#Test Script #C2663325-reactivate-membership-trial-annual
+#Author : Gopal Tikare
+#======================================================================================================
+
+general:
+  platform: ios
+  tags: '' # (Deprecated as part of Regression Optimization)us-golden-flows-wplus, C2663325, p1-wplus-teflon-e2e
+  testCaseId: C2663325
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 323
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      # Create Wplus Trial Anually Account using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+      #Cancel membership using Astro api
+      - executeFunction:
+          name: us.functions.utils.astro.cancelPaidMembership
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to SignIn
+      - click:
+          identifier: us.mappings.home.signInButton
+      # Signin
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: E2epassword$
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+        # Navigate to Walmart+
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      # Click on the CTA from MLP
+      - executeFunction:
+          name: us.functions.wplus.account.clickOnJoinWplusFromMlp
+          params:
+            - name: flow
+              string: reactivate
+
+      # Choose monthly plan
+      - executeFunction:
+          name: us.functions.wplus.account.chooseWplusPlan
+          params:
+            - name: plan
+              string: annual
+
+      #Navigate to Walmart Plus
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - verifyIdentifier:
+          timeout: 1000
+          present:
+            - identifier: us.mappings.wplus.manageMembership.gearIcon
+
+      #Navigate to Manage membership
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      # Verify Monthly Plan Activation on Manage Membership
+      - executeFunction:
+          name: us.functions.wplus.membership.verifyMyMembershipDetails
+          params:
+            - name: tenure
+              string: annual
+
+      # storing testrun result as passed
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

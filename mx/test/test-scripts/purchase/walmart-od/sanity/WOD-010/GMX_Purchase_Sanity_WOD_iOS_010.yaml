@@ -1,0 +1,591 @@
+#======================================================================================================================
+#    AUTHOR: Teresa Partida (vn55epy)
+#   CREATED: Jun/27/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-purchase-sanity-walmart-od-production-ios-010, qaa-purchase-sanity-walmart-od-production-ios
+
+scenarios:
+  #####################################################################################################################
+  #
+  #  JIRA MANUAL TC:
+  #    https://jira.walmart.com/browse/MMP-1052
+  #
+  # Flags Used:
+  #       ${ASSERT_DELIVERY_SLOT_IN_CART}  -  Values: [true | false]
+  #       ${ASSERT_DELIVERY_SLOT_IN_REVIEW_ORDER}  -  Values: [true | false]
+  #       ${IOS_CART_PRODUCT_ASSERTIONS_WORKAROUND}  -  Values: [true | false]
+  #
+  #######################################################################################################################
+
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+
+      - storeIn:
+          key: PURCHASE_TEST_CASE_NAME
+          value: "GMX_PURCHASE_SANITY_WOD_IOS_010"
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+      - storeIn:
+          key: WOD_010_SUCCESSFUL_EXECUTION
+          value: false
+      - log: "BEFORE SCENARIO END"
+
+  #-------------------------------------------------------------------------------------------------
+
+  - name: Main
+    platform: ios
+    flow:
+      - log: "TEST START: ${PURCHASE_TEST_CASE_NAME}"
+
+     # STEP 1: Navigate through onboarding and select OD Banner ------------------------------------
+      - log:
+          message: "STEP 1: Navigate through onboarding and select OD Banner"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.purchase.sanity.wod-010.zipCode
+            - name: banner
+              string: "OD"
+
+      - executeFunction:
+          name: mx.flows.od.delivery-method-selector.selectPickupOdStoreByZipCode
+          params:
+            - name: zipCode
+              string: mx.data.qaa.purchase.sanity.wod-010.zipCode
+            - name: storeName
+              string: mx.data.qaa.purchase.sanity.wod-010.storeName
+
+     # STEP 2: Search a product and add it to cart -------------------------------------------------
+      - log:
+          message: "STEP 2: Search a product and add it to cart"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.purchase.sanity.wod-010.searchTerm1
+
+      - executeFunction:
+          name: mx.functions.slp.getFirstProductListedName # ---> ${returnedProductName}
+
+      # [VARIABLE] Product's name saved in ${purchase_od010_product_name_1}
+      - storeIn:
+          key: purchase_od010_product_name_1
+          value: ${returnedProductName}
+
+      - executeFunction:
+          name: mx.functions.slp.addProductToCart
+          params:
+            - name: productName
+              string: ${purchase_od010_product_name_1}
+
+      - executeFunction:
+          name: mx.functions.slp.getUnitProductPrice # ---> ${returnedPrice}
+          params:
+            - name: productName
+              string: ${purchase_od010_product_name_1}
+
+      - executeFunction:
+          name: mx.functions.slp.getProductType # ---> ${returnedProductType}
+          params:
+            - name: productName
+              string: ${purchase_od010_product_name_1}
+
+      - executeFunction:
+          name: mx.functions.slp.getProductQuantityAsPieces # ---> ${returnedProductPieces}
+          params:
+            - name: productName
+              string: ${purchase_od010_product_name_1}
+
+      # [VARIABLE] Product's price saved in ${purchase_od010_product_price_1}
+      - storeIn:
+          key: purchase_od010_product_price_1
+          value: ${returnedPrice}
+      # [VARIABLE] Product's type saved in ${purchase_od010_product_type_1}
+      - storeIn:
+          key: purchase_od010_product_type_1
+          value: ${returnedProductType}
+      # [VARIABLE] Product's quantity saved in ${purchase_od010_product_quantity_1}
+      - storeIn:
+          key: purchase_od010_product_quantity_1
+          value: ${returnedProductPieces}
+      # [VARIABLE] Product's subtotal saved in ${purchase_od010_product_subtotal_1}
+      - arithmetic:
+          expression: ${purchase_od010_product_price_1} * ${purchase_od010_product_quantity_1}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_od010_product_subtotal_1
+
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapDepartments
+
+      - executeFunction:
+          name: mx.flows.od.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.purchase.sanity.wod-010.searchTerm2
+
+      - executeFunction:
+          name: mx.functions.slp.openFirstPDPListed
+      - executeFunction:
+          name: mx.functions.pdp.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.pdp.addToCart # ---> ${returnedProductName}
+
+      - executeFunction:
+          name: mx.functions.pdp.increaseQuantityBy
+          params:
+            - name: quantity
+              string: mx.data.qaa.purchase.sanity.wod-010.increaseQuantity
+
+      - executeFunction:
+          name: mx.functions.pdp.getPrice # ---> ${returnedProductPrice}
+      - executeFunction:
+          name: mx.functions.pdp.getType # ---> ${returnedProductType}
+      - executeFunction:
+          name: mx.functions.pdp.getProductQuantityAsPieces # ---> ${returnedProductQuantity}
+
+      # [VARIABLE] Product's name saved in ${purchase_od010_product_name_2}
+      - storeIn:
+          key: purchase_od010_product_name_2
+          value: ${returnedProductName}
+      # [VARIABLE] Product's price saved in ${purchase_od010_product_price_2}
+      - storeIn:
+          key: purchase_od010_product_price_2
+          value: ${returnedProductPrice}
+      # [VARIABLE] Product's type saved in ${purchase_od010_product_type_2}
+      - storeIn:
+          key: purchase_od010_product_type_2
+          value: ${returnedProductType}
+      # [VARIABLE] Product's quantity saved in ${purchase_od010_product_quantity_2}
+      - storeIn:
+          key: purchase_od010_product_quantity_2
+          value: ${returnedProductQuantity}
+      # [VARIABLE] Product's subtotal saved in ${purchase_od010_product_subtotal_2}
+      - arithmetic:
+          expression: ${purchase_od010_product_price_2} * ${purchase_od010_product_quantity_2}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_od010_product_subtotal_2
+
+      - executeFunction:
+          name: mx.functions.pdp.assertAddedToCart
+
+      - executeFunction:
+          name: mx.functions.pdp.tapClose
+
+      # STEP 3: Open cart and validate product data -------------------------------------------------
+      - log:
+          message: "STEP 3: Open cart and validate product data"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+
+      - log: "Product - ${purchase_od010_product_name_1} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_od010_product_name_1}
+            - name: productType
+              string: ${purchase_od010_product_type_1}
+            - name: expectedQuantity
+              string: ${purchase_od010_product_quantity_1}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_od010_product_price_1}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_od010_product_subtotal_1}
+
+      - log: "Product - ${purchase_od010_product_name_2} - assertions"
+      - executeFunction:
+          name: mx.flows.od.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_od010_product_name_2}
+            - name: productType
+              string: ${purchase_od010_product_type_2}
+            - name: expectedQuantity
+              string: ${purchase_od010_product_quantity_2}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_od010_product_price_2}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_od010_product_subtotal_2}
+
+      # [VARIABLE] Order subtotal saved in ${purchase_od010_order_subtotal}
+      - arithmetic:
+          expression: ${purchase_od010_product_subtotal_1} + ${purchase_od010_product_subtotal_2}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_od010_order_subtotal
+
+      # [VARIABLE] Order subtotal saved in ${purchase_od010_order_subtotal}
+      - arithmetic:
+          expression: ${purchase_od010_product_quantity_1} + ${purchase_od010_product_quantity_2}
+          numberOfDecimalPlaces: 0
+          storeIn: purchase_od010_order_product_count
+
+      - executeFunction:
+          name: mx.flows.od.cart.assertTotals
+          params:
+            - name: expectedSubtotal
+              string: ${purchase_od010_order_subtotal}
+
+      # STEP 4: Continue and login from cart -------------------------------------------------------
+      - log:
+          message: "STEP 4: Continue and login from cart"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.cart.tapContinue
+
+      - executeFunction:
+          name: mx.flows.od.login.loginFromPopup
+          params:
+            - name: userEmail
+              string: mx.data.qaa.purchase.sanity.wod-010.userEmail
+            - name: userPassword
+              string: mx.data.qaa.purchase.sanity.wod-010.userPassword
+
+      # STEP 5: Select "Envio a domicilio" and add new delivery address ----------------------------
+      - log:
+          message: "STEP 5: Select \"Envio a domicilio\" and add new delivery address"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapHomeDeliveryMethod
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.address-message-popup.closePopupIfDisplayed
+
+      - executeFunction:
+          name: mx.functions.reserve-slot.tapAddAddress
+
+      - executeFunction:
+          name: mx.flows.od.addresses.addHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: mx.data.qaa.purchase.sanity.wod-010.userFirstName
+            - name: userLastName
+              string: mx.data.qaa.purchase.sanity.wod-010.userLastName
+            - name: userStreet
+              string: mx.data.qaa.purchase.sanity.wod-010.addressStreet
+            - name: userExteriorNumber
+              string: mx.data.qaa.purchase.sanity.wod-010.addressExteriorNumber
+            - name: userZipCode
+              string: mx.data.qaa.purchase.sanity.wod-010.addressZipCode
+            - name: userNeighborhood
+              string: mx.data.qaa.purchase.sanity.wod-010.addressNeighborhood
+            - name: expectedUserState
+              string: mx.data.qaa.purchase.sanity.wod-010.addressState
+            - name: expectedUserCity
+              string: mx.data.qaa.purchase.sanity.wod-010.addressCity
+            - name: expectedUserMunicipality
+              string: mx.data.qaa.purchase.sanity.wod-010.addressMunicipality
+            - name: userPhoneNumber
+              string: mx.data.qaa.purchase.sanity.wod-010.addressPhoneNumber
+
+      # STEP 6: Select time slot -------------------------------------------------------------------
+      - log:
+          message: "STEP 6: Select time slot"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.reserve-slot.selectDateAndRandomNormalTimeSlot
+
+      # [VARIABLE] Returned day slot saved in ${purchase_od010_reserved_slot_day}
+      - storeIn:
+          key: purchase_od010_reserved_slot_day
+          value: ${returnedSelectedDaySlot}
+      # [VARIABLE] Returned time slot saved in ${purchase_od010_reserved_slot_time}
+      - storeIn:
+          key: purchase_od010_reserved_slot_time
+          value: ${returnedSelectedTimeSlot}
+      # [VARIABLE] Home delivery fee saved in ${purchase_od010_reserved_slot_fee}
+      - storeIn:
+          key: purchase_od010_reserved_slot_fee
+          value: ${returnedDeliveryFee}
+
+      # STEP 7: Continue to checkout ---------------------------------------------------------------
+      - log:
+          message: "STEP 7: Continue to checkout"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.review-order.assertDeliveryInformation
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.purchase.sanity.wod-010.deliveryMethod
+            - name: expectedDaySlot
+              string: ${purchase_od010_reserved_slot_day}
+            - name: expectedTimeSlot
+              string: ${purchase_od010_reserved_slot_time}
+            - name: expectedStoreOrHomeName
+              string: mx.data.qaa.purchase.sanity.wod-010.userAddressName
+            - name: expectedStoreOrHomeAddress
+              string: 'null'
+            - name: expectedUserStreet
+              string: mx.data.qaa.purchase.sanity.wod-010.addressStreet
+            - name: expectedUserExteriorNumber
+              string: mx.data.qaa.purchase.sanity.wod-010.addressExteriorNumber
+            - name: expectedUserCity
+              string: mx.data.qaa.purchase.sanity.wod-010.addressCity
+            - name: expectedUserState
+              string: mx.data.qaa.purchase.sanity.wod-010.addressState
+            - name: expectedUserZipCode
+              string: mx.data.qaa.purchase.sanity.wod-010.addressZipCode
+
+      # [VARIABLE] Order total saved in ${purchase_od010_order_total}
+      - arithmetic:
+          expression: ${purchase_od010_order_subtotal} + ${purchase_od010_reserved_slot_fee}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_od010_order_total
+
+      # STEP 8: Go to payment methods and add credit card ------------------------------------------
+      - log:
+          message: "STEP 8: Go to payment methods and add credit card"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToWallet
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+
+      - executeFunction:
+          name: mx.functions.wallet.tapAddPaymentMethod
+
+      - executeFunction:
+          name: mx.flows.od.wallet.addNewDebitOrCreditCardShort
+          params:
+            - name: cardNumber
+              string: mx.data.qaa.purchase.sanity.wod-010.cardNumber
+            - name: expectedExpirationMonth
+              string: mx.data.qaa.purchase.sanity.wod-010.cardExpirationMonth
+            - name: expectedExpirationYear
+              string: mx.data.qaa.purchase.sanity.wod-010.cardExpirationYear
+            - name: cardCVV
+              string: mx.data.qaa.purchase.sanity.wod-010.cardCVV
+            - name: cardHolderName
+              string: mx.data.qaa.purchase.sanity.wod-010.cardHolderName
+            - name: last4Digits
+              string: mx.data.qaa.purchase.sanity.wod-010.cardLast4Digits
+
+      - executeFunction:
+          name: mx.functions.wallet.assertCardAdded
+          params:
+            - name: last4Digits
+              string: mx.data.qaa.purchase.sanity.wod-010.cardLast4Digits
+
+      - executeFunction:
+          name: mx.functions.payment.tapContinue
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedPaymentMethod
+          params:
+            - name: paymentMethod
+              string: mx.data.qaa.purchase.sanity.wod-010.paymentMethod
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedCardByLast4Digits
+          params:
+            - name: last4Digits
+              string: mx.data.qaa.purchase.sanity.wod-010.cardLast4Digits
+
+      - executeFunction:
+          name: mx.flows.od.review-order.assertTotalsInformation
+          params:
+            - name: expectedSubtotalProductsCount
+              string: ${purchase_od010_order_product_count}
+            - name: expectedSubtotal
+              string: ${purchase_od010_order_subtotal}
+            - name: assertDeliveryFee
+              string: true
+            - name: expectedDeliveryFee
+              string: ${purchase_od010_reserved_slot_fee}
+
+      # STEP 9: Add promotional coupon--------------------------------------------------------------
+      - log:
+          message: "STEP  9: Add promotional coupon"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.review-order.applyCoupon
+          params:
+            - name: promoCode
+              string: mx.data.qaa.purchase.sanity.wod-010.coupon
+
+      - executeFunction:
+          name: mx.functions.review-order.getPromoDiscount
+
+      # [VARIABLE] Home delivery fee saved in ${purchase_od010_reserved_slot_fee}
+      - storeIn:
+          key: purchase_od010_coupon_discount
+          value: ${returnedPromoDiscount}
+
+      # [VARIABLE] Order total updated in ${purchase_od010_order_total}
+      - arithmetic:
+          expression: ${purchase_od010_order_total} - ${purchase_od010_coupon_discount}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_od010_order_total
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${purchase_od010_order_total}
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotalFromButton
+              string: ${purchase_od010_order_total}
+
+      # STEP 10: Remove coupon ---------------------------------------------------------------------
+      - log:
+          message: "STEP  10: Remove coupon"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.review-order.removeCoupon
+          params:
+            - name: promoCode
+              string: mx.data.qaa.purchase.sanity.wod-010.coupon
+
+      - executeFunction:
+          name: mx.functions.review-order.assertPromoDiscountIsNotDisplayed
+
+      # [VARIABLE] Order total updated in ${purchase_od010_order_total}
+      - arithmetic:
+          expression: ${purchase_od010_order_total} + ${purchase_od010_coupon_discount}
+          numberOfDecimalPlaces: 2
+          storeIn: purchase_od010_order_total
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotal
+          params:
+            - name: estimatedTotalFromBottom
+              string: ${purchase_od010_order_total}
+
+      - executeFunction:
+          name: mx.functions.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: estimatedTotalFromButton
+              string: ${purchase_od010_order_total}
+      # ---------------------------------------------------------
+      # STEPS 11 AND 12 ARE ONLY AVAILABLE IN STAGING ENVIRONMENT
+      # ---------------------------------------------------------
+      - if:
+          condition: ${GLASS_ENV} == 'staging'
+          then:
+            # STEP 11: Place order -----------------------------------------------------------------
+            - log:
+                message: "STEP  11: Place order"
+                color: ORANGE
+
+            - executeFunction:
+                name: mx.functions.review-order.tapPlaceOrder
+
+            - executeFunction:
+                name: mx.functions.order-confirmation.assertPageDisplayed
+
+            - executeFunction:
+                name: mx.functions.utils.closeRateWalmartPopupIfDisplayed
+
+            - executeFunction:
+                name: mx.functions.order-confirmation.getOrderNumber
+
+            - executeFunction:
+                name: mx.flows.od.order-confirmation.assertConfirmation
+                params:
+                  - name: expectedTotal
+                    string: ${purchase_od010_order_total}
+                  - name: expectedDeliveryMethod
+                    string: mx.data.qaa.purchase.sanity.wod-010.deliveryMethod
+                  - name: expectedDaySlot
+                    string: ${purchase_od010_reserved_slot_day}
+                  - name: expectedTimeSlot
+                    string: ${purchase_od010_reserved_slot_time}
+                  - name: expectedHomeAddressName
+                    string: mx.data.qaa.purchase.sanity.wod-010.userAddressName
+                  - name: expectedUserStreet
+                    string: ${purchase_od010_delivery_address_street}
+                  - name: expectedUserExteriorNumber
+                    string: ${purchase_od010_delivery_address_exterior_number}
+                  - name: expectedUserCity
+                    string: ${purchase_od010_delivery_address_city}
+                  - name: expectedUserState
+                    string: ${purchase_od010_delivery_address_state}
+                  - name: expectedUserZipCode
+                    string: ${purchase_od010_delivery_address_zip_code}
+                  - name: expectedProductsCount
+                    string: ${purchase_od010_order_product_count}
+
+            # STEP 12: Hit "Descubrir mas productos" button ----------------------------------------
+            - log:
+                message: "STEP  12: Hit \"Descubrir mas productos\" button"
+                color: ORANGE
+
+            - executeFunction:
+                name: mx.functions.order-confirmation.tapFindMoreProducts
+
+            - executeFunction:
+                name: mx.functions.home.assertPageLoaded
+          else:
+            - log:
+                message: "Steps 11 and 12 will be skipped"
+
+      #------------------------------
+
+      - storeIn:
+          key: WOD_010_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${PURCHASE_TEST_CASE_NAME}"
+
+  #----------------------------------------------------------------------------------------------
+
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..."
+
+      - if:
+          condition: ${WOD_010_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully."
+                color: GREEN_BOLD
+      - log:
+          message: "Resetting data for the next execution."
+      - executeFunction:
+          name: mx.flows.od.after-scenario-exclusive.relaunchAndNavigateToHomePage
+      - executeFunction:
+          name: mx.flows.od.after-scenario-exclusive.deleteCards
+      - executeFunction:
+          name: mx.flows.od.after-scenario-exclusive.deleteAddresses
+      - executeFunction:
+          name: mx.flows.od.after-scenario-exclusive.emptyCart
+      - log: "AFTER SCENARIO END"

@@ -1,0 +1,227 @@
+functions:
+  # Validate pickup person title, pickup person name and edit link
+  - name: us.functions.functional.checkout.reviewOrder.fulfillment.validatePickupPerson
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.pickupPersonTitle
+      - executeFunction:
+          name: us.functions.functional.utils.validateElementValue
+          params:
+            - name: identifierToVerify
+              string: us.mappings.functional.checkout.reviewOrder.pickupPersonName
+            - name: identifierValueToVerify
+              string: ${primaryPickupPerson}
+            - name: toVerifyContent
+              string: "false"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+
+    # Function to update the primary and alternate pickup person details
+  - name: us.functions.functional.checkout.reviewOrder.updatePickupPerson
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+          coordinates: 50% , 50%
+      - sleep:
+         duration: 3000
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.primaryPickupPersonFirstName
+          string: ${pickupPersonFirstName}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.primaryPickupPersonLastName
+          string: ${pickupPersonLastName}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - if:
+          condition: ${addAlternatePickupPerson} != null && ${addAlternatePickupPerson} == true
+          then:
+            - executeFunction:
+                name:  us.functions.functional.checkout.reviewOrder.clickAddOrRemoveAlternatePickupPerson
+            - enterText:
+                identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonFirstName
+                string: ${altPickupPersonFirstName}
+                clearField: true
+            - executeFunction:
+                name: us.functions.functional.util.clickKeyboardDone
+            - enterText:
+               identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonLastName
+               string: ${altPickupPersonLastName}
+               clearField: true
+            - executeFunction:
+                name: us.functions.functional.util.clickKeyboardDone
+            - enterText:
+                identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonEmail
+                string: ${altPickupPersonEmail}
+                clearField: true
+            - executeFunction:
+                name: us.functions.functional.util.clickKeyboardDone
+            - if:
+                condition: ${removeAlternatePickupPerson} != null && ${removeAlternatePickupPerson} == true
+                then:
+                  - executeFunction:
+                      name:  us.functions.functional.checkout.reviewOrder.clickAddOrRemoveAlternatePickupPerson
+                else:
+                    - storeIn:
+                        key: altPickupPersonFullName
+                        value: ${altPickupPersonFirstName} ${altPickupPersonLastName}
+      - storeIn:
+          key: pickupPersonFullName
+          value: ${pickupPersonFirstName} ${pickupPersonLastName}
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.saveButton
+      - executeFunction:
+          name: us.functions.functional.utils.validateElementValue
+          params:
+            - name: identifierToVerify
+              string: us.mappings.functional.checkout.reviewOrder.pickupPersonName
+            - name: identifierValueToVerify
+              string: ${pickupPersonFullName}
+            - name: toVerifyContent
+              string: "false"
+      - if:
+          condition: ${altPickupPersonFullName} != null
+          then:
+            - executeFunction:
+                name: us.functions.functional.utils.validateElementValue
+                params:
+                    - name: identifierToVerify
+                      string:  us.mappings.functional.checkout.reviewOrder.pickupPerson.altPickupPersonFullName
+                    - name: identifierValueToVerify
+                      string: ${altPickupPersonFullName}
+                    - name: toVerifyContent
+                      string: "false"
+
+  # Function to click add or remove alternate pickup person
+  - name: us.functions.functional.checkout.reviewOrder.clickAddOrRemoveAlternatePickupPerson
+    flow:
+    - click:
+        identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altenatePersonLink
+
+  - name: us.functions.functional.checkout.reviewOrder.editPickupPerson
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+          coordinates: 50% , 50%
+      - sleep:
+          duration: 3000
+
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.primaryPickupPersonFirstName
+          string: ${pickupPersonFirstName}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.primaryPickupPersonLastName
+          string: ${pickupPersonLastName}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.primaryPickupPersonEmail
+          string: ${pickupPersonEmail}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.saveButton
+
+  - name: us.functions.functional.checkout.reviewOrder.addAlternatePickupPerson
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+          coordinates: 50% , 50%
+      - sleep:
+          duration: 3000
+
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.alternatePickupPersonTitle
+          then:
+            - click:
+                identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.addAlternatePickupPersonButton
+      - scroll:
+          direction: down
+          scrollLimit: 1
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonFirstName
+          string: ${altPickupPersonFirstName}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonLastName
+          string: ${altPickupPersonLastName}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+      - enterText:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonEmail
+          string: ${altPickupPersonEmail}
+          clearField: true
+      - executeFunction:
+          name: us.functions.functional.util.clickKeyboardDone
+
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.saveButton
+
+  - name: us.functions.functional.checkout.reviewOrder.removeAlternatePickupPerson
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPersonLink
+          coordinates: 50% , 50%
+      - sleep:
+          duration: 3000
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.alternatePickupPersonTitle
+          then:
+            - click:
+                identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.removeAlternatePickupPersonButton
+          else:
+            - log: No alternate pickup person to remove
+
+      - click:
+          identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.saveButton
+  
+  - name: us.functions.functional.checkout.reviewOrder.validatePickupPersonDetails
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.functional.checkout.reviewOrder.pickupPersonTitle
+          label:
+            - identifier: us.mappings.functional.checkout.reviewOrder.pickupPersonName
+              contains: ${pickupPersonName}
+      - if:
+          condition: ${altPickupPersonName} != null
+          then:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonFullName
+                    contains: ${altPickupPersonName}
+          else:
+            - verifyIdentifier:
+                notPresent:
+                  - identifier: us.mappings.functional.checkout.reviewOrder.editPickupPerson.altPickupPersonFullName

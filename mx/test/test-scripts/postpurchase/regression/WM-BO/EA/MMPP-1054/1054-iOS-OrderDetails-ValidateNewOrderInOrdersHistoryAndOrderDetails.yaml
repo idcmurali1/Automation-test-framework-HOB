@@ -1,0 +1,225 @@
+#======================================================================================================================
+#  AUTHOR:   Sergio Fernández (vn0t1qt)
+#  CREATED:  Jan/06/2025
+#  REVISION: ---
+#
+#  JIRA MANUAL TEST CASE:    MMPP-1054
+#  JIRA AUTOMATED TEST CASE: MMPP-3197
+#
+#  FLOW: Navigate to EA Banner, Log in, create a new order, validate Orders History & Order Details.
+#
+#  Copyright © 2025 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: postpurchase-walmart-ea-sanity-production-ios-1054,
+        postpurchase-bodega-ea-sanity-production-ios-1054
+  testCaseId: MMPP-3197
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+      - log: R2_SUBFLOW_BEFORE
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseName
+          params:
+            - name: testCaseName
+              string: 1054-iOS-OrderDetails-ValidateNewOrderInOrdersHistoryAndOrderDetails
+      - storeIn:
+          key: varTC_ORDER_CREATED
+          value: false
+      - storeIn:
+          key: varTC_ORDER_CANCELLED
+          value: false
+      - storeIn:
+          key: varTC_SUCCESSFUL_EXECUTION
+          value: false
+      - log: BEFORE SCENARIO END
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: "TEST START: ${__SQUAD_REPORTING_TEST_CASE_NAME}"
+      - log: R2_SUBFLOW_MAIN
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 1: OPEN APP, COMPLETE ONBOARDING AND SWITCH TO EA...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1: OPEN APP, COMPLETE ONBOARDING AND SWITCH TO EA..."
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.postpurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.postpurchase.onboarding.onlineExclusiveStore
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 2-4: NAVIGATE TO ACCOUNT AND LOG IN...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 2-4: NAVIGATE TO ACCOUNT AND LOG IN..."
+
+      - storeIn:
+          key: userEmail
+          value: mx.postpurchase.1054.userAccount_ios.email
+      - storeIn:
+          key: userPassword
+          value: mx.postpurchase.1054.userAccount_ios.password
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication # <-- ${userEmail}, ${userPassword}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 5: CREATE A NEW ORDER...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5: CREATE A NEW ORDER..."
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction: # Clear cart in case previous run failed and left products in the cart...
+          name: functions.cartPage.clearCart
+      - executeFunction:
+          name: mx.flows.od.order-creation.quickOrderCreation # RETURNS --> ${returnedOrderInfo}
+
+      # Create required vars that will be used later...
+      - storeIn:
+          key: orderInfo
+          value: ${returnedOrderInfo}
+      - executeNode:
+          file: mx/test/helpers/utils/getJsonValues.js
+          args:
+            - value: ${returnedOrderInfo}
+          getValue:
+            - key: orderNumber
+              storeIn: orderNumber
+      - storeIn:
+          key: varTC_ORDER_CREATED
+          value: true
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 6-7: NAVIGATE TO ORDERS HISTORY...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 6-7: NAVIGATE TO ORDERS HISTORY..."
+
+      - executeFunction:
+          name: functions.thankYouPage.tapOnContinueShoppingButton
+      - executeFunction:
+          name: functions.accountPage.navigateToOrderHistoryPage
+      - executeFunction:
+          name: functions.orderHistoryPage.isPageDisplayed
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 8: VALIDATE ORDER INFORMATION...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 8: VALIDATE ORDER INFORMATION..."
+
+      - executeFunction:
+          name: mx.flows.od.orders-history.assertOrderInformation # <-- ${orderInfo}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 9-10: OPEN ORDER & VALIDATE ORDER DETAILS...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9-10: OPEN ORDER & VALIDATE ORDER DETAILS..."
+
+      - executeFunction:
+          name: mx.functions.orders-history.openOrder # <-- ${orderNumber}
+
+      - executeFunction:
+          name: mx.flows.od.order-details.assertOrderInformation # <-- ${orderInfo}
+
+      #----------------------------------------------------------------------------------------------------------------
+      # ADDITIONAL STEP: CANCEL ORDER (TEST CASE REPEATABILITY)...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "ADDITIONAL STEP: CANCEL ORDER (TEST CASE REPEATABILITY)..."
+
+      - executeFunction:
+          name: mx.flows.od.order-details.cancelOrder
+      - storeIn:
+          key: varTC_ORDER_CANCELLED
+          value: true
+
+      #----------------------------------------------------------------------------------------------------------------
+      # STEP 11-12: LOG OUT...
+      - executeFunction: #---------------------------------------------------------------------------------------------
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11-12: LOG OUT..."
+
+      - executeFunction:
+          name: mx.functions.utils.navigateToDeepLink.Account
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.account.tapLogout
+
+      - storeIn:
+          key: varTC_SUCCESSFUL_EXECUTION
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER
+
+      # Cancel Order if not cancelled already in the additional step in main scenario...
+      - if:
+          condition: ${varTC_ORDER_CREATED} && !${varTC_ORDER_CANCELLED}
+          then:
+            - executeFunction:
+                name: mx.functions.utils.navigateToDeepLink.OrderDetails # <-- ${orderNumber}
+            - executeFunction:
+                name: mx.flows.od.order-details.cancelOrder
+
+      # If execution not successful, fail the after scenario too, to ensure correct success/failure status in reports...
+      - if:
+          condition: '!${varTC_SUCCESSFUL_EXECUTION}'
+          then:
+            - failTest:
+                message: "FAILED EXECUTION: Main Scenario failed: After Scenario will propagate the failure to show correct execution status."
+          else:
+            - log:
+                message: "SUCCESSFUL EXECUTION"
+                color: GREEN_BOLD
+
+      - log: AFTER SCENARIO END

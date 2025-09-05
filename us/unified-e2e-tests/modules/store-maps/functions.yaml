@@ -1,0 +1,105 @@
+functions:
+  - name: unified.us.functions.inStorePickup.filter
+    flow:
+      - scroll:
+          direction: up
+      - click:
+          identifier: us.mappings.choice.inStore.filter
+          wait: 7000
+
+  - name: unified.us.functions.storeMaps.mapView
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.storeMaps.aisleNumber
+            - name: direction
+              string: down
+            - name: scrollLimit
+              string: 2
+      - click:
+          identifier: us.mappings.storeMaps.aisleNumber
+          wait: 10000
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.storeMaps.mapView
+          then:
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.storeMaps.mapView.itemCard
+                        - identifier: us.mappings.storeMaps.mapView.itemCard.aisle
+                  - log: "Map view displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Map view not displayed as expected"
+
+      - click:
+          identifier: us.mappings.storeMaps.mapViewCloseButton
+
+  - name: unified.us.functions.storeMaps.itemPage.mapView
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.scrollIfNotVisible # unified.us.functions.utils.dragIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.item.switching.fulfillment.pickupText
+            - name: direction
+              string: down
+            - name: scrollLimit
+              string: 4
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.storeMaps.itemPage.aisleNumber
+          then:
+            - click:
+                identifier: us.mappings.storeMaps.itemPage.aisleNumber
+                wait: 4000
+          else:
+            - click:
+                identifier: us.mappings.item.switching.fulfillment.pickupText
+            # Solution due to temporary scroll isse
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - scroll:
+                      direction: up
+                      scrollLimit: 3
+                      untilIdentifier: us.mappings.storeMaps.itemPage.aisleNumber
+            - sleep:
+                duration: 2000
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible # unified.us.functions.utils.dragIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.storeMaps.itemPage.aisleNumber
+                  - name: direction
+                    string: down
+            - click:
+                identifier: us.mappings.storeMaps.itemPage.aisleNumber
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.storeMaps.mapView
+          then:
+            - log: "Map view displayed as expected"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Map view not displayed as expected"
+      # - if:
+      #     identifier:
+      #       present:
+      #         - identifier: us.mappings.storeMaps.backButton
+      #     then:
+      #       - click:
+      #           identifier: us.mappings.storeMaps.backButton
+      #     else:
+      - click:
+          identifier: us.mappings.global.closeButton

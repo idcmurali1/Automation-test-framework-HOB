@@ -1,0 +1,248 @@
+#======================================================================================================================
+#    AUTHOR: Sergio Fernandez Aldana (vn0t1qt)
+#   CREATED: Feb/16/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Scrolls into the given direction to find the product to be added to Cart (from PLP only).
+  #   If the product is not found within 20 swipes max or it is already added to the cart, the function will fail.
+  #   At the end, the method will assert, in the same PLP, the product was added to Cart.
+  # PARAMS:
+  #   ${productName}  [Mandatory]  Product Name to be added.
+  #   ${direction}    [Mandatory]  Direction of the scroll to look for the product. Options: [ up | down ]
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.flows.od.add-to-cart.addProductToCartByNameInPLP
+    platform: android
+    flow:
+      - log:
+          message: "Product Name: '${productName}'"
+          color: CYAN
+      - log:
+          message: "Direction: '${direction}'"
+          color: CYAN
+      - if:
+          condition: ${direction} != 'up' && ${direction} != 'down'
+          then:
+            - failTest:
+                message: "Function Error: given direction is not valid. Valid options: [ up | down ]."
+      - if:
+          identifier:
+            notPresent:
+              - identifier: mx.mappings.department-l3.addProductToCartByName # <--PARAMS--${productName}
+          then:
+            - executeFunction:
+                name: mx.functions.utils.centerElementVerticallyWithinContainer
+                params:
+                  - name: mappingOfContainer
+                    string: mx.mappings.department-l3.productListContainer
+                  - name: mappingOfElementToCenter
+                    string: mx.mappings.department-l3.addProductToCartByName # <--PARAMS--${productName}
+                  - name: searchDirection
+                    string: down
+          else:
+            - executeFunction:
+                name: mx.functions.utils.isElementBehindBottomMenu
+                params:
+                  - name: element
+                    string: mx.mappings.department-l3.addProductToCartByName # <--PARAMS--${productName}
+                    # --RETURNS--${returnedIsBehind}-->
+            - if:
+                condition: ${returnedIsBehind}
+                then:
+                  - executeFunction:
+                      name: mx.functions.utils.centerElementVerticallyWithinContainer
+                      params:
+                        - name: mappingOfContainer
+                          string: mx.mappings.department-l3.productListContainer
+                        - name: mappingOfElementToCenter
+                          string: mx.mappings.department-l3.addProductToCartByName # <--PARAMS--${productName}
+                        - name: searchDirection
+                          string: down
+      - executeFunction:
+          name: mx.functions.department-l3.addProductToCart # <--PARAMS--${productName}
+      - executeFunction:
+          name: mx.functions.department-l3.assertProductAddedToCart # <--PARAMS--${productName}
+      - log:
+          message: "End Flow: od.add-to-cart.addProductToCartByNameInPLP"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function scrolls down to a product that does not have any special, promotional or discount badges
+  #                 adds the product to cart and retrieves its name, type and price.
+  # PARAMS:  ${previousList}  [OPTIONAL]  In order to run this function multiple times on the same page
+  #                                         it is possible to pass a List generated from a previous
+  #                                         execution of this function '${returnedCheckedProductsList}'.
+  #                                         Set to 'null' in order to restart the product verification process.
+  # NOTE:        This function does not make the difference between pieces, dual or weighable products
+  # NOTE:        This function does not take a product price limit into consideration.
+  # RETURNS:
+  #   ${returnedCheckedProductsList}
+  #   ${returnedProductName}
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.add-to-cart.addProductWithoutBadgesToCartInSLP
+    platform: android
+    flow:
+      # This drag action will hide the bottom menu in case it ends on top of the name label or the heart icon.
+      - drag:
+          from:
+            x: 50%
+            y: 55%
+          to:
+            x: 50%
+            y: 50%
+      - executeFunction:
+          name: mx.functions.slp.getProductNameWithoutSpecialBadges #--RETURNS--${returnedProductNameWithoutSpecialBadges}--${returnedCheckedProductsList}-->
+          params:
+            - name: previousList
+              string: ${previousList}
+      - executeFunction:
+          name: mx.functions.slp.centerProductIfDisplayedInTheLowerSectionOfTheScreen
+          params:
+            - name: productName
+              string: ${returnedProductNameWithoutSpecialBadges}
+      - storeIn:
+          key: returnedProductName
+          value: ${returnedProductNameWithoutSpecialBadges}
+      - executeFunction:
+          name: mx.functions.slp.addProductToCart
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - log:
+          message: "Product Name got: ${returnedProductName}"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.slp.assertProductAddedToCart
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - log:
+          message: "End flow: od.add-to-cart.addProductWithoutBadgesToCartInSLP"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function scrolls down to a weighable product that does not have any special, promotional or 
+  #                 discount badges, adds the product to cart and retrieves its name. If the product is a dual type
+  #                 the flow will click the UOM selector to change it to weight mode.
+  # NOTE:        This function does not take a product price limit into consideration.
+  # NOTE:        ONLY FOR WEIGHABLE OR DUAL PRODUCTS!!!
+  # PARAMS:  ${previousList}  [OPTIONAL]                In order to run this function multiple times on the same page
+  #                                                       it is possible to pass a List generated from a previous
+  #                                                       execution of this function '${returnedCheckedProductsList}'.
+  #                                                       Set to 'null' to restart the product verification process.
+  # RETURNS:
+  #   ${returnedProductNameWithoutSpecialBadges}
+  #   ${returnedProductName}
+  #   ${returnedProductWeightConversionRate}  How many grams are equal to 1 piece of the product.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.add-to-cart.addWeighableProductWithoutBadgesToCartInSLP
+    platform: android
+    flow:
+      # This drag action will hide the bottom menu in case it ends on top of the name label or the heart icon.
+      - drag:
+          from:
+            x: 50%
+            y: 55%
+          to:
+            x: 50%
+            y: 50%
+      - executeFunction:
+          name: mx.functions.slp.getWeighableProductNameWithoutSpecialBadges #--RETURNS--${returnedProductNameWithoutSpecialBadges}--${returnedCheckedProductsList}-->
+          params:
+            - name: previousList
+              string: ${previousList}
+      - executeFunction:
+          name: mx.functions.slp.centerProductIfDisplayedInTheLowerSectionOfTheScreen
+          params:
+            - name: productName
+              string: ${returnedProductNameWithoutSpecialBadges}
+      - storeIn:
+          key: returnedProductName
+          value: ${returnedProductNameWithoutSpecialBadges}
+      - executeFunction:
+          name: mx.functions.slp.addProductToCart
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - log:
+          message: "Product Name got: ${returnedProductName}"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.slp.assertProductAddedToCart
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - sleep:
+          duration: 3000 # Necessary wait to let add to cart button collapse.
+      # this click keeps the main button expanded.
+      - click:
+          identifier: mx.mappings.slp.mainButtonByProductName
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.slp.UOMSelectorByProductName # Unit of measure selector
+          then:
+            - click:
+                identifier: mx.mappings.slp.weightButtonByProductName
+          else:
+            - log:
+                message: "Product is not a Dual Type..."
+                color: CYAN
+      - executeFunction:
+          name: mx.functions.slp.getProductQuantityAsWeight
+          params:
+            - name: productName
+              string: ${returnedProductName}
+      - storeIn:
+          key: returnedProductWeightConversionRate
+          value: ${returnedProductWeight}
+      - log:
+          message: "Product Weight Conversion Rate got: ${returnedProductWeightConversionRate}"
+          color: CYAN
+      - log:
+          message: "End flow: od.add-to-cart.addWeighableProductWithoutBadgesToCartInSLP"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Scrolls down to find the product to be added to Cart (from SLP only) with multi-savings promotion.
+  #   If the product is not found within 20 swipes max or it is already added to the cart, the function will fail.
+  #   At the end, the method will assert the product was added to Cart.
+  # AUTHOR: Rodrigo Pacheco  (vn53p0i)
+  - name: mx.flows.od.add-to-cart.addToCartProductWithMultiSavingsPromotionInSLP
+    platform: android
+    flow:
+      # This drag action will hide the bottom menu in case it ends on top of the name label or the heart icon.
+      - drag:
+          from:
+            x: 50%
+            y: 55%
+          to:
+            x: 50%
+            y: 50%
+      - executeFunction:
+          name: mx.functions.slp.getProductNameWithMultiSavingsPromotion #--RETURNS--${returnedProductNameWithMultiSavingsPromotion}--${returnedPromotionType}-->
+      - executeFunction:
+          name: mx.functions.slp.addProductToCart
+          params:
+            - name: productName
+              string: ${returnedProductNameWithMultiSavingsPromotion}
+      - executeFunction:
+          name: mx.functions.slp.assertProductAddedToCart
+          params:
+            - name: productName
+              string: ${returnedProductNameWithMultiSavingsPromotion}
+      - sleep:
+          duration: 3000 # Necessary wait to let add to cart button collapse.
+      - log:
+          message: "End Flow: od.add-to-cart.addToCartProductWithMultiSavingsPromotionInSLP"
+          color: BLUE

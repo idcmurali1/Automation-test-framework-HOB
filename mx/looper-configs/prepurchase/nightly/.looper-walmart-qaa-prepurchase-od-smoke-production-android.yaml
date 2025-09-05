@@ -1,0 +1,63 @@
+inherit: 'job:///glass-mobile-app-automation/mx/qaa/base-job/global-base:mx/looper-configs/qaa/base/.looper-base.yml'
+
+gitShallowDepth: 50
+
+branches:
+  - spec: mx/prepurchase/release*
+    triggers:
+      - push: disabled
+      - pr: disabled
+
+      - cron:
+          spec: "0 0 * * *"
+          timezone: America/Mexico_City
+          call: build
+
+      - manual:
+          name: '[[ Run Walmart OD Smoke Android Test Suite ]]'
+          call: build
+
+  - spec: development
+    triggers:
+      - push: disabled
+      - pr: disabled
+      
+      - manual:
+          name: '[!] [[ Run Walmart OD Smoke Android Test Suite ]]'
+          call: build
+
+envs:
+  global:
+    variables:
+      APP_NAME: walmart
+      APP_PLATFORM: android
+      SAUCELABS_APK_FILENAME: ''
+      SAUCELABS_APK_VERSION: ''
+      SAUCELABS_APK_BUILD_NUMBER: ''
+      APP_PACKAGE: com.walmart.mg.debug
+      GLASS_ENV: production
+      TEST_SUITE: prepurchase-od-smoke
+      JIRA_PROJECT_ID: MMS
+      PARALLEL_EXECUTION: true
+      OVERWRITE_TC_SELECTION: false
+      TC_IDS: ''
+      EXECUTION_NAME: ''
+      REMOTE_DEVICE_NAME_ANDROID: 'Google Pixel 6 GoogleAPI Emulator'
+      REMOTE_PLATFORM_VERSION_ANDROID: 14.0
+      STOP_JIRA_REPORTING: false
+      TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT: true
+      SLACK_TEST_RESULTS_CHANNEL_ID: C063M11HW6S
+
+rules:
+  before:
+    group (name 'Set Global Vars'):
+      - exposeVars(./mx/app-versions/${APP_PLATFORM}/walmartmx.properties)
+      - var(SAUCELABS_APK_FILENAME): ${sauceFilename}
+      - var(SAUCELABS_APK_VERSION): ${appVersion}
+      - var(SAUCELABS_APK_BUILD_NUMBER): ${buildNumber}
+      - var(EXECUTION_NAME):
+          shell (name EXECUTION_NAME):
+            echo 'Nightly Run - ${TEST_SUITE}-${GLASS_ENV}-${APP_NAME}-${APP_PLATFORM} - v${SAUCELABS_APK_VERSION}(${SAUCELABS_APK_BUILD_NUMBER})'
+      - var(JIRA_SUMMARY_PREFIX):
+          shell (name JIRA_SUMMARY_PREFIX): 
+            echo 'nightly-walmart-'

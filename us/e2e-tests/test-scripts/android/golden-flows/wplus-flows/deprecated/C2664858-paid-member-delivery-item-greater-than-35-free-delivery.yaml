@@ -1,0 +1,205 @@
+general:
+  platform: android
+  tags: C2664858
+  #, p1-wplus-teflon-e2e
+  testCaseId: C2664858
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      
+
+    
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Existing Customer with Membership - STORE_SCHEDULED_DELIVERY Delivery from Store (> $35)
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      
+       # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+         key: customerEmail
+         value: wplususer${timestamp}@walmart.com
+
+      # Create Wplus Trial Account and convert to Paid using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createTrialAccountConvertToPaid
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.createWplusAccountPayload.annual
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: E2epassword$
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter 
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+            name: us.functions.utils.fetchFromDataList
+            params:
+              - name: email
+                string: ${customerEmail}
+              - name: storeId
+                string: 32144      
+              - name: itemType
+                string: STORE_SCHEDULED_DELIVERY
+              - name: itemList
+                string: us.data.greaterThan35.itemLists
+
+            # Add item to cart from deeplink
+      - executeFunction:
+              name: us.functions.global.navigation.goToDeepLink
+              params:
+                - name: deepLinkUrl
+                  string: ${deeplinkURl} 
+                  
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+   
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: pickup
+
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+            - name: addAddress
+              string: true
+            - name: firstName
+              string: wplus
+            - name: lastName
+              string: memb
+            - name: streetAddress
+              string: us.data.deliveryaddress.streetAddress
+            - name: city
+              string: us.data.deliveryaddress.city
+            - name: state
+              string: us.data.deliveryaddress.state
+            - name: zipcode
+              string: us.data.deliveryaddress.zipcode
+            - name: phoneNumber
+              string: us.data.deliveryaddress.phoneNumber
+
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery from store
+      
+      # verifying sc item delivery charges on cart
+      - executeFunction:
+          name: us.functions.wplus.cart.scItem.verifyDeliveryCharges
+
+      - executeFunction:
+         name: us.functions.wplus.cart.verifyDeliveryFeesWaivedOff
+
+      - executeFunction:
+          name: us.functions.cart.verifyNoThresholdFeesOnCart
+
+      
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Delivery from store
+
+      - executeFunction:
+          name: us.functions.wplus.reviewOrder.verifyDeliveryFeesWaivedOff 
+
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyNoThresholdFeesOnReviewOrder 
+
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvAndPlaceOrder
+          params:               
+           - name: cvv
+             string: 111 
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrderAgainIfError
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      #verify order confirmation page
+      - executeFunction:
+          name: us.functions.wplus.orderConfirmation.chargeWaiveOffValidation 
+          params:
+            - name: basketType
+              string: scOnly
+            - name: storeOrderType
+              string: delivery
+
+      
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps              

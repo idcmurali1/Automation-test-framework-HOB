@@ -1,0 +1,139 @@
+
+# ================================================================================================================================
+# TC: 007
+# Flow: TC-007 : Cashi validation  Production Only
+# ================================================================================================================================
+general:
+  testCaseId: C2720174
+  tags: C2720174, p1-mx-ea-prod, p1-bodega-ea-prod, p1-mx-mh-e2e-teflon, p1-mx-mh-e2e-prod
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      # Navigate to HomePage and validate HomePage is Loaded
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp007.android.email
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp007.ios.email
+
+      # Click on login and select sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login to account
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      # Go to checkout 
+      - executeFunction:
+          name: functions.accountPage.openWallet
+
+      - executeFunction:
+          name: functions.wallet.validateAddCreditCardIsDisplayed
+
+      - executeFunction:
+          name: functions.wallet.validateCashiIsDisplayed
+
+      # Go back to account Page
+      - goBack: true 
+
+      # Validate Departments and Services 
+      - executeFunction:
+          name: functions.global.tapServicesBtn
+
+      - executeFunction:
+          name: functions.servicesPage.validateServicesPageIsDisplayed
+
+      - executeFunction:
+          name: functions.global.tapDepartmentsBtn 
+
+      - executeFunction:
+          name: functions.departmentsPage.validateDepartmentsPageIsDisplayed
+
+      # Search for a 1P item and validate if search results are displayed
+      - executeFunction:
+          name: functions.global.tapShopBtn  
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.global.1PItems
+
+      # Navigate to cart and ensure Items are added to cart.     
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      #Navigate to ROP
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      #Select an address 
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+
+      #User is able to load wallet
+      - executeFunction:
+          name: functions.checkoutPage.validateWalletIsDisplayed
+
+      - executeFunction:
+          name: functions.checkoutPage.selectPaymentMethod
+          params:
+            - name: payment
+              string: data.paymentMethod.cashi
+
+      - executeFunction:
+          name: functions.checkoutPage.validateCashi
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: wcp-007
+          color: GREEN_BOLD

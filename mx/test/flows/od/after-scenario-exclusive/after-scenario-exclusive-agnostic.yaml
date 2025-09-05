@@ -1,0 +1,472 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Aug/25/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   This function empties favorites list and cart after test execution if necessary.
+  # NOTE:
+  #   ONLY FOR AFTER SCENARIO.
+  # PARAMS:
+  #   ${userEmail}               [Mandatory]  In case the execution logs out the test user after killing the app.
+  #   ${userPassword}            [Mandatory]  In case the execution logs out the test user after killing the app.
+  #   ${isListEmpty}             [Mandatory]  This value is needed in order to verify if it's really necessary to call the relaunch function.
+  #                                               Options [true | false].
+  #   ${isCartEmpty}             [Mandatory]  This value is needed in order to verify if it's really necessary to call the relaunch function.
+  #                                               Options [true | false].
+  # AUTHOR: 
+  #   Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.after-scenario-exclusive.emptyFavoritesListAndCart
+    flow:
+      - if:
+          condition: ${isListEmpty} == true && ${isCartEmpty} == true
+          then:
+              - log: 
+                  message: "Favorites List and Cart are Empty, no need to Relaunch App."
+                  color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.utils.relaunchApp
+            - executeFunction:
+                name: mx.functions.login.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.prehome.tapODBanner
+            # Tap 'My Items'...
+            - log:
+                message: Opening My Products Page...
+                color: BLUE
+            - click:
+                identifier: //*[contains(@resource-id,"navigation_my_items")] | //XCUIElementTypeButton[@name="My Items" or @label="My Items"]
+            - executeFunction:
+                name: mx.functions.utils.closeBlackPopupIfDisplayed
+            # Tap 'lists'...
+            - log:
+                message: Opening Lists...
+                color: BLUE
+            - click:
+                identifier: //XCUIElementTypeCell[@name="Listas"]/XCUIElementTypeButton | //XCUIElementTypeOther[@name="MyItemsViewController.headerContainerView"]//XCUIElementTypeButton[@name="Listas" or @name="Lists"] | //*[contains(@resource-id,"tab_lists")]
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.lists.loginButton
+                then:
+                  - click:
+                      identifier: mx.mappings.lists.loginButton
+                  - executeFunction:
+                      name: mx.functions.login.enterEmail
+                      params:
+                        - name: userEmail
+                          string: ${userEmail}
+                  - executeFunction:
+                      name: mx.functions.login.enterPassword
+                      params:
+                        - name: userPassword
+                          string: ${userPassword}
+                  - executeFunction:
+                      name: mx.functions.login.tapLogin
+                  - if: 
+                      condition: ${APP_PLATFORM} == 'ios'
+                      then:
+                        - executeFunction:
+                            name: mx.functions.login.save-password.tapDontAllowIfDisplayed
+                        - executeFunction:
+                            name: mx.functions.login.save-password.bottom-popup.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.lists.openFavoritesList
+            - executeFunction:
+                name: mx.functions.lists.deleteAllProductsFromList 
+            - if:
+                identifier:
+                  present:
+                    - identifier: //*[@name="LDBadge.label" and @value="0"] | //*[@resource-id="com.walmart.mg.debug:id/cart_summary_count" and @text="0"]
+                then:
+                  - log:
+                      message: "Cart is empty."
+                      color: CYAN
+                else:
+                  - log:
+                      message: "Emptying cart..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.top-menu.tapCartIcon
+                  - executeFunction:
+                      name: mx.functions.utils.closeBlackPopupIfDisplayed
+                  - loop:
+                      begin: 1
+                      end: 50
+                      storeIndex: lapCount
+                      flow:
+                        - log:
+                            message: "Lap: ${lapCount}"
+                            color: GREEN
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: //*[@name="Eliminar" or @name="Remove"] | //*[@text="Eliminar" or @text="Remove"]
+                            then:
+                              - click:
+                                  identifier: //*[@name="Eliminar" or @name="Remove"] | //*[@text="Eliminar" or @text="Remove"]
+                            else:
+                              - log:
+                                  message: "Cart is now empty."
+                                  color: CYAN
+                              - break: true
+      - log:
+          message: "End function: after-scenario-exclusive.emptyFavoritesListAndCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   This function empties the cart after test execution.
+  # NOTE:
+  #   ONLY FOR AFTER SCENARIO.
+  # PARAMS:
+  #   ${userEmail}               [Mandatory]  In case the execution logs out the test user after killing the app.
+  #   ${userPassword}            [Mandatory]  In case the execution logs out the test user after killing the app.
+  #   ${isCartEmpty}   [Mandatory]  This value is needed in order to verify if it's really necessary to call the relaunch function.
+  #                                     Options [true | false].
+  # AUTHOR: 
+  #   Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.od.after-scenario-exclusive.emptyCartWithLoginFromMyItemsIfNeeded
+    flow:
+      - if:
+          condition: ${isCartEmpty} == true
+          then:
+            - log:
+                message: "Cart is already empty, no need to relaunch app..."
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.utils.relaunchApp
+            - executeFunction:
+                name: mx.functions.login.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.prehome.tapODBanner
+            # Tap 'My Items'...
+            - log:
+                message: Opening My Products Page...
+                color: BLUE
+            - click:
+                identifier: //*[contains(@resource-id,"navigation_my_items")] | //XCUIElementTypeButton[@name="My Items" or @label="My Items"]
+            - executeFunction:
+                name: mx.functions.utils.closeBlackPopupIfDisplayed
+            # Tap 'lists'...
+            - log:
+                message: Opening Lists...
+                color: BLUE
+            - click:
+                identifier: //XCUIElementTypeCell[@name="Listas"]/XCUIElementTypeButton | //XCUIElementTypeOther[@name="MyItemsViewController.headerContainerView"]//XCUIElementTypeButton[@name="Listas" or @name="Lists"] | //*[contains(@resource-id,"tab_lists")]
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.lists.loginButton
+                then:
+                  - click:
+                      identifier: mx.mappings.lists.loginButton
+                  - executeFunction:
+                      name: mx.functions.login.enterEmail
+                      params:
+                        - name: userEmail
+                          string: ${userEmail}
+                  - executeFunction:
+                      name: mx.functions.login.enterPassword
+                      params:
+                        - name: userPassword
+                          string: ${userPassword}
+                  - executeFunction:
+                      name: mx.functions.login.tapLogin
+                  - if: 
+                      condition: ${APP_PLATFORM} == 'ios'
+                      then:
+                        - executeFunction:
+                            name: mx.functions.login.save-password.tapDontAllowIfDisplayed
+                        - executeFunction:
+                            name: mx.functions.login.save-password.bottom-popup.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.top-menu.tapCartIcon
+            - executeFunction:
+                name: mx.functions.utils.closeBlackPopupIfDisplayed
+            - log:
+                message: "Emptying cart..."
+                color: CYAN
+            - loop:
+                begin: 1
+                end: 50
+                storeIndex: lapCount
+                flow:
+                  - log:
+                      message: "Lap: ${lapCount}"
+                      color: GREEN
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: //*[@name="Eliminar" or @name="Remove"] | //*[@text="Eliminar" or @text="Remove"]
+                      then:
+                        - click:
+                            identifier: //*[@name="Eliminar" or @name="Remove"] | //*[@text="Eliminar" or @text="Remove"]
+                      else:
+                        - log:
+                            message: "Cart is now empty."
+                            color: CYAN
+                        - break: true
+      - log:
+          message: "End function: after-scenario-exclusive.emptyCart"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   This function empties the cart and deletes all custom lists after test execution.
+  # NOTE:
+  #   ONLY FOR AFTER SCENARIO.
+  # PARAMS:
+  #   ${userEmail}          [Mandatory]   In case the execution logs out the test user after killing the app.
+  #   ${userPassword}       [Mandatory]   In case the execution logs out the test user after killing the app.
+  #   ${isCartEmpty}        [Mandatory]   This value is needed in order to verify if it's really necessary to call the
+  #                                         relaunch function. Options [true | false].
+  #                                         It checks if there are products in cart after the session.
+  #   ${isListPageEmpty}    [Mandatory]   This value is needed in order to verify if it's really necessary to call the
+  #                                         relaunch function. Options [true | false].
+  #                                         It checks if there are custom lists created after the session.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  # EDITOR: Osmar Juárez (vn56dce)
+  - name: mx.flows.od.after-scenario-exclusive.emptyCartAndDeleteCustomLists
+    flow:
+      - if:
+          condition: ${isListPageEmpty} == true && ${isCartEmpty} == true
+          then:
+            - log: 
+                message: "Lists Page does not contain custom lists and Cart is Empty, no need to Relaunch App."
+                color: CYAN
+          else:
+            - executeFunction:
+                name: mx.functions.utils.relaunchApp
+            - executeFunction:
+                name: mx.functions.login.closePopupIfDisplayed
+            - executeFunction:
+                name: mx.functions.prehome.tapODBanner
+            # Tap 'My Items'...
+            - log:
+                message: Opening My Products Page...
+                color: BLUE
+            - click:
+                identifier: //*[contains(@resource-id,"navigation_my_items")] | //XCUIElementTypeButton[@name="My Items" or @label="My Items"]
+            - executeFunction:
+                name: mx.functions.utils.closeBlackPopupIfDisplayed
+            # Tap 'lists'...
+            - log:
+                message: Opening Lists...
+                color: BLUE
+            - click:
+                identifier: //XCUIElementTypeCell[@name="Listas"]/XCUIElementTypeButton | //XCUIElementTypeOther[@name="MyItemsViewController.headerContainerView"]//XCUIElementTypeButton[@name="Listas" or @name="Lists"] | //*[contains(@resource-id,"tab_lists")]
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.lists.loginButton
+                then:
+                  - click:
+                      identifier: mx.mappings.lists.loginButton
+                  - executeFunction:
+                      name: mx.functions.login.enterEmail
+                      params:
+                        - name: userEmail
+                          string: ${userEmail}
+                  - executeFunction:
+                      name: mx.functions.login.enterPassword
+                      params:
+                        - name: userPassword
+                          string: ${userPassword}
+                  - executeFunction:
+                      name: mx.functions.login.tapLogin
+                  - if: 
+                      condition: ${APP_PLATFORM} == 'ios'
+                      then:
+                        - executeFunction:
+                            name: mx.functions.login.save-password.tapDontAllowIfDisplayed
+                        - executeFunction:
+                            name: mx.functions.login.save-password.bottom-popup.closePopupIfDisplayed
+            - sleep:
+                duration: 5000
+            # Deleting Custom Lists...
+            - log:
+                message: "Checking if there are any Custom Lists..."
+                color: CYAN
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: //*[@resource-id="com.walmart.mg.debug:id/lists_tile_view" and not(.//*[@resource-id="com.walmart.mg.debug:id/lists_name" and @text= "Tus favoritos"])] | //*[@name= "LandingViewController.cardStackView"]/XCUIElementTypeButton[not(contains(@name, "Tus favoritos"))]
+                then:
+                  - log:
+                      message: "List page is empty (no Custom Lists), checking if Cart is empty..."
+                      color: CYAN
+                else:
+                  - log:
+                      message: "Custom List(s) found, deleting all Custom Lists..."
+                      color: CYAN
+                  - loop:
+                      begin: 1
+                      end: 50
+                      flow:
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: //*[@resource-id="com.walmart.mg.debug:id/lists_tile_view" and not(.//*[@resource-id="com.walmart.mg.debug:id/lists_name" and @text= "Tus favoritos"])] | //*[@name= "LandingViewController.cardStackView"]/XCUIElementTypeButton[not(contains(@name, "Tus favoritos"))]
+                            then:
+                              - log:
+                                  message: "Opening generic Custom List..."
+                                  color: CYAN
+                              - click:
+                                  identifier: //*[@resource-id="com.walmart.mg.debug:id/lists_tile_view" and not(.//*[@resource-id="com.walmart.mg.debug:id/lists_name" and @text= "Tus favoritos"])] | //*[@name= "LandingViewController.cardStackView"]/XCUIElementTypeButton[not(contains(@name, "Tus favoritos"))]
+                              - sleep:
+                                  duration: 5000
+                              - click:
+                                  identifier: //*[@text= "Eliminar esta lista"] | //*[@text= "Configuración"] | //*[@name= "Configuración"] | //*[@name= "Settings"] | //*[@value= "Settings"] | //*[@label= "Settings"]
+                              - sleep:
+                                  duration: 1500
+                              - click:
+                                  identifier: //*[@text= "Eliminar"] | //*[@value= "Eliminar esta lista"] | //*[@value= "Delete this list"] | //*[@text= "Eliminar esta lista"]
+                              - sleep:
+                                  duration: 1500
+                              - click:
+                                  identifier: //*[@value= "Eliminar"] | //*[@value= "Delete"] | //*[@text= "Eliminar"] 
+                              - sleep:
+                                  duration: 1500
+                            else:
+                              - log:
+                                  message: "All Custom Lists have been deleted."
+                                  color: CYAN
+                              - break: true
+            # Deleting All Products from Cart...
+            - if:
+                identifier:
+                  present:
+                    - identifier: //*[@name="LDBadge.label" and @value="0"] | //*[@resource-id="com.walmart.mg.debug:id/cart_summary_count" and @text="0"]
+                then:
+                  - log:
+                      message: "Cart is empty."
+                      color: CYAN
+                else:
+                  - log:
+                      message: "Emptying cart..."
+                      color: CYAN
+                  - executeFunction:
+                      name: mx.functions.top-menu.tapCartIcon
+                  - executeFunction:
+                      name: mx.functions.utils.closeBlackPopupIfDisplayed
+                  - loop:
+                      begin: 1
+                      end: 50
+                      storeIndex: lapCount
+                      flow:
+                        - log:
+                            message: "Lap: ${lapCount}"
+                            color: GREEN
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: //*[@name="Eliminar" or @name="Remove"] | //*[@text="Eliminar" or @text="Remove"]
+                            then:
+                              - click:
+                                  identifier: //*[@name="Eliminar" or @name="Remove"] | //*[@text="Eliminar" or @text="Remove"]
+                            else:
+                              - log:
+                                  message: "Cart is now empty."
+                                  color: CYAN
+                              - break: true
+      - log:
+          message: "End function: after-scenario-exclusive.emptyCartAndDeleteCustomLists"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  #
+  # PARAMS:
+  #   ${userEmail}     [Mandatory]  User's email to perform login with.
+  #   ${userPassword}  [Mandatory]  User's password to perform login with.
+  #
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.flows.od.after-scenario-exclusive.reLoginIfSessionExpired
+    platform: ios
+    flow:
+      - log:
+          message: Checking if Login form displayed due to expired session...
+          color: GREEN_BOLD
+      - if:
+          identifier:
+            present:
+              - identifier: //XCUIElementTypeStaticText[contains(@name,"Your session has expired")]
+            timeout: 5000
+          then:
+            - log:
+                message: User requires re-login due to expired session
+                color: GREEN_BOLD
+            - log:
+                message: '[ PARAM: User Email: "${userEmail}"]'
+                color: CYAN
+            - log:
+                message: '[ PARAM: User Password: "${userPassword}"]'
+                color: CYAN
+            - enterText:
+                identifier: //XCUIElementTypeTextField[@label="Email"]
+                string: ${userEmail}
+                clickFirst: true
+                clearField: true
+            - enterText:
+                identifier: //XCUIElementTypeTextField[@label="Password"]
+                string: ${userPassword}
+                clickFirst: true
+                clearField: true
+            - click:
+                identifier: SignInView.ctaButton
+            - executeFunction:
+                name: mx.functions.prehome.assertPageDisplayed
+          else:
+            - log:
+                message: User does not require re-login due to expired session
+                color: GREEN_BOLD
+      - log:
+          message: 'End flow: mx.flows.od.after-scenario-exclusive.reLoginIfSessionExpired'
+          color: BLUE
+
+  # DESCRIPTION: Empties the Cart in case it has products already added. This flow can be called when the user is in
+  #   Home Page or any other page that is displaying the Cart Icon at the top-left corner.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i), Sergio Fernandez (vn0t1qt)
+  # EDITOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.after-scenario-exclusive.emptyCart
+    flow:
+      - executeFunction:
+          name: mx.functions.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.cart.emptyCart
+      - log:
+          message: 'End flow: mx.flows.od.after-scenario-exclusive.emptyCart'
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # DESCRIPTION:  This flow deletes all addresses from account after test execution.
+  # AUTHOR: Teresa Partida (vn55epy)
+  - name: mx.flows.od.after-scenario-exclusive.deleteAddresses
+    flow:
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.account.openAddresses
+      - executeFunction:
+          name: mx.flows.od.addresses.deleteAllAddresses
+      - executeFunction:
+          name: mx.functions.addresses.assertNoAddressesAreDisplayed
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.bottom-menu.tapHome
+      - log:
+          message: "End function: after-scenario-exclusive.deleteAddresses"
+          color: BLUE

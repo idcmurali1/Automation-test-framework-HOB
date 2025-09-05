@@ -1,0 +1,141 @@
+general:
+  tags: unified-prod-e2e-1, C2672106, p2-ecomm-prod-e2e
+  testCaseId: C2672106
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 364, WP028
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo    
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "EVERGREEN $5 MEMBER FLOW"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+       # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.prod.android.wplsEmail
+            - name: android.password
+              string: us.data.prod.android.wplsPassword
+            - name: ios.email
+              string: us.data.prod.wplusprod2.email
+            - name: ios.password
+              string: us.data.prod.wplusprod2.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      # Change store
+      - executeFunction:
+          name: unified.us.functions.home.location.updateStore
+          params:
+            - name: address
+              string: 1105 Boston Rd, Springfield
+            - name: ZIP_CODE
+              string: 01119
+
+      # Change fulfillment to delivery
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      # Navigate to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+      # Search the Virtual pack Item
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: milk
+
+      # Click First item in the search list
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      # add item to the cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      #Evergreen Time slot Reservation.
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: page
+              string: cart
+            - name: tab
+              string: delivery
+            - name: addAddress
+              string: true
+            - name: addExistingAddress
+              string: true
+            - name: timeSlot
+              string: evergreen
+            - name: slotDay
+              string: today
+
+      #Evergreen Time slot and Price Validation on the Cart Page.
+      - executeFunction:
+          name: unified.us.functions.evergreen.validations.on.cartAndPosPage.member
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: unified.us.functions.utils.closeErrorAlertIfExists
+
+      #Evergreen Time slot and Price Validation on the Review Order Page.
+      - executeFunction:
+          name: unified.us.functions.evergreen.validations.on.reviewOrderPage.member
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,88 @@
+#======================================================================================================================
+#    AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+#   CREATED: Feb/15/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow changes the payment method to a debit card
+  # Param  ${last4Digits}  [Mandatory] Debit/Credit last 4 digits
+  - name: mx.flows.od.review-order.changeToCard
+    platform: android
+    flow: 
+      - log:
+          message: Changing method payment to card ending in ${last4Digits}
+          color: CYAN
+      - if:
+          identifier:
+            text:
+              - identifier: mx.mappings.review-order.cardSummary
+                contains: Con terminación en ${last4Digits}
+          then:
+            - log:
+                message: Desired card is already selected
+                color: CYAN
+            - break: true
+          else:
+            - log:
+                message: Changing payment method
+                color: CYAN
+            - click:
+                identifier: mx.mappings.review-order.payment-section.editPaymentMethod
+            - executeFunction:
+                name: mx.functions.payment.assertCardContainerDisplayed
+            - executeFunction:
+                name: mx.functions.payment.scrollRightToCard
+            - executeFunction:
+                name: mx.functions.payment.selectCard
+            - executeFunction:
+                name: mx.functions.payment.tapContinue
+      - log:
+          message: "End flow: od.review-order.changeToCard"
+          color: BLUE
+  
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Disables the susbtitute preferences for all products by using the general checkbox.
+  - name: mx.flows.od.review-order.disableSubstituePreferencesForAllProducts
+    platform: android
+    flow:
+      - executeFunction:
+          name: mx.functions.review-order.scrollUpToSection
+          params:
+            - name: sectionName
+              string: "Preferencias de sustitutos"
+      - executeFunction:
+          name: mx.functions.review-order.tapEditSubstitutePreferences
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.unselectAllProducts
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.tapUnderstood
+      - executeFunction:
+          name: mx.functions.review-order.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.review-order.tapEditSubstitutePreferences
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.assertGeneralSubstitutesCheckboxStatus
+          params:
+            - name: expectedStatus
+              string: unchecked
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.assertAllIndividualSubstitutesCheckboxStatus
+          params:
+            - name: expectedStatus
+              string: unchecked
+      - executeFunction:
+          name: mx.functions.substitutes-preferences.tapUnderstood
+      - log:
+          message: "End flow: od.review-order.disableSubstituePreferencesForAllProducts"
+          color: BLUE

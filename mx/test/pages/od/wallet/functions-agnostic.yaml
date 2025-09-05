@@ -1,0 +1,135 @@
+#======================================================================================================================
+#  AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#  CREATED: Feb/06/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method taps back to account page
+  - name: mx.functions.wallet.tapBack
+    flow: 
+      - click:  
+          identifier: mx.mappings.wallet.backButton
+      - log:
+          message: "End function: wallet.tapBack"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if there are more cards than certain quantity
+  - name: mx.functions.wallet.assertAtLeastCardQuantity
+    flow: 
+      - log:  
+          message: Asserting if wallet has at least 2 cards added
+          color: CYAN
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - getString:
+                identifier: mx.mappings.wallet.creditDebitCardsTitle
+                attribute: text
+                storeIn: cardTitle
+          else:
+            - getString:
+                identifier: mx.mappings.wallet.creditDebitCardsTitle
+                attribute: label
+                storeIn: cardTitle
+      - executeNode:
+          file: mx/test/helpers/department-l3/getTotalFromText.js
+          args:
+            - value: ${cardTitle}
+          getResponse:
+            storeIn: returnedQuantity 
+      - if:
+          condition: ${returnedQuantity} >= 2
+          then:
+            - log:
+                message: Quantity is as expected
+                color: CYAN
+          else:
+            - failTest:
+                message: Not enough cards for test user, failing test
+      - log:
+          message: End function - wallet.assertAtLeastCardQuantity
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if wallet page is displayed
+  - name: mx.functions.wallet.assertPageDisplayed
+    flow: 
+      - verifyIdentifier: 
+          present:
+            - identifier: mx.mappings.wallet.pageTitle
+            - identifier: mx.mappings.wallet.paymentMethodsContainer
+            - identifier: mx.mappings.wallet.otherPaymentMethodsContainer
+            - identifier: mx.mappings.wallet.backButton
+      - executeFunction:
+          name: mx.functions.utils.searchItemInPage
+          params:
+            - name: elementToFind 
+              string: mx.mappings.wallet.associateDiscountContainer
+      - log:
+          message: End function - wallet.assertPageDisplayed
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method asserts if payment method cash is unavailable
+  - name: mx.functions.wallet.assertPaymentMethodCashIsUnavailable
+    flow:
+      - scroll:
+          untilIdentifier: mx.mappings.wallet.radioButtonCashIsNotAvailable
+          direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.wallet.radioButtonCashIsNotAvailable
+          then:
+            - log:
+                message: "Payment method cash is unavailable"
+                color: CYAN
+          else:
+            - failTest:
+                message: "Payment method cash is available"
+      - log:
+          message: "End function: wallet.assertPaymentMethodCashIsUnavailable"
+          color: CYAN
+
+  #--------------------------------------------------------------------------------------------------------------------
+  # Description:
+  - name: mx.functions.wallet.assertNoCardsAdded
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: mx.mappings.wallet.creditPaymentContainer
+            - identifier: mx.mappings.wallet.editCardButton
+
+      - log:
+          message: "End function: wallet.assertNoCardsAdded"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method taps on add payment method.
+  - name: mx.functions.wallet.tapAddPaymentMethod
+    flow:
+      - click:
+          identifier: mx.mappings.wallet.add-card.addNewPaymentMethod
+      - log:
+          message: "End function: wallet.tapAddPaymentMethod"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method taps on add Debit/Credit Card.
+  - name: mx.functions.wallet.tapAddDebitCreditCard
+    flow:
+      - click:
+          identifier: mx.mappings.wallet.addCreditDebitCardButton
+      - log:
+          message: "End function: wallet.tapAddDebitCreditCard"
+          color: BLUE

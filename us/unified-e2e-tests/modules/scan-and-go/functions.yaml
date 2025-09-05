@@ -1,0 +1,471 @@
+functions:
+  - name: unified.us.functions.search.scanAndGo.StoreMapsMapView
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - verifyIdentifier:
+                contentDescription:
+                  - identifier: us.mappings.search.InStore.Filter
+                    contains: Filter by In-store, applied,
+            - if: 
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.search.storeMapsAisle
+                then:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.search.storeMapsAisle
+                  - click:
+                      identifier: us.mappings.search.storeMapsAisle
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.home.storeMapText
+                        # - identifier: us.mappings.search.storeMapsAisle.item
+                  - click:
+                      identifier: us.mappings.global.closeButton
+            - sleep: 
+                duration: 5000
+            - click:
+                identifier: us.mappings.search.storeMapsAisle.itemDetailScreen
+            - sleep:
+                duration: 3000
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.storeMapsAisle.itemAile
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - click:
+                identifier: us.mappings.search.storeMapsAisle.itemAile
+            # - verifyIdentifier:
+            #     present:
+            #       - identifier: us.mappings.search.storeMapsAisle.item
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.closeButton
+                then:
+                  - click:
+                      identifier: us.mappings.global.closeButton
+                else:
+                  - click:
+                      identifier: us.mappings.global.navigateBackArrow
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.search.storeMapsAisle
+                then:
+                  - click:
+                      identifier: us.mappings.search.storeMapsAisle
+                      wait: 3000
+                else:
+                  - executeFunction:
+                      name: unified.us.functions.search.clickOnFirstItem
+                  - click:
+                      identifier: us.mappings.home.items.storeMode.aile
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.items.storeMode.titleText
+                  - identifier: us.mappings.home.items.storeMode.aile.productmap
+            - click:
+                identifier: us.mappings.home.items.storeMode.storeMapsCloseButton
+                wait: 1000
+
+  - name: unified.us.functions.home.assert.scanAndGo
+    flow:
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.ViewstoremodeButton
+            - click:
+                identifier: us.mappings.home.ViewstoremodeButton
+                wait: 5000     
+      - if:
+          condition: ${platform} == 'Android'
+          then:      
+            - executeFunction:
+                name: us.functions.search.scanAndGo.StoreModeView
+      - if: 
+          condition: ${option} == 'checkprice'
+          then:
+            - click:
+                identifier: us.mappings.home.scanAndGo.checkPrice
+      # Allow Camera Access
+            - executeFunction:
+                name: unified.us.functions.scanner.allowWouldYouLikeToAccessYourCameraOption
+      
+      # Validate Are you at the store bottom overlay
+            - executeFunction:
+                name: unified.us.functions.scanner.validateAreYouAtTheStoreBottomOverlay
+
+      # Validate Are you get accurate prices bottom overlay
+            - executeFunction:
+                name: unified.us.functions.scanner.validateGetAccuratePriceBottomOverlay    
+      
+      #Validate allow location
+            - executeFunction:
+                name: unified.us.functions.scanner.allowLocation
+      
+      # Validate Are you get shop smart with scanner bottom overlay
+            - executeFunction:
+                name: unified.us.functions.scanner.shopSmartWithScannerBottomOverlay
+
+      # Enter barcode and verify
+            - executeFunction:
+               name: unified.us.functions.scanner.verifyAndEnterBarcodetext
+               params:
+                 - name: barcode
+                   string: ${barcode}
+
+  # Navigate to Debug panel and select store mode
+  - name: unified.us.functions.home.debugPanel.setUpScanAndGo
+    flow:
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://debugPanel
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.debugPanel.storeMode
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.debugPanel.storeMode
+      - click:
+          identifier: us.mappings.debugPanel.storeMode
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.DisableListeners
+            - click:
+                identifier: us.mappings.debugPanel.storeMode.DisableListeners
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.storeModeEnabled
+            - click:
+                identifier: us.mappings.debugPanel.storeMode.storeModeEnabled    
+      - if:
+          condition: ${platform} == 'Android'
+          then:   
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.storeId
+            - click:
+                identifier: us.mappings.debugPanel.storeMode.storeId  
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.debugPanel.storeMode.enterStoreId
+                then:
+                  - enterText:
+                      identifier: us.mappings.debugPanel.storeMode.enterStoreId
+                      string: us.data.prod.android.scanAndGo.storeId
+                  - click:
+                      identifier: us.mappings.paymentMethod.checkout.continueButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.debugPanel.storeMode.isTransactable
+      - click:
+          identifier: us.mappings.debugPanel.storeMode.isTransactable
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.storeSupportsScanAndGo
+            - click:
+                identifier: us.mappings.debugPanel.storeMode.storeSupportsScanAndGo
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.activateInStoreSession
+            - click:
+                identifier: us.mappings.debugPanel.storeMode.activateInStoreSession
+            - goBack: true
+            - click:
+               identifier: us.mappings.debugPanel.storeMode.clickToCloseDubugPanel
+               coordinates: 5% ,50%
+            - sleep:
+               duration: 3600
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.mockOrderHistoryEnabled
+            - click:
+                identifier: us.mappings.debugPanel.storeMode.mockOrderHistoryEnabled
+            
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.debugPanel.storeMode.notifyTransactionCompleted
+            - click:    
+                identifier: us.mappings.debugPanel.storeMode.notifyTransactionCompleted        
+            
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.debugPanel.storeMode.storeId
+                then:
+                  - enterText:
+                      identifier: us.mappings.debugPanel.storeMode.storeId
+                      string: us.data.prod.ios.scanAndGo.storeId
+                  - click:
+                      wait: 2000
+                      identifier: us.mappings.flex.doneButton
+                  - sleep:
+                      duration: 2000
+                  - click:
+                      wait: 2000
+                      identifier: us.mappings.debugPanel.storeMode.backScreen
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.debugPanel.storeMode.backScreen
+                then:
+                  - click:
+                      identifier: us.mappings.debugPanel.storeMode.backScreen
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.debugPanel.WelcometoyourStoreTitle
+                then:
+                  - click:
+                      identifier: us.mappings.home.storeModePopUpClose
+
+  - name: unified.us.functions.home.scanAndGo
+    flow:
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - executeFunction:
+                name: unified.us.functions.search.scanAndGo.StoreModeView
+      - if:
+          condition: ${platform} == 'iOS'
+          then:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.storeModePopUp
+                then:
+                  - click:
+                      identifier: us.mappings.home.storeModePopUpClose
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.ViewstoremodeButton
+            - click:
+                identifier: us.mappings.home.ViewstoremodeButton
+            - executeFunction:
+                name: unified.us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.home.scanAndGo
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center       
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.scanAndGo
+      - click:
+          identifier: us.mappings.home.scanAndGo
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.deliveryAddress.add.sharePreciseLocation
+                then:
+                  - click: 
+                      identifier: us.mappings.deliveryAddress.add.sharePreciseLocation
+      - executeFunction:
+          name: unified.us.functions.scanner.allowLocation
+      - executeFunction:
+          name: unified.us.functions.scanner.allowWouldYouLikeToAccessYourCameraOption
+      - executeFunction:
+          name: unified.us.functions.scanner.allowLocation
+      - if:
+          condition: ${platform} == 'Android'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.scanAndGo.inStoreTitle
+      - click:
+          identifier: us.mappings.home.scanAndGo.exitScanAndGo
+      - executeFunction:
+          name: unified.us.functions.search.scanAndGo.StoreModeView
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - click:
+                wait: 10000
+                identifier: us.mappings.home.scanAndGo
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.scanAndGo.welcomeTitle
+                  - identifier: us.mappings.home.scanAndGo.subTitle
+                  - identifier: us.mappings.home.scanAndGo.inStoreTitle
+            - click:
+                identifier: us.mappings.home.scanAndGo.exitScanAndGo
+                wait: 5000
+            - executeFunction:
+                name: us.functions.home.viewStoreMode
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.scanAndGo.findAnItem
+      - click:
+          identifier: us.mappings.home.scanAndGo.findAnItem
+      - sleep:
+         duration: 5000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.scanAndGo.findAnItem.allDepartments
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.storeMode.close
+            - click:
+                identifier: us.mappings.home.storeMode.close
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.scanAndGo.findAnItem.allDepartments
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - click:
+                identifier: us.mappings.tabBar.shop     
+          else:
+            - goBack: true
+      - executeFunction:
+          name: unified.us.functions.search.scanAndGo.StoreModeView
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.scanAndGo.walmartPay 
+      - click:
+          identifier: us.mappings.home.scanAndGo.walmartPay 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.scanAndGo.walmartPayTitle
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.scanAndGo.walmartPayTitle.Popup.Startscanning
+                then:
+                    - click:
+                        identifier: us.mappings.home.scanAndGo.walmartPayTitle.Popup.Startscanning
+                        wait: 3000
+          else:         
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.scanner.shopSmartWithScannerGotItButton
+                then:
+                  - click: 
+                      identifier: us.mappings.scanner.shopSmartWithScannerGotItButton
+                else:
+                  - click: 
+                      identifier: us.mappings.global.closeButton           
+      - if:
+          condition: ${platform} == 'iOS'
+          then: 
+            - click:
+                identifier: us.mappings.cart.missingAnything.closeButton  
+          else:       
+            - click:
+                identifier: us.mappings.backButton
+      - executeFunction:
+          name: unified.us.functions.search.scanAndGo.StoreModeView
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.scanAndGo.checkPrice
+      - click:
+          identifier: us.mappings.home.scanAndGo.checkPrice
+      - if:
+          condition: ${platform} == 'iOS'
+          then:    
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.scanAndGo.checkPrice.shopSmartText
+                then:
+                  - click:
+                      identifier: us.mapppings.wplus.gotItInRefferalDialog 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.scanAndGo.checkPrice.scannerText
+            - click:
+                identifier: us.mappings.home.ScannerCloseButton
+                doubleClick: true
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.scanner.shopSmartWithScannerTitle
+            - click:
+                identifier: us.mappings.scanner.shopSmartWithScannerGotItButton
+            - click:
+                identifier: us.mappings.backButton
+
+
+  - name: unified.us.functions.search.scanAndGo.StoreModeView
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.ViewstoremodeButton 
+          then:
+            - log: "Store view mode option displayed as expected"
+            - if:
+                condition: ${platform} == 'iOS'
+                then: 
+                  - click:
+                      wait: 10000
+                      identifier: us.mappings.home.ViewstoremodeButton
+          else:
+            - if:
+                condition: ${platform} == 'iOS'
+                then: 
+                  - log: relaunching app
+                  - terminateApp: true
+                  - executeFunction:
+                      name: unified.us.functions.global.navigation.goToDeepLink
+                      params:
+                        - name: deepLinkUrl
+                          string: walmart://home
+                  - sleep:
+                      duration: 3000   
+                  - executeFunction:
+                      name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.home.storeModePopUp
+                      then:
+                        - click:
+                            identifier: us.mappings.home.storeModePopUpClose
+                  - click:
+                      wait: 10000
+                      identifier: us.mappings.home.ViewstoremodeButton
+                else:          
+                  - failTest:
+                      message: "ENV_FAILURE - ${env} - Store mode view option not displayed as expected"  
+      - if:
+          condition: ${platform} == 'Android'
+          then:       
+            - click:
+                identifier: us.mappings.home.ViewstoremodeButton 
+                coordinates: 50%,50%

@@ -1,0 +1,549 @@
+#======================================================================================================================
+#    AUTHOR: Isis Tolentino (vn53dge)
+#   CREATED: Feb/22/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: qaa-dev-phase-ea-production-android-023
+
+scenarios:
+
+  - name: Main
+    flow:
+      - log: "TEST START: QAA - EA - PRODUCTION SANITY - EA-023"
+
+      # STEP 1: NAVIGATE THROUGH ONBOARDING AND SELECT EA BANNER - EA HOME IS DISPLAYED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 1: NAVIGATE THROUGH ONBOARDING AND SELECT EA BANNER."
+            - name: squadNames
+              string: CORE | QAA
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: zipCode
+              string: mx.data.qaa.sanity.ea-023.zipCode
+            - name: banner
+              string: 'EA'
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 2-3: NAVIGATE TO ACCOUNT AND LOGIN EXISTING ACCOUNT - USER LOGS IN SUCCESSFULLY.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 2-3: NAVIGATE TO ACCOUNT AND LOGIN EXISTING ACCOUNT."
+            - name: squadNames
+              string: CUSTOMER | QAA
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.sanity.ea-023.userEmail
+            - name: userPassword
+              string: mx.data.qaa.sanity.ea-023.userPassword
+            - name: userName
+              string: mx.data.qaa.sanity.ea-023.userName
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 4: OPEN "SHOES" DEPARTMENT, ADD A PRODUCT WITH SIZE SELECTION FROM PDP PAGE.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 4: OPEN 'SHOES' DEPARTMENT, ADD A PRODUCT WITH SIZE SELECTION FROM PDP PAGE."
+            - name: squadNames
+              string: PRE-PURCHASE  | QAA
+      
+      - executeFunction:
+          name: mx.functions.ea.bottom-menu.tapDepartments
+      - executeFunction:
+          name: mx.functions.ea.departments.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.departments.selectDepartmentByName
+          params:
+            - name: departmentName
+              string: mx.data.qaa.sanity.ea-023.departmentName
+      - executeFunction:
+          name: mx.functions.ea.department-l1-l2.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.department-l1-l2.openFirstAvailableCategory
+      - executeFunction:
+          name: mx.functions.ea.department-l1-l2.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.department-l1-l2.openFirstAvailableCategory
+      - executeFunction:
+          name: mx.functions.ea.department-l3.assertPageDisplayed
+      - executeFunction:
+          name: mx.flows.ea.sort-and-filter.addSoldByFilterWithOptionFromSLP
+          params:
+            - name: soldByOption
+              string: 'ByWalmart'
+      - executeFunction:
+          name: mx.functions.ea.department-l3.openFirstAvailablePDP #--RETURNS--${returnedProductName}-->
+      - storeIn:
+          key: QAA_EA_023_PRODUCT_NAME
+          value: ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.ea.pdp.assertCorrectProductDisplayed
+          params:
+            - name: productName
+              string: ${QAA_EA_023_PRODUCT_NAME}
+      - executeFunction:
+          name: mx.functions.ea.pdp.getProductPrice
+      - storeIn:
+          key: QAA_EA_023_PRODUCT_PRICE
+          value: ${returnedPrice}
+      - storeIn:
+          key: QAA_EA_023_ORIGINAL_PRODUCT_PRICE
+          value: ${returnedOriginalPrice}
+      - executeFunction:
+          name: mx.functions.utils.positionElementToTheCenter
+          params:
+            - name: elementToPositionCenter
+              string: mx.mappings.ea.pdp.sizeContainer
+      - executeFunction:
+          name: mx.functions.ea.pdp.assertSizeContainerDisplayed
+      - executeFunction:
+          name: mx.functions.ea.pdp.selectFirstAvailableSize
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: mx.functions.ea.pdp.getSelectedSize
+      - executeFunction:
+          name: mx.functions.ea.pdp.addToCart
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.ea.pdp.productNameLabel
+      - executeFunction:
+          name: mx.functions.ea.pdp.getProductName
+      - storeIn:
+          key: QAA_EA_023_PRODUCT_NAME
+          value: ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.ea.pdp.getProductQuantity
+      - storeIn:
+          key: QAA_EA_023_PRODUCT_QUANTITY
+          value: ${returnedProductQuantity}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 5: OPEN CART.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 5: OPEN CART."
+            - name: squadNames
+              string: PRE-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.pdp.tapClose
+      - executeFunction:
+          name: mx.functions.ea.top-menu.tapCartIcon
+      - executeFunction:
+          name: mx.functions.utils.closeBlackPopupIfDisplayed
+      - executeFunction:
+          name: mx.functions.ea.cart.assertPageDisplayed
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 6: VALDIATE CART TOTALS.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 6: VALDIATE CART TOTALS."
+            - name: squadNames
+              string: PURCHASE | QAA
+              
+      - executeFunction:
+          name: mx.functions.ea.cart.assertProductsCountInSubtotalLabel
+          params:
+            - name: expectedProductsCount
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+      - executeFunction:
+          name: mx.flows.ea.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${QAA_EA_023_PRODUCT_NAME}
+            - name: expectedQuantity
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+            - name: expectedUnitPrice
+              string: ${QAA_EA_023_PRODUCT_PRICE}
+            - name: assertDiscount
+              string: 'false'
+            - name: expectedOriginalPrice
+              string: 'null'
+            - name: expectedSubtotal
+              string: ${QAA_EA_023_PRODUCT_PRICE}
+      - executeFunction:
+          name: mx.flows.ea.cart.assertTotals
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.sanity.ea-023.deliveryMethod
+            - name: expectedDeliveryFee
+              string: mx.data.qaa.sanity.ea-023.deliveryFee
+            - name: expectedSubtotal
+              string: ${QAA_EA_023_PRODUCT_PRICE}
+            - name: assertDiscount
+              string: 'false'
+            - name: assertDeliveryFee
+              string: 'false'
+            - name: expectedSavingsAmount
+              string: 'null'
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 7-8: CLICK CONTINUE IN CART AND SELECT HOME DELIVERY ADDRESS.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 7-8: CLICK CONTINUE IN CART AND SELECT HOME DELIVERY ADDRESS."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.cart.tapContinue
+      - sleep:
+          duration: 8000
+      - executeFunction:
+          name: mx.functions.ea.address-selector-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.flows.ea.addresses.selectAddressByNameFromSelector
+          params:
+            - name: addressName
+              string: mx.data.qaa.sanity.ea-023.addressName
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertPageDisplayed
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 9: SELECT IN-STORE PAYMENT METHOD - PAYMENT METHOD IS SELECTED.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 9: SELECT IN-STORE PAYMENT METHOD."
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.scrollUpToSection
+          params:
+            - name: sectionOption
+              string: 'Payment'
+      - executeFunction:
+          name: mx.functions.utils.positionElementAtTheTop
+          params:
+            - name: elementToPositionUp
+              string: mx.mappings.ea.review-order.paymentSectionContainer
+      - executeFunction:
+          name: mx.flows.ea.review-order.selectInStorePaymentMethod
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 10: REVIEW ORDER ASSERTIONS - REVIEW ORDER INFORMATION IS CORRECT.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 10: REVIEW ORDER ASSERTIONS."
+            - name: squadNames
+              string: PURCHASE | QAA
+      - scroll:
+          direction: up
+          untilIdentifier: mx.mappings.ea.review-order.deliveryHeaderContainer
+          position: top
+      - executeFunction:
+          name: mx.functions.ea.review-order.getSingleDeliveryDate #--RETURNS--${returnedDeliveryDate}-->
+      - storeIn:
+          key: QAA_EA_023_REVIEW_ORDER_DELIVERY_DATE
+          value: ${returnedDeliveryDate}
+      - executeFunction:
+          name: mx.flows.ea.review-order.assertHomeDeliveryInformation
+          params:
+            - name: assertBy
+              string: 'FullString'
+            - name: expectedDeliveryDate
+              string: ${QAA_EA_023_REVIEW_ORDER_DELIVERY_DATE}
+            - name: expectedHomeAddressName
+              string: mx.data.qaa.sanity.ea-023.addressName
+            - name: addressFullString
+              string: mx.data.qaa.sanity.ea-023.addressFullStringFromCart
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertProductsCountInDeliveryDetailsSection
+          params:
+            - name: expectedProductsCount
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+      - executeFunction:
+          name: mx.functions.ea.review-order.openProductsDetailsPopup
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.assertProductsCount
+          params:
+            - name: expectedProductsCount
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.assertProductListed
+          params:
+            - name: productName
+              string: ${QAA_EA_023_PRODUCT_NAME}
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.tapClose
+      - scroll:
+          direction: down
+          untilIdentifier: mx.mappings.ea.review-order.deliveryFeeValue
+      - executeFunction:
+          name: mx.flows.ea.review-order.assertTotals #--RETURNS--${returnedEstimatedTotal}-->
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.sanity.ea-023.deliveryMethod
+            - name: expectedDeliveryFee
+              string: mx.data.qaa.sanity.ea-023.deliveryFee
+            - name: expectedSubtotal
+              string: ${QAA_EA_023_PRODUCT_PRICE}
+            - name: assertDiscount
+              string: 'false'
+            - name: assertDeliveryFee
+              string: 'false'
+            - name: expectedSavingsAmount
+              string: 'null'
+      - storeIn:
+          key: QAA_EA_023_ORDER_TOTAL
+          value: ${returnedEstimatedTotal}
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 11: PLACE ORDER - ORDER CONFIRMATION IS CORRECT.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 11: PLACE ORDER AND VALIDATE ORDER CONFIRMATION PAGE."
+            - name: squadNames
+              string: PURCHASE | QAA
+      - executeFunction:
+          name: mx.functions.ea.review-order.scrollUpToSection
+          params:
+            - name: sectionOption
+              string: "PhoneNumber"
+      - executeFunction:
+          name: mx.flows.ea.review-order.enterCellphoneNumberIfNotDisplayed
+          params:
+            - name: userPhoneNumber
+              string: mx.data.qaa.sanity.ea-023.userPhoneNumber
+      - executeFunction:
+          name: mx.functions.ea.review-order.tapPlaceOrder #--RETURNS--${returnedOrderedDate}-->
+      - sleep:
+          duration: 10000
+      - storeIn:
+          key: QAA_EA_023_ORDERED_DATE
+          value: ${returnedOrderedDate}
+      - storeIn:
+          key: EA_023_IS_CART_EMPTY
+          value: true
+      - storeIn:
+          key: EA_023_IS_ORDER_CREATED
+          value: true
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.assertPageDisplayed
+
+  #----------------------------------------------------------------------------------------------------------------
+
+      ## STEP 12: VALIDATE ORDER CONFIRMATION IS CORRECT.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 12 - Validate Order Confirmation"
+            - name: squadNames
+              string: PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.getOrderNumber #--RETURNS--${returnedOrderNumber}-->
+      - storeIn:
+          key: QAA_EA_023_ORDER_NUMBER
+          value: ${returnedOrderNumber}
+      - executeFunction:
+          name: mx.flows.ea.order-confirmation.assertConfirmationForHomeDelivery
+          params:
+            - name: expectedTotal
+              string: ${QAA_EA_023_ORDER_TOTAL}
+            - name: expectedDeliveryDate
+              string: ${QAA_EA_023_REVIEW_ORDER_DELIVERY_DATE}
+            - name: expectedProductsCount
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+            - name: expectedHomeAddressName
+              string: mx.data.qaa.sanity.ea-023.addressName
+            - name: isMultipleDelivery
+              string: 'false'
+            - name: assertBy
+              string: 'FullString'
+            - name: addressFullString
+              string: mx.data.qaa.sanity.ea-023.addressFullStringFromCart 
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 13: VERIFY ORDER IN ORDERS HISTORY - ORDER INFORMATION IS CORRECT.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 13: VERIFY ORDER IN ORDERS HISTORY."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.order-confirmation.tapFindMoreProducts
+      - sleep:
+          duration: 10000
+      - executeFunction:
+          name: mx.functions.ea.bottom-menu.tapAccount
+      - executeFunction:
+          name: mx.functions.ea.account.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.account.openOrdersHistory
+      - executeFunction:
+          name: mx.functions.ea.orders-history.assertPageDisplayed
+      - executeFunction:
+          name: mx.flows.ea.orders-history.assertOrder #--RETURNS--${returnedDeliveryDate}-->
+          params:
+            - name: orderNumber
+              string: ${QAA_EA_023_ORDER_NUMBER}
+            - name: expectedDeliveryMethod
+              string: mx.data.qaa.sanity.ea-023.deliveryMethod
+            - name: expectedTotal
+              string: ${QAA_EA_023_ORDER_TOTAL}
+            - name: isMultipleDelivery
+              string: 'false'
+            - name: expectedOrderStatus
+              string: mx.data.qaa.sanity.ea-023.expectedOrderStatus
+            - name: expectedDeliveryDate
+              string: ${QAA_EA_023_REVIEW_ORDER_DELIVERY_DATE}
+            - name: expectedProductsCount
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+      - storeIn:
+          key: QAA_EA_023_ORDERS_HISTORY_DELIVERY_DATE
+          value: ${returnedDeliveryDate}
+
+    #--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 14: OPEN ORDER DETAILS AND CONFIRM CORRECT INFORMATION.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 14: OPEN ORDER DETAILS AND CONFIRM CORRECT INFORMATION."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.functions.ea.orders-history.openOrder
+          params:
+            - name: orderNumber
+              string: ${QAA_EA_023_ORDER_NUMBER}
+
+      # First assertions...
+      - executeFunction:
+          name: mx.flows.ea.order-details.assertDetailsForHomeDeliveryWithSingleDelivery
+          params:
+            - name: expectedOrderNumber
+              string: ${QAA_EA_023_ORDER_NUMBER}
+            - name: expectedOrderedDate
+              string: ${QAA_EA_023_ORDERED_DATE}
+            - name: expectedDeliveryMethod
+              string: HomeDelivery
+            - name: expectedOrderStatus
+              string: mx.data.qaa.sanity.ea-023.expectedOrderStatus
+            - name: expectedDeliveryDate
+              string: ${QAA_EA_023_ORDERS_HISTORY_DELIVERY_DATE}
+            - name: expectedHomeAddressName
+              string: mx.data.qaa.sanity.ea-023.addressName
+            - name: assertBy
+              string: 'FullString'
+            - name: addressFullString
+              string: mx.data.qaa.sanity.ea-023.android.addressFullStringInOrderDetails
+      - executeFunction:
+          name: mx.functions.ea.order-details.expandProductsDetailsIfNotExpandedForSingleDelivery
+      - executeFunction:
+          name: mx.functions.utils.positionElementAtTheTop
+          params:
+            - name: elementToPositionUp
+              string: mx.mappings.ea.order-details.collapseProductDetailsSectionButton
+      
+      # Product Assertions...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertProductDisplayed
+          params:
+            - name: productName
+              string: ${QAA_EA_023_PRODUCT_NAME}
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertProductUnitPrice
+          params:
+            - name: expectedUnitPrice
+              string: ${QAA_EA_023_PRODUCT_PRICE}
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertProductOrderedQuantity
+          params:
+            - name: expectedQuantity
+              string: ${QAA_EA_023_PRODUCT_QUANTITY}
+      - scroll:
+          direction: down
+          scrollLimit: 1
+
+      # Totals Assertions...
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertSubtotal
+          params:
+            - name: expectedSubtotal
+              string: ${QAA_EA_023_PRODUCT_PRICE}
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertDiscount
+          params:
+            - name: expectedDiscount
+              string: '0.00'
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertDeliveryDiscount
+          params:
+            - name: expectedDeliveryDiscount
+              string: '49.00'
+      - scroll:
+          direction: down
+          scrollLimit: 4
+      - executeFunction:
+          name: mx.functions.ea.order-details.assertTotal
+          params:
+            - name: expectedTotal
+              string: ${QAA_EA_023_ORDER_TOTAL}
+      - scroll:
+          direction: down
+          scrollLimit: 1
+
+#--------------------------------------------------------------------------------------------------------------------
+
+      ## STEP 15: CANCEL ORDER - ORDER STATUS IS 'CANCELED'.
+      - executeFunction:
+          name: mx.squad-reporting.setTestCaseStep
+          params:
+            - name: step
+              string: "STEP 15: CANCEL ORDER."
+            - name: squadNames
+              string: POST-PURCHASE | QAA
+
+      - executeFunction:
+          name: mx.flows.ea.order-details.cancelOrderWithSetOption
+      - storeIn:
+          key: EA_023_IS_ORDER_CREATED
+          value: false

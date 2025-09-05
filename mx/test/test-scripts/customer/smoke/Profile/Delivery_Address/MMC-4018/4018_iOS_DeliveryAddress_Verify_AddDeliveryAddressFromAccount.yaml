@@ -1,0 +1,160 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Ramirez (vn53vq4)
+#  CREATED: Nov/05/2024
+#  REVISION: ---
+#  MANUAL JIRA TICKET: https://jira.walmart.com/browse/MMC-4018
+#  AUTOMATED JIRA TICKET: https://jira.walmart.com/browse/MMC-4470
+#
+#  FLOW: Navigate to EA Banner, open Account page,perform login verify account is logged in correctly and
+#        add new delivery address.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#  NOTE: JIRA features are not implemented yet for WCP approach.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-ios, customer-walmart-ea-smoke-production-ios-4018,
+        customer-bodega-ea-smoke-production-ios, customer-bodega-ea-smoke-production-ios-4018
+  testCaseId: MMC-4470
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: testStatus 
+          value: false
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      - storeIn:
+          key: userEmail 
+          value: mx.data.customer.userEmail
+
+      # Onboarding
+      - log:
+          message: "STEP 1: Onboarding..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Tap global account button and sign in.
+      - log:
+          message: "STEP 2: LOGIN..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: mx.data.customer.password
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+
+      # Open Add Address
+      - log:
+          message: "STEP 3: TAP ADD NEW ADDRESS..."
+          color: CYAN  
+      - executeFunction:
+          name: functions.accountPage.tapOnAddressRow
+      - executeFunction:
+          name: functions.account.addAddressPage.tapAddAddressBtn 
+
+      # Enter address information
+      - log:
+          message: "STEP 4: ENTER NEW ADDRESS INFORMATION..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.addAddressPage.addAddress
+          params:
+            - name: firstName
+              string: mx.data.customer.shared.userName
+            - name: lastName
+              string: mx.data.customer.shared.lastName
+            - name: apartmentName
+              string: mx.data.customer.shared.apartmentName
+            - name: exteriorNumber
+              string: mx.data.customer.shared.exteriorNumber
+            - name: interiorNumber
+              string: mx.data.customer.shared.interiorNumber
+            - name: streetAddress
+              string: mx.data.customer.shared.streetAddress
+            - name: municipalityName
+              string: mx.data.customer.shared.municipalityName
+            - name: cityName
+              string: mx.data.customer.shared.cityName
+            - name: stateName
+              string: mx.data.customer.shared.stateName
+            - name: zipCode
+              string: mx.data.customer.shared.zipCode
+            - name: coloniaName
+              string: mx.data.customer.shared.coloniaName
+            - name: crossingStreets
+              string: mx.data.customer.shared.crossingStreets
+            - name: references
+              string: mx.data.customer.shared.references
+            - name: phoneNumber
+              string: mx.data.customer.shared.phoneNumber
+
+      # Go back home page
+      - log:
+          message: "EXTRA STEP: NAVIGATE BACK TO HOME PAGE..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      
+      #Test Execution Status    
+      - storeIn:
+          key: testStatus 
+          value: true
+      
+      # Main HOOK completed
+      - log:
+          message: "MAIN HOOK COMPLETED SUCCESSFULLY!"
+          color: CYAN
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testStatus} == true
+          then:
+          - log:
+              message: "4018: Customer_Smoke_PROD_iOS_DeliveryAddress_Verify_AddDeliveryAddressFromAccount - Completed Succesfully!!"
+              color: YELLOW_BOLD
+          else:
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."

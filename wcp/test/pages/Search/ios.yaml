@@ -1,0 +1,96 @@
+functions:
+
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Search for products using sku, keywords, name or category
+  # Params:      ${searchText}  [Mandatory]  Product search info
+  - name: functions.searchField.enterText
+    platform: ios
+    flow: 
+      - click:
+          identifier: searchPage.searchBar
+      - sleep:
+          duration: 2000
+      - enterText:
+          identifier: searchPage.searchField
+          string: ${searchText}
+          clickFirst: true
+          clearField: true
+          pressEnter: true
+      - log:
+          message: "End Functions: searchField.enterText"
+          color: BLUE
+        
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Get product name for product added to cart
+  # No Params
+  - name: functions.searchResultPage.getProductName
+    platform: ios
+    flow:
+      - getString:
+          identifier: searchPage.firstItem
+          storeIn: itemtName
+          attribute: label
+      - executeNode:
+          file: wcp/test/helpers/SearchPage/extractProductName.js
+          args:
+            - value: ${itemtName}
+          getResponse:
+            storeIn: productName
+      - log: 
+          message: "Product name added to cart: ${productName}"
+          color: CYAN
+      - log:
+          message: "End Functions: searchResultPage.getProductName"
+          color: BLUE
+        
+#--------------------------------------------------------------------------------------------------------------------
+
+  # Description: Get product price for product added to cart
+  # Params:    ${productName}  [Mandatory]  Product name for which the price is required.
+  - name: functions.searchResultPage.getProductPrice
+    platform: ios
+    flow:
+      - getString:
+          identifier: searchResultPage.productPrice
+          storeIn: productPrice
+          attribute: label
+      - log: 
+          message: "Product price added to cart: ${productPrice}"
+          color: CYAN
+      - log:
+          message: "End Functions: searchResultPage.getProductPrice"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Gets the Original Price of the Product. The Original Price is the one that displays strikethrough when
+  #              the product has some sort of discount.
+  # RETURNS:  ${productOriginalPrice}
+  #              The Original Price of the product. If the product doesn't have any sort of discount, the returned value
+  #              will be the same final price that it is displaying.
+  - name: functions.searchResultPage.getOriginalPrice
+    platform: ios
+    flow:
+      # Get product price (this element contains both prices if the product has a discount)...
+      - getString:
+          identifier: searchResultPage.productPrice
+          storeIn: productPrice
+          attribute: label
+      - log:
+          message: ${productPrice}
+          color: YELLOW_BOLD
+      # Execute the corresponding helper to ger the original price..
+      - executeNode:
+          file: wcp/test/helpers/Price/cleanOriginalPrice.js
+          args:
+            - value: ${productPrice}
+          getResponse:
+            storeIn: productOriginalPrice
+      - log:
+          message: "Returned Product Original Price is: '${productOriginalPrice}'"
+          color: CYAN
+      - log:
+          message: "End function: functions.searchResultPage.getOriginalPrice"
+          color: BLUE

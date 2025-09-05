@@ -1,0 +1,427 @@
+#======================================================================================================================
+#    AUTHOR: Francisco Javier Ramírez Hernández (vn53vq4)
+#   CREATED: Nov/16/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method selects today delivery slot
+  - name: mx.functions.reserve-slot.selectTodaySlot
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.todaySlotIsSelected
+          then:
+              - log: "Today date slot is already selected"
+          else:
+            - if: 
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.todaySlotButtonIsAvailable
+                then:
+                  - click:
+                      identifier: mx.mappings.reserve-slot.todaySlotButton 
+                else:
+                  - failTest:
+                      message: "Today date slot is not available!"
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This method selects tomorrow delivery slot
+  - name: mx.functions.reserve-slot.selectTomorrowSlot
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.tomorrowSlotIsSelected
+          then:
+              - log: "Tomorrow date slot is already selected"
+          else:
+            - if: 
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.tomorrowSlotButtonIsAvailable
+                then:
+                  - click:
+                      identifier: mx.mappings.reserve-slot.tomorrowSlotButton
+                else:
+                  - failTest:
+                      message: "Tomorrow date slot is not available!"
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the Day After Tomorrow
+  - name: mx.functions.reserve-slot.selectDayAfterTomorrowSlot
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.reserve-slot.dayAfterTomorrowSlotIsSelected
+          then:
+              - log: 
+                  message: "Day After Tomorrow date slot is already selected"
+                  color: CYAN
+          else:
+            - if: 
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.dayAfterTomorrowSlotButtonIsAvailable
+                then:
+                  - click:
+                      identifier: mx.mappings.reserve-slot.dayAfterTomorrowSlotButton
+                else:
+                  - failTest:
+                      message: "Day After Tomorrow date slot is not available!"
+      - log:
+          message: "End function: reserve-slot.selectDayAfterTomorrowSlot" 
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the last day available, (Available days are: today, tomorrow, day after tomorrow)
+  - name: mx.functions.reserve-slot.selectLastAvailableDateSlot
+    platform: ios
+    flow:
+      - loop:
+           begin: 2
+           end: 0
+           storeIndex: i
+           mode: decrement
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.blockedDateSlot
+                  then: 
+                    - log: 
+                        message: "Slot with index ${i} is blocked, verifying next date slot..."
+                        color: CYAN
+                  else:
+                      - if:
+                          identifier:
+                            present:
+                              - identifier: mx.mappings.reserve-slot.selectedDateSlot
+                          then:
+                            - log: 
+                                message: "Last day available is already selected!"
+                                color: CYAN
+                          else:
+                            - click:
+                                identifier: mx.mappings.reserve-slot.dateSlotByIndex
+                      - break: true
+      - log:
+          message: "End function: reserve-slot.selectLastAvailableDateSlot"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the first day available, (today, tomorrow, day after tomorrow)
+  - name: mx.functions.reserve-slot.selectFirstAvailableDateSlot
+    platform: ios
+    flow:
+      - loop:
+           begin: 0
+           end: 2
+           storeIndex: i
+           mode: increment
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.blockedDateSlot
+                  then: 
+                    - log: "Slot with index ${i} is blocked, verifying next date slot..."
+                  else:
+                      - if:
+                          identifier:
+                            present:
+                              - identifier: mx.mappings.reserve-slot.selectedDateSlot
+                          then:
+                            - log:
+                                message: "First day available is already selected!"
+                                color: CYAN
+                          else:
+                            - click:
+                                identifier: mx.mappings.reserve-slot.dateSlotByIndex
+                      - break: true
+      - log:
+          message: "End function: reserve-slot.selectFirstAvailableDateSlot"
+          color: BLUE
+  
+  # --------------------------------------------------------------------------------------------------------------------
+                  
+  # Description: Scrolls down until WalmartPass section is displayed on home.
+  - name: mx.functions.reserve-slot.scrollDown
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          scrollLimit: 3       
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the last available and regular time slot, it ignores express slots.
+  - name: mx.functions.reserve-slot.selectLastAvailableTimeSlot
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          scrollLimit: 4
+          wait: 1000
+      - storeIn:
+          key: i
+          value: 11 # There can only be 11 time slots at max.
+      - loop:
+          begin: ${i}
+          end: 0
+          mode: decrement
+          flow:
+            - try:
+                flow:
+                  - click:
+                      identifier: mx.mappings.reserve-slot.timeSlotByIndex # <--PARAM--${i}
+                  - log:
+                      message: "Time slot with index '${i}' has been selected."
+                      color: CYAN
+                  - break: true
+                catch:
+                  flow:
+                    - log:
+                        message: "Time slot with index '${i}' is not available, verifying with the next time slot..."
+                        color: CYAN
+                    - arithmetic:
+                        expression: ${i} - 1
+                        storeIn: i
+      - log: 
+          message: "End function: reserve-slot.selectLastAvailableTimeSlot"
+          color: BLUE
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the first express time slot available (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectFirstAvailableExpressSlot
+    platform: ios
+    flow:
+      - loop:
+           begin: 1
+           end: 8      
+           storeIndex: i
+           mode: increment
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                  then: 
+                    -  click:
+                         identifier: mx.mappings.reserve-slot.expressTimeSlotRadioButtonByIndex
+                    - break: true
+                  else:
+                      - log: "Time slot with index ${i} is not an Express or is not available, verifying with the next time slot..."
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method selects the last available express time slot (from 9:00 am to 9:00 pm)
+  - name: mx.functions.reserve-slot.selectLastAvailableExpressSlot
+    platform: ios
+    flow:
+        - executeFunction: 
+            name: mx.functions.reserve-slot.scrollDown
+        - loop:
+           begin: 7
+           end: 0      
+           storeIndex: i
+           mode: decrement
+           flow:
+               - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.isAnExpressTimeSlotByIndex
+                  then: 
+                    -  click:
+                         identifier: mx.mappings.reserve-slot.expressTimeSlotRadioButtonByIndex
+                    - break: true
+                  else:
+                      - log: "Time slot with index ${i} is not an Express or is not available, verifying with the next time slot..."
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # This method selects a random available express time slot (from 9:00 am to 9:00 pm).
+  - name: mx.functions.reserve-slot.selectRandomAvailableExpressSlot
+    platform: ios
+    flow:
+      - loop:
+           begin: 1
+           end: 20    
+           storeIndex: j
+           mode: increment
+           flow:
+            - executeNode:
+                  file: mx/test/helpers/utils/getRandomInt.js
+                  args:
+                    - value: 1
+                    - value: 8
+                  getResponse:
+                    storeIn: i
+            - log: "Random slot index: ${i}"
+            - if:
+                identifier:
+                  present:
+                    - identifier: mx.mappings.reserve-slot.isAnExpressTimeSlotByIndex
+                then: 
+                    - click:
+                        identifier: mx.mappings.reserve-slot.expressTimeSlotRadioButtonByIndex
+                    - break: true
+                else:
+                    - log: "Current time slot is not an express one, verifying next time slot..."
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: Returns the Day of the Selected Delivery Slot in the following format:
+  #              <Index_of_selected_button>, <Day>, <Date>
+  #              (i.e. 1, Today, 6/12)
+  - name: mx.functions.reserve-slot.getSelectedDaySlot
+    platform: ios
+    flow:
+      - getString:
+          identifier: mx.mappings.reserve-slot.selectedDaySlotDayLabel
+          attribute: label
+          storeIn: day
+      - getString:
+          identifier: mx.mappings.reserve-slot.selectedDaySlotDateLabel
+          attribute: label
+          storeIn: date
+      - getString:
+          identifier: mx.mappings.reserve-slot.selectedDaySlot
+          attribute: index
+          storeIn: index
+      - if:
+          condition: ${index} == false
+          then:
+             - storeIn: 
+                key: index
+                value: '1'
+          else:
+            - if:
+                condition: ${index} == true
+                then:
+                  - storeIn:
+                      key: index
+                      value: '2'
+                else:
+                  - if:
+                      condition: ${index} == 2
+                      then:
+                        - storeIn:
+                            key: index
+                            value: '3'
+      - storeIn:
+          key: returnedSelectedDaySlot
+          value: ${index}, ${day}, ${date}
+      - log: 
+          message: "Delivery Slot Day Got: ${returnedSelectedDaySlot}"
+          color: CYAN
+      - log: 
+          message: "End function: reserve-slot.getSelectedDaySlot (Delivery Slot Day Got: '${returnedSelectedDaySlot}')"
+          color: BLUE
+  
+  # ----------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: This view only appears on iOS.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.reserve-slot.login.assertLoginScreenAsGuestDisplayed
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: mx.mappings.reserve-slot.login.title
+            - identifier: mx.mappings.reserve-slot.login.loginButton
+            - identifier: mx.mappings.reserve-slot.login.sectionContainer
+            - identifier: mx.mappings.reserve-slot.login.createAccountButton
+      - log:
+          message: "End function: reserve-slot.login.assertLoginScreenAsGuestDisplayed"
+          color: BLUE
+  
+  # ----------------------------------------------------------------------------------------------------------------
+  
+  # DESCRIPTION: This button only appears on iOS.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.reserve-slot.login.tapCreateAccount
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.login.createAccountButton
+      - log:
+          message: "End function: reserve-slot.login.tapCreateAccount"
+          color: BLUE
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method taps on close button
+  - name: mx.functions.reserve-slot.address-message-popup.tapClose
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.reserve-slot.address-message-popup.closeButton            
+  
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This method asserts add direction pop-up is not displayed
+  - name: mx.functions.reserve-slot.address-message-popup.assertPopupNotDisplayed
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          notPresent:
+            - identifier: mx.mappings.reserve-slot.address-message-popup.popupTitle
+            - identifier: mx.mappings.reserve-slot.address-message-popup.addAddressButton
+
+  # -------------------------------------------------------------------------------------------------------------------- 
+  
+  # Description: This function detects if first time slot is express, if it is a online payment will search for normal time slot
+  # AUTHOR: Gustavo Antonio López Cambambia
+  - name: mx.functions.reserve-slot.selectTimeSlotIfExpressDeliveryIsNotPresent
+    platform: ios
+    flow:
+        - executeFunction:
+            name: mx.functions.reserve-slot.selectFirstAvailableTimeSlot
+        - storeIn:
+            key: i
+            value: 1
+        - if:
+            identifier:
+              present:
+                - identifier: mx.mappings.reserve-slot.selectedExpressTimeSlotAndOnlinePayByIndex
+            then:
+              - executeFunction:
+                  name: mx.functions.reserve-slot.selectLastAvailableDateSlot
+              - executeFunction:
+                  name: mx.functions.reserve-slot.getSelectedDaySlot
+              - executeFunction:
+                  name: mx.functions.reserve-slot.assertThereAreAvailableTimeSlots
+              - executeFunction:
+                  name: mx.functions.reserve-slot.selectLastAvailableTimeSlot
+              - log:
+                  message: "Warning: the selected time slot is not express"
+            else:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: mx.mappings.reserve-slot.expressTimeSlotByIndex
+                  then:
+                    - log:
+                        message: "Selected time slot is express, it's not necessary to select a different time slot"
+                        color: CYAN
+                  else:
+                    - log:
+                        message: "Warning: the selected time slot is not express"
+                        color: YELLOW
+        - log:
+            message: "End function: reserve-slot.selectTimeSlotIfExpressDeliveryIsNotPresent"
+            color: BLUE

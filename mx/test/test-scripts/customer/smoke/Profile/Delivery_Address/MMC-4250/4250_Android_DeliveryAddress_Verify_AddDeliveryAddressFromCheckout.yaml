@@ -1,0 +1,251 @@
+#======================================================================================================================
+#  AUTHOR: Francisco Ramirez (vn53vq4)
+#  CREATED: Nov/11/2024
+#  REVISION: ---
+#  MANUAL JIRA TICKET: https://jira.walmart.com/browse/MMC-4250 
+#  AUTOMATED JIRA TICKET: https://jira.walmart.com/browse/MMC-4477
+#
+#  FLOW: Navigate to EA Banner, navigate to account and perform login, go back to home page and add any products to cart
+#        open cart and tap on add new delivery address.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#  NOTE: We are working only on PROD environments.
+#======================================================================================================================
+
+general:
+  tags: customer-walmart-ea-smoke-production-android, customer-walmart-ea-smoke-production-android-4250,
+        customer-bodega-ea-smoke-production-android, customer-bodega-ea-smoke-production-android-4250
+  testCaseId: MMC-4477
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: testStatus 
+          value: false
+      
+      #Cart is empty
+      - storeIn:
+          key: cartEmpty 
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_LAUNCH_AND_LOGIN ### [[ 🟢 Flow Identifier: LAUNCH & LOGIN 🟢 ]] ###
+
+      - storeIn:
+          key: userEmail 
+          value: mx.data.customer.userEmail
+
+      # Onboarding
+      - log:
+          message: "STEP 1: Onboarding..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      # Tap global account button and sign in.
+      - log:
+          message: "STEP 2: LOGIN..."
+          color: CYAN 
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: mx.data.customer.password
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+
+      
+      - log:
+          message: "STEP 3: NAVIGATE TO HOME AND ADD PRODUCTS TO CART..."
+          color: CYAN  
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: mx.data.customer.simpleProductsArray
+      
+      #Cart is not empty
+      - storeIn:
+          key: cartEmpty 
+          value: false
+
+      # Open Cart and tap on add delivery address
+      - log:
+          message: "STEP 4: OPEN CART AND TAP ADD NEW DELIVERY ADDRESS"
+          color: CYAN
+      - executeFunction:
+         name: functions.global.tapCartIcon
+      - executeFunction:
+          name: functions.cartPage.isCartPageDisplayed
+      - executeFunction:
+          name: functions.cartPage.tapOnAddressLink
+      - executeFunction:
+          name: mx.functions.addresses.tapAddAddressButton
+
+      # Enter address information
+      - log:
+          message: "STEP 5: ENTER NEW DELIVERY ADDRESS"
+          color: CYAN     
+      
+      - executeFunction:
+          name: functions.addAddressPage.enterFirstName # <-- ${firstName}
+          params:
+            - name: firstName
+              string: mx.data.customer.shared.userName
+      - executeFunction:
+          name: functions.addAddressPage.enterLastName # <-- ${lastName}
+          params:
+            - name: lastName
+              string: mx.data.customer.shared.lastName
+      - sleep:
+          duration: 3000          
+          
+      # Accept location permission pop up if displayed
+      - if:
+          identifier:
+            present:
+              - identifier: addAddressPage.allowLocationPermission
+            timeout: 3000
+          then:
+            - click:
+                identifier: addAddressPage.allowLocationPermission
+      - executeFunction:
+          name: mx.functions.add-and-edit-address-form.enterStreetAddress # <-- ${streetAddress}
+          params:
+            - name: streetAddress
+              string: mx.data.customer.shared.streetAddress
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: functions.addAddressPage.enterExteriorNumber # <-- ${exteriorNumber}
+          params:
+            - name: exteriorNumber
+              string: mx.data.customer.shared.exteriorNumber
+      - executeFunction:
+          name: functions.addAddressPage.enterInteriorNumber # <-- ${interiorNumber}
+          params:
+            - name: interiorNumber
+              string: mx.data.customer.shared.interiorNumber
+      
+      - executeFunction:
+          name: functions.addAddressPage.enterZipCode # <-- ${zipCode}
+          params:
+            - name: zipCode
+              string: mx.data.customer.shared.zipCode
+
+      # Happy path: dropdown selection.        
+      - click:
+          identifier: addAddressPage.coloniaDropdown
+      - sleep:
+          duration: 2000
+      - click:
+          identifier: com.walmart.mg.debug:id/municipality_field
+          coordinates: 50%, 95%
+      - sleep:
+          duration: 4000
+
+      # Happy path: This is intended in order to hide keyboard.    
+      - executeFunction:
+          name: functions.addAddressPage.tapSaveButton
+
+      - click:
+          identifier: addAddressPage.crossingStreetsField
+      - enterText:
+          identifier: addAddressPage.crossingStreetsField
+          string: mx.data.customer.shared.crossingStreets
+          clearField: true
+          clickFirst: true
+      - executeFunction:
+          name: functions.utils.keyboard.tapNextBtn
+      - sleep:
+          duration: 4000
+      - executeFunction:
+          name: functions.addAddressPage.enterReferences # <-- ${references}
+          params:
+            - name: references
+              string: mx.data.customer.shared.references
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: functions.addAddressPage.enterPhoneNumber # <-- ${phoneNumber}
+          params:
+            - name: phoneNumber
+              string: mx.data.customer.shared.phoneNumber
+      - executeFunction:
+          name: functions.addAddressPage.tapSaveButton
+      - executeFunction:
+          name: functions.addAddressPage.mapViewForAddressConfirmation.isPageDisplayed
+      - executeFunction:
+          name: mx.functions.add-and-edit-address-form.confirmation-map.dragGeolocationPin
+      - executeFunction:
+          name: functions.addAddressPage.mapViewForAddressConfirmation.confirmLocation 
+      
+      # Extra Step: Clean up cart.
+      - executeFunction:
+          name: functions.cartPage.removeRegularAndOOSItems/loop
+      
+      #Cart is empty
+      - storeIn:
+          key: cartEmpty 
+          value: true
+      
+      #Test Execution Status    
+      - storeIn:
+          key: testStatus 
+          value: true
+       
+      # Main HOOK completed
+      - log:
+          message: "MAIN HOOK COMPLETED SUCCESSFULLY!"
+          color: CYAN
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R  S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - if:
+          condition: ${testStatus} == true && ${cartEmpty} == true
+          then:
+          - log:
+              message: "4250: Customer_Smoke_PROD_Android_DeliveryAddress_Verify_AddDeliveryAddressFromCheckout - Completed Succesfully!!"
+              color: YELLOW_BOLD
+          else:
+            - executeFunction:
+                name: functions.cartPage.removeRegularAndOOSItems/loop
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."

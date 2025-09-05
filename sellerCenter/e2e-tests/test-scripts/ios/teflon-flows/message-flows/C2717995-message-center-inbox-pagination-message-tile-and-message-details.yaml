@@ -1,0 +1,83 @@
+general:
+  platform: ios
+  tags: C2717995, sc-e2e, sc-staging-feature-build
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Login
+      - executeFunction:
+          name: sc.functions.accounts.login
+          params:
+            - name: email
+              string: sc.partner2.email
+            - name: password
+              string: sc.partner2.password
+      
+      # From the Home screen, verify that the user can View and then select the inbox from the footer bar tab.
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: sc.functions.navigation.toTab
+                params:
+                  - name: tab
+                    string: Inbox
+
+      # Validate Inbox page
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: sellercenter://seller/inbox?status=failed
+      
+      - executeFunction:
+          name: sc.functions.inbox.verifyMessageListDisplay
+        
+      # Verify paginate multiple times without any issue
+      - executeFunction:
+          name: sc.functions.inbox.paginate
+
+      # Message details screen matches the same Message tile that is presented in the Message Inbox.
+      - if:
+          condition: ${APP_PLATFORM} == 'android'
+          then:
+            - executeFunction:
+                name: sc.functions.inbox.matchMessageDetails
+      
+      # Verify message details
+      - if:
+          condition: ${APP_PLATFORM} == 'ios'
+          then:
+            - executeFunction:
+                name: us.functions.global.navigation.goToDeepLink
+                params:
+                  - name: deepLinkUrl
+                    string: sellercenter://seller/inbox?incidentid=EC9D0305CE9242BFB86DDF6D234EC7CD&purchaseorderno=108903236816816
+
+      - executeFunction:
+          name: sc.functions.inbox.verifyMessageDetails
+
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: sc.functions.utils.afterSteps

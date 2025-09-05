@@ -1,0 +1,234 @@
+general:
+  platform: ios
+  tags: cart-011-ios, ca-function-run, cart_ios
+  testCaseId: cart-011-ios
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+  - name: Add multisave sku to cart, validate discounted price and env fee, eco and CRF fee in cart (all under environment fee). Rollback items can be added to the cart and old and new price is being shown in the cart.
+    flow:
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.onboarding.zipCodeT6N0A9
+      - log:
+          message: Navigated onboarding to home - T6N0A9 
+          color: YELLOW
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos
+      - log:
+          message: navigate to signin page
+          color: YELLOW 
+
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.cart011.emailios
+            - name: password
+              string: ca.test.data.cart011.passwordios 
+      - executeFunction:
+          name: ca.test.functions.accountPage.navigateToShop
+      - log:
+          message: signed in
+          color: YELLOW 
+
+      # Selecting store in home page
+      - executeFunction:
+          name: ca.test.functions.global.authentication.storeSelect
+          params:
+          - name: Zip_Code
+            string: ca.test.data.onboarding.zipcodeT0E0A0
+          - name: storeName
+            string: ca.test.search.storeNameT0E0A0
+      - log:
+          message: Updated the store to T6N0A9!
+
+      # change the Adderss
+      - executeFunction:
+          name: ca.test.functions.home.changeLocationLink
+          params:
+            - name: address
+              string: ca.test.data.cart011.initialAddress
+      - log:
+          message: Updated the Address to Albetra!
+          color: GREEN_BOLD_BRIGHT
+
+    #Clear Cart
+      - executeFunction:
+          name:  ca.test.functions.cart.removeCartItems
+      - log:
+          message: cart cleared
+          color: YELLOW 
+
+    # Add product to cart - GM rollback SKU
+    # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProduct
+          params:
+            - name: product
+              string: ca.test.data.rollBackItem
+      - log:
+          message: Scrolling to product with rollback badge
+          color: GREEN_BOLD
+
+      #check the rollback bage
+      - executeFunction:
+          name: ca.test.functions.productSearch.basedOnPromotionalBadge
+          params:
+            - name: promotionalBadge
+              string: ca.test.data.badges.rollback
+      - log:
+          message: Extracting product name with Rollback badge
+          color: GREEN_BOLD
+
+      #check and navigate to options
+      - executeFunction:
+          name: ca.test.functions.productSearch.navigateToOptions
+      - log:
+          message: navigate to options
+          color: GREEN_BOLD
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.PDPpage.addToCart
+      - log:
+          message: Add the item to cart!
+          color: GREEN_BOLD
+
+      - executeFunction:
+          name: ca.test.functions.PDPpage.closePDPpage
+      - log:
+          message: PDP page closed!
+          color: GREEN_BOLD
+
+      #clear search box
+      - executeFunction:
+          name: ca.test.functions.productSearch.clearSearch
+      - log:
+          message: search box cleared!
+          color: GREEN_BOLD
+
+    # Add product to cart - GM multi SKU
+    # Product Search
+      - executeFunction:
+          name: ca.test.functions.productSearch.searchAProductIos
+          params:           
+          - name: product
+            string: ca.test.data.cart11.GM_Item 
+      - log:
+          message:  GM multi SKU product searched
+          color: YELLOW
+
+    # Add to cart
+      - executeFunction:
+          name: ca.test.functions.srp.addToCartIos
+      - log:
+          message: Added GM to cart
+          color: YELLOW  
+
+    # Add product to cart - GM - ECO Fee
+    # Product Search
+      - executeFunction:
+              name: ca.functions.searchPage.searchItemArray
+              params:
+                - name: items
+                  string: ca.test.data.cart011.mxItemArray
+                - name: quantity
+                  string: ca.test.data.cart011.mxItemQty
+                - name: checkNonPromotionBadges
+                  string: true  
+      - log:
+          message: GM - Eco fee product searched!
+          color: YELLOW 
+          
+      - log:
+          message: Added GM - eco fee to cart
+          color: YELLOW  
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartIos
+      - log:
+          message: Navigated to cart
+          color: YELLOW
+
+      # Verify env fee, eco and CRF fee in cart (all under environment fee)
+      # Verify eco handling fee
+      - executeFunction:
+          name: ca.test.functions.cart.validateEcoHandlingFees
+          params: 
+            - name: eco_fee
+              string: ca.test.data.cart011.ecoHandlingFees
+      - log:
+          message: validated eco fee
+          color: YELLOW
+
+      # Verify crf fees in cart
+      - executeFunction:
+          name: ca.test.functions.cart.validateCrfFees
+          params: 
+            - name: crf_fee
+              string: ca.test.data.cart011.CRFFees
+      - log:
+          message: validated crf fee
+          color: YELLOW
+
+      # Verify bev fees in cart
+      - executeFunction:
+          name: ca.test.functions.cart.validateBevFees
+          params: 
+            - name: bev_fee
+              string: ca.test.data.cart011.bevDepositFees
+      - log:
+          message: validated bev fee
+          color: YELLOW   
+
+      # validate the rollback product price
+      - executeFunction:
+          name: ca.test.functions.cart.rollbackPriceValidation
+          params:
+            - name: productName
+              string: ca.test.data.product.cart011.GM_RollbackName
+            - name: product_price
+              string: ca.test.data.cart011.rollbackPrice
+      - log:
+          message: validated the rollback product price
+          color: YELLOW 
+
+      - log:
+          message: Added multisave sku to cart, validated discounted price and env fee, eco and CRF fee in cart (all under environment fee). Rollback items can be added to the cart and old and new price is being shown in the cart!
+          color: GREEN_BOLD_BRIGHT  
+#------------------------------------------------------------------------------
+      - storeIn:
+          key: testStatus
+          value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-011-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps 

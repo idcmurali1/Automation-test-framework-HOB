@@ -1,0 +1,349 @@
+#======================================================================================================================
+#  AUTHOR: Guillermo Canales (g0c08aj), Teresa Partida (vn55epy)
+#  CREATED: Nov/11/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: purchase-walmart-ea-sanity-production-ios-005, purchase-bodega-ea-sanity-production-ios-005, purchase-walmart-ea-sanity-production-ios, purchase-bodega-ea-sanity-production-ios
+  testCaseId: MMP-5096
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE:
+#    TC Goal: Merge cart (new user), pick up, pay at store * TBD
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    TO-DO
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMP-5096
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMP-5060
+#
+#######################################################################################################################
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: MMP_5096_SUCCESSFUL_EXECUTION
+          value: false
+
+      ## TODO Remove when issue is solved
+      - storeIn:
+          key: WALLET_ISSUE_WORKAROUND
+          value: true
+
+      - log: "BEFORE SCENARIO END"
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   M A I N   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: ios
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+        
+      #---------------------------------------------------------------------------------------------
+      # STEP 1: GO TO ACCOUNT ----------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 1: GO TO ACCOUNT."
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 2: LOGIN FROM PROFILE -----------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 2: LOGIN FROM PROFILE."
+          color: ORANGE
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: mx.data.qaa.purchase.sanity.tc005.userEmail
+            - name: userPassword
+              string: mx.data.purchase-user-data.userPassword
+
+      - log: "Emptying cart before test"
+      - executeFunction:
+          name: functions.global.tapShopBtn
+      - executeFunction:
+         name: functions.cartPage.clearCart
+
+      ##TODO: Remove this validation when wallet issue is fixed
+      - if:
+          condition: WALLET_ISSUE_WORKAROUND == true
+          then:
+            - log:
+                message: "SKIPPING STEPS 3 AND 4 DUE TO WALLET ISSUE"
+                color: ORANGE
+          else:
+            #---------------------------------------------------------------------------------------------
+            # STEP 3: GO TO WALLET  ----------------------------------------------------------------------
+            #---------------------------------------------------------------------------------------------
+            - log:
+                message: "STEP 3: OPEN WALLET."
+                color: ORANGE
+
+            - executeFunction:
+                name: functions.global.tapAccountBtn
+            - executeFunction:
+                name: functions.accountPage.openWallet
+
+            #---------------------------------------------------------------------------------------------
+            # STEP 4: DELETE ALL CARDS  ------------------------------------------------------------------
+            #---------------------------------------------------------------------------------------------
+            - log:
+                message: "STEP 4: DELETE ALL CARDS."
+                color: ORANGE
+            - executeFunction:
+                name: mx.flows.od.wallet.deleteAllCards
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 5: GO TO HOME  ------------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 5: GO TO HOME."
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      #---------------------------------------------------------------------------------------------
+      # STEPS 6 & 7: SEARCH ITEM (6) AND OPEN PDP (7) ----------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEPS 6 & 7: SEARCH ITEM (6) AND OPEN PDP (7)."
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.searchPage.getTheFirstAvailableItemAndNavigateToPDP
+          params:
+            - name: productArray
+              string: mx.data.purchase-products.appliances.array
+
+      - executeFunction:
+          name: mx.functions.pdp.getProductNameHelper # ---> ${returnedProductName}
+      - executeFunction:
+          name: mx.functions.pdp.getPrice # ---> ${returnedProductPrice}
+
+      # [VARIABLE] Product's name saved in ${purchase_5060_product_name}
+      - storeIn:
+          key: purchase_5060_product_name
+          value: ${returnedProductName}
+      # [VARIABLE] Product's price saved in ${purchase_5060_product_price}
+      - storeIn:
+          key: purchase_5060_product_price
+          value: ${returnedProductPrice}
+      # [VARIABLE] Product's quantity saved in ${purchase_5060_product_quantity}
+      - storeIn:
+          key: purchase_5060_product_quantity
+          value: "1"
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 8: CLICK ON BUY NOW  ------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 8: CLICK ON BUY NOW."
+          color: ORANGE
+
+      - executeFunction:
+          name: functions.productDetailsPage.tapBuyNowOption
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.functions.address-selector-popup.isPopUpDisplayed
+
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - executeFunction:
+                name: mx.functions.address-selector-popup.selectVisibleRandomAddress
+            - executeFunction:
+                name: mx.functions.address-selector-popup.tapSave
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 9: VALIDATE PRODUCT DETAILS -----------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 9: VALIDATE PRODUCT DETAILS."
+          color: ORANGE
+
+      - sleep:
+          duration: 5000
+
+      - executeFunction:
+          name: mx.flows.od.review-order.validateProductDetails
+          params:
+            - name: productName
+              string: ${purchase_5060_product_name}
+            - name: expectedProductPrice
+              string: ${purchase_5060_product_price}
+            - name: expectedProductQuantity
+              string: ${purchase_5060_product_quantity}
+
+      - executeFunction:
+          name: functions.checkoutPage.validateItemDetails
+
+      ##TODO: Remove this validation when wallet issue is fixed
+      - if:
+          condition: WALLET_ISSUE_WORKAROUND == true
+          then:
+            - log:
+                message: "SKIPPING STEPS 10-12 DUE TO WALLET ISSUE"
+                color: ORANGE
+
+          else:
+            #---------------------------------------------------------------------------------------------
+            # STEP 10: OPEN WALLET -----------------------------------------------------------------------
+            #---------------------------------------------------------------------------------------------
+            - log:
+                message: "STEP 10: OPEN WALLET"
+                color: ORANGE
+
+            - executeFunction:
+                name: mx.functions.review-order.scrollToAddPaymentButton
+            - executeFunction:
+                name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+
+            #---------------------------------------------------------------------------------------------
+            # STEP 11: VALIDATE DELETED CARD IS NOT DISPLAYED --------------------------------------------
+            #---------------------------------------------------------------------------------------------
+            - log:
+                message: "STEP 11: VALIDATE DELETED CARD IS NOT DISPLAYED."
+                color: ORANGE
+
+            - executeFunction:
+                name: mx.functions.wallet.assertNoCardsAdded
+
+            #---------------------------------------------------------------------------------------------
+            # STEP 12: ADD AMEX CARD ---------------------------------------------------------------------
+            #---------------------------------------------------------------------------------------------
+            - log:
+                message: "STEP 12: ADD AMEX CARD."
+                color: ORANGE
+
+            - executeFunction:
+                name: mx.functions.wallet.tapAddPaymentMethod
+
+            - executeFunction:
+                name: mx.flows.od.wallet.addNewDebitOrCreditCardShort
+                params:
+                  - name: cardNumber
+                    string: mx.data.purchase-payment.amex.cardNumber
+                  - name: expirationDate
+                    string: mx.data.purchase-payment.card.expirationDate
+                  - name: cvv
+                    string: data.global.card.cvv.1234
+                  - name: last4Digits
+                    string: mx.data.purchase-payment.amex.last4Digits
+
+            - executeFunction:
+                name: mx.functions.payment.tapContinue
+
+      - executeFunction:
+          name: functions.checkoutPage.paymentMethod.assertCreditOrDebitCardSelected
+          params:
+            - name: cardLast4Digits
+              string: mx.data.purchase-payment.amex.last4Digits
+
+      - executeFunction:
+          name: functions.checkoutPage.addCVV
+          params:
+            - name: CVV
+              string: data.global.card.cvv.1234
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToSection
+          params:
+            - name: sectionName
+              string: "Total"
+
+      - executeFunction:
+          name: mx.flows.od.review-order.assertTotalsInformation
+          params:
+            - name: expectedSubtotalProductsCount
+              string: ${purchase_5060_product_quantity}
+            - name: expectedSubtotal
+              string: ${purchase_5060_product_price}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 13: PLACE ORDER -----------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - if:
+          condition: ${GLASS_ENV} == 'teflon'
+          then:
+            - log:
+                message: "STEP 13: PLACE ORDER"
+                color: ORANGE
+
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+          else:
+            - log: "SKIPPING ORDER PLACEMENT IN PROD ENV"
+
+      # End main -----------------------------------------------------------------------------------
+      - storeIn:
+          key: MMP_5096_SUCCESSFUL_EXECUTION
+          value: true
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   A F T E R   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMP_5096_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"

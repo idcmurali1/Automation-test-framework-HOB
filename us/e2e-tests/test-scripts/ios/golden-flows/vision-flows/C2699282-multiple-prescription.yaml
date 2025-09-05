@@ -1,0 +1,189 @@
+general:
+  platform: ios
+  tags: C2699282, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2699282 
+  metadata:
+    - name: scenarioId
+      string: PV009
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start main
+     
+     # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+      
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      
+      - storeIn:
+          key: customerEmail
+          value: wplususer${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+      
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.visionFlow.createAccountPayload
+      
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${customerEmail}
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+           name: us.functions.gic.select.inhome.delivery.address
+
+      # add Sunglass item to cart
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.flow.vision.sunglass.item1.deeplink
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart        
+
+      # Second Item - eyeglasses
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.flow.vision.item1.deeplink   
+
+      - executeFunction:
+          name: us.functions.item.visionItem.verifyItemPage         
+
+      - executeFunction:
+          name: us.functions.item.visionItem.verifySelectLenses
+          params:
+            - name: itemType
+              string: Eyeglasses            
+            - name: LenseType
+              string: Lense B   
+            - name: LenseMaterial
+              string: PolyCarbonate
+            - name: option
+              string: StandardPolycarbonate
+            - name: LenseColor
+              string: Copper   
+            - name: add-ons
+              string: No add-ons  
+
+      - executeFunction:
+          name: us.functions.item.visionItem.AddPrescription
+          params:
+            - name: name
+              string: PatientA        
+            - name: dob
+              string: us.data.flow.multiPrecriptionDob1
+            - name: PD
+              string: us.data.flow.multiPrecriptionPd1
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.verifyVisionItemTile
+
+      # Third Item - eyeglasses     
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.flow.vision.item2.deeplink            
+
+      - executeFunction:
+          name: us.functions.item.visionItem.verifySelectLenses
+          params:
+            - name: itemType
+              string: Eyeglasses            
+            - name: LenseType
+              string: Lense A   
+            - name: LenseMaterial
+              string: HiIndex
+            - name: option
+              string: Standard hi-index
+            - name: add-ons
+              string: No add-ons 
+
+      - executeFunction:
+          name: us.functions.item.visionItem.AddPrescription
+          params:
+            - name: name
+              string: PatientB         
+            - name: dob
+              string: us.data.flow.multiPrecriptionDob2
+            - name: PD
+              string: us.data.flow.multiPrecriptionPd2
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart      
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: us.functions.reviewOrder.verifyVisionItemTile
+          
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+      - log: ${orderNo}
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

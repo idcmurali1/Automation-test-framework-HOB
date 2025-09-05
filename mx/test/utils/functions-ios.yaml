@@ -1,0 +1,557 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Oct/24/2022
+#  REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+  
+  # DESCRIPTION: This function extracts the 'rect' attribute from ${element} and stores the X and Y coordinate values
+  #              in the variables ${x} and ${y} respectively.
+  # PARAM:       ${element}  [Mandatory]  Coordinates will be extracted from this element.
+  # RETURNS: Coordinates in the variables: ${x} and ${y}
+  # AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+  - name: mx.functions.utils.extractElementCoordinates
+    platform: ios
+    flow: 
+      - log:
+          message: "Extracting bounds attribute from element: '${element}'"
+          color: CYAN
+      - getString:
+          identifier: ${element}
+          storeIn: bounds
+          attribute: rect
+      - log:
+          message: "Extracted bounds: ${bounds}"
+          color: CYAN
+      - executeNode:
+          file: mx/test/helpers/utils/extractElementCoordinates.js
+          args:
+            - value: '${bounds}'
+            - value: 'iOS'
+          getValue:
+            - key: x
+              storeIn: x
+            - key: y
+              storeIn: y
+            - key: width
+              storeIn: x2
+            - key: height
+              storeIn: y2
+      - log:
+          message: "Coordinates got: X: '${x}' and Y: '${y}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: utils.extractElementCoordinates"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------          
+  
+  # Description: This function performs a click by coordinates relative to the specified element on ${relativeElement}
+  #              by modifying the values of the X and Y coordinates.
+  #              Note: The X coordinate is the horizontal axis and the Y coordinate is the vertical axis in appium.
+  #              Note: To only modify one axis, the one not to be modified must be set to '0'. I.E. to perform a click
+  #              to the right of the relative element you can assign the params like this: ${modifyValueX} = '150'
+  #              and ${modifyValueY} = '0'.
+
+  #              Note: +X,+Y = This will perform a diagonal click down and to the right of the relative element.
+  #              Note: -X,+Y = This will perform a diagonal click down and to the left of the relative element.
+  #              Note: +X,-Y = This will perform a diagonal click up and to the right of the relative element.
+  #              Note: -X,-Y = This will perform a diagonal click up and to the left of the relative element.
+
+  # Param:       ${relativeElement}   [Mandatory]  The click will be performed relative to this element.
+  # Param:       ${modifyValueX}      [Mandatory]  Integer: value that will be used to modify the X coordinate, can be negative.
+  # Param:       ${modifyValueY}      [Mandatory]  Integer: value that will be used to modify the Y coordinate, can be negative.
+  - name: mx.functions.utils.clickByCoordinatesRelativeToElement
+    platform: ios
+    flow:
+        - executeFunction:
+            name: mx.functions.utils.extractElementCoordinates
+            params:
+              - name: element
+                string: ${relativeElement}
+        - log:
+            message: "Modifying coordinates of X and Y"
+            color: CYAN
+        - arithmetic:
+            expression: ${x} + ${modifyValueX}
+            storeIn: x1
+        - arithmetic:
+            expression: ${y} + ${modifyValueY}
+            storeIn: y1
+        - click:
+            coordinates: ${x1}, ${y1}
+        - log:
+            message: "End function: utils.clickByCoordinatesRelativeToElement"
+            color: BLUE
+
+#--------------------------------------------------------------------------------------------------------------------          
+  
+  # Description: This function tap on close keyboard button
+  - name: mx.functions.utils.tapCloseKeyboardButton
+    platform: ios
+    flow: 
+      - click:
+          identifier: mx.mappings.utils.closeKeyboardButton
+      - log:
+          message: "End function: utils.tapCloseKeyboardButton"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function scrolls all the way to the top with a single click.
+  - name: mx.functions.utils.scrollToTop
+    platform: ios
+    flow:
+      - log:
+          message: "Scrolling to the top."
+          color: CYAN
+      - click:
+          coordinates: 50%,5%
+      - log:
+          message: "End function: utils.scrollToTop"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function closes the "Rate Walmart" popup.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.closeRateWalmartPopupIfDisplayed
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.utils.rate-walmart-popup.notNowButton
+          then:
+            - log:
+                message: "Rate Walmart Popup displayed, closing popup."
+                color: CYAN
+            - click:
+                identifier: mx.mappings.utils.rate-walmart-popup.notNowButton
+          else:
+            - log:
+                message: "Rate Walmart Popup did not displayed, flow will continue..."
+                color: CYAN
+      - log:
+          message: "End function: utils.closeRateWalmartPopupIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+  
+  # Description: This function closes the "Rate Walmart" popup.
+  # AUTHOR: Isis Tolentino (vn53dge)
+  - name: mx.functions.utils.closeRateWalmartPopup
+    platform: ios
+    flow:
+      - click:
+          identifier: mx.mappings.utils.rate-walmart-popup.notNowButton
+      - log:
+          message: "End function: utils.closeRateWalmartPopup"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This method closes any instance of the black popup from different pages if it's displayed.
+  - name: mx.functions.utils.closeBlackPopupIfDisplayed
+    platform: ios
+    flow: 
+      - if:
+          identifier:
+            # 'present' attribute must be used instead of 'visible' because this popup always has the attribute 'visible' set as false.
+            present:
+              - identifier: mx.mappings.utils.black-popup.container
+          then:
+            - log:
+                message: "Closing black popup..."
+                color: CYAN
+            - executeFunction:
+                name: mx.functions.utils.extractElementCoordinates
+                params:
+                  - name: element
+                    string: mx.mappings.utils.black-popup.closeButton
+            - executeFunction:
+                name: mx.functions.utils.clickByCoordinatesRelativeToElement
+                params:
+                  - name: relativeElement
+                    string: mx.mappings.utils.black-popup.closeButton
+                  - name: modifyValueX
+                    string: '5'
+                  - name: modifyValueY
+                    string: '5'
+      - log:
+          message: "End function: utils.closeBlackPopupIfDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${element}  [Mandatory]  Element to check whether it is displayed or not in the visible area of the screen.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.utils.isElementDisplayed
+    platform: ios
+    flow:
+      - log:
+          message: "Element: '${element}'"
+          color: CYAN
+      - storeIn:
+          key: returnedIsDisplayed
+          value: false
+      - if:
+          identifier:
+            present:
+              - identifier: ${element}
+          then:
+            - getString:
+                identifier: ${element}
+                attribute: visible
+                storeIn: returnedIsDisplayed
+      - log:
+          message: "Is element displayed?: '${returnedIsDisplayed}'"
+          color: CYAN
+      - log:
+          message: "End function: utils.isElementDisplayed"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${bundleId}  [Mandatory]  iOS Bundle Identifier to activate.
+  # AUTHOR:  Rodrigo Pacheco  (vn53p0i)
+  # EDITOR:  Osmar Juárez (vn56dce)
+  - name: mx.functions.utils.terminateApp
+    platform: ios
+    flow:
+      - executeAppiumScript:
+          method: "mobile: terminateApp"
+          params:
+            - key: bundleId
+              value: ${bundleId}
+      - log:
+          message: "End function: utils.terminateApp"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS:  ${bundleId}  [Mandatory]  iOS Bundle Identifier to activate.
+  # AUTHOR:  Rodrigo Pacheco  (vn53p0i)
+  # EDITOR:  Osmar Juárez (vn56dce)
+  - name: mx.functions.utils.activateApp
+    platform: ios
+    flow:
+      - executeAppiumScript:
+          method: "mobile: activateApp"
+          params:
+            - key: bundleId
+              value: ${bundleId}
+      - log:
+          message: "End function: utils.activateApp"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # PARAMS: ${bundleId}  [Optional]  Bundle Identifier to re-launch. If this param is not set, the default value is 'com.walmartmexico.WalmartMG.qa'
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  # EDITOR: Osmar Juárez (vn56dce)
+  - name: mx.functions.utils.relaunchApp
+    platform: ios
+    flow:
+      - terminateApp: true
+      - sleep:
+          duration: 1500
+      - executeFunction:
+          name: mx.functions.utils.activateApp
+          params:
+            - name: bundleId
+              string: ${bundleId:com.walmartmexico.WalmartMG.qa}
+      - sleep:
+          duration: 5000
+      - log:
+          message: "End function: utils.relaunchApp"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  # - name: mx.functions.utils.relaunchApp
+  #   platform: ios
+  #   flow:
+  #     - executeAppiumScript:
+  #         method: "mobile: launchApp"
+  #         params:
+  #           - key: bundleId
+  #             value: ${BUNDLE_ID}
+  #         args:
+  #           - key: -kDebugProfileEnabled
+  #             value: true
+  #           - key: -kDebugProfilePrevailing
+  #             value: ${GLASS_ENV}
+  #     - log:
+  #         message: "End function: utils.relaunchApp"
+  #         color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function will center the element if it is displayed in the lower or upper section of the screen so it
+  #                 shows all of its elements.
+  # PARAM:  ${elementToCenter}  [Mandatory]  Element to center, if this element contains a variable, you should make sure to
+  #                                   set it before running this function by using a storeIn or something similar.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.centerElementVertically
+    platform: ios
+    flow:
+      # Extracting Max Screen Size...
+      - log:
+          message: "Extracting Max Screen Size..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: mx.mappings.utils.genericPageContainer
+      - storeIn:
+          key: maxScreenSize
+          value: ${y2}
+      - log:
+          message: "Max Screen Size: '${maxScreenSize}'" # This is our 100%...
+          color: CYAN
+      # Getting Element Position (Height)...
+      - log:
+          message: "Getting Element Position (Height)..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: ${elementToCenter}
+      - storeIn:
+          key: elementHeightPosition
+          value: ${y}
+      - log:
+          message: "Element Position (Height): '${elementHeightPosition}'"
+          color: CYAN
+      # Getting Element Position (%)...
+      - log:
+          message: "Getting Element Position (%)..."
+          color: CYAN
+      - arithmetic:
+          expression: (${elementHeightPosition} * 100) / ${maxScreenSize}
+          numberOfDecimalPlaces: 0
+          storeIn: elementHeightPosition
+      - log:
+          message: "Element Position (%): '${elementHeightPosition}%'"
+          color: CYAN
+      - if:
+          condition: ${elementHeightPosition} > 99.9 # If the Element is not visible (too low), then use the scroll function...
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: ${element}
+                scrollLimit: 5
+                wait: 2000
+                position: center
+          else:
+            - if:
+                condition: ${elementHeightPosition} > 75 # If the Element is displayed in the lower section of the screen...
+                then:
+                  - log:
+                      message: "Element is displayed in the lower section of the screen, centering Element"
+                      color: CYAN
+                  - drag:
+                      from:
+                        x: 50%
+                        y: 70%
+                      to:
+                        x: 50%
+                        y: 40%
+      - if:
+          condition: ${elementHeightPosition} < 1 # If the Element is not visible (too high), then use the scroll function...
+          then:
+            - scroll:
+                direction: up
+                untilIdentifier: ${element}
+                scrollLimit: 5
+                wait: 2000
+                position: center
+          else:
+            - if:
+                condition: ${elementHeightPosition} < 25 # If the Element is displayed in the upper section of the screen...
+                then:
+                  - log:
+                      message: "Element is displayed in the upper section of the screen, centering Element"
+                      color: CYAN
+                  - drag:
+                      from:
+                        x: 50%
+                        y: 40%
+                      to:
+                        x: 50%
+                        y: 70%
+      - log:
+          message: "End function: utils.centerElementVertically"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This method scrolls up to top section, then scrolls down to search an element and asserts if is present.
+  # PARAMS: ${elementToFind}  [Mandatory]  Mapping of the element to find.
+  #         ${direction}      [Optional]   Direction where to scroll to try to find the element.
+  # AUTHOR: ?????
+  # EDITOR: Sergio Fernandez (vn0t1qt), Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.searchItemInPage
+    platform: ios
+    flow:
+      - log:
+          message: "[ PARAM: Element to Find: '${elementToFind}' ]"
+          color: CYAN
+      - log:
+          message: "[ PARAM: Direction: '${direction}' ]"
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.isElementDisplayed
+          params:
+            - name: element
+              string: ${elementToFind}
+      - if:
+          condition: ${returnedIsDisplayed}
+          then:
+            - log:
+                message: Element Found
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.utils.positionElementToTheCenter
+                params:
+                  - name: elementToPositionCenter
+                    string: ${elementToFind}
+          else:
+            - log:
+                message: Element not visible, process will start searching for it...
+                color: GREEN
+            - if:
+                condition: ${direction} == "null"
+                then:
+                  - log:
+                      message: Direction not defined, process will start from top...
+                      color: GREEN
+                  - scroll:
+                      direction: up
+                      position: center
+                      scrollLimit: 5
+                      wait: 1000
+                  - executeFunction:
+                      name: mx.functions.utils.isElementDisplayed
+                      params:
+                        - name: element
+                          string: ${elementToFind}
+                  - if:
+                      condition: ${returnedIsDisplayed}
+                      then:
+                        - log:
+                            message: Element Found
+                            color: GREEN_BOLD
+                      else:
+                        - scroll:
+                            direction: down
+                            untilIdentifier: ${elementToFind}
+                            position: center
+                            scrollLimit: 10
+                            wait: 1000
+                else:
+                  - scroll:
+                      direction: ${direction}
+                      untilIdentifier: ${elementToFind}
+                      position: center
+                      scrollLimit: 10
+            - executeFunction:
+                name: mx.functions.utils.isElementDisplayed
+                params:
+                  - name: element
+                    string: ${elementToFind}
+            - if:
+                condition: ${returnedIsDisplayed}
+                then:
+                  - log:
+                      message: Element Found
+                      color: GREEN_BOLD
+                else:
+                  - failTest:
+                      message: Element Not Found
+      - log:
+          message: "End function: mx.functions.utils.searchItemInPage"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function will center an element if it is displayed. This function assumes the expected
+  #                 element is displayed and not out of view.
+  # PARAM:        ${elementToPositionCenter}  [Mandatory] Element center, if this element contains a variable, you should make sure to
+  #                                                         set it before running this function by using a storeIn or something similar. Element
+  #                                                         must be visible before running this function.
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.utils.positionElementToTheCenter
+    platform: ios
+    flow:
+      # Extracting Max Screen Size...
+      - log:
+          message: "Extracting Max Screen Size..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: mx.mappings.utils.genericPageContainer
+      - storeIn:
+          key: maxScreenSize
+          value: ${y2}
+      - log:
+          message: "Max Screen Size: '${maxScreenSize}'" # This is our 100%...
+          color: CYAN
+
+      # Getting Element current position (Height)...
+      - log:
+          message: "Getting Element Current Position (Height)..."
+          color: CYAN
+      - executeFunction:
+          name: mx.functions.utils.extractElementCoordinates
+          params:
+            - name: element
+              string: ${elementToPositionCenter}
+      - storeIn:
+          key: elementHeightPosition
+          value: ${y}
+      - log:
+          message: "Element Position (Height): '${elementHeightPosition}'"
+          color: CYAN
+
+      # Getting Element Position in (%)...
+      - log:
+          message: "Getting Element Position in (%)..."
+          color: CYAN
+      - arithmetic:
+          expression: (${elementHeightPosition} * 100) / ${maxScreenSize}
+          numberOfDecimalPlaces: 0
+          storeIn: elementHeightPosition
+      - log:
+          message: "Element Position (%): '${elementHeightPosition}%'"
+          color: CYAN
+
+      # Moving the element to the center if necessary...
+      - if:
+          condition: ${elementHeightPosition} > 60 || ${elementHeightPosition} < 20
+          then:
+            - drag:
+                from:
+                  x: 50%
+                  y: ${elementHeightPosition}%
+                to:
+                  x: 50%
+                  y: 45%
+                wait: 3000
+          else:
+            - log:
+                message: "Element is within visible range, there's no need to center it."
+                color: CYAN
+      - log:
+          message: "End function: utils.positionElementToTheCenter"
+          color: BLUE

@@ -1,0 +1,205 @@
+general:
+  platform: ios
+  tags: C2673750, us-golden-flows, p2-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2673750
+  metadata:
+    - name: scenarioId
+      string: FS009
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+    #  Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.ios.skybenefitcard.email
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.skybenefitcard.email
+            - name: password
+              string: us.data.ios.skybenefitcard.password
+
+# commenting due to not able to add amount to ds card .
+#uncomment after the issue is resolved
+      # - executeFunction:
+      #     name: us.functions.utils.addAmountToDsSkyCard
+      #     params:
+      #       - name: balance
+      #         string: 30
+      #       - name: PIHASH
+      #         string: PIH.pang.WMTPC.GIFTCARD.0e9ed288-83db-4795-80cd-bee75cf0ea4d.8334
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.deleteBenefitCard
+
+      - sleep:
+          duration: 3000
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToServicesFromTabBar
+      
+      - executeFunction:
+          name: us.functions.services.navigateToBenefitsPrograms
+
+      - executeFunction:
+          name: us.functions.services.benefitsPrograms.addBenefitProgramCard
+
+      - executeFunction:
+          name: us.functions.services.benefitsPrograms.addingBenefitProgramCard
+          params:
+            - name: benefitCardNumber
+              string: us.data.wallet.benefitCard.number
+            - name: benefitCardPin
+              string: us.data.wallet.benefitCard.pin
+            - name: month
+              string: us.data.wallet.benefitCard.dobMonth
+            - name: date
+              string: us.data.wallet.benefitCard.dobDate
+            - name: year
+              string: us.data.wallet.benefitCard.dobYear
+            - name: zipcode
+              string: us.data.wallet.benefitCard.zipCode
+
+      - executeFunction:
+          name: us.functions.services.benefitsPrograms.benefitProgramCardConfirmation
+
+      - executeFunction:
+          name: us.functions.services.benefitsPrograms.benefitProgramCardTracker
+      
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.verifySkyBenefitCardPresent
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToHomeFromTabBar
+
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping 
+
+      - executeFunction:
+           name: us.functions.utils.fetchFromDataList 
+           params:
+             - name: email
+               string: us.data.ios.skybenefitcard.email
+             - name: itemType
+               string: FC_DELIVERY
+             - name: itemList
+               string: us.data.flow.dsSkyCard.fcItemLists
+
+     # searching for OTC or Food item
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: ${itemFetched}
+              
+    #  # searching for OTC or Food item
+    #   - executeFunction:
+    #       name: us.functions.search.searchItem
+    #       params:
+    #         - name: searchTerm
+    #           string: oreo chocolate
+
+      - executeFunction:
+          name: us.function.search.selectBenefitsProgramsFilter
+
+      # Verify BCBSA flag on search page
+      - executeFunction:
+          name: us.function.search.verifyBcbsFlagandClickOnWellnessEligibleItem
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping 
+      
+      - executeFunction:
+          name: us.functions.cart.bcbsaFlagAndBenenfitTracker
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - executeFunction:
+          name: us.functions.reviewOrder.verifySkyBenefitCard
+
+     # Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+
+      - storeIn:
+          key: testStatus
+          value: passed
+              
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps
+          

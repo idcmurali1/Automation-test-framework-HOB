@@ -1,0 +1,120 @@
+general:
+  platform: ios
+  tags: C2657254 #(Deprecated as part of Regression Optimization) us-golden-flows-wplus, p1-wplus-teflon-e2e, C2657254
+  testCaseId: C2657254
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: 288
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+        # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createTrialAccountConvertToPaid
+          params:
+            - name: email
+              string: $customerEmail
+            - name: payload
+              string: us.data.flowinhome.createAccountPayload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: E2epassword$
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      #Close W+ bottomsheet on home page
+      - executeFunction:
+          name: us.test.functions.utils.closeWplusPrompt.homeScreen
+
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+
+      - executeFunction:
+          name: us.funtions.wplus.inHome.selectAddress
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Delivery
+      - sleep:
+          duration: 10000
+
+      - executeFunction:
+          name: us.funtions.wplus.inHome.dss.popflow.storeSelect.delivery
+
+      - executeFunction:
+          name: us.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: us.test.functions.utils.relaunchApp
+
+      - executeFunction:
+          name: us.funtions.inHome.splashscreen.freetrial.signup
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.wplus.account.navigateToWalmartPlus
+
+      - executeFunction:
+          name: us.functions.wplus.navigateToManageMembershipFromBenefitsPage
+
+      - executeFunction:
+          name: us.functions.wplus.inHome.validateMyPlusUpsDetailsOnManageMembershipPage
+          params:
+            - name: tenure
+              string: monthly
+            - name: membershipType
+              string: paid
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

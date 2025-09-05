@@ -1,0 +1,192 @@
+general:
+  platform: android
+  tags: C2696984 #(Deprecated as part of Regression Optimization)p1-wplus-teflon-e2e
+  testCaseId: C2696984
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: "397, 389, 388"
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start main
+
+    # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+    # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - storeIn:
+          key: email
+          value: wplususer${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$   
+
+    # Create Account using astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.reward.createAccountPayload
+
+    # Navigating into the App
+      - executeFunction:
+         name: us.functions.global.navigation.goToDeepLink
+         params:
+           - name: deepLinkUrl
+             string: walmart://expo?expo_preview=true&experiment_spec=DbnGz&variation_specs=4lbnx&experiment_count=0
+
+    # setStore
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+              - name: storeOnly
+                string: true
+
+    # Search for an item
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 162008179
+
+    # Validate Sign in to Unlock on Search Screen
+      - executeFunction:
+         name: us.functions.ibotta.validateSignInButtonForGuestUser
+
+      - executeFunction:
+         name: us.functions.search.clickOnFirstItem
+
+     # Validate Sign in to Unlock on Item Screen
+      - executeFunction:
+         name: us.functions.ibotta.validateSignInButtonForGuestUserItemPage
+
+    # Sign in with created account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $email
+            - name: password
+              string: $password
+
+    # Navigating into the Item screen through deeplink
+      - executeFunction:
+         name: us.functions.global.navigation.goToDeepLink
+         params:
+           - name: deepLinkUrl
+             string: walmart://ip/162008179
+
+    # Verify the Rewards on Item Screen and Clip the item
+      - executeFunction:
+          name: us.functions.wplus.verifyibottaandatc.fromItemPage
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar    
+
+    # Increasing the Item quanitity
+      - executeFunction:
+            name: us.functions.cart.increaseItemQtyInCart
+            params:
+              - name: quantity
+                string: 2
+            
+    # Verify Reward on Cart Screen
+      - executeFunction:
+          name: us.functions.wplus.verifyRewardEarned.fromCartPage
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+    # Verify the Rewards on Review order screen
+      - executeFunction:
+          name: us.functions.ibotta.validateRewardsInfoInCheckoutPage
+
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvAndPlaceOrder
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+            
+    # Verify the Rewards on ThankYou Screen
+      - executeFunction:
+          name: us.functions.ibotta.validateRewardsEarnedInThankYouPage
+
+      - executeFunction:
+          name: us.functions.utils.astro.getOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+
+    # Set order fulfilment
+      - executeFunction:
+          name: us.functions.utils.astro.setOrderStatus
+          params:
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY
+            - name: status
+              string: Delivered
+
+      - executeFunction:
+         name: us.functions.tippingAndFeedback.click.continueShopping.button
+
+      - executeFunction:
+         name: us.functions.global.navigation.toTab
+         params:
+           - name: tabName
+             string: Account
+
+    # Verify the Rewards on Account Screen
+      - executeFunction:
+          name: us.functions.ibotta.validateRewardsEarnedOnAccountPage
+
+    # Navigate to ODP
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/${orderNo}
+
+    # Verify the Rewards on ODP screen
+      - executeFunction:
+          name: us.functions.ibotta.validateBannerInODP  
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

@@ -1,0 +1,214 @@
+#######################################################################################################################
+#
+#   TEST CASE DETAILS: 
+#
+#      [ TC - INEP-317 ]
+#      FLOW: Verify GIC Customer Preference
+#    
+#
+#   CONFLUENCE TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/COMM/WCP+Merging+Hallways+-+Weekly+Summary#25049188467b442a39856942ffbf14209cc3ea19a5
+#
+#   CONFLUENCE AUTOMATION TRACKING DASHBOARD:
+#      https://confluence.walmart.com/display/~vn54czd/Native+Apps+Automation
+#
+#   JIRA OPIF ID:
+#      https://jira.walmart.com/browse/OPIF-179432
+#
+#   JIRA STORY ID:
+#      https://jira.walmart.com/browse/INEP-306
+#
+#   JIRA SUB-TASK ID:
+#      https://jira.walmart.com/browse/INEP-312
+#
+#   JIRA TEST PLAN ID:
+#      https://jira.walmart.com/browse/INEP-314
+#
+#   JIRA TEST ID:
+#      https://jira.walmart.com/browse/INEP-317
+#
+#######################################################################################################################
+
+general:
+  testCaseId: INEP-317
+  tags: OPIF-179432, p1-mh-opif-teflon-d-feb, INEP-317, p1-mh-opif-prod, native-apps-opif-test-case, p1-mh-opif-teflon
+  combineScenarios: true
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   B E F O R E   S C E N A R I O                                                                                     #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: 'INEP-317: BEFORE SCENARIO START'
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.mh.inep-317.userEmail-android
+            - storeIn:
+                key: deliveryAddress
+                value: data.mh.inep-317.deliveryAddress-android
+          else:
+            - storeIn:
+                key: userEmail
+                value: data.mh.inep-317.userEmail-ios
+            - storeIn:
+                key: deliveryAddress
+                value: data.mh.inep-317.deliveryAddress-ios
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: false
+
+      - log: 'INEP-317: BEFORE SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   M A I N   S C E N A R I O                                                                                         #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: 'INEP-317: Verify GIC Customer Preference'
+    flow:
+      - log: 'INEP-317: MAIN SCENARIO START'
+
+      - log:
+          message: "Navigate to home and login"
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore 
+
+      - executeFunction:
+          name: functions.homePage.assertPageLoaded
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.wcp002.userPassword
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "Validate user preferred intent is displayed"
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.homePage.gic.expandIfCollapsed
+
+      - executeFunction:
+          name: functions.global.gic.verifyIntentIsSelected
+          params:
+            - name: expectedIntent
+              string: data.gic.intent.delivery
+
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "Validate user preferred delivery address and store are displayed"
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.homePage.gic.assertDeliveryAddressIsDisplayed
+          params:
+            - name: expectedDeliveryName
+              string: data.mh.inep-317.deliveryName
+            - name: expectedDeliveryAddress
+              string: ${deliveryAddress}
+
+      - executeFunction:
+          name: functions.homePage.gic.assertStoreIsDisplayed
+          params:
+            - name: expectedStoreName
+              string: data.mh.inep-317.storeName
+            - name: expectedStoreAddress
+              string: data.mh.inep-317.storeAddress
+
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "Validate user preferred store is displayed"
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.global.gic.selectPickupIntent
+          params:
+            - name: page
+              string: home
+
+      - executeFunction:
+          name: functions.homePage.gic.assertStoreIsDisplayed
+          params:
+            - name: expectedStoreName
+              string: data.mh.inep-317.storeName
+            - name: expectedStoreAddress
+              string: data.mh.inep-317.storeAddress
+
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "Close GIC"
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.homePage.gic.collapseIfExpanded
+      - executeFunction:
+          name: functions.homePage.gic.verifyGICIsNotExpanded
+
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "Reset GIC intent"
+          color: PURPLE_BOLD_BRIGHT
+
+      - executeFunction:
+          name: functions.global.gic.selectDeliveryIntent
+          params:
+            - name: page
+              string: home
+
+      - storeIn:
+          key: tcVars_successfulExecution
+          value: true
+
+      - log: 'INEP-317: MAIN SCENARIO END'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+#   A F T E R   S C E N A R I O                                                                                       #
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: After
+    after: true
+    executeOnFailure: false
+    flow:
+      - log: 'INEP-317: AFTER SCENARIO START'
+
+      - if:
+          condition: ${tcVars_successfulExecution}
+          then:
+            - log:
+                message: TC PASSED
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: TC FAILED
+
+      - log: 'INEP-317: AFTER SCENARIO END'

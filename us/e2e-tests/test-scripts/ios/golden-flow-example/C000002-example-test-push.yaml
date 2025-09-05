@@ -1,0 +1,70 @@
+general:
+  platform: ios
+  tags: example-test-push-prod
+
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps    
+
+  - name: Main
+    flow:
+      - log: Push Notifications test
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+      # Navigate to sign in page
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn 
+        # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+              - name: email
+                string: example.push@ios.com
+              - name: password
+                string: Password1       
+      - callAPI:
+          url: http://notifications-mobile.glb.prod.walmart.com/business/WMT1H/customers/158cf212-b6d4-4d8c-b3ce-8d0af42cb537/push/new
+          mediaType: application/json
+          requestBody: '{"body": "Checkout exciting offers from Walmart for apps flyer", "title": "Walmart Holiday offers", "url": "walmart://item/467341170"}'
+          header:
+            - key: apiKey
+              value: onehallway
+            - key: Cache-Control
+              value: no-cache
+            - key: Content-Type
+              value: application/json
+          requestMethod: POST
+          wait: 5000
+          verifyResponseCode: 202
+      - sleep:
+          duration: 10000    
+      - drag:
+         from:
+          x: 10
+          y: 5
+         to:
+          x: 200
+          y: 500
+      - verifyIdentifier:
+          present:
+            - identifier: Walmart Holiday offers
+      - click: 
+          identifier: Walmart Holiday offers 
+      - verifyIdentifier:
+          present:
+            - identifier: Return to home      
+      - click: 
+          identifier: Return to home 
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.createFile
+          params:
+            - name: FILE_OUTPUT
+              string: '{"status":"complete"}'

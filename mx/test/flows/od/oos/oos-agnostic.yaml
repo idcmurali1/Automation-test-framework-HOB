@@ -1,0 +1,65 @@
+#======================================================================================================================
+#    AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#   CREATED: Mar/29/2023
+#  REVISION: ---
+#
+#  Copyright © 2023 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow extracts the products name that will be removed from cart
+  - name: mx.flows.oos.extractOOSProductsNameAndSubtotal
+    flow: 
+      - numberOfChildElements:
+          identifier: mx.mappings.oos.productsRootElement
+          storeIn: numberOfOOSProducts
+          filterBy: mx.mappings.oos.oosProducts
+      - arithmetic:
+          expression: ${numberOfOOSProducts} + 1
+          storeIn: rightBound
+      - storeIn:
+          key: oosNamesArray
+          value: ""
+      - arithmetic:
+          expression: 0
+          storeIn: substractedSubtotal
+      - loop:
+          begin: 1
+          storeIndex: i
+          end: ${rightBound}
+          flow:
+            - getString:
+                identifier: mx.mappings.oos.productNameByIndex
+                storeIn: value
+            - executeNode:
+                file: mx/test/helpers/oos/setOOSArray.js
+                args:
+                  - value: ${oosNamesArray}
+                  - value: ${value}
+                getResponse:
+                  storeIn: oosNamesArray
+            - getString:
+                identifier: mx.mappings.oos.productPriceByIndex
+                storeIn: value
+            - executeNode:
+                file: mx/test/helpers/slp/sanitizePrice.js
+                args:
+                  - value: ${value}
+                getResponse:
+                  storeIn: linePrice
+            - arithmetic:
+                expression: ${linePrice} + ${substractedSubtotal}
+                storeIn: substractedSubtotal
+      - log:
+          message: Extracted names - ${oosNamesArray}
+          color: CYAN
+      - log:
+          message: Substracted subtotal - ${substractedSubtotal}
+          color: CYAN
+      - log:
+          message: "End flow: oos.extractOOSProductsName"
+          color: BLUE
+      

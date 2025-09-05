@@ -1,0 +1,63 @@
+inherit: 'job:///glass-mobile-app-automation/mx/qaa/base-job/global-base:mx/looper-configs/qaa/base/.looper-base.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    triggers:
+      - push: disabled
+      - pr: disabled
+
+      - cron:
+          spec: "5 2 * * *"
+          timezone: America/Mexico_City
+          call: build
+
+      - manual:
+          name: '[[ Run Android Test Suite ]]'
+          call: build
+
+  - spec: mx/MXMOB*
+    triggers:
+      - push: disabled
+      - pr: disabled
+      
+      - manual:
+          name: '[!] [[ Run Android Test Suite ]]'
+          call: build
+
+envs:
+  global:
+    variables:
+      APP_PLATFORM: android
+      SAUCELABS_APK_FILENAME: ''
+      SAUCELABS_APK_VERSION: ''
+      SAUCELABS_APK_BUILD_NUMBER: ''
+      APP_PACKAGE: com.walmart.mg.debug
+      GLASS_ENV: production
+      TEST_SUITE: qaa-ea-sanity
+      PARALLEL_EXECUTION: true
+      OVERWRITE_TC_SELECTION: false
+      TC_IDS: ''
+      EXECUTION_NAME: ''
+      REMOTE_DEVICE_NAME_ANDROID: 'Google Pixel 5 GoogleAPI Emulator'
+      REMOTE_PLATFORM_VERSION_ANDROID: 12.0
+      STOP_JIRA_REPORTING: false
+      TURN_OFF_INDIVIDUAL_TEST_EXECUTION_SQUADS_REPORT: false
+
+rules:
+  before:
+    group (name 'Set Global Vars'):
+      - exposeVars(mx/looper-configs/qaa/nightly/nightly_vars.properties)
+      - var(SAUCELABS_APK_FILENAME):
+          shell (name SAUCELABS_APK_FILENAME):
+            echo '${nightlyVars.saucelabs.android.apkFilename}'
+      - var(SAUCELABS_APK_VERSION):
+          shell (name SAUCELABS_APK_VERSION):
+            echo '${nightlyVars.saucelabs.android.apkVersion}'
+      - var(SAUCELABS_APK_BUILD_NUMBER):
+          shell (name SAUCELABS_APK_BUILD_NUMBER):
+            echo '${nightlyVars.saucelabs.android.apkBuildNumber}'
+      - var(EXECUTION_NAME):
+          shell (name EXECUTION_NAME):
+            echo 'Nightly Run - ${TEST_SUITE}-${GLASS_ENV}-${APP_PLATFORM} - v${SAUCELABS_APK_VERSION}(${SAUCELABS_APK_BUILD_NUMBER})'

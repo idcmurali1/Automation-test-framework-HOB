@@ -1,0 +1,190 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: DFTB
+# User: Registered User
+# Order Type: Mixed
+# Fulfillment: SCHEDULED_PICKUP
+# Payment Type: CC
+# Experience: A2C Using API
+# Validation: Validate DFTB for MX Order, Added Item from DFTB
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+general:
+  platform: ios
+  tags: flow-084, exp_go, GO/MX-Express-Slot-English-iOS-Flow
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: true
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHome 
+      
+      # Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateIosHomePage
+      - executeFunction:    
+          name: ca.test.functions.home.livingDesign.validateIosBottomNavigation
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.data.flow084.emailios
+            - name: password
+              string: ca.test.data.flow084.passwordios          
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToSignInIos
+
+      # Sign In Page verification from account
+      - executeFunction:
+           name: ca.test.functions.signIn.fromAccountPageValidationIos      
+      
+      # Sign In to the account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.flow084.emailios
+            - name: password
+              string: ca.test.data.flow084.passwordios 
+            - name: validateSignInPage
+              string: true
+
+      - executeFunction:
+          name: ca.test.functions.home.verifyUserNameInTopleft 
+
+      - executeFunction:
+          name: ca.test.functions.utils.terminateApp
+
+      - executeFunction:
+          name: ca.test.functions.utils.relaunchApp        
+
+      # Workaround done for cart issue due to location       
+      # Checking and selecting Store
+      - executeFunction:
+          name: ca.test.functions.home.storeSelect
+          params:
+            - name: Zip_Code
+              string: ca.test.data.onboarding.zipcode
+            - name: storeName
+              string: ca.test.data.onboarding.storeName   
+
+      - executeFunction:
+          name: ca.test.functions.astro.addToCart
+          params:
+            - name: payLoad
+              string: ca.test.data.flowDftbMixCart.addToCartPayLoad      
+
+      # Navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCartHomeIos
+
+     # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutIos1  
+
+      # DFTB Screen Validation
+      - executeFunction:
+          name: ca.test.functions.cart.dftbValidation
+
+      # Add to cart
+      - executeFunction:
+          name: ca.test.functions.dftb.addToCart
+          params:
+            - name: productName
+              string: ca.test.data.flowDFTBIos.productName
+
+      # Continue to CheckOut
+      - executeFunction:
+          name: ca.test.functions.cart.DFTB.continue 
+
+      # Reserve a Time
+      - executeFunction:
+          name: ca.test.functions.bookASlot.GOreserveTimeIos      
+
+      # Product validation of added item from DFTB
+      - executeFunction:
+          name: ca.test.functions.checkout.DFTB.productTileValidation
+          params:
+            - name: itemName
+              string: ca.test.data.flowDFTBIos.productName
+
+      # Add Card Cvv
+      - executeFunction:
+          name: ca.test.functions.checkOut.payment.addCvvIos
+          params:
+            - name: CVV
+              string: ca.test.data.flow001ios.Cvv_1          
+              
+      # Adding mobile number
+      - executeFunction:
+          name: ca.test.functions.checkout.phoneNumber.enterContactNumber
+
+      # Order placement
+      - executeFunction:
+          name: ca.test.functions.checkOut.PlacingOrder
+
+       # Order Confirmation screen validation
+      - executeFunction:
+          name: ca.test.functions.checkOut.orderConfirmationValidationIos
+
+      # Continue Shopping
+      - executeFunction:
+          name: ca.test.functions.checkOut.continueShopping      
+
+      # Closing feedback popup 
+      - executeFunction:
+          name: ca.test.functions.checkOut.feedback      
+
+      # Navigate to account page
+      - executeFunction:
+          name: ca.test.functions.home.navigateHomeToAccountPage
+    
+      # Go to purchase page
+      - executeFunction:
+          name: ca.test.functions.accountPage.purchaseHistoryButtonIos
+
+      # Purchase history page to view Details
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.viewDetailsButtonIos    
+
+      # Order cancellation
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.orderCancellation     
+          
+      - storeIn:
+          key: testStatus
+          value: passed
+  
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow084-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps 

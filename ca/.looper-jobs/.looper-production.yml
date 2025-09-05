@@ -1,0 +1,93 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - pr:
+          scheduling: cancelRunning
+          requiredLabels:
+            - "ca-functional"
+      - push:
+          manualOnly: true
+
+      - manual:
+          name: Run Android Prod Sanity - Test
+          call: run_android_sanity_testCase(TEST_TAGS = 'prodSanity')
+
+      - cron:
+          spec: H */6 * * *
+          call: run_android_sanity_testCase(TEST_TAGS = 'prodSanity')
+
+      - manual:
+          name: Run Android Prod functionality - Test
+          call: run_android_functionlity_testCase(TEST_TAGS = 'ca-function-run')
+
+      - cron:
+          spec: H */6 * * *
+          call: run_android_functionlity_testCase(TEST_TAGS = 'ca-function-run')
+
+      - manual:
+          name: Run ios Prod Sanity - Test
+          call: run_ios_sanity_testCase(TEST_TAGS = 'prodSanity')
+
+      - cron:
+          spec: H */6 * * *
+          call: run_ios_sanity_testCase(TEST_TAGS = 'prodSanity')
+
+      - manual:
+          name: Run ios Prod functionality - Test
+          call: run_ios_functionlity_testCase(TEST_TAGS = 'ca-function-run')
+
+      - cron:
+          spec: H */6 * * *
+          call: run_ios_functionlity_testCase(TEST_TAGS = 'ca-function-run')
+
+envs:
+  global:
+    variables:
+      MARKET: ca
+      SLACK_CHANNEL: r2-ca-glass-prod-test-report
+      userName: ca-glass
+      accessKey: 5aeaa56f-ed83-411a-85d3-f8084e78aab1
+      POST_TO_SPLUNK: false
+      POST_TO_XRAY: false
+
+  env_android_production:
+    variables:
+      APP_PLATFORM: android
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/android/android-default.yaml
+      DEPENDENCY_PROFILE: looper_prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      SAUCE_APP: storage:filename=${MARKET}-walmart-development-latest.apk
+
+  env_ios_production:
+    variables:
+      APP_PLATFORM: ios
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: ${MARKET}/test/dependencies/ios/ios-default.yaml
+      DEPENDENCY_PROFILE: looper_prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production_ios
+      SAUCE_APP: storage:filename=${MARKET}-walmart-development-latest.zip
+
+flows:
+  pr:
+    - call: run_android_sanity_testCase(TEST_TAGS = 'prodSanity')
+    - call: run_ios_functionlity_testCase(TEST_TAGS = 'ca-function-run')
+    - call: run_android_functionlity_testCase(TEST_TAGS = 'ca-function-run')
+    - call: run_ios_sanity_testCase(TEST_TAGS = 'prodSanity')
+
+  run_android_sanity_testCase:
+    - call: build(env_android_production)
+  run_android_functionlity_testCase:
+    - call: build(env_android_production)
+  run_ios_sanity_testCase:
+    - call: build(env_ios_production)
+  run_ios_functionlity_testCase:
+    - call: build(env_ios_production)

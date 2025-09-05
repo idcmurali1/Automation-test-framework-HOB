@@ -1,0 +1,257 @@
+# ================================================================================================================================
+# TC: 08
+# Flow: TC 08 : Test Accounts: Existing user + Payment Information: MSI +  MSI Item
+# ================================================================================================================================
+general:
+  testCaseId: C2720131
+  tags: C2720131, p1-mx-ea-teflon, p1-bodega-ea-teflon, p1-mx-ea-prod, p1-bodega-ea-prod, p1-mx-mh-e2e-teflon, p1-mx-mh-e2e-prod
+  combineScenarios: true
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  - name: Main
+    flow:
+      #Navigate to HomePage and validate HomePage is Loaded
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            # Create new Account using Astro API
+            - executeFunction:
+                name: functions.astroApi.generateTimeStampEmail
+
+            - executeFunction:
+                name: functions.astroApi.createAccount
+                params:
+                  - name: payload
+                    string: data.global.payload.visaCard1111
+          else:
+            # Store in email on prod
+            - if:
+                condition: ${platform} == 'Android'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp008.android.email
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp008.ios.email
+
+      # Click on login and select sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+      # Login to account
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      # Search for a 1P item and validate if search results are displayed
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            # Add MSI item into cart
+            - executeFunction:
+                name: functions.utils.getTheFirstAvailableItemAndNavigateToPDPWithDeepLink
+                params:
+                  - name: productArray
+                    string: data.wcp08.productName
+
+            - executeFunction:
+                name: functions.productDetailsPage.tapClose
+
+          else:
+            - executeFunction:
+                name: functions.searchPage.addToCartUsingItemArray
+                params:
+                  - name: productArray
+                    string: data.wcp08.productName
+                  - name: badge
+                    string: data.itemBadge.MSI                 
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      - if:
+          condition: ${environment} == 'Production'
+          then:
+            # Validate MSI badge
+            - executeFunction:
+                name: functions.cartOrProductDetailPage.validateMSIBadge
+            - if:
+                condition: ${platform} == 'Android' #iOS locator is not accessible
+                then:
+                  # Validate MSI Interest Bottom Sheet on cart page
+                  - executeFunction:
+                      name: functions.cartPage.validateBankPromotionBottomSheet
+            
+            - executeFunction:
+                name: functions.cartPaget.navigateToPDP
+
+            # Validete MSI badge an item details on PDP
+            - executeFunction:
+                name: functions.cartOrProductDetailPage.validateMSIBadge
+
+            - executeFunction:
+                name: functions.productDetailsPage.validateItemDetails
+            
+            # Validate MSI Interest Bottom Sheet on PDP
+            - executeFunction:
+                name: functions.productDetailsPage.validateBankPromotionBottomSheet
+
+            - if: 
+                condition: ${platform} == 'Android' # iOS is closed
+                then:
+                  - executeFunction:
+                      name: functions.productDetailsPage.tapClose
+            
+            - executeFunction:
+                name: functions.cartPage.tapDeliveryOption
+
+            - executeFunction:
+                name: functions.cartPage.validateMoneybox
+
+      #Navigate to ROP
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      #Select an address 
+      - executeFunction:
+          name: functions.addAddressBottomSheet.handleSelectAddressPopUp
+          params:
+            - name: invoiceColoniaName
+              string: data.defaultAddress.coloniaName
+
+      - executeFunction:
+          name: functions.checkoutPage.scrollToCVVTextfield
+
+      - executeFunction:
+          name: function.utils.applyPayments
+          params:
+            - name: paymentType
+              string: creditCard
+            - name: cardNumber
+              string: data.global.creditCard.visa.4242.fullNumber
+            - name: cardHolderFirstName
+              string: data.global.addNewCardInfo.cardHolder.firstName
+            - name: cardHolderLastName
+              string: data.global.addNewCardInfo.cardHolder.lastName
+            - name: expirationDate
+              string: data.wcp08.expirationDate
+            - name: expirationMonth
+              string: data.global.addNewCardInfo.expiration.month
+            - name: expirationYear
+              string: data.wcp08.expirationYear
+            - name: cvv
+              string:  data.global.card.cvv.123
+            - name: phoneNumber
+              string: data.defaultAddress.phoneNumber
+            - name: sameBillingAddress
+              string: data.wcp08.sameBillingAddress 
+            - name: defaultCard
+              string: data.wcp08.defaultCard 
+            - name: cardLast4Digits
+              string: data.global.creditCard.visa.4242.last4DigitsOnly
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            #Validating MSI Instruction Displayed
+            - executeFunction:
+                name: functions.checkoutPage.validateMsiOptionsDisplayed
+
+            - executeFunction:
+                name: functions.checkoutPage.selectMsiOption
+
+            # CEPG-234683 - CVV is getting removed after selecting invoice/MSI plans in review order page
+            - if: 
+                condition: ${platform} == 'Android' # in iOS CVV option is not displayed after adding new card
+                then:
+                  - executeFunction:
+                      name: functions.checkoutPage.addCVV
+                      params:
+                        - name: CVV
+                          string: data.global.card.cvv.1234
+
+            #Click Place Order
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+            
+            - executeFunction:
+                name: functions.orderDetailPage.verifySectionDisplayed
+            - executeFunction:
+                name: functions.orderDetailPage.verifyDeliveryType
+                params:
+                  - name: expectedDeliveryType
+                    string: data.global.deliveryText.delivery
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyItemDetails
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyPaymentMethodSection              
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyCardPayment
+                params:
+                  - name: expectedCardLastFourDigit
+                    string:  data.global.creditCard.visa.4242.last4DigitsOnly
+
+            # - executeFunction:
+            #     name: functions.orderDetailPage.verifyFinanceOptionsDisplayed
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

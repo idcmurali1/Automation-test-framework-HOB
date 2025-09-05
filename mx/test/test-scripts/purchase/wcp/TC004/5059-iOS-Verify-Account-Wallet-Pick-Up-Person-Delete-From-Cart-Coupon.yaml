@@ -1,0 +1,155 @@
+#======================================================================================================================
+#  AUTHOR: Jorge Carrillo (vn575hp)
+#  CREATED: Oct/21/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: purchase-walmart-ea-sanity-production-ios-004, purchase-bodega-ea-sanity-production-ios-004, wip-purchase-walmart-ea-sanity-production-ios, wip-purchase-bodega-ea-sanity-production-ios
+  testCaseId: MMP-5095
+
+#######################################################################################################################
+#
+#  TEST CASE TITLE:
+#    TC Goal: Account wallet, pick up person, delete from cart, coupon
+#
+#  CONFLUENCE TRACKING DASHBOARD:
+#    TO-DO
+#
+#  JIRA AUTOMATION TC:
+#    https://jira.walmart.com/browse/MMP-5095
+#
+#  JIRA MANUAL TC:
+#    https://jira.walmart.com/browse/MMP-5059
+#
+#######################################################################################################################
+
+scenarios:
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   B E F O R E   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+      - storeIn:
+          key: MMP_5095_SUCCESSFUL_EXECUTION
+          value: false
+
+      - log: "BEFORE SCENARIO END"
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   M A I N   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    platform: ios
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 1: OPEN APP AND SELECT EA -------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 1: OPEN WALMART APP AND COMPLETE ONBOARDING.  OPEN THE EA BANNER."
+         color: ORANGE
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      
+    #---------------------------------------------------------------------------------------------
+    # STEP 2: LOGIN FROM PROFILE -----------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 2: LOGIN FROM PROFILE."
+         color: ORANGE
+      - storeIn:
+          key: userEmail
+          value: mx.data.qaa.purchase.sanity.tc004.userEmail
+      - storeIn:
+          key: userPassword
+          value: mx.data.purchase-user-data.userPassword
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: ${userPassword}
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully 
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 3: OPEN WALLET ------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 3: OPEN WALLET."
+         color: ORANGE
+      - executeFunction:
+          name: functions.accountPage.openWallet
+
+    #---------------------------------------------------------------------------------------------
+    # STEP 4: ADD CREDIT CARD --------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 4: ADD CREDIT CARD."
+         color: ORANGE
+      - executeFunction:
+          name: functions.walletPage.tapCredit$DebitCardBtn
+      - executeFunction:
+          name: function.utils.setDefaultDataForPayment
+          params:
+            - name: paymentType
+              string: creditCard
+            - name: brand
+              string: masterCard
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.fillCreditDebitCardInformationForm
+
+    #---------------------------------------------------------------------------------------------
+    # END ----------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------------
+      - storeIn:
+          key: MMP_5095_SUCCESSFUL_EXECUTION
+          value: true
+
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  #   A F T E R   S C E N A R I O
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMP_5095_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO ENDED"

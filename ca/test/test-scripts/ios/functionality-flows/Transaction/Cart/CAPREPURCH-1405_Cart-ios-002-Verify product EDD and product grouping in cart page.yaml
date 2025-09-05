@@ -1,0 +1,458 @@
+general:
+  platform: ios
+  tags: cart-002-ios, ca-function-run, cart_ios
+  testCaseId: cart-002-ios
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+  - name: Go to cart and Validate GO, GM (1P and 3P), MX and Freight EDD and product grouping in cart page.
+    flow:
+            - log:
+                message: Go to cart and Validate GO, GM (1P and 3P), MX and Freight EDD and product grouping in cart page.
+                color: CYAN_BOLD_BRIGHT
+
+            # Navigate onboarding to home
+            - executeFunction:
+                name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+                params:
+                  - name: ZIP_CODE
+                    string: ca.test.data.cart002.zipCode
+            - log:
+                message: navigated from onboarding to home
+                color: YELLOW 
+
+            # Navigate to sign in page
+            - executeFunction:
+                name: ca.test.functions.home.navigateHomeToSignInIos
+            - log:
+                message: navigated to signin page
+                color: YELLOW   
+
+            # Sign In to the account
+            - executeFunction:
+                name: ca.test.functions.global.authentication.signInAccountIos
+                params:
+                  - name: email
+                    string: ca.test.data.cart002.emailios
+                  - name: password
+                    string: ca.test.data.cart002.passwordios
+            - executeFunction:
+                name: ca.test.functions.home.verifyUserNameInTopleft
+            - log:
+                message: Singed in as registered user.
+                color: YELLOW 
+
+            # Clear Cart
+            - executeFunction:
+                name:  ca.test.functions.cart.removeCartItems
+            - log:
+                message: cart cleared!
+                color: YELLOW
+
+          # Add product to cart - GO
+          # Product Search
+            - executeFunction:
+                  name: ca.functions.searchPage.searchItemArray
+                  params:
+                    - name: items
+                      string: ca.test.data.cart001.goItemArray
+                    - name: quantity
+                      string: ca.test.data.product_1_qty
+                    - name: checkNonPromotionBadges
+                      string: true     
+            - log:
+               message: searched a GO product!
+               color: YELLOW 
+
+            - storeIn:
+                key: go_item
+                value: ${productTitle}
+
+            - storeIn:
+                key: go_item_price
+                value: ${productCost}
+
+          # Add product to cart - MX
+          # Product Search
+            - executeFunction:
+                name: ca.functions.searchPage.searchItemArray
+                params:
+                  - name: items
+                    string: ca.test.data.cart001.mxItemArray
+                  - name: quantity
+                    string: ca.test.data.product_1_qty
+                  - name: checkNonPromotionBadges
+                    string: true      
+            - log:
+               message: searched a MX product!
+               color: YELLOW 
+
+            - storeIn:
+                key: mx_item
+                value: ${productTitle}
+
+            - storeIn:
+                key: mx_item_price
+                value: ${productCost}
+
+          # Add product to cart - GM - 1P
+          # Product Search
+            - executeFunction:
+                name: ca.functions.searchPage.searchItemArray
+                params:
+                  - name: items
+                    string: ca.test.data.cart001.1pGmItemArray
+                  - name: quantity
+                    string: ca.test.data.product_1_qty
+                  - name: checkNonPromotionBadges
+                    string: true
+            - log:
+               message: searched a GM-1P product!
+               color: YELLOW 
+
+            - storeIn:
+                key: gm_1p_item
+                value: ${productTitle}
+
+            # Product SRP to PDP page
+            - executeFunction:
+                name: ca.test.functions.pdp.srpToPdp
+                params:
+                  - name: productName
+                    string: ${gm_1p_item}
+            - log:
+               message: Navigate from srp to PDP of GM-1P product!
+               color: YELLOW 
+
+          # # PDP page header container validation
+          #   - executeFunction:
+          #       name: ca.test.functions.pdp.productHeaderContainer
+          #   - log:
+          #      message: PDP details validated for GM-1P product!
+          #      color: YELLOW 
+
+          # extracting Fulfillment Date from PDP
+            - executeFunction:
+                name: ca.test.function.pdp.extractingFulfillmentDateIos
+                params:
+                  - name: productName
+                    string: ${gm_1p_item}
+            - storeIn:
+                key: GM_1P_Shipping_EED
+                value: ${shipping}
+            - storeIn:
+                key: GM_1P_Pickup_EED
+                value: ${pickup}
+            - log:
+               message: Extracted fulfillment date details of GM-1P product!
+               color: YELLOW 
+
+            # extracting Fulfillment Details
+            - executeFunction:
+                name: ca.test.functions.pdp.extractingFulfilledByDetails
+            - storeIn:
+                key: GM_1P_SellerInfo
+                value: ${sellerInfo}
+            - storeIn:
+                key: GM_1P_fulfillmentInfo
+                value: ${fulfillmentInfo}
+            - log:
+               message: Extracted seller details of GM-1P product!
+               color: YELLOW
+
+            #closing PDP page
+            - executeFunction:
+                name: ca.test.functions.PDPpage.closePDPpage
+            - log:
+               message: Closed PDP of GM-1P product!
+               color: YELLOW 
+            - storeIn:
+                key: 1p_item_price
+                value: ${productCost}
+
+          # Add product to cart - GM - 3P
+          # Product Search
+            - executeFunction:
+                  name: ca.functions.searchPage.searchItemArray
+                  params:
+                    - name: items
+                      string: ca.test.data.cart002.3pGmItemArray
+                    - name: quantity
+                      string: ca.test.data.product_1_qty
+                    - name: checkNonPromotionBadges
+                      string: true 
+            - log:
+               message: searched a GM-3P product!
+               color: YELLOW 
+
+            - storeIn:
+                key: gm_3p_item
+                value: ${productTitle}
+
+            # Product SRP to PDP page
+            - executeFunction:
+                name: ca.test.functions.pdp.srpToPdp
+                params:
+                  - name: productName
+                    string: ${gm_3p_item}
+            - log:
+               message: Navigate to PDP of GM-3P product!
+               color: YELLOW 
+
+          # extracting Fulfillment Date from PDP
+            - executeFunction:
+                name: ca.test.function.pdp.extractingFulfillmentDateIos
+                params:
+                  - name: productName
+                    string: ${gm_3p_item}
+            - storeIn:
+                key: GM_3P_Shipping_EED
+                value: ${shipping}
+            - storeIn:
+                key: GM_3P_Pickup_EED
+                value: ${pickup}
+            - log:
+               message: Extracted fulfillment details of GM-3P product!
+               color: YELLOW 
+
+            # extracting Fulfilledment Details
+            - executeFunction:
+                name: ca.test.functions.pdp.extractingFulfilledByDetails
+            - storeIn:
+                key: GM_3P_SellerInfo
+                value: ${sellerInfo}
+            - storeIn:
+                key: GM_3P_fulfillmentInfo
+                value: ${fulfillmentInfo}
+            - log:
+               message: Extracted seller details of GM-3P product!
+               color: YELLOW 
+
+            #closing PDP page
+            - executeFunction:
+                name: ca.test.functions.PDPpage.closePDPpage
+            - log:
+               message: Closed PDP of GM-3P product!
+               color: YELLOW 
+
+            - storeIn:
+                key: 3p_item_price
+                value: ${productCost}
+
+          # Add product to cart - Freight
+          # Product Search
+            - executeFunction:
+                  name: ca.functions.searchPage.searchItemArray
+                  params:
+                    - name: items
+                      string: ca.test.data.cart001.freightItemArray
+                    - name: quantity
+                      string: ca.test.data.product_1_qty
+                    - name: checkNonPromotionBadges
+                      string: true
+            - log:
+               message: searched a Freight product!
+               color: YELLOW 
+
+            - storeIn:
+                key: freight_item
+                value: ${productTitle}
+
+            # Product SRP to PDP page
+            - executeFunction:
+                name: ca.test.functions.pdp.srpToPdp
+                params:
+                  - name: productName
+                    string: ${freight_item}
+            - log:
+               message: Navigate to PDP of a Freight product!
+               color: YELLOW 
+
+          # # PDP page header container validation
+          #   - executeFunction:
+          #       name: ca.test.functions.pdp.productHeaderContainer
+          #   - log:
+          #      message: Validated PDP details of a Freight product!
+          #      color: YELLOW 
+
+          # extracting Fulfillment Date from PDP
+            - executeFunction:
+                name: ca.test.function.pdp.extractingFulfillmentDateIos
+                params:
+                  - name: productName
+                    string: ${freight_item}
+            - storeIn:
+                key: Freight_Shipping_EED
+                value: ${shipping}
+            - storeIn:
+                key: Freight_Pickup_EED
+                value: ${pickup}
+            - log:
+               message: Extracted fulfillment details of a Freight product!
+               color: YELLOW 
+
+            # extracting Fulfilledment Details
+            - executeFunction:
+                name: ca.test.functions.pdp.extractingFulfilledByDetails
+            - storeIn:
+                key: Freight_SellerInfo
+                value: ${sellerInfo}
+            - storeIn:
+                key: Freight_fulfillmentInfo
+                value: ${fulfillmentInfo}
+            - log:
+               message: Extracted seller details of a Freight product!
+               color: YELLOW 
+               
+            #closing PDP page
+            - executeFunction:
+                name: ca.test.functions.PDPpage.closePDPpage
+            - log:
+               message: Closed PDP page of a Freight product!
+               color: YELLOW 
+            - storeIn:
+                key: fr_item_price
+                value: ${productCost}
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *          
+
+          # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCartIos
+            - log:
+               message: Naviagted to cart!
+               color: YELLOW 
+
+            # Book a delivery slot
+            - executeFunction:
+                name: ca.test.functions.cart.deliverySlotIos 
+            - log:
+                message: Booked a delivery slot!
+                color: YELLOW 
+
+          # Cart fulfillment verification
+            - executeFunction:
+                name: ca.test.functions.cart.deliveryFromStore.verifyCard
+            - log:
+                message: fulfillmentType verified in cart!
+                color: GREEN_BOLD_BRIGHT
+          
+          # Validate GO is under scheduled cart
+            - executeFunction:
+                name: ca.test.functions.cart.validatingProductGrouping
+                params:
+                  - name: fulfillmentType
+                    string: Delivery from store
+                  - name: productName
+                    string: ${go_item}
+            - log:
+                message: Go prodct is under Scheduled cart!
+                color: GREEN_BOLD_BRIGHT
+
+          # Validate MX is under scheduled cart
+            - executeFunction:
+                name: ca.test.functions.cart.validatingProductGrouping
+                params:
+                  - name: fulfillmentType
+                    string: Delivery from store
+                  - name: productName
+                    string: ${mx_item}
+            - log:
+                message: MX prodct is under Scheduled cart!
+                color: GREEN_BOLD_BRIGHT
+
+            # Expanding the product tile if compressed
+            - executeFunction:
+                name: ca.test.functions.cart.generalMerchandise.fulfillmentCard.dateRange
+                params:
+                  - name: EED1
+                    string: ${GM_1P_Shipping_EED}
+                  - name: EED2
+                    string: ${product_2_shipping}
+                  - name: EED3
+                    string: ${GM_3P_Shipping_EED}
+            - log:
+                message: Expanding the product tile if compressed.
+                color: GREEN_BOLD
+
+          # EDD for GM products verification
+            - executeFunction:
+                name: ca.test.function.cart.generalMerchandise.eedBasedGrouping
+                params:
+                  - name: walmartDeliveryDate
+                    string: ${GM_1P_Shipping_EED}
+                  - name: itemsShippedByWalmart
+                    string: "2 items"
+                  - name: soldByWalmart
+                    string: ${GM_1P_SellerInfo}
+                  - name: general_merchandise
+                    string: ${gm_1p_item}
+                  - name: freight_merchandise
+                    string: ${freight_item}
+                  - name: 3pDeliveryDate
+                    string: ${GM_3P_Shipping_EED}
+                  - name: itemShippedByThirdParty
+                    string: "1 item"
+                  - name: soldByThirdParty
+                    string: ${GM_3P_SellerInfo}
+                  - name: third_party_merchandise
+                    string: ${gm_3p_item}
+            - log:
+                message: EDD for GM products verified in cart!
+                color: GREEN_BOLD_BRIGHT
+
+            # Proceed to Checkout
+            - executeFunction:
+                      name: ca.test.functions.cart.checkout.proceedToCheckOutIos 
+            - log:
+                message: Navigate to checkout page
+                color: GREEN_BOLD_BRIGHT
+
+            #verify fulfillmentType in checkout
+            - executeFunction:
+                      name: ca.test.functions.checkOut.validateCheckOutOrderCard
+                      params:
+                        - name: fulfillmentType
+                          string: ca.test.data.cart002.fulfillmentType
+            - log:
+                message: fulfillmentType verified in checkout!
+                color: GREEN_BOLD_BRIGHT
+            
+            #verify deliveryAddress in checkout
+            - executeFunction:
+                      name: ca.test.functions.checkOut.assertingDeliveryAddress
+                      params:
+                        - name: fulfillmentType
+                          string: ca.test.data.cart002.fulfillmentType
+                        - name: addressFirstLine
+                          string: ca.test.data.cart002.deliveryAddress
+            - log:
+                message: delivery addrress verified in checkout!
+                color: GREEN_BOLD_BRIGHT
+#------------------------------------------------------------------------------
+            - storeIn:
+                key: testStatus
+                value: passed
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-002-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps  
+
+

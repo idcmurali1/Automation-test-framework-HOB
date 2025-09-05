@@ -1,0 +1,145 @@
+#======================================================================================================================
+#  AUTHOR: Isis Tolentino (vn53dge)
+#  CREATED: Nov/6/2024
+#  REVISION: ---
+#  JIRA MANUAL TEST CASE: MMPP-1040
+#  JIRA AUTOMATED TEST CASE: MMPP-3196
+#  FLOW: Navigate to EA Banner, Validate Order History and Order Details Loads Correctly.
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: postpurchase-walmart-ea-sanity-production-ios-1040, postpurchase-walmart-ea-sanity-production-ios, 
+        postpurchase-bodega-ea-sanity-production-ios-1040, postpurchase-bodega-ea-sanity-production-ios
+
+  testCaseId: MMPP-3196
+
+scenarios:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+
+      - log: R2_SUBFLOW_BEFORE ### [[ 🟢 Flow Identifier: BEFORE 🟢 ]] ###
+
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+      
+      - storeIn:
+          key: MMPP_1040_SUCCESSFUL_EXECUTION
+          value: false
+
+      - log: BEFORE SCENARIO END
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+
+      - log: R2_SUBFLOW_MAIN ### [[ 🟢 Flow Identifier: MAIN 🟢 ]] ###
+      
+      # STEP 1 ---------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 1: OPEN APP, COMPLETE ONBOARDING AND SELECT BANNER."
+         color: ORANGE
+      
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: mx.postpurchase.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: mx.postpurchase.onboarding.onlineExclusiveStore
+
+      # STEPS 2-4 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 2-4: (2-3) OPEN ACCOUNT AND SELECT SIGNIN. (4) LOGIN."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: mx.postpurchase.1040.userAccount.email
+            - name: userPassword
+              string: mx.postpurchase.1040.userAccount.password
+
+      # STEPS 5-6 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 5-6: (5) SELECT 'PEDIDOS' OPTION. (6) VALIDATE ORDER HISTORY LIST."
+         color: ORANGE
+
+      - executeFunction:
+          name: functions.accountPage.tapOnOrderHistory
+      - executeFunction:
+          name: mx.functions.orders-history.assertPageDisplayed
+
+      # STEPS 7-8 ------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 7-8: (7) SELECT ANY ORDER FROM THE ORDER HISTORY LIST. (8) SELECT 'VER DETALLES' BUTTON."
+         color: ORANGE
+      
+      - executeFunction:
+          name: mx.functions.orders-history.tapOrderDetailsByPosition
+          params:
+            - name: position
+              string: "1"
+
+      # STEPS 9 --------------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEP 9: Validate order details."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.order-details.assertOrderDetailsDisplayed
+
+      # STEPS 10-11 ----------------------------------------------------------------------------------------------------
+      - log:
+         message: "STEPS 10-11: (10) BACK TO PROFILE/ACCOUNT. (11) LOGOUT."
+         color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.order-details.tapBack
+      - executeFunction:
+          name: mx.functions.orders-history.tapBack
+      - executeFunction:
+          name: mx.functions.account.tapLogout
+
+      - storeIn:
+          key: MMPP_1040_SUCCESSFUL_EXECUTION
+          value: true
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   A F T E R   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: After
+    after: true
+    flow:
+      - log: R2_SUBFLOW_AFTER ### [[ 🟢 Flow Identifier: AFTER 🟢 ]] ###
+
+      - if:
+          condition: ${MMPP_1040_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully."
+                color: GREEN_BOLD
+
+      - log: AFTER SCENARIO END

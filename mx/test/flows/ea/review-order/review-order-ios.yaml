@@ -1,0 +1,465 @@
+#======================================================================================================================
+#  AUTHOR: Rodrigo Pacheco Cámara (vn53p0i)
+#  CREATED: Feb/27/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # DESCRIPTION: Asserts all the information related to the Home Delivery Method. For the Address assertion, this can be
+  #   asserted as a single string provided in the parameter ${addressFullString}, or asserted by individual values
+  #   provided in the parameters ${streetName}, ${exteriorNumber}, ${city}, ${state} and ${zipCode}.
+  #
+  # PARAMS:
+  #   ${assertBy}                 [Mandatory]   How to verify the desired address. Options: [ 'FullString' | 'Values' ]
+  #                                               If 'FullString' function validates by using 'addressFullString'.
+  #                                               If 'Values' function validates by individual values using the address related parameters.
+  #
+  #   ${expectedDeliveryDate}     [Optional]    Expected Delivery date to assert (the one from Cart page).
+  #                                               NOTE: Remember that the delivery date changes after selecting a payment method.
+  #                                               NOTE: Set to 'null' to skip this assertion in case your order has multiple.
+  #                                               delivery sections and different delivery dates.
+  #
+  #   ${expectedHomeAddressName}  [Mandatory]   Expected Address Name to validate.
+  #
+  #   ${addressFullString}        [Optional]    (Used only when ${assertBy} == 'FullString')
+  #                                               Full String containing the complete home delivery address.
+  #
+  #   ${streetName}               [Optional]   (Used only when ${assertBy} == 'Values')
+  #                                               Expected Home Street to be displayed.
+  #
+  #   ${exteriorNumber}           [Optional]   (Used only when ${assertBy} == 'Values')
+  #                                               Expected Home Exterior Number to be displayed.
+  #
+  #   ${city}                     [Optional]   (Used only when ${assertBy} == 'Values')
+  #                                               Expected Home City to be displayed.
+  #
+  #   ${state}                    [Optional]   (Used only when ${assertBy} == 'Values')
+  #                                               Expected Home State to be displayed.
+  #
+  #   ${zipCode}                  [Optional]   (Used only when ${assertBy} == 'Values')
+  #                                               Expected Home ZIP Code to be displayed.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.review-order.assertHomeDeliveryInformation
+    platform: ios
+    flow:
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: 'HomeDelivery'
+
+      # Delivery Date Assertion...
+      - log:
+          message: "Expected Delivery Date Assertion: ['${expectedDeliveryDate}']..."
+          color: CYAN
+      - if:
+          condition: ${expectedDeliveryDate} == null
+          then:
+            - log:
+                message: "Delivery Date Assertion Skipped (expectedDeliveryDate = null)"
+                color: GREEN_BOLD
+          else:
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertSingleDeliveryDate
+                params:
+                  - name: expectedDeliveryDate
+                    string: ${expectedDeliveryDate}
+
+      # Home Address Name Assertion...
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertHomeAddressName
+          params:
+            - name: expectedHomeAddressName
+              string: ${expectedHomeAddressName}
+
+      # Home Address Assertion...
+      - if:
+          condition: ${assertBy} != 'FullString' && ${assertBy} != 'Values'
+          then:
+            - failTest:
+                message: "Invalid 'assertBy' Option provided: '${assertBy}'"
+      - if:
+          condition: ${assertBy} == 'FullString'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertHomeAddressByFullString
+                params:
+                  - name: addressFullString
+                    string: ${addressFullString}
+      - if:
+          condition: ${assertBy} == 'Values'
+          then:
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertHomeAddressByIndividualValues
+                params:
+                  - name: streetName
+                    string: ${streetName}
+                  - name: exteriorNumber
+                    string: ${exteriorNumber}
+                  - name: city
+                    string: ${city}
+                  - name: state
+                    string: ${state}
+                  - name: zipCode
+                    string: ${zipCode}
+      - log:
+          message: "End flow: od.review-order.assertHomeDeliveryInformation"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: Asserts all the information related to the Pickup Delivery Method (Delivery method, Delivery date, 
+  #              Store Address and Pickup Person). For the Store Address assertion, this can be asserted as a single 
+  #              string provided in the parameter ${addressFullString}.
+  #
+  # PARAMS:
+  #   ${expectedDeliveryDate}   [Mandatory]   Expected Delivery date to assert (the one from Cart page).
+  #                                             NOTE: Remember that the delivery date changes after selecting a payment method.
+  #
+  #   ${addressFullString}      [Mandatory]   Full String containing the complete store address (as displayed in Review-Order Page).
+  #
+  #   ${pickupPersonFirstName}  [Mandatory]   Expected Pickup Person's First Name.
+  #
+  #   ${pickupPersonLastName}   [Mandatory]   Expected Pickup Person's Last Name.
+  #
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.review-order.assertPickupDeliveryInformation
+    platform: ios
+    flow:
+      # Delivery Method Assertion...
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertDeliveryMethod
+          params:
+            - name: expectedDeliveryMethod
+              string: 'PickupDelivery'
+
+      # Delivery Date Assertion...
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertSingleDeliveryDate
+          params:
+            - name: expectedDeliveryDate
+              string: ${expectedDeliveryDate}
+
+      # Home Address Name Assertion...
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertStoreAddressByFullString
+          params:
+            - name: addressFullString
+              string: ${addressFullString}
+
+      # Pickup Person Assertion...
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertPickupPerson
+          params:
+            - name: pickupPersonName
+              string: ${pickupPersonFirstName} ${pickupPersonLastName}
+
+      - log:
+          message: "End flow: ea.review-order.assertPickupDeliveryInformation"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.flows.ea.review-order.selectInStorePaymentMethod
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.ea.review-order.tapAddOrChangePaymentMethodButton
+      - executeFunction:
+          name: mx.functions.ea.payment.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.payment.selectInStorePaymentMethod
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.ea.payment.tapContinueButton
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertInStorePaymentMethodIsSelected
+      - log:
+          message: "Flow Succeeded: In-Store Payment Method is Selected."
+          color: GREEN_BOLD
+      - log:
+          message: "End flow: ea.review-order.selectInStorePaymentMethod"
+          color: BLUE
+
+#----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This function validates if the desired phone number is already displayed in the phone number section,
+  #                 if it's not then it enters the number, if it is, then the flow continues without any modifications.
+  # PARAM         ${userPhoneNumber} [Mandatory] User phone number to input.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.flows.ea.review-order.enterCellphoneNumberIfNotDisplayed
+    platform: ios
+    flow:
+      - executeNode:
+          file: mx/test/helpers/review-order/parsePhoneNumberForAssertion.js
+          args:
+            - value: ${userPhoneNumber}
+          # The name of this variable is used in the next mapping, please do not change or change accordingly.
+          getResponse:
+            storeIn: expectedPhoneNumber
+      - log:
+          message: "Expected Phone Number to be displayed: '${expectedPhoneNumber}'"
+          color: CYAN
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.displayedPhoneNumber # <--PARAM--${expectedPhoneNumber}
+          then:
+            - log:
+                message: "Expected Phone Number is already typed and displayed, flow will continue execution..."
+                color: GREEN_BOLD
+          else:
+            - log:
+                message: "Expected Phone Number has not been entered, flow will enter it and continue..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.review-order.enterCellphoneNumber
+                params:
+                  - name: userPhoneNumber
+                    string: ${userPhoneNumber}
+      - log:
+          message: "End flow: review-order.enterCellphoneNumberIfNotDisplayed"
+          color: BLUE
+
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:  This method asserts all the values in the totals section (bottom of the page). Estimated total is calculated inside this method.
+  # PARAMS:
+  #          ${deliveryMethod}          [Mandatory]   Selected Delivery Method. Options: [ HomeDelivery | PickupDelivery ]
+  #                                                     - If option is 'HomeDelivery', flow will assert the Delivery Fee as Charged.
+  #                                                       (This option needs the value of 'expectedDeliveryFee' to be a numeric value, else flow fails).
+  #                                                     - If option is 'PickupDelivery', flow will run the Delivery Fee assertion as Not Charged.
+  #                                                       (This option ignores the value of 'expectedDeliveryFee'.
+  #
+  #          ${assertDeliveryFee}       [Mandatory]    Flag to indicate if the Delivery Fee should be verified. Options: [ true | false ]
+  #                                                     - If 'HomeDelivery' is selected while this parameter is 'true' flow will use the value in 'expectedDeliveryFee' to assert the Delivery fee as charged.
+  #                                                     - If 'HomeDelivery' is selected while this parameter is 'false' flow will not verify the Delivery fee, and it will return the displayed value in 'returnedDeliveryFee' instead.
+  #                                                     - If 'PickupDelivery' is selected this parameter and 'expectedDeliveryFee' will be ignored and flow will run the Delivery Fee assertion as Not Charged.
+  #
+  #          ${expectedDeliveryFee}     [Optional]    Expected delivery fee cost. Options: [ <numeric value> | null ]
+  #                                                     Since delivery fee depends on the value of 'assertDeliveryFee' refer the documentation in the previous parameter for the full details.
+  #
+  #          ${assertDiscount}          [Mandatory]    Flag to indicate if the Saved amount should be verified. Options: [ true | false ]
+  #                                                     If 'true', the original subtotal value will be verified, as well as the savings amount and finally the subtotal after discounts (it uses 'expectedSubtotal' and 'expectedSavingsAmount').
+  #                                                     If 'false', only the subtotal without discounts will be verified (it uses 'expectedSubtotal').
+  #
+  #          ${expectedSavingsAmount}   [Optional]    This is the sum of all the amount that is being saved for purchasing discounted products (the value next to the "Ahorras $XX.XX" label).
+  #                                                     This parameter is ignored if 'assertDiscount' is 'false'.
+  #
+  #          ${expectedSubtotal}        [Mandatory]   Expected subtotal (the result of the addition of all the products subtotals). If there are
+  #                                                     discounts, this value should be equal to the sum of all product subtotals BEFORE discount.
+  #
+  # RETURNS:
+  #          ${returnedEstimatedTotal}  This is the calculated estimated total (Subtotal + Delivery fee), for Pickup orders Delivery fee equals '0.00'.
+  #          ${returnedDeliveryFee}     If the expectedDeliveryFee is 'null' it will return this variable with the value displayed for delivery fee.
+  #          ${returnedSubtotal}        If the there were discounts in the cart, this will be the fixed subtotal after discounts. If there weren't discounts, this value will be the same as 'expectedSubtotal'.
+  # AUTHOR: Rodrigo Pacheco C.
+  - name: mx.flows.ea.review-order.assertTotals
+    platform: ios
+    flow:
+      - log:
+          message: "[Mandatory] Delivery method: '${deliveryMethod}'"
+          color: CYAN
+      - log:
+          message: "[Mandatory] Assert Delivery Fee?: '${assertDeliveryFee}'"
+          color: CYAN
+      - log:
+          message: "[Optional] Expected Delivery Fee: '${expectedDeliveryFee}'"
+          color: CYAN
+      - log:
+          message: "[Mandatory] Assert Discount?: '${assertDiscount}'"
+          color: CYAN
+      - log:
+          message: "[Optional] Expected Savings amount: '${expectedSavingsAmount}'"
+          color: CYAN
+      - log:
+          message: "[Mandatory] Expected Subtotal: '${expectedSubtotal}'"
+          color: CYAN
+
+      # Delivery Fee assertion...
+      - log:
+          message: "Delivery Fee assertion..."
+          color: GREEN_BOLD
+      - if:
+          condition: ${deliveryMethod} != 'HomeDelivery' && ${deliveryMethod} != 'PickupDelivery'
+          then:
+            - failTest:
+                message: "Invalid Delivery Method Option provided: '${deliveryMethod}'"
+
+      # If Home Delivery...
+      - if:
+          condition: ${deliveryMethod} == 'HomeDelivery'
+          then:
+            - if:
+                condition: ${assertDeliveryFee} != true && ${assertDeliveryFee} != false
+                then:
+                  - failTest:
+                      message: "Invalid 'assertDeliveryFee' Option provided: '${assertDeliveryFee}'"
+            - if:
+                condition: ${assertDeliveryFee} == true
+                then:
+                  - log:
+                      message: "Performing Delivery Fee assertion (Optional 'assertDeliveryFee' = 'true'), flow will assert Delivery Fee as Charged..."
+                      color: GREEN_BOLD
+                  - executeFunction:
+                      name: mx.functions.ea.review-order.assertDeliveryFee
+                      params:
+                        - name: expectedDeliveryFee
+                          string: ${expectedDeliveryFee}
+                  - storeIn:
+                      key: finalDeliveryFee
+                      value: ${expectedDeliveryFee}
+                else:
+                  - log:
+                      message: "Delivery Fee assertion skipped (Optional 'assertDeliveryFee' = 'false'). Getting displayed delivery fee value..."
+                      color: GREEN_BOLD
+                  - executeFunction:
+                      name: mx.functions.ea.review-order.getDisplayedDeliveryFee #--RETURNS--${returnedDeliveryFee}-->
+                  - storeIn:
+                      key: finalDeliveryFee
+                      value: ${returnedDeliveryFee}
+      # If Pickup Delivery...
+      - if:
+          condition: ${deliveryMethod} == 'PickupDelivery'
+          then:
+            - log:
+                message: "Selected Delivery method is Pickup Delivery, flow will assert Delivery Fee as Not Charged..."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertDeliveryFeeNotCharged
+            - storeIn:
+                key: finalDeliveryFee
+                value: '0.00'
+
+      # Subtotal assertion...
+      - if:
+          condition: ${assertDiscount} != true && ${assertDiscount} != false
+          then:
+            - failTest:
+                message: "Invalid 'assertDiscount' Option provided: '${assertDiscount}'"
+      - if:
+          condition: ${assertDiscount} == false
+          then:
+            - log:
+                message: "Performing Subtotal assertion without discounts ('assertDiscount' = 'false')."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertSubtotal
+                params:
+                  - name: expectedSubtotal
+                    string: ${expectedSubtotal}
+          else:
+            - log:
+                message: "Performing Subtotal assertion with discounts ('assertDiscount' = 'true')."
+                color: GREEN_BOLD
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertSubtotalBeforeDiscounts
+                params:
+                  - name: expectedOriginalSubtotal
+                    string: ${expectedSubtotal}
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertSavingsAmount
+                params:
+                  - name: expectedSavingsAmount
+                    string: ${expectedSavingsAmount}
+            - arithmetic:
+                expression: ${expectedOriginalSubtotal} - ${expectedSavingsAmount}
+                numberOfDecimalPlaces: 2
+                storeIn: expectedSubtotal
+            - executeFunction:
+                name: mx.functions.ea.review-order.assertSubtotalAfterDiscounts
+                params:
+                  - name: expectedSubtotalAfterDiscount
+                    string: ${expectedSubtotal}
+      - storeIn:
+          key: returnedSubtotal
+          value: ${expectedSubtotal}
+      - log:
+          message: "Calculated Final Subtotal: '${returnedSubtotal}'"
+          color: GREEN_BOLD
+
+      # Estimated Total assertion...
+      - log:
+          message: "Estimated Total assertion..."
+          color: GREEN_BOLD
+      - arithmetic:
+          expression: ${expectedSubtotal} + ${finalDeliveryFee}
+          numberOfDecimalPlaces: 2
+          storeIn: returnedEstimatedTotal
+      - log:
+          message: "Calculated Estimated Total: '${returnedEstimatedTotal}'"
+          color: GREEN_BOLD
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertEstimatedTotalFromDetailsSection
+          params:
+            - name: expectedEstimatedTotal
+              string: ${returnedEstimatedTotal}
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertEstimatedTotalFromButton
+          params:
+            - name: expectedEstimatedTotal
+              string: ${returnedEstimatedTotal}
+      - log:
+          message: "End flow: review-order.assertTotals"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.functions.ea.review-order.assertCashiPaymentMethodIsSelected
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.ea.review-order.cashiPaymentMethodIcon
+              - identifier: mx.mappings.ea.review-order.cashiDescriptionTextView
+            timeout: 15000
+          then:
+            - log:
+                message: "Assertion Succeeded: Cashi Payment Method is Selected."
+                color: GREEN_BOLD
+          else:
+            - failTest:
+                message: "Failed: Cashi Payment Method is not displayed or was not Selected properly."
+      - log:
+          message: "End function: ea.review-order.assertCashiPaymentMethodIsSelected"
+          color: BLUE
+  
+  #----------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Francisco Ramirez (vn53vq4)
+  - name: mx.flows.ea.review-order.selectCashiPaymentMethod
+    platform: ios
+    flow:
+      - executeFunction:
+          name: mx.functions.ea.review-order.tapAddOrChangePaymentMethodButton
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: mx.functions.ea.payment.assertPageDisplayed
+      - executeFunction:
+          name: mx.functions.ea.payment.selectCashiPaymentMethod
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: mx.functions.ea.payment.tapContinueButton
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertCashiPaymentMethodIsSelected
+      - log:
+          message: "Flow Succeeded: Cashi Payment Method is Selected."
+          color: GREEN_BOLD
+      - log:
+          message: "End flow: ea.review-order.selectCashiPaymentMethod"
+          color: BLUE

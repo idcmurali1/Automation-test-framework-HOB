@@ -1,0 +1,196 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: mx/release-latest
+    scheduling: concurrent
+
+    triggers:
+      - push:
+          manualOnly: true
+
+      # iOS
+      - manual:
+          name: Upload MX-Bodega iOS Release Latest
+          call: upload_build_to_sauce_labs(env_mx_bodega_ios_release_latest)
+
+      # - cron:
+      #     spec: H 16 * * 1
+      #     call: upload_build_to_sauce_labs(env_mx_bodega_ios_release_latest)
+
+      - manual:
+          name: Upload MX iOS Release Latest
+          call: upload_build_to_sauce_labs(env_mx_ios_release_latest)
+      
+      - manual:
+          name: Upload MX Merge Hallways iOS Release Latest
+          call: upload_build_to_sauce_labs(env_mx_mh_ios_release_latest)
+      
+      # - cron:
+      #     spec: H 16 * * 1
+      #     call: upload_build_to_sauce_labs(env_mx_ios_release_latest)
+
+      # Android
+
+      - manual:
+          name: Upload MX Android Release Latest
+          call: upload_build_to_sauce_labs(env_mx_android_release_latest)
+      
+      - manual:
+          name: Upload MX Merge Hallways Android Release Latest
+          call: upload_build_to_sauce_labs(env_mx_mh_android_release_latest)
+      
+      # - cron:
+      #     spec: H 16 * * 1
+      #     call: upload_build_to_sauce_labs(env_mx_android_release_latest)
+
+      - manual:
+          name: Upload MX-Bodega Android Release Latest
+          call: upload_build_to_sauce_labs(env_mx_bodega_android_release_latest)
+      
+      # - cron:
+      #     spec: H 16 * * 1
+      #     call: upload_build_to_sauce_labs(env_mx_bodega_android_release_latest)
+
+      - pr: disabled
+
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - push:
+          manualOnly: true
+
+      # iOS
+      - manual:
+          name: Upload MX iOS Release Latest
+          call: upload_build_to_sauce_labs(env_mx_ios_release_latest)
+
+      - cron:
+          spec: H 5 * * *
+          call: upload_build_to_sauce_labs(env_mx_ios_release_latest)
+      
+      - manual:
+          name: Upload MX Merge Hallways iOS Release Latest
+          call: upload_build_to_sauce_labs(env_mx_mh_ios_release_latest)
+
+      - cron:
+          spec: H 5 * * *
+          call: upload_build_to_sauce_labs(env_mx_mh_ios_release_latest)
+
+      - manual:
+          name: Upload MX-Bodega iOS Release Latest
+          call: upload_build_to_sauce_labs(env_mx_bodega_ios_release_latest)
+
+      - cron:
+          spec: H 5 * * *
+          call: upload_build_to_sauce_labs(env_mx_bodega_ios_release_latest)
+
+
+      # Android
+      - manual:
+          name: Upload MX Android Release Latest
+          call: upload_build_to_sauce_labs(env_mx_android_release_latest)
+      
+      - cron:
+          spec: H 5 * * *
+          call: upload_build_to_sauce_labs(env_mx_android_release_latest)
+      
+      - manual:
+          name: Upload MX Merge Hallways Android Release Latest
+          call: upload_build_to_sauce_labs(env_mx_mh_android_release_latest)
+      
+      - cron:
+          spec: H 5 * * *
+          call: upload_build_to_sauce_labs(env_mx_mh_android_release_latest)
+
+      - manual:
+          name: Upload MX-Bodega Android Release Latest
+          call: upload_build_to_sauce_labs(env_mx_bodega_android_release_latest)
+      
+      - cron:
+          spec: H 5 * * *
+          call: upload_build_to_sauce_labs(env_mx_bodega_android_release_latest)
+
+      - pr: disabled
+
+
+envs:
+  global:
+    variables:
+      SAUCE_USERNAME: wcp-apps-e2e
+      SAUCE_ACCESS_KEY: ENC[rnmbZWq+9q4Y2NblUl3yKduKKFO9zq86fEbKAl0j4lm4uh5bgYho+//5ZRtDYEqx]
+      TEST_PLAN_PASSED: ":white_check_mark: *Build Success*"
+      TEST_PLAN_FAILED: ":x: *Build Failure*"
+
+  #iOS
+  env_mx_ios_release_latest:
+    variables:
+      MARKET: mx
+      APP_PLATFORM: ios
+      SAUCE_FILE_NAME: mx-release-latest.zip
+      APP_BRANCH: glass-release-candidate-arm64-sim
+
+  env_mx_bodega_ios_release_latest:
+    variables:
+      MARKET: mx-bodega
+      APP_PLATFORM: ios
+      SAUCE_FILE_NAME: mx-bodega-release-latest.zip
+      APP_BRANCH: glass-release-candidate-arm64-sim
+  
+  env_mx_mh_ios_release_latest:
+    variables:
+      MARKET: mx
+      APP_PLATFORM: ios
+      SAUCE_FILE_NAME: mx-merge-hallways-release-latest.zip
+      APP_BRANCH: glass-release-candidate-arm64-sim
+
+  #Android
+  env_mx_android_release_latest:
+    variables:
+      MARKET: mx
+      APP_PLATFORM: android
+      SAUCE_FILE_NAME: mx-release-latest.apk
+      APP_BRANCH: mx-RC
+
+  env_mx_bodega_android_release_latest:
+    variables:
+      MARKET: mx-bodega
+      APP_PLATFORM: android
+      SAUCE_FILE_NAME: mx-bodega-release-latest.apk
+      APP_BRANCH: mx-bodega-RC    
+
+  env_mx_mh_android_release_latest:
+    variables:
+      MARKET: mx
+      APP_PLATFORM: android
+      SAUCE_FILE_NAME: mx-merge-hallways-release-latest.apk
+      APP_BRANCH: mx-RC
+
+flows:
+
+  get_app_version:
+      - var(APP_VERSION):
+        - shell (name Get App Version For MX Release): head wcp/looper/mx-release/app-version/mx-release-version.txt
+
+  download_build:
+    - shell (name Download App Build): |
+        sh wcp/scripts/download_build_looper.sh
+
+  upload_build:
+    - shell (name Upload Build to Sauce Labs): |
+        sh wcp/scripts/upload_build_looper.sh
+
+  upload_build_to_sauce_labs:
+    - node(label = linux, isolation = except_project, ws = exclusive):
+        try:
+          - declare(APP_VERSION)
+          - call: get_app_version
+          - (name Environment dump) printenv|sort
+          - call: download_build
+          - call: upload_build
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1

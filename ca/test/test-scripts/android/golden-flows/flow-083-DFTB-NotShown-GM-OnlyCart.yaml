@@ -1,0 +1,111 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: DFTB
+# User:  Registered User
+# Order Type: GM
+# Fulfillment: S2H
+# Payment Type: CC
+# Experience: A2C Using API
+# Validation: Validate DFTB not shown for GM Only Orders
+#
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: android
+  tags: flow-083, GO/MX-Express-Slot-English-Android-Flow
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.orleansPostalCode
+
+      # Astro - Clear Cart
+      - executeFunction:
+          name: ca.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: ca.test.data.flow083.email
+            - name: password
+              string: ca.test.data.flowDftb.password
+
+      # Home to Sign In
+      - executeFunction:
+          name: ca.test.functions.home.signIn
+
+      # Login to account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.flow083.email
+            - name: password
+              string: ca.test.data.flowDftb.password
+
+      - executeFunction:
+          name: ca.test.functions.home.GICPhase2.selectStore
+          params:
+            - name: Zip_Code
+              string: ca.test.data.orleansPostalCode
+            - name: storeName
+              string: ca.test.data.flowDFTB.storeName
+      
+      - executeFunction:
+          name: ca.test.functions.astro.addToCart
+          params:
+            - name: payLoad
+              string: ca.test.data.flowDftbGM.addToCartPayLoad
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # navigate to cart
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToCart
+
+      # Proceed to Checkout
+      - executeFunction:
+          name: ca.test.functions.cart.proceedToCheckOutDFTB
+
+      # DFTB not visible Validation
+      - executeFunction:
+          name: ca.test.functions.cart.DftbNotVisibleValidation
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-041
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

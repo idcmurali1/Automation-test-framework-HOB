@@ -1,0 +1,140 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+branches:
+  - spec: development
+    scheduling: concurrent
+
+    triggers:
+      - push:
+          manualOnly: true
+
+      # Run Unified E2E flows on Prod on development build
+      - manual:
+          name: Re-Run unified-prod-e2e
+          call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-development-latest.zip"', APP_BUILD_BRANCH = 'development-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod')
+
+      - manual:
+          name: Re-Run unified-prod-e2e
+          call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-development-latest.zip"', APP_BUILD_BRANCH = 'development-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod')
+
+      - manual:
+          name: Re-Run unified-prod-e2e
+          call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-development-latest.zip"', APP_BUILD_BRANCH = 'development-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod')
+
+      # # Run unified flows on Prod on development build.
+      # - cron:
+      #     spec: "0 11,17,23 * * 3-7"
+      #     call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-development-latest.zip"', APP_BUILD_BRANCH = 'development-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod')
+
+  - spec: us/release-latest
+    scheduling: concurrent
+
+    triggers:
+      - push:
+          manualOnly: true
+
+      # Run unified flows on Prod on Release branch build
+      - manual:
+          name: Run Unified iOS Prod Regression flows - All
+          call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-release-latest.zip"', APP_BUILD_BRANCH = 'release-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod-release')
+
+      - manual:
+          name: Run Unified iOS Prod Regression flows - All
+          call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-release-latest.zip"', APP_BUILD_BRANCH = 'release-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod-release')
+
+      - manual:
+          name: Run Unified iOS Prod Regression flows - All
+          call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-release-latest.zip"', APP_BUILD_BRANCH = 'release-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod-release')
+
+      # # Run unified flows on Prod on Release branch build, scheduled at  6:30PM Friday-Monday for release 25.0, we will change to regular schedule after this release
+      # - cron:
+      #     spec: "30 18 * * 1-2"
+      #     call: rerun_unified_prod_e2e(SAUCE_APP = '"storage\:filename\=ios-arm-release-latest.zip"', APP_BUILD_BRANCH = 'release-latest', TAG_TO_RERUN_FAILURE ='unified-prod-e2e', TEST_TAGS = 'unified-prod-e2e-retry', DEPENDENCY_PROFILE = 'looper-prod-release')
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      APP_PLATFORM: ios
+      SLACK_CHANNEL: r2-glass-test-result # Add your own team's test result slack channel. Also, make sure to add looperbot app to channel.
+      # TESTRAIL_PROJECT_ID: 133 # OPTIONAL: If used, a new Testrail plan id will be generated on this project id for each looper run.
+      # TESTRAIL_PLAN_ID: '' # OPTIONAL: Declare global var TESTRAIL_PLAN_ID to be used in test configs
+      # SKIP_SLACK_TEST_RUN: passed # OPTIONAL: Set value to skip posting slack message for test runs using condition "all" or "passed"
+      #TESTRAIL_PLAN_ID: 768828
+      POST_TO_ANIVIA: true
+      R2_VERIFIER_PATH: "./us/e2e-tests"
+
+  env_ios_teflon:
+    variables:
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/ios/ios-default.yaml
+      # TEST_TAGS: example-test
+      DEPENDENCY_PROFILE: looper
+      GLASS_ENV: teflon
+      MAPPING_LABELS: teflon
+
+  env_ios_prod_regression:
+    variables:
+      DEPENDENCY_FILE_NAME: us/e2e-tests/dependencies/ios/ios-default.yaml
+      # DEPENDENCY_PROFILE: looper-prod
+      GLASS_ENV: production
+      MAPPING_LABELS: production
+      R2_THREADS: 10
+      SLACK_CHANNEL: r2-glass-prod-ios-tests
+      SLACK_TEST_RUN_MESSAGE: "${TEST_PLAN_STATUS}\n>>> *Branch*: ${TRIGGER_BRANCH}\n
+        *App Build*: ${SAUCE_APP}\n
+        *Tag*: ${TEST_TAGS}\n
+        *Build Link*: ${BUILD_URL}\n
+        *Test Report*: ${SLACK_TEST_REPORT_MESSAGE}\n
+        *Report Link*: ${REPORT_URL}"
+
+flows:
+
+  rerun_unified_prod_e2e:
+    try:
+      - parallel(failsafe):
+          - call: run_prod_regression_base_release(POST_TO_ES = true, TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_teflon_regression_flows:
+    try:
+      - parallel(failsafe):
+          - call: run_prod_regression_base_release(TEST_TAGS = 'us-golden-flows', TEST_SESSION_ID = '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}')
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  run_prod_regression_base_release:
+    try:
+      - call: build(env_ios_prod_regression)
+    catch:
+      - shell: exit 1
+    finally:
+      - call: post_slack_test_plan
+
+  build:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: setup
+          - call: get_app_version
+          - call: get_repository_build
+          - call: return_sauce_app_location
+          - call: get_build_app_version
+          - shell: node ./us/scripts/fetch-failed-test-flows.js
+          - call: execute_test
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          - call: get_test_failures
+          - var(TEST_RUN_STATUS = $TEST_RUN_PASSED)
+        catch:
+          - var(TEST_RUN_STATUS = $TEST_RUN_FAILED)
+          - shell: exit 1
+        finally:
+          - call: post_test_results_json_to_es

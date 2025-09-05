@@ -1,0 +1,415 @@
+#======================================================================================================================
+#    AUTHOR: Teresa Partida (vn55epy)
+#   CREATED: Aug/26/2024
+#  REVISION: ---
+#
+#  Copyright © 2024 Walmart. All rights reserved.
+#======================================================================================================================
+
+general:
+  tags: purchase-e2e-ea-production-ios-002, purchase-e2e-ea-production-ios
+
+scenarios:
+  - name: Before
+    before: true
+    flow:
+      - log: "BEFORE SCENARIO START: Initial Config..."
+
+      - storeIn:
+          key: PURCHASE_TEST_CASE_NAME
+          value: "GMX_PURCHASE_EA_IOS_002"
+
+      - storeIn:
+          key: EA_002_SUCCESSFUL_EXECUTION
+          value: false
+
+      - executeFunction:
+          name: mx.functions.utils.relaunchApp
+          params:
+            - name: bundleId
+              string: ${BUNDLE_ID}
+
+      - if:
+          condition: ${BUNDLE_ID} == 'com.walmartmexico.WalmartMG.qa'
+          then:
+            - storeIn:
+                key: APP_INITIAL
+                value: "w"
+          else:
+            - storeIn:
+                key: APP_INITIAL
+                value: "b"
+
+      - log: "BEFORE SCENARIO END"
+
+  #-------------------------------------------------------------------------------------------------
+
+  - name: Main
+    platform: ios
+    flow:
+      - log: "TEST START: ${PURCHASE_TEST_CASE_NAME}"
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 1: Open app and select EA -------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 1: Open app and select EA"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.global.onboarding.navigateToHomeAsGuestUser
+          params:
+            - name: banner
+              string: EA
+            - name: zipCode
+              string: mx.data.qaa.purchase.ea-002.zipCode
+
+      - executeFunction:
+          name: mx.flows.od.login.navigateToAccountAndLogin
+          params:
+            - name: userEmail
+              string: mx.data.qaa.purchase.ea-002.userEmail
+            - name: userPassword
+              string: mx.data.qaa.purchase.ea-002.userPassword
+            - name: userName
+              string: mx.data.qaa.purchase.ea-002.userName
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 2: Search product" --------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 2: Search product"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.ea.bottom-menu.tapDepartments
+
+      - executeFunction:
+          name: mx.flows.ea.search.performSuccessfulSearch
+          params:
+            - name: searchTerm
+              string: mx.data.qaa.purchase.ea-002.searchTerm
+
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 3: Add product to cart from SLP" ------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 3: Add product to cart from SLP"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.od.add-to-cart.addProductWithoutBadgesToCartInSLP
+
+      # [VARIABLE] Product's name saved in ${productName} to be used in the following slp functions
+      - storeIn:
+          key: productName
+          value: ${returnedProductName}
+      - executeFunction: # <--- ${productName}
+          name: mx.functions.slp.getUnitProductPrice # ---> ${returnedPrice}
+      - executeFunction: # <--- ${productName}
+          name: mx.functions.slp.getProductType # ---> ${returnedProductType}
+      - executeFunction: # <--- ${productName}
+          name: mx.functions.slp.getProductQuantityAsPieces # ---> ${returnedProductPieces}
+
+      # [VARIABLE] Product's name saved in ${purchase_ea002_product_name}
+      - storeIn:
+          key: purchase_ea002_product_name
+          value: ${returnedProductName}
+      # [VARIABLE] Product's price saved in ${purchase_ea002_product_price}
+      - storeIn:
+          key: purchase_ea002_product_price
+          value: ${returnedPrice}
+      # [VARIABLE] Product's type saved in ${purchase_ea002_product_type}
+      - storeIn:
+          key: purchase_ea002_product_type
+          value: ${returnedProductType}
+      # [VARIABLE] Product's quantity saved in ${purchase_ea002_product_quantity}
+      - storeIn:
+          key: purchase_ea002_product_quantity
+          value: ${returnedProductPieces}
+      # [VARIABLE] Product's subtotal saved in ${purchase_ea002_product_subtotal}
+      - storeIn:
+          key: purchase_ea002_product_subtotal
+          value: ${returnedPrice}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 4: Go to cart" ------------------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 4: Go to cart"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.ea.top-menu.assertCartQuantity
+          params:
+            - name: expectedQuantity
+              string: ${purchase_ea002_product_quantity}
+
+      - executeFunction:
+          name: mx.functions.ea.top-menu.tapCartIcon
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 5: Validate cart totals" --------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 5: Validate cart totals"
+          color: ORANGE
+
+      - log: "Product - ${purchase_ea002_product_name} - assertions"
+      - executeFunction:
+          name: mx.flows.ea.cart.quickPerformProductAssertions
+          params:
+            - name: productName
+              string: ${purchase_ea002_product_name}
+            - name: productType
+              string: ${purchase_ea002_product_type}
+            - name: expectedQuantity
+              string: ${purchase_ea002_product_quantity}
+            - name: expectedWeightQuantity
+              string: "null"
+            - name: expectedUnitPrice
+              string: ${purchase_ea002_product_price}
+            - name: expectedOriginalPrice
+              string: "null"
+            - name: expectedSubtotal
+              string: ${purchase_ea002_product_subtotal}
+
+      # [VARIABLE] Order's subtotal saved in ${purchase_ea002_order_subtotal}
+      - storeIn:
+          key: purchase_ea002_order_subtotal
+          value: ${purchase_ea002_product_subtotal}
+
+      - executeFunction:
+          name: mx.flows.ea.cart.assertTotals # ---> ${returnedDeliveryFee}, ${returnedEstimatedTotal}
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.purchase.ea-002.deliveryMethod
+            - name: expectedSubtotal
+              string: ${purchase_ea002_order_subtotal}
+            - name: assertDiscount
+              string: false
+
+      # [VARIABLE] Order's delivery fee saved in ${purchase_ea002_order_delivery_fee}
+      - storeIn:
+          key: purchase_ea002_order_delivery_fee
+          value: ${returnedDeliveryFee}
+
+      - if:
+          condition: ${purchase_ea002_order_delivery_fee} == 0.00
+          then:
+            - storeIn:
+                key: purchase_ea002_order_delivery_fee_validation
+                value: false
+          else:
+            - storeIn:
+                key: purchase_ea002_order_delivery_fee_validation
+                value: true
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 6: Continue with purchase -------------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 6: Continue with purchase"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.ea.cart.tapContinue
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 7: Add new delivery address -----------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 7: Add new delivery address"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.flows.ea.addresses.addHomeDeliveryAddressFromPopup
+          params:
+            - name: userFirstName
+              string: mx.data.qaa.purchase.ea-002.userFirstName
+            - name: userLastName
+              string: mx.data.qaa.purchase.ea-002.userLastName
+            - name: userStreet
+              string: mx.data.qaa.purchase.ea-002.addressStreet
+            - name: userExteriorNumber
+              string: mx.data.qaa.purchase.ea-002.addressExteriorNumber
+            - name: userZipCode
+              string: mx.data.qaa.purchase.ea-002.addressZipCode
+            - name: userNeighborhood
+              string: mx.data.qaa.purchase.ea-002.addressNeighborhood
+            - name: expectedUserState
+              string: mx.data.qaa.purchase.ea-002.addressState
+            - name: expectedUserCity
+              string: mx.data.qaa.purchase.ea-002.addressCity
+            - name: expectedUserMunicipality
+              string: mx.data.qaa.purchase.ea-002.addressMunicipality
+            - name: userPhoneNumber
+              string: mx.data.qaa.purchase.ea-002.addressPhoneNumber
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 8: Select CC as payment method --------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 8: Select CC as payment method"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.review-order.scrollDownToWallet
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.tapChangePaymentMethod
+
+      - executeFunction:
+          name: mx.functions.payment.selectCard
+          params:
+            - name: last4Digits
+              string: mx.data.qaa.purchase.ea-002.cardLast4Digits
+
+      - executeFunction:
+          name: mx.functions.payment.tapContinue
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.enterCVV
+          params:
+            - name: cvv
+              string: mx.data.qaa.purchase.ea-002.cardCVV
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedPaymentMethod
+          params:
+            - name: paymentMethod
+              string: mx.data.qaa.purchase.ea-002.paymentMethod
+
+      - executeFunction:
+          name: mx.functions.review-order.payment-section.assertSelectedCardByLast4Digits
+          params:
+            - name: last4Digits
+              string: mx.data.qaa.purchase.ea-002.cardLast4Digits
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 9: Verify order details in summary page -----------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 9: Verify order details in summary page"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.utils.scrollToTop
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertProductsCountInDeliveryDetailsSection
+          params:
+            - name: expectedProductsCount
+              string: ${purchase_ea002_product_quantity}
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.openProductsDetailsPopup
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.assertPopupDisplayed
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.assertProductsCount
+          params:
+            - name: expectedProductsCount
+              string: ${purchase_ea002_product_quantity}
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.assertProductListed
+          params:
+            - name: productName
+              string: ${purchase_ea002_product_name}
+      - executeFunction:
+          name: mx.functions.ea.review-order.products-details-popup.tapClose
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.getSingleDeliveryDate #--RETURNS--${returnedDeliveryDate}-->
+
+      # [VARIABLE] Order's delivery date saved in ${purchase_ea002_order_delivery_date}
+      - storeIn:
+          key: purchase_ea002_order_delivery_date
+          value: ${returnedDeliveryDate}
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.scrollDownToSection
+          params:
+            - name: sectionOption
+              string: "Totals"
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.assertProductsCountInSubtotalLabel
+          params:
+            - name: expectedProductsCount
+              string: ${purchase_ea002_product_quantity}
+
+      - executeFunction:
+          name: mx.flows.ea.review-order.assertTotals #--RETURNS--${returnedEstimatedTotal}-->
+          params:
+            - name: deliveryMethod
+              string: mx.data.qaa.purchase.ea-002.deliveryMethod
+            - name: expectedDeliveryFee
+              string: ${purchase_ea002_order_delivery_fee}
+            - name: expectedSubtotal
+              string: ${purchase_ea002_order_subtotal}
+            - name: assertDiscount
+              string: 'false'
+            - name: assertDeliveryFee
+              string: ${purchase_ea002_order_delivery_fee_validation}
+            - name: expectedSavingsAmount
+              string: 'null'
+
+      # [VARIABLE] Order's total saved in ${purchase_ea002_order_total}
+      - storeIn:
+          key: purchase_ea002_order_total
+          value: ${returnedEstimatedTotal}
+
+      #---------------------------------------------------------------------------------------------
+      # STEP 10: Add a valid phone number ----------------------------------------------------------
+      #---------------------------------------------------------------------------------------------
+      - log:
+          message: "STEP 10: Add a valid phone number"
+          color: ORANGE
+
+      - executeFunction:
+          name: mx.functions.ea.review-order.scrollUpToSection
+          params:
+            - name: sectionOption
+              string: "PhoneNumber"
+
+      - executeFunction:
+          name: mx.flows.ea.review-order.enterCellphoneNumberIfNotDisplayed
+          params:
+            - name: userPhoneNumber
+              string: mx.data.qaa.purchase.ea-002.addressPhoneNumber
+
+      - storeIn:
+          key: EA_002_SUCCESSFUL_EXECUTION
+          value: true
+
+      - log: "TEST END: ${PURCHASE_TEST_CASE_NAME}"
+
+  #----------------------------------------------------------------------------------------------
+
+  - name: After
+    after: true
+    flow:
+      - log: "AFTER SCENARIO START: After Configs..."
+
+      - executeFunction:
+          name: mx.flows.ea.after-scenario-exclusive.relaunchAndNavigateToHomePage
+      - executeFunction:
+          name: mx.flows.od.after-scenario-exclusive.deleteAddresses
+      - executeFunction:
+          name: mx.flows.od.after-scenario-exclusive.emptyCart
+
+      - if:
+          condition: ${EA_002_SUCCESSFUL_EXECUTION} != true
+          then:
+            - log:
+                message: "Main Failed. No need to reset data."
+                color: RED
+            - failTest:
+                message: "Main Scenario Failed: the After Scenario will propagate the failure to ensure SauceLabs run shows correct execution status."
+          else:
+            - log:
+                message: "Main Scenario ended Successfully, no need to reset data."
+                color: GREEN_BOLD
+      - log: "AFTER SCENARIO END"

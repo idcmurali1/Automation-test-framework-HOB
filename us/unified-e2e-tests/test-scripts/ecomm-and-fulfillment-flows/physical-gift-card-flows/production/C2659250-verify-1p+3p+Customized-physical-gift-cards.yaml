@@ -1,0 +1,157 @@
+general:
+  tags: unified-prod-e2e, C2659250
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2659250
+  metadata:
+    - name: scenarioId
+      string: EC001
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn 
+      
+      # Account info
+      - executeFunction:
+          name: unified.us.functions.authentication.signInInfo
+          params:
+            - name: android.email
+              string: us.data.prod.flow015.android.email
+            - name: android.password
+              string: us.data.android.prod.password.flow015
+            - name: ios.email
+              string: us.data.prod.flow015.ios.email
+            - name: ios.password
+              string: us.data.ios.prod.password.flow015
+
+      # Sign in with default account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: ${email}
+            - name: password
+              string: ${password}
+
+      # clear cart  
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar 
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: unified.us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.backNavigation
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'GIC_BOOKSLOT PICKUP RESERVE TIME SLOTS VERIFICATION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      # Add 1P Variable Amount PGC
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 654950389 
+
+      - executeFunction:
+          name: unified.us.functions.search.validateItemTile
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+
+      - executeFunction:
+          name: unified.us.functions.pgc.prod.validateItemPageOfCustomAmount1PPGC
+
+      - executeFunction:
+          name: unified.us.functions.item.enterCustomAmount
+          params:
+            - name: amount
+              string: 35
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # Add 1P Fixed Amount PGC
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: us.data.prod.flow015.1PFixedPGC
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # Add 3P PGC
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 46518902
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          params:
+            - name: noAds
+              string: true
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      # Go to checkout
+      - executeFunction:
+          name: unified.us.functions.cart.continueToCheckout
+
+      # Verify review order page
+      - executeFunction:
+          name: unified.us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

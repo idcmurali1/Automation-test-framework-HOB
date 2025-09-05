@@ -1,0 +1,112 @@
+general:
+  platform: ios
+  tags: cart-010-ios, ca-function-run, cart
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #  
+  - name: Validating the price summary of the cart for GM.
+    flow:
+
+             # Navigate onboarding to home
+            - executeFunction:
+                name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+                params:
+                  - name: ZIP_CODE
+                    string: ca.test.data.onboarding.zipCodeT6N0A9
+            - log:
+                message: Navigated onboarding to home - T6N0A9 
+                color: YELLOW
+
+            # Navigate to sign in page
+            - executeFunction:
+                name: ca.test.functions.home.navigateHomeToSignInIos
+            - log:
+                message: navigate to signin page
+                color: YELLOW 
+
+            # Sign In to the account
+            - executeFunction:
+                name: ca.test.functions.global.authentication.signInAccountIos
+                params:
+                  - name: email
+                    string: ca.test.data.cart010.emailios
+                  - name: password
+                    string: ca.test.data.cart010.passwordios 
+            - executeFunction:
+                name: ca.test.functions.home.verifyUserNameInTopleft
+            - log:
+                message: signed in
+                color: YELLOW 
+
+            # Selecting store at home
+            - executeFunction:
+                name: ca.test.functions.global.authentication.storeSelect
+                params:
+                  - name: Zip_Code
+                    string: ca.test.data.onboarding.zipcodeL5V6N2
+                  - name: storeName
+                    string: ca.test.search.storeNameL5V6N2
+            - log:
+                message: Store selected from home
+                color: YELLOW 
+                
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            - log: 'R2_SUBFLOW_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+          # navigate to cart
+            - executeFunction:
+                name: ca.test.functions.global.navigation.goToCartIos
+            - log:
+                message: Navigated to cart
+                color: YELLOW 
+
+          # # validate the total of grocery items -- CAPURCHASE-152
+          #   - executeFunction:
+          #       name: ca.test.functions.cart.totalItemsValidation
+          #   - log:
+          #       message: validated the total of grocery items
+          #       color: YELLOW 
+
+          # # validate the total of GM items -- CAPURCHASE-152
+          #   - executeFunction:
+          #       name: ca.test.functions.cart.totalGMItemsValidation
+          #   - log:
+          #       message: validated the total of GM items
+          #       color: YELLOW 
+          
+          # validate GM by EDD
+            - executeFunction:
+                name: ca.test.functions.cart.GM_EDDValidation
+            - log:
+                message: validated GM by EDD
+                color: YELLOW          
+
+            - log:
+               message: Cart page shows total of grocery items in the grocery group and total Items of GM by EDD!
+               color: GREEN_BOLD_BRIGHT  
+
+#------------------------------------------------------------------------------
+            - storeIn:
+                key: testStatus
+                value: passed
+  #After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: cart-010-ios
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps  

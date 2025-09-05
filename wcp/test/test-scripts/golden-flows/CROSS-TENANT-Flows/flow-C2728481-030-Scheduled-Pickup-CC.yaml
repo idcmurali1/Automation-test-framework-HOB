@@ -1,0 +1,189 @@
+general:
+  testCaseId: C2728481 
+  tags: wcp-030, p1-us-prod, p1-ca-en-prod, p1-ca-fr-prod, p1-ca-en-teflon, p1-ca-fr-teflon, p1-mx-mh-e2e-prod, p1-mx-mh-e2e-teflon, val_app_screenshots
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+  - name: Main
+    flow:
+
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+     # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Onboarding
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+      
+      # Sign in
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+      - if:
+          condition: ${platform} == 'Android'
+          then:
+            - storeIn:
+                key: userEmail
+                value: data.wcp030.android.email
+          else:
+            - storeIn:
+                key: userEmail
+                value: data.wcp030.ios.email
+
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password
+
+      - executeFunction:
+          name: functions.accountPage.assertUserLoggedInSuccessfully
+
+      - executeFunction:
+          name: functions.global.tapShopBtn
+
+      - executeFunction:
+          name: functions.global.gic.selectPickupIntent
+          params:
+            - name: page
+              string: home
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray 
+          params:          
+            - name: productArray
+              string: data.searchPage.EachItems
+
+      # # # Implememt Validarte SLA TIER GPMNETE-167574
+      # # - executeFunction:
+      # #     name: functions.productDetailsPage.validatePickupSlaTier
+
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.searchPage.VWItems
+
+      # # # Implement Validarte SLA TIER GPMNETE-167574
+      # # - executeFunction:
+      # #     name: functions.productDetailsPage.validatePickupSlaTier
+
+      - executeFunction:
+          name: functions.global.tapCartIcon
+
+      - executeFunction:
+          name: functions.cartPage.tapReserveATimeBtn
+
+      - executeFunction:
+          name: functions.reserveATime.bookSlot
+          params:
+            - name: fufillment
+              string: Pickup
+            - name: slotType
+              string: Standard
+            - name: slotDay
+              string: tomorrow
+      
+      - executeFunction:
+          name: functions.cartPage.validateItemDetails
+
+      # # Review this functionaliy as it is throwing error We are expecting 'Curbside pickup' and showing 'Pickup'
+      # - executeFunction:
+      #     name: functions.cartPage.assertFulfillmentTypeInCart
+      #     params:
+      #       - name: fulfillmentText
+      #         string: Pickup   
+
+      - if:
+          condition: ${market} == 'CA' && ${language} != 'fr' # Remove this condition when CEPG-288654 and CEPG-288653 Get fixed
+          then:
+            - executeFunction:
+                name: functions.cartPage.validatePOSBenefits
+                params:
+                  - name: userType
+                    string: data.userType.regularUser
+                  - name: fulfillment
+                    string: 'Schedule Pickup'
+                  - name: feeLabel
+                    string: data.moneyBox.belowMinOrderFeeText
+                  - name: feeValue
+                    string: data.moneyBox.belowMinOrderFeeValue
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+      
+      - executeFunction:
+          name: functions.checkoutPage.assertPageLoaded     
+      
+      - executeFunction:
+          name: functions.checkoutPage.validateItemDetails
+          params:
+            - name: fulfillment
+              string: ScheduledPickUp
+
+      - executeFunction:
+          name: functions.checkoutPage.chooseASubstitutionItem
+
+      # Checkout page: User is able to load wallet
+      - executeFunction:
+          name: functions.checkoutPage.validateWalletIsDisplayed
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+
+            - executeFunction:
+                name: functions.checkoutPage.addCVV
+                params:
+                  - name: CVV
+                    string: data.global.card.cvv.123
+
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+
+            - executeFunction:
+                  name: functions.thankYouPage.verifyThankYouPageDisplayed
+
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            - executeFunction:
+                name: functions.orderDetailsPage.verifyAmmendsBannerIsNotDisplayed
+
+            # # Create this function to validate reschedule is not displayed 
+            # - executeFunction:
+            #     name: funcitons.orderDetailsPage.validateRescheduleIsNotDisplayed
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyItemDetails
+
+            - executeFunction:
+                name: functions.orderDetailPage.verifyPaymentMethodSection
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

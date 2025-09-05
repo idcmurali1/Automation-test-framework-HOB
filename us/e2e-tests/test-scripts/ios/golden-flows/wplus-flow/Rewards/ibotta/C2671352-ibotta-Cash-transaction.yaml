@@ -1,0 +1,141 @@
+general:
+  platform: ios
+  tags: us-golden-flows-wplus, C2671352, p0-wplus-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2671352
+  metadata:
+    - name: scenarioId
+      string: WP026 #299 #Missing clip on cart id, update after align with web team
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$
+
+      # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flowDigitalRewards.ios.createAccountPayload
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      # Get list of available ibottaRewardsItems
+      - executeFunction:
+          name: us.functions.search.ibottaRewardsItem
+          params:
+            - name: ibottaRewardsItem
+              string: ibottaRewardsItemArray
+
+      # Navigate to ibotta Rewards Item page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://ip/$ibottaRewardsItem
+
+      # Verify Ibotta reward added label for clipped items
+      - executeFunction:
+          name: us.functions.search.pdp.addUnclippedRewardItemToCart
+
+      # - executeFunction:
+      #     name: us.functions.search.pdp.closePdpPage
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      # Clip ibotta cash on cart
+      - executeFunction:
+          name: us.functions.cart.clipOnCartAndVerifyRewardsEarnedTag
+
+      # Verify cash earned on the bottom of cart page
+      - executeFunction:
+          name: us.functions.cart.VerifyRewardsEarnedBanner
+
+      # Verify Ibotta reward earned label for clipped items on the cart page
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      # Verify cash earned on the bottom of review order page
+      - executeFunction:
+          name: us.functions.ibotta.validateRewardsInfoInCheckoutPage
+
+      # Place order
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Verify cash earned card on TY page
+      - executeFunction:
+          name: us.functions.ibotta.validateCashEarnedCardInThankYouPage
+
+      # Navigate to cash center
+      - executeFunction:
+          name: us.functions.ibotta.navigateToCashCenterFormTYP
+
+      # Verify pending link is displayed on cash banner
+      - executeFunction:
+          name: us.functions.wplus.ibotta.verifyWalmartCashPending
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

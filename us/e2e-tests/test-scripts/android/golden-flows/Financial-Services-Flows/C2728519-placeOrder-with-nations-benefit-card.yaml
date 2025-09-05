@@ -1,0 +1,216 @@
+general:
+  platform: android
+  tags: us-golden-flows, C2728519 #, p1-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2728519
+  metadata:
+    - name: scenarioId
+      string: ""
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+    # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+ 
+#********************************************************************************************************
+
+ # Astro - Create order
+
+ #*******************************************************************************************************
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - storeIn:
+          key: customerEmail
+          value: wmtuser${timestamp}@cloudtest.org
+
+      - storeIn:
+          key: password
+          value: E2epassword$ 
+    
+        # Create Accountusing astro api
+      - executeFunction:
+          name: us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.flow0214.createAccountPayload
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+    # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $customerEmail
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addNationsBenefitCard
+          params:
+            - name: benefitCardNumber
+              string: us.data.flow.nations.benefitCard.number
+            - name: expiration
+              string: us.data.flow.nations.benefitCard.expiration
+            - name: benefitCardCVV
+              string: us.data.flow.nations.benefitCard.cvv        
+            - name: zipcode
+              string: us.data.flow.nations.benefitCard.zipcode
+      
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: us.functions.home.setStore
+          params:
+              - name: store
+                string: 32144
+              - name: storeName
+                string: San Jose Supercenter
+                  
+      # Search Items
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: 10801611
+
+    # Verify Benefit tracker in search results page
+      - executeFunction:
+          name: us.function.search.selectNationsBenefitsProgramsFilter
+    
+      - executeFunction:
+          name: us.functions.cart.viewBenefitTrackerNationscard
+
+      - executeFunction:
+          name: us.functions.item.deepLink.checkItemAvailable
+          params:
+            - name: itemArray
+              string: NationsbenefitsEligibleItems
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+       # Go to cart
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.verifyBenefitsProgramEligibleBadge
+
+# Verify Benefit tracker on Cart page
+      - executeFunction:
+          name: us.functions.cart.viewBenefitTrackerNationscard
+
+      - executeFunction:
+         name: us.functions.cart.continueToCheckoutOrNewOrder
+
+# Validate that payment method for order is Nations (Benefit Card)
+      - executeFunction:
+          name: us.functions.reviewOrder.verifyNationsBenefitCard
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+# Verify payment method on ODP is Nations (Benefit Card)
+      - executeFunction:
+          name: us.functions.oderDetailPage.verifyNationsBenefitCard
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Deeplink into order details page
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - executeFunction:
+          name: us.functions.purchaseHistory.orderDetails.assertOrderId        
+
+      - executeFunction:
+          name: us.functions.cancel.orderItems
+          params:
+            - name: itemTypes
+              string: fc
+            - name: reasonIndex
+              string: 3      
+
+      # Go to home
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+      
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToAccountFromTabBar     
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToWalletPage
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.verifyBenefitCardRefund
+
+      - executeFunction:
+          name: us.functions.account.paymentMethod.deleteBenefitCard
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

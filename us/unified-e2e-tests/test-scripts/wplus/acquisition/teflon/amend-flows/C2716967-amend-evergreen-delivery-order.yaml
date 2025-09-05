@@ -1,0 +1,190 @@
+general:
+  tags: C2716967, unified-p1-wplus-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2716967
+  # metadata:
+  #   - name: scenarioId
+  #     string: EC010
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start Main
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+
+    # Navigate to sign in page
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccountWithParams
+          params:
+            - name: android.email
+              string: us.data.teflon.amend.evergreen.delivery.android.email
+            - name: android.password
+              string: us.data.teflon.amend.evergreen.delivery.password
+            - name: ios.email
+              string: us.data.teflon.amend.evergreen.delivery.ios.email
+            - name: ios.password
+              string: us.data.teflon.amend.evergreen.delivery.password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.accountToHome
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_POST_TRANSACTION'
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - executeFunction:
+          name: unified.us.functions.utils.fetchFulcrumAvailableItem
+          params:
+            - name: itemType
+              string: STORE_SCHEDULED_DELIVERY
+            - name: backupItem
+              string: 1042699943
+            - name: skipForNext
+              string: true
+            - name: storeId
+              string: 32144
+
+      - storeIn:
+          key: item1
+          value: $itemFetched
+
+      # Add SC item to cart using deeplink
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string:  walmart://item/$item1        
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+      # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Navigate to cart page
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      #Evergreen Time slot Reservation.
+      - executeFunction:
+          name: unified.us.functions.selectBookingSlot
+          params:
+            - name: page
+              string: cart
+            - name: tab
+              string: delivery
+            - name: timeSlot
+              string: evergreen
+            - name: slotDay
+              string: today
+
+      #Evergreen Time slot and Price Validation on the Cart Page.
+      - executeFunction:
+          name: unified.us.functions.evergreen.validations.on.cartAndPosPage.member
+
+      #Evergreen Time slot and Price Validation on the Review Order Page.
+      - executeFunction:
+          name: unified.us.functions.evergreen.validations.on.reviewOrderPage.member
+
+      # Place order
+      - executeFunction:
+          name: unified.us.functions.checkout.placeOrder
+
+      # Go to Last Order
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      # Go to home
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://home
+
+      - executeFunction:
+          name: unified.us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+
+      - storeIn:
+          key: item2
+          value: $itemFetched      
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://item/$item2
+
+      # add item to the cart
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+      - sleep:
+          duration: 10000
+
+      # Go to cart
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: unified.us.functions.amend.addToExistingOrderFlow
+
+      - executeFunction:
+          name: unified.us.functions.amend.creditCard.InCart
+          params:
+            - name: cvv
+              string: "111"
+
+      - executeFunction:
+          name: unified.us.functions.amend.verify.itemAddedToOrder
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: walmart://orders/$orderNo
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

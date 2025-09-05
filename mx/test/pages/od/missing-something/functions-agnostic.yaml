@@ -1,0 +1,190 @@
+#======================================================================================================================
+#   AUTHOR: Octavio Cabrales Zárate (vn53g23)
+#   CREATED: Dic/15/2022
+#   REVISION: ---
+#
+#  Copyright © 2022 Walmart. All rights reserved.
+#======================================================================================================================
+
+functions:
+
+  # Description: This method continues to checkout
+  - name: mx.functions.missing-something.tapContinue
+    flow:
+      - click:  
+          identifier: mx.mappings.missing-something.continueButton
+      - log:
+          message: "End function: missing-something.tapContinue"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Sergio Fernandez (vn0t1qt)
+  # EDITORS: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.continueWithoutSelectionIfPageDisplayed
+    flow: 
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.pageTitle
+          then:
+            - click:
+                identifier: mx.mappings.missing-something.continueButton
+          else:
+            - log:
+                message: "'missing-something' page not displayed, TC will continue"
+                color: CYAN
+      - log:
+          message: "End function: missing-something.continueWithoutSelectionIfPageDisplayed"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # AUTHOR: Rodrigo Pacheco (vn53p0i)
+  - name: mx.functions.missing-something.closePopupIfDisplayed
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: mx.mappings.missing-something.pageTitle
+          then:
+            - click:
+                identifier: mx.mappings.missing-something.closeButton
+          else:
+            - log:
+                message: "'missing-something' page not displayed, TC will continue"
+                color: CYAN
+      - log:
+          message: "End function: missing-something.closePopupIfDisplayed"
+          color: BLUE
+
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION: This method searches for a Products with multi-savings promotion.
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+  # EDITOR: Sergio Fernandez (vn0t1qt)
+  - name: mx.functions.missing-something.searchForMultiSavingsProduct
+    flow:
+      - loop:
+          begin: 0
+          end: 3
+          flow:
+            - executeFunction:
+                name: mx.functions.utils.isElementDisplayed
+                params:
+                  - name: element
+                    string: mx.mappings.missing-something.productWithMultiSavingsBadge
+            - if:
+                condition: ${returnedIsDisplayed}
+                then:
+                  - break: true
+                else:
+                  - scroll:
+                      direction: down
+                      scrollLimit: 1
+      - log:
+          message: "End function: missing-something.searchForMultiSavingsProduct"
+          color: BLUE
+          
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This function increases the product quantity by clicking the increase button.
+  # Params: ${productName}  [Mandatory]  Specific product name.
+  #         ${quantity}     [Mandatory]  Quantity to increase on clicks.
+  # AUTHOR: Octavio Cabrales Zárate (vn53g23)
+  - name: mx.functions.missing-something.fastIncreaseProductQuantityBy
+    platform: android
+    flow:
+      - log:
+          message: "Increase quantity: ${quantity}"
+          color: CYAN
+      - log:
+          message: "Product Name: ${productName}"
+          color: CYAN
+      # this long click maintains the main button expanded
+      - click:
+          identifier: mx.mappings.missing-something.mainButtonByProductName
+          longClick: true
+      - click:
+          identifier: mx.mappings.missing-something.increaseQuantityButton
+          numberOfClicks: ${quantity}
+          waitBetweenClicks: 250
+      - log:
+          message: "End function: missing-something.fastIncreaseProductQuantityBy"
+          color: BLUE
+  
+  # ------------------------------------------------------------------------------------------------------------------
+
+  # RETURNS:  ${returnedIsThereProductWithMultiSavings}  Whether there is a product with multi-savings or not.
+  # AUTHOR: Rodrigo Pacheco C. (vn53p0i)
+  - name: mx.functions.missing-something.isThereProductWithMultiSavings
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                present:
+                  - identifier: mx.mappings.missing-something.productWithMultiSavingsBadge
+                timeout: 5000
+            - log:
+                message: "Product with Multi-Savings Promotion found!"
+                color: CYAN
+            - storeIn:
+                key: returnedIsThereProductWithMultiSavings
+                value: true
+          catch:
+            flow:
+              - log:
+                  message: "Product with Multi-Savings Promotion NOT found!"
+                  color: CYAN
+              - storeIn:
+                  key: returnedIsThereProductWithMultiSavings
+                  value: false
+      - log:
+          message: "End function: mx.functions.missing-something.isThereProductWithMultiSavings"
+          color: BLUE
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # DESCRIPTION:
+  #   This function gets two things the required quantity to activate multi savings promotion and the final price of the 
+  #   products with multisavings. It is required to pass a product name with the multi savings promotion badge, otherwise 
+  #   function fails. i.e. if multi savings badge contains "3 x $200" the returned values  will be "3" and "200". 
+  #   This function does NOT consider if the product has already been added to cart or the actual added quantity of the product already in cart.
+  # PARAM:
+  #   ${productName}  [Mandatory]
+  # RETURNS:
+  #   ${returnedPromotionQuantity}  Quantity required to activate Multi Savings promotion once.
+  #   ${returnedPromotionPrice}     Final price of the products applying multi savings discount.
+  # AUTHOR:
+  #   Rodrigo Pacheco (vn53p0i)
+  # EDITOR:
+  #   Osmar Juárez (vn56dce)
+  - name: mx.functions.missing-something.getInfoMultiSavingsPromotionBadge
+    flow:
+      - log:
+          message: "[ PARAM: Product Name with Multi-Savings Promotion: '${productName}' ]"
+          color: CYAN
+      - getString:
+          identifier: mx.mappings.missing-something.multiSavingsBadgeByProductName # <--[PARAM]--${productName}
+          storeIn: multiSavingsBadgeText
+      - executeNode:
+          file: mx/test/helpers/cart/getLeftNumberFromBadge.js
+          args:
+            - value: ${multiSavingsBadgeText}
+          getResponse:
+            storeIn: returnedPromotionQuantity
+      - executeNode:
+          file: mx/test/helpers/cart/getPriceFromBadge.js
+          args:
+            - value: ${multiSavingsBadgeText}
+          getResponse:
+            storeIn: returnedPromotionPrice
+      - log:
+          message: "Promotion quantity got: '${returnedPromotionQuantity}'"
+          color: GREEN_BOLD
+      - log:
+          message: "Promotion price got: '${returnedPromotionPrice}'"
+          color: GREEN_BOLD
+      - log:
+          message: "End function: mx.functions.missing-something.getInfoMultiSavingsPromotionBadge"
+          color: BLUE

@@ -1,0 +1,230 @@
+general:
+  platform: android
+  tags: C2669431, p1-ecomm-teflon-e2e, PetRx
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2669431
+  metadata:
+    - name: scenarioId
+      string: PV003
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.android.flowPetRXAcceptAmend.email
+
+  - name: Main
+    endTestOnFailure: true
+    flow:
+
+      - log: Start Main
+
+        # Get timestamp
+      - getTimestamp:
+           asDate: false
+           storeIn: timestamp
+
+      #Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # User signs in to the account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.android.flowPetRXAcceptAmend.email #us.data.petrx.C2669431.email
+            - name: password
+              string: us.data.ios.flowPetRX.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome              
+
+#---------------------Not Required this steps added astro cart clear s 
+      #  # Navigate to cart and clear it
+      # - executeFunction:
+      #     name: us.functions.global.navigation.toCartFromNavBar
+
+      # - executeFunction:
+      #     name: us.functions.cart.removeAllCartItems
+
+      # - executeFunction:
+      #     name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # - executeFunction:
+      #     name: us.functions.global.navigation.backNavigation   
+#------------------------------------      
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+##**From here code to test only petrx pharmacy & FC items
+      
+    # Fetch stock available PetRX items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.petrx.C2669431.email
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: itemList
+              string: us.data.flow.petRx.itemLists
+      - log: "The Item Id fetched from the for, the list is: ${itemFetched}"
+
+      # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - sleep:
+          duration: 2000
+
+      # add item to the cart
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+        
+
+      #  Change the quantity to 3
+      - executeFunction:
+          name: us.functions.cart.increaseItemQtyInCartWithoutPriceChange
+          params:
+            - name: quantity
+              string: 3
+
+      - sleep:
+          duration: 2000
+
+      # proceeding to checkout/Review order page
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      - sleep:
+          duration: 2000
+
+# #  Add Pet and Vet details
+      - executeFunction:
+          name: us.functions.checkout.AddPetVet
+      - executeFunction:
+          name: us.functions.checkout.SelectPetVet
+      - sleep:
+          duration: 3000
+
+      - executeFunction:
+          name: us.functions.checkout.confirmCvvAndPlaceOrder
+
+      - sleep:
+          duration: 2000
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrderAgainIfError
+#  Get order number and update order detailse via Astro
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+
+      # Depricated step, since Purchase history is not clickable in 24.23 app version
+      # - executeFunction:
+      #     name: us.functions.checkout.petrx.orderVerification
+
+      - log: "The order number is: ${orderNo}"
+      - executeFunction:
+          name: us.functions.utils.astro.petrxOrder.increaseQtyandMoveOrder
+          params:
+            - name: orderNo
+              string: $orderNo
+            - name: payload
+              string: us.data.petRx.incQuantityAndMoveOrder.payload
+            - name: incQuantity
+              string: 9
+            - name: orderNo
+              string: ${orderNo}
+            - name: orderType
+              string: FC_DELIVERY_PETRX
+            - name: status
+              string: PO Acknowledged
+
+      - sleep:
+          duration: 3000
+#  Verify changes made by vet (via Astro) and decline it
+      - executeFunction:
+          name: us.functions.petrx.postAmendment.acceptReject
+          params:
+            - name: rejectPetrx
+              string: true
+
+      # - executeFunction:
+      #     name: us.functions.utils.astro.petrxOrder.fetchOfferIdAndPetVetDetails
+      #     params:
+      #       - name: orderNo
+      #         string: $orderNo
+
+      # - log: "The fetched offerId is: ${offerId}"
+      # - log: "The fetched petId is: ${petId}"
+      # - log: "The fetched prescriberId is: ${prescriberId}"
+      # - log: "The fetched clinicId is: ${clinicId}"
+
+      # - sleep:
+      #     duration: 4000
+
+      # - executeFunction:
+      #     name: us.functions.utils.astro.petrx.amendOrder
+      #     params:
+      #       - name: orderNo
+      #         string: $orderNo
+      #       - name: petId
+      #         string: $petId
+      #       - name: prescriberId
+      #         string: $prescriberId
+      #       - name: clinicId
+      #         string: $clinicId
+      #       - name: offerId
+      #         string: $offerId
+      #       - name: itemFetched
+      #         string: $itemFetched
+      #       - name: incQuantity
+      #         string: 9
+      #       - name: payload
+      #         string: us.data.petRx.amendOrder
+
+      - storeIn:
+          key: testStatus
+          value: passed              
+      
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

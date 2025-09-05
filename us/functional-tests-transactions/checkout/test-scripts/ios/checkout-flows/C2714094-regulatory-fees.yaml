@@ -1,0 +1,133 @@
+# Validate checkout flow - regulatory fees - crv, battery recycling, tire recycling
+
+general:
+  platform: ios
+  tags: C2714094, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714094
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Validate checkout flow - regulatory fees - crv, battery recycling, tire recycling
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Validate checkout flow - regulatory fees - crv, battery recycling, tire recycling"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.template.ios.email
+            - name: password
+              string: us.data.prod.checkout.template.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      # Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search crv fee item and add to cart
+      - executeFunction:
+          name: us.functions.functional.utils.addItemToCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.crvFees.item
+            - name: expectedItemCount
+              string: 1
+
+      # Search battery recycling fee item and add to cart
+      - executeFunction:
+          name: us.functions.functional.utils.addItemToCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.batteryFees.item
+            - name: expectedItemCount
+              string: 1
+
+      # Search tire recycling fee item and add to cart
+      - executeFunction:
+          name: us.functions.functional.utils.addItemToCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.tireRecycling.item
+            - name: expectedItemCount
+              string: 2
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      # Go to book slot
+      - executeFunction:
+          name: us.functions.selectBookingSlot
+          params:
+            - name: tab
+              string: delivery
+            - name: page
+              string: cart
+            - name: slotDay
+              string: tomorrow
+            - name: slotIndex
+              string: 3
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Validate POS
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validatePOSRegulatoryFees
+          params:
+            - name: crv
+              string: true
+            - name: battery
+              string: true
+            - name: tire
+              string: true
+            - name: coreCharge
+              string: true
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

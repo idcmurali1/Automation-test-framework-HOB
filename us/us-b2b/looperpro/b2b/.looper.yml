@@ -1,0 +1,86 @@
+inherit: 'job:///glass-mobile-app-automation/looper-base:.looper.yml'
+
+gitShallowDepth: 10
+
+triggers:
+  - pr: disabled
+  - push: disabled
+
+  - manual:
+      name: test-sm-ios-b2b
+      call: build_sm_ios_b2b
+
+envs:
+  global:
+    variables:
+      MARKET: us
+      DATA_FILE: ./smdata.json
+      START_TIME: ""
+      END_TIME: ""
+      POST_TO_ES: true
+      GLASS_ENV: production
+      MAPPING_LABELS: production-sm
+      TEST_TAGS: sm-b2b-deep-link
+
+
+  env_ios_b2b_sm:
+    variables:
+      APP_PLATFORM: ios
+      DEPENDENCY_FILE_NAME: us/us-b2b/dependencies/ios/ios-default.yaml
+      SAUCE_APP: storage:filename=glass-development-b2b-latest.zip
+      DEPENDENCY_PROFILE: sm-prod-deep-link
+      TEST_SESSION_ID: '%{(Math.abs(new(java.util.Random).nextInt()) % 100000000 + 1)}'
+      EMAIL_SUBJECT: Apps iOS E2E Site Merch Test Complete - Build ${BUILD_ID}
+      EMAIL_MESSAGE:
+        "Test Results:
+        http://grafana.teflon.walmartlabs.com/d/_ORtCX84k/glass-e2e-apps-site-merch?orgId=1&from=now-7d&to=now&var-buildId=${BUILD_ID}&var-platform=${APP_PLATFORM}"
+
+flows:
+  build_sm:
+    - node(label = linux, isolation = except_project, ws = exclusive, group = '${APP_PLATFORM} - ${TEST_TAGS}'):
+        try:
+          - declare(APP_VERSION)
+          - call: setup
+          - call: get_app_version
+          # - call: get_repository_build
+          - call: return_sauce_app_location
+          - call: get_build_app_version
+          - shell (name Print All ENV): |
+              printenv|sort
+          - shell: echo ${SM_JSON} > smdata.json
+          - shell: cat smdata.json
+          - shell: node ./us/us-b2b/helpers/generate-deep-link-tests.js
+          - var(START_TIME):
+              - shell(silent): date +"%Y-%m-%dT%H:%M:%S%z"
+          - call: execute_test
+          - var(END_TIME):
+              - shell(silent): date +"%Y-%m-%dT%H:%M:%S%z"
+          - call: generate_sauce_labs_build_url
+          - call: publish_report
+          - shell: node ./us/us-b2b/scripts/generateSMDeepLinkSummaryReport.js
+        finally:
+          - call: post_email(email)
+
+  build_sm_ios_b2b:
+    - call: build_sm(env_ios_b2b_sm)
+
+  setup:
+    - hygieia.publishBuild()
+    - shell (name Remove node_modules): |
+        rm -frv node_modules
+    - shell (name npm cache clear): |
+        npm cache clear --force
+    - shell (name sleep 10): |
+        sleep 10
+    - shell (name npm install): |
+        npm install
+    - if: |
+        %{USE_CUSTOM_R2_JAR == 'false'}
+      then:
+        - shell (name download r2 binary): |
+            npm run download-r2
+      else:
+        - shell: echo Using custom R2 jar
+
+parameters:
+  - SM_JSON: { type: string }

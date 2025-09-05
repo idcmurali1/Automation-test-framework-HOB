@@ -1,0 +1,175 @@
+# ================================================================================================================================
+# TC: 015
+# Flow: TC-015: Unschedueled Pick up + Cancel order
+# ================================================================================================================================
+general: 
+  testCaseId: C2720137
+  tags: C2720137 #, p1-mx-ea-teflon, p1-bodega-ea-teflon, p1-mx-ea-prod,p1-bodega-ea-prod, p1-us-teflon, p1-ca-en-teflon
+
+scenarios: 
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   B E F O R E   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Before
+    before: true
+    flow:
+      - executeFunction:
+          name: functions.utils.setMarketInfo
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#   M A I N   S C E N A R I O
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main 
+    flow: 
+      # Onboard to aplication and select EA options.
+      - executeFunction:
+          name: functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: data.onboarding.userPostalCode
+            - name: ShoppingExperience
+              string: data.onboarding.onlineExclusiveStore
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            # Create new Account using Astro API
+            - executeFunction:
+                name: functions.astroApi.generateTimeStampEmail
+
+            - executeFunction:
+                name: functions.astroApi.createAccount
+                params:
+                  - name: payload
+                    string: data.global.payload.visaCard4242
+      - if:
+          condition: ${environment} == 'Production'
+          then: 
+            - if:    
+                condition: ${platform} == 'Android'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp015.android.email
+            - if: 
+                condition: ${platform} == 'iOS'
+                then:
+                  - storeIn:
+                      key: userEmail
+                      value: data.wcp015.ios.email
+
+      # Click on login and select sign in.
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+
+
+      # Tap Sign in button
+      - executeFunction:
+          name: functions.accountPage.tapSignInBtn
+
+
+      # Login with existing user.
+      - executeFunction:
+          name: functions.loginPage.userAuthentication
+          params:
+            - name: userEmail
+              string: ${userEmail}
+            - name: userPassword
+              string: data.global.password.Password1
+
+      # Tap shop button
+      - executeFunction:
+          name: functions.global.tapShopBtn 
+
+      - executeFunction:
+          name: functions.cartPage.clearCart
+
+      # Get the first available item and add into cart 
+      - executeFunction:
+          name: functions.searchPage.addToCartUsingItemArray
+          params:
+            - name: productArray
+              string: data.wcp015.pickupItem.array
+                      
+      # Go to Cart
+      - executeFunction:
+          name: functions.global.tapCartIcon
+      
+      # Get the fufillment type
+      - executeFunction:
+          name: functions.cartPage.getFulfillmentType  # << return cartPage.fulfillmentType
+
+      # Execute following function to proof Pickup to delivery functionality is working
+      - executeFunction:
+          name: functions.cartPage.switchPickupToDelivery
+
+      # Switch to pickup if fulfillment is delivery
+      - executeFunction:
+          name: functions.cartPage.switchDeliveryToPickup   # << return cartPage.fulfillmentType
+
+      - executeFunction:
+          name: functions.cartPage.tapContinueToCheckoutBtn
+
+      - if: 
+          condition: ${environment} == 'Production'
+          then:        
+            - executeFunction:
+                name: functions.checkout.validateFufillmentType
+                params:
+                  - name: expectedFulfillmentType
+                    string: ${cartPage.fulfillmentType}
+
+      - if:
+          condition: ${environment} == 'Teflon'
+          then:
+            - executeFunction:
+                  name: functions.checkoutPage.scrollToCVVTextfield
+            
+            - executeFunction:
+                name: functions.checkoutPage.addCVV
+                params:
+                  - name: CVV
+                    string: data.global.card.cvv.123
+      
+            - executeFunction:
+                name: functions.checkoutPage.tapPlaceOrderButton
+          
+            - executeFunction:
+                  name: functions.thankYouPage.verifyThankYouPageDisplayed
+            - if:
+                condition: ${platform} == 'iOS'
+                then:
+                  - executeFunction:
+                      name: functions.utils.terminateApp
+                  - sleep:
+                      duration: 10000
+
+            - executeFunction:
+                name: functions.global.navigateToODPUseDeeplink
+
+            # Cancel order Process 
+            - executeFunction:
+                name: functions.orderDetailsPage.cancelOrder
+                params:
+                  - name: reasonIndex
+                    string: data.global.orderCancellation.reasonIndex3
+            
+            # Validate ODP after order cancellation
+            - executeFunction:
+                name: functions.orderDetailsPage.validateAfterCancellation
+                params:
+                  - name: orderCancelled
+                    string: true
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: functions.utils.after

@@ -1,0 +1,153 @@
+# Verifying Shipping Walmart Multiple items in checkout flow
+general:
+  platform: ios
+  tags: C2713813, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2713813
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Verifying Shipping Walmart Multiple items in checkout flow
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Verifying Shipping Walmart Multiple items in checkout flow"
+
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.sc.bagpreference.ios.email
+            - name: password
+              string: us.data.prod.checkout.sc.bagpreference.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      #Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      - executeFunction:
+          name: us.functions.global.navigation.backNavigation
+
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      # Search item-1 and add to cart
+      - executeFunction:
+          name: us.functions.search.addItemtoCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.bagfee.scPickupDelivery.item
+            - name: expectedItemCount
+              string: 1
+
+      # Search item-2 and add to cart
+      - executeFunction:
+          name: us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: us.data.checkout.shipping.item 
+
+     # Add item to cart
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: us.functions.global.navigation.toCartFromNavBar
+
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+      #Validate Item details item count and promise date in checkout page
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateFCCard
+          params:
+            - name: fulfillmentText
+              string: Shipping
+            - name: altFulfillmentText
+              string: shipping
+            - name: fulfillmentItemCount
+              string: 2
+            - name: fulfillmentType
+              string: FC_DELIVERY
+
+      #Validate item count and subtotal in pos section
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.pos.validateSubtotal.multipleItems
+
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.reviewOrder.paymentMethod.label
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+          params:
+            - name: ebtExists
+              string: false
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: Order number ${orderNo}
+
+      #Validate Item details item count and promise date in order confirmation page
+      - executeFunction:
+          name: us.functions.functional.thankyou.orderConfirmation.itemDetailsValidation
+          params:
+            - name: itemCount
+              string: 2
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

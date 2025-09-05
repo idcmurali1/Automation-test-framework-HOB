@@ -1,0 +1,141 @@
+# Verifying Subscriptions - Shipping in checkout
+
+general:
+  platform: ios
+  tags: C2714087, prod-functional-checkout
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2714087
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: End Before test
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_PRE_TRANSACTION"
+  # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Verifying Subscriptions - Shipping in checkout
+    endTestOnFailure: true
+    flow:
+      - log: Starting test "Verifying Subscriptions - Shipping in checkout"
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in with default account
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.prod.checkout.sc.bagpreference.ios.email
+            - name: password
+              string: us.data.prod.checkout.sc.bagpreference.ios.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+
+      #Enable dummy payment through debug panel
+      - executeFunction:
+          name: us.functions.functional.utils.placeOrder.enablePaymentByPass
+
+      # Go to cart and remove items in cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      - executeFunction:
+          name: us.functions.cart.removeAllCartItems
+
+      - executeFunction:
+          name: us.functions.cart.removeUnavailableItemsFromCart
+
+      # Search item and add to cart
+      - executeFunction:
+          name: us.functions.search.addItemtoCart
+          params:
+            - name: searchTerm
+              string: us.data.checkout.bagfee.scPickupDelivery.item
+            - name: expectedItemCount
+              string: 1
+
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: "R2_SUBFLOW_TRANSACTION"
+      # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Go to cart
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+
+      # Selecting the shipping fulfillment option
+      - executeFunction:
+          name: us.functions.cart.switchBetweenPickUpAndShipping
+          params:
+            - name: fulfillmentType
+              string: shipping
+
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.cart.subscriptionItem.subscribeToAutoDelivery
+
+      # Verify Subscription badge for item is present or not in cart
+      - executeFunction:
+          name: us.functions.sub.validateTheSubscriptionFrequencyInCartPage
+
+      # Add Subscription for item in cart
+      - executeFunction:
+          name: us.functions.cart.enrollForSubscriptionOfAnItem
+
+      # Continue to checkout or create new order
+      - executeFunction:
+          name: us.functions.cart.continueToCheckoutOrNewOrder
+
+      # Validate Subscription details and terms in checkout
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.itemDetails.validateSubscriptionDetails
+          params:
+            - name: fulfillmentTypeSubscription
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.functional.checkout.reviewOrder.validateSubscriptionTermsAlertMessage
+          params:
+            - name: fulfillmentTypeSubscription
+              string: Shipping
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.orderCreationValidation
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: Order number ${orderNo}
+
+      #Validate subscription label and promise date in Thank you page 
+      - executeFunction:
+          name: us.functions.functional.checkout.orderConfirmation.validateSubscriptionForShippingOrDelivery
+          params:
+            - name: fulfillmentTypeText
+              string: Shipping
+
+      - storeIn:
+           key: testStatus
+           value: passed
+
+  - name: After
+    after: true
+    useTestConfigErrors: false
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

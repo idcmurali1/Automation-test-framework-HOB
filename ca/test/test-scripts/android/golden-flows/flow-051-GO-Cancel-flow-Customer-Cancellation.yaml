@@ -1,0 +1,178 @@
+#-------------------------------------------------------------------------------------------------------------------
+# Flow: 051
+# User : Registered User
+# Order Type: GO
+# Fulfillment: SCHEDULED_PICKUP
+# Payment Type : CC
+# Experience: Customer Cancellation
+# Validation: Page Elements and Order cancellation
+#
+# Remark: Cost Assertions failing
+#-------------------------------------------------------------------------------------------------------------------
+
+general:
+  platform: android
+  tags: flow-051, Post-Transction-English-Android-Flow, Post-Transction-French-Android-Flow
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+      - log: ${APP_PLATFORM}
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: ca.test.functions.onboardingToHomePage.usingPostalCode
+          params:
+            - name: PostalCode
+              string: ca.test.data.flow051.postalCode
+      
+      # Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateHomePage
+
+      # Verifying home screen bottom ribbon
+      - executeFunction:
+          name: ca.test.functions.home.livingDesign.validateBottomNavigation
+
+      # Navigate to Account Tab
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToAccountFromTabBar
+      
+      # Account page validation before login
+      - executeFunction:
+          name: ca.test.functions.accountPage.accountPageBeforeLogin
+        
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.astro.createAccount
+          params:
+            - name: payLoad
+              string: ca.test.data.flow051.astroRequestBody
+
+      # Login to account
+      - executeFunction:
+          name: ca.test.functions.loginPage.userLogin
+          params:
+            - name: email
+              string: ca.test.data.flow051.emailId
+            - name: password
+              string: ca.test.data.flow051.password
+            - name: signInBtnAccountPage
+              string: true
+      
+      # Account page validation after login
+      - executeFunction:
+          name: ca.test.functions.accountPage.accountPageAfterLogin
+
+      # Placing order using astro api
+      - executeFunction:
+          name: ca.test.functions.astro.placeOrder.scheduledPickup
+          params:
+            - name: email
+              string: ca.test.data.flow051.emailId
+            - name: password
+              string: ca.test.data.flow051.password
+            - name: payLoad
+              string: ca.test.data.flow051.astroOrderBody
+              
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_POST_TRANSACTION'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      # Go to purchase page
+      - executeFunction:
+          name: ca.test.functions.accountPage.purchaseHistoryButton
+
+      # Validating purchase history page
+      - executeFunction:
+          name: ca.test.functions.purchaseHistoryPageValidation
+
+      # Purchase history page to view Details
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.viewDetailsButton
+      
+      # # Order Id assertion
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.orderIdAssertion
+
+      # # Address Assertion
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.addressAssertion
+      #     params:
+      #       - name: address
+      #         string: ca.test.data.flow051.customerAddress
+
+      # # Product tile validation
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.validatingProductTile
+      #     params:
+      #       - name: productName
+      #         string: ca.test.data.flow051.product_1_Name
+      #       - name: quantity
+      #         string: ca.test.data.flow051.product_1_Qty
+      #       - name: productPrice
+      #         string: ca.test.data.flow051.product_1_price
+
+      # # Cost Assertion
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.costAssertion
+      #     params:
+      #       - name: subTotalAstro
+      #         string: ca.test.data.flow051.subTotal
+      #       - name: totalTax
+      #         string: ca.test.data.flow051.totalTax
+      #       - name: estimate_total
+      #         string: ca.test.data.flow051.estimateTotal
+
+      # Order cancellation
+      - executeFunction:
+          name: ca.test.functions.purchaseHistory.orderCancellation
+
+      # # Validating order cancellation page
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.orderCancellationPageValidation
+
+      # # Cost assertion after cancellation
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistory.viewDetails.costAssertion
+      #     params:
+      #       - name: subTotalAstro
+      #         string: ca.test.data.flow049.subTotalAfterCancellation
+      #       - name: totalTax
+      #         string: ca.test.data.flow049.totalTaxAfterCancellation
+      #       - name: estimate_total
+      #         string: ca.test.data.flow049.estimateTotalAfterCancellation
+
+      # status
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: flow-051
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps

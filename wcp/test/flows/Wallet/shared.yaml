@@ -1,0 +1,167 @@
+functions:
+
+  #--------------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow removes all the existing CC/DC starting from the Profile Page to leave the user without any
+  #              card payment methods.
+  # No Params
+  - name: flow.wallet.removeAllExistingCC/DC.fromAccount
+    flow:
+      - executeFunction:
+          name: functions.accountPage.openWallet
+      - if:
+          identifier:
+            present:
+              - identifier: walletPage.expandCardsSectionBtn
+            timeout: 5000
+          then:
+            - click:
+                identifier: walletPage.expandCardsSectionBtn
+      - if:
+          identifier:
+            present:
+              - identifier: walletPage.cardsSection.CC/DCCountLabel
+            timeout: 5000
+          then:
+            - getString:
+                identifier: walletPage.cardsSection.CC/DCCountLabel
+                extractNumbers: true
+                storeIn: cardsCount
+            - log:
+                message: ${cardsCount} CC/DC Card(s) found.
+                color: CYAN
+            - loop:
+                begin: 0
+                end: ${cardsCount}
+                storeIndex: lap
+                flow:
+                  - log:
+                      message: lap ${lap}...
+                      color: GREEN
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: walletPage.cardsSection.firstEditCardBtn
+                        timeout: 5000
+                      then:
+                        - click:
+                            identifier: walletPage.cardsSection.firstEditCardBtn
+                        - click:
+                            identifier: editCardPage.deleteCardBtn
+                        - click:
+                            identifier: editCardPage.deleteCard.confirmBtn
+                        # The following 3 instructions are required because some way, when the loop repeats, Appium cannot click the
+                        # 'Edit' button even when the 'if' correctly detected it, so as workaround, we are closing and re-opening
+                        # the wallet again...
+                        - sleep:
+                            duration: 2000
+                        - executeFunction:
+                            name: functions.global.tapAccountBtn
+                        - executeFunction:
+                            name: functions.accountPage.openWallet
+                      else:
+                        - break: true
+          else:
+            - log:
+                message: No CC/DC found.
+                color: CYAN
+      - executeFunction:
+          name: functions.global.tapAccountBtn
+      - log:
+          message: "End flow: flow.wallet.removeExistingCC/DC.fromProfile"
+          color: BLUE
+
+  # Description: This flow validates cashi is displayed in wallet page
+  # No params 
+  - name: functions.wallet.validateCashiIsDisplayed
+    flow:
+      - executeFunction:
+          name: functions.walletPage.validateCashiBox
+      - executeFunction: 
+          name: functions.walletPage.tapCashiBox
+      - executeFunction:
+          name: functions.walletPage.validateCashiPopupIsDisplayed 
+      - goBack: true
+      - log: 
+          message: "End flow: functions.walletPage.validateCashiDisplayed"
+          color: BLUE 
+
+  # Description: This flow validates cashi is displayed in wallet page
+  # No params 
+  - name: functions.wallet.validateAddCreditCardIsDisplayed
+    flow:
+      - executeFunction:
+          name: functions.walletPage.addPaymentMethod.creditDebitCardButton
+      - executeFunction:
+          name: functions.addCreditDebitCardPage.assertAddCreditCardWithNoExistingAddress
+      - goBack: true 
+      - log: 
+          message: "End flow: functions.wallet.validateAddCreditCardIsDisplayed"
+          color: BLUE 
+
+  #-----------------------------------------------------------------------------------------------------------------
+
+  # Description: This flow validates cashi is displayed in wallet page
+  # Params       ${mobileNumber}      Klarna mobile number
+  #              ${otp}               OTP to login
+  - name: functions.walletPage.attachKlarna
+    flow:
+      - executeFunction: 
+          name: functions.walletPage.tabKlarnaBtn
+      - executeFunction:
+          name: functions.walletPage.valdiateAndAcceptKlarnaPopUp
+      - executeFunction:
+          name: functions.walletPage.klarnaPage.isPageDisplayed
+      - executeFunction:
+          name: functions.walletPage.klarnaPage.enterMobileNumber # <-- ${mobileNumber}
+      - executeFunction:
+          name: functions.walletPage.klarnaPage.tabContinueBtn
+      - executeFunction:
+          name: functions.walletPage.klarnaPage.enterVerificationCode # <-- ${otp}
+      - executeFunction:
+          name: functions.walletPage.klarnaPage.chooseInstallment&TabContinue
+      - executeFunction:
+          name: functions.walletPage.klarnaPage.tabContinueBtn
+      - log:
+          message: "End Function: walletPage.attachKlarna"
+          color: BLUE
+  
+#-------------------------------------------------------------------------------------------------------------------
+  
+#   # Description: This function attaches gift card as payment method to the profile.
+#   # Param        ${giftCardNumber} [Mandator] >> Gift card number
+#   #              ${giftCardPin} [Mandatory] >> Gift card pin
+#   - name: functions.walletPage.addPaymentMethod.attachGiftCard
+#     flow:
+#       - executeFunction:
+#           name: function.utils.applyPayments
+#           params:
+#             - name: paymentType
+#               string: "Gift Card"
+#       - log:
+#           message: "End Function: walletPage.addPaymentMethod.attachGiftCard"
+#           color: BLUE
+
+#-------------------------------------------------------------------------------------------------------------------
+  # Description: This function used to add Gift Card
+  # Param        ${giftCardNumber} [Mandator] >> Gift card number
+  #              ${giftCardPin} [Mandatory] >> Gift card pin
+  - name: functions.walletPage.paymentMethod.giftCard
+    flow:
+      - executeFunction:
+          name: functions.walletPage.addPaymentMethod.addGiftCard.isPageDisplayed
+      - executeFunction:
+          name: functions.walletPage.addPaymentMethod.giftCard.enterGiftCardNumber
+      - executeFunction: 
+          name: functions.walletPage.addPaymentMethod.giftCard.enterGiftCardPin 
+      - executeFunction:
+          name: functions.walletPage.addPaymentMethod.giftCard.tapOnSaveBtn
+      - executeFunction:
+          name: functions.checkoutPage.walletPopup.tapCloseBtn
+      - executeFunction: 
+          name: functions.checkoutPage.paymentMethod.assertGiftCardAttached
+    #   - executeFunction:
+    #       name: functions.checkoutPage.wallet.tapContinueButton
+      - log:
+          message: "End Function: walletPage.paymentMethod.giftCard"
+          color: BLUE

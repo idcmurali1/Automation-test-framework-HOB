@@ -1,0 +1,127 @@
+general:
+  tags: C2664990 # covered in C2737021
+  testCaseId: C2664990
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  metadata:
+    - name: scenarioId
+      string: WP026 #197
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+      #Get Environment Values
+      - executeFunction:
+          name: us.function.utils.getEnvironmentValue
+
+      # Set Platfrom Values
+      - executeFunction:
+          name: functions.utils.setPlatformInfo
+
+      # Get timestamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+      
+      - storeIn:
+          key: email
+          value: wplususer${timestamp}@walmart.com
+
+      - storeIn:
+          key: password
+          value: E2epassword$   
+
+      # Create Account using astro api
+      - executeFunction:
+          name: unified.us.functions.utils.astro.createAccount
+          params:
+            - name: payload
+              string: us.data.reward.createAccountPayload
+
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+  - name: Main
+    flow:
+      - log: Start main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: unified.us.functions.global.onboarding.navigateOnboardingToHome
+    
+      - executeFunction:
+          name: unified.us.functions.home.navigateHomeToSignIn
+
+      # Sign in with created account
+      - executeFunction:
+          name: unified.us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: $email
+            - name: password
+              string: $password
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.goToHomeFromTabBar
+
+      - executeFunction:
+          name: unified.us.functions.home.setStore
+          params:
+            - name: store
+              string: 32144
+            - name: storeName
+              string: San Jose Supercenter
+      
+      - executeFunction:
+          name: unified.us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+      - executeFunction:
+          name: unified.us.functions.search.searchItem
+          params:
+            - name: searchTerm
+              string: American Flatbread Frozen Pizza
+      
+      # Apply Reward Eligible filter
+      - executeFunction:
+          name: unified.us.functions.search.applyRewardsEligibleFilter
+
+      - executeFunction:
+          name: unified.us.functions.search.clickOnFirstItem
+          
+      # Clip Rewards
+      - executeFunction:
+          name: unified.us.functions.search.verifyAddToRewardCheckboxandClipReward
+
+      - executeFunction:
+          name: unified.us.functions.item.addItemToCart
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      - executeFunction:
+          name: unified.us.functions.global.navigation.toCartFromNavBar    
+
+      # Verify Earning Rewards Tag
+      - executeFunction:
+          name: unified.us.functions.cart.VerifyRewardsEarnedTag
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: unified.us.functions.utils.afterSteps

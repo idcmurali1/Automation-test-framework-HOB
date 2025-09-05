@@ -1,0 +1,210 @@
+general:
+  platform: ios
+  tags: C2666399,  p0-ecomm-teflon-e2e
+  inherit:
+    filesRunAll:
+      - us-errors-helpers.yaml
+  testCaseId: C2666399
+  metadata:
+    - name: scenarioId
+      string: PV001
+
+scenarios:
+
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2_SUBFLOW_PRE_TRANSACTION'
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+      # Astro clear cart
+      - executeFunction:
+          name: us.functions.utils.astro.clearCart
+          params:
+            - name: custEmail
+              string: us.data.ios.flowPetRX.muliti.email #us.data.ios.flowPetRX.email
+
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Navigate onboarding to home
+      - executeFunction:
+          name: us.functions.global.onboarding.navigateOnboardingToHome
+
+      # Navigate to sign in page
+      - executeFunction:
+          name: us.functions.home.navigateHomeToSignIn
+
+      # Sign in
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.muliti.email #us.data.ios.flowPetRX.email
+            - name: password
+              string: us.data.ios.flowPetRX.password
+
+      - executeFunction:
+          name: us.functions.global.navigation.accountToHome
+  
+      - executeFunction:
+          name: us.functions.home.rateDriverPopup
+  
+  #     # - executeFunction:
+  #     #     name: us.functions.home.changeStore
+  #     #     params:
+  #     #         - name: zipcode
+  #     #           string: 75006
+  #     #         - name: storeName
+  #     #           string: Carrollton Pharmacy
+
+      - executeFunction:
+          name: us.functions.home.changeStore
+          params:
+              - name: zipcode
+                string: 95122
+              - name: storeName
+                string: San Jose Supercenter
+      
+      - executeFunction:
+          name: us.functions.gic.changeFulfillment
+          params:
+            - name: option
+              string: Shipping
+
+       ## Add petrx items to cart 
+          # refer for petRx item list https://confluence.walmart.com/pages/viewpage.action?spaceKey=CDMPIDO&title=RCTSTAMPS-8350+NEW+PETRX+ITEMS 
+          
+
+       #Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.fetchFromDataList
+          params:
+            - name: email
+              string: us.data.ios.flowPetRX.muliti.email #us.data.ios.flowPetRX.email   
+            - name: itemType
+              string: FC_DELIVERY
+            - name: storeId
+              string: 32144
+            - name: itemList
+              string: us.data.flow.petRx.itemLists # to be used for day0 us.data.flow.petRx.virtualpackitems
+
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+#Verify Petrx product details and add to cart
+      - executeFunction:
+          name: us.functions.item.petrxItem.verifyPresent 
+      # - executeFunction: Day 0 Validations for Virtual pack petrx
+      #     name: us.functions.item.petrxItem.virtualPack
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+#       # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: FC_DELIVERY
+            - name: backupItem
+              string: 945213102
+            - name: store
+              string: 32144
+
+      # # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+
+    # Fetch stock available items using fetch API
+      - executeFunction:
+          name: us.functions.utils.getSearchableItem
+          params:
+            - name: source
+              string: astro
+            - name: itemType
+              string: MP_DELIVERY
+            - name: backupItem
+              string: 113749870
+            - name: store
+              string: 32144 
+
+      # # Add items to cart using deeplink
+      - executeFunction:
+          name: us.functions.global.navigation.goToDeepLink
+          params:
+            - name: deepLinkUrl
+              string: ${deeplinkURl}
+      - executeFunction:
+          name: us.functions.item.addItemToCart
+      
+         
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#       - log: 'R2_SUBFLOW_TRANSACTION'
+# # # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      # Go to cart
+      - executeFunction:
+           name: us.functions.global.navigation.toCartFromNavBar
+
+      # Verify cart
+      - executeFunction:
+          name: us.functions.cart.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping
+
+    # Continue to checkout
+      - executeFunction:
+          name: us.functions.cart.continueToCheckout
+
+# Add Pet and Vet details
+      - executeFunction:
+          name: us.functions.checkout.AddPetVet
+
+      - executeFunction:
+          name: us.functions.checkout.SelectPetVet 
+          
+      - executeFunction:
+          name: us.functions.checkout.reviewOrder.verifyCardDetails
+          params:
+            - name: fulfillmentText
+              string: Shipping    
+
+      - executeFunction:
+          name: us.functions.checkout.placeOrder
+
+      - executeFunction:
+          name: us.functions.orderConfirmation.ratings
+
+      #Validate order confirmation page
+      - executeFunction:
+          name: us.functions.orderConfirmation.getOrderNumber
+
+      - log: ${orderNo}
+             
+      - storeIn:
+          key: testStatus
+          value: passed  
+      
+  - name: After
+    after: true
+    flow:
+      - executeFunction:
+          name: us.functions.utils.afterSteps

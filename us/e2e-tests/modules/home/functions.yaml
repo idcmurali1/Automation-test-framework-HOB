@@ -1,0 +1,4286 @@
+functions:
+
+################################################################# iOS ######################################################
+
+  # ################################## Navigation functions ################################## #
+  - name: us.functions.home.navigateHomeToSignIn
+    platform: ios
+    flow: 
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions 
+      - if: 
+          identifier: 
+            present: 
+              - identifier: us.mappings.home.continueSpanishViewModalText
+          then: 
+            - click: 
+                identifier: us.mappings.home.continueSpanishViewModalButton    
+      - click:
+          identifier: us.mappings.tabBar.account
+      - verifyIdentifier:
+          timeout: 20000
+          present:
+            - identifier: us.mappings.account.signInButton
+      - click:
+          identifier: us.mappings.account.signInButton
+          wait: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.authentication.emailField
+          then:
+            - storeIn:
+                key: signInValidated
+                value: true
+      - if:
+          condition: ${signInValidated}
+          then:
+            - log: SignIn page loaded
+            - storeIn:
+                key: signInValidated
+                value: false
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - SIGN-IN ERROR"
+
+  # pick time slot from home page
+  - name: us.functions.home.navigateToPickTimeSlot
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+      - click:
+          identifier: us.mappings.tabBar.shop
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.seeTimes
+      - click:
+          wait: 5000
+          identifier: us.mappings.home.seeTimes
+
+  # Navigate to scanner from home 
+  - name: us.functions.home.goToScannerFromHome
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.Scannerbutton
+      - click:
+          identifier: us.mappings.home.Scannerbutton
+          wait: 1000
+  # ################################## Navigation functions end ################################## #
+
+  # ################################## Home pop up screens ################################## #
+  - name: us.functions.home.handle.bottomOverlay
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present: 
+              - identifier: us.mappings.home.gotItButton
+          then:
+            - click:
+                wait: 5000
+                # identifier: us.mappings.home.gotItButton
+                #temp fix to dismiss beta message overlay as tapping Got it does not work.
+                coordinates: 195,215
+          else:
+            - log: "overlay not displayed"
+
+  - name: us.functions.home.rateDriverPopup
+    platform: ios
+    flow:
+      - loop:
+         begin: 1
+         end: 6
+         storeIndex: index    
+         flow:
+            - log: $index          
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.tipping.notNowButton
+                then:
+                  - click:
+                      identifier: us.mappings.tipping.notNowButton
+                else:        
+                  - break: true
+
+  - name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 8000
+                present:
+                  - identifier: us.mappings.wplus.promotion.PopUpTrialButton
+            # - click:
+            #     identifier: us.mappings.wplus.promotion.PopUpTrialButtonClose
+            # work arround for bug CEPG-200049 
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.promotion.PopUpTrialButtonClose
+                then:
+                  - click:
+                      identifier: us.mappings.wplus.promotion.PopUpTrialButtonClose
+                else:
+                  - drag:
+                      from:
+                        x: 174
+                        y: 96                
+                      to:
+                        x: 174
+                        y: 744                       
+          catch:
+            flow:
+              - log: No Wplus pop up displayed
+
+  - name: us.functions.home.closeWPlusEarnRewardPopup
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.promotion.earnRewardPopup
+          then:
+            - click:
+                identifier: us.mappings.global.closeButton                
+
+  # Function to handle Wplus Paramount Subscription Screen in Home Page
+  - name: us.functions.home.closeWPlusParamountPlusPopUpIfDisplayed
+    platform: ios
+    flow:
+      - sleep:
+          duration: 2000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.wplus.ParamountPlusPopUpScreen
+          then:
+            - click:
+                identifier: us.mappings.home.wplus.ParamountPlusClose
+
+  # Function to handle Home screen banner
+  - name: us.functions.home.closeWplusBottomSheetBannerIfDisplayed
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.wplus.closeWplusBottomSheetBanner
+          then:
+            - click:
+                identifier: us.mappings.home.wplus.closeWplusBottomSheetBanner
+
+   # Function to handle store confirmation banner
+  - name: us.functions.home.closeStoreConfirmationBannerIfDisplayed
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.confirmStoreBanner.close
+          then:
+            - click:
+                identifier: us.mappings.home.confirmStoreBanner.close
+
+  # Function to handle Home screen banner
+  - name: us.functions.home.closeWplusBottomSheetBannerIfDisplayed
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.wplus.closeWplusBottomSheetBanner
+          then:
+            - click:
+                identifier: us.mappings.home.wplus.closeWplusBottomSheetBanner
+          else:
+            - log: "Home screen banner is not displayed"
+  # ################################## Home pop up screens end ################################## #
+
+  - name: us.functions.home.setStore
+    platform: ios
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+      - if:
+          condition: ${store} == 32144
+          then:
+            - storeIn:
+                key: zipcode
+                value: 95122
+          else:
+            - storeIn:
+                key: zipcode
+                value: ${store}
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.gicBannerPostalCode
+          then:
+            - executeFunction:
+                name: us.functions.home.changeStore
+          else:
+            - log: Skipping
+
+  - name: us.functions.home.changeStore
+    platform: ios
+    flow:
+         # Handling Wplus pop up 
+        - executeFunction: 
+            name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+  
+        # Making sure GIC is displayed
+        - executeFunction:
+            name: us.functions.gic.expandIfCollapsed
+        # Skips intent selection (Pickup) if $storeOnly true (For non-signIn case)
+        - if:
+            condition: ${storeOnly} == false
+            then:
+              # Skip pickup intent selection if already selected
+              - try:
+                  flow:
+                    - if:
+                        identifier:
+                          present:
+                            - identifier: us.mappings.home.gic.newModule.container
+                        then:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.home.gic.module.pickupIntent
+                                  contains: selected
+                        else:
+                          - verifyIdentifier:
+                              label:
+                                - identifier: us.mappings.home.gic.module.pickupIntent
+                                  contains: clear selection
+                    - log: Pickup intent already selected
+                  catch:
+                    flow:
+                      - click:
+                          identifier: us.mappings.home.gic.module.pickupIntent
+                          wait: 3000
+                      - log: Pickup intent selected
+        - click:
+            identifier: us.mappings.home.gic.module.unselectedIntent.storeAddress
+            wait: 3000
+        - if: 
+            identifier:
+              present:
+                - identifier: us.mappings.home.noPickupLocationaAvailableText
+            then:
+              - click: 
+                  identifier: us.mappings.global.closeButton
+            else:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.home.zipcodeClearButton
+                  then:
+                    - click:
+                        identifier: us.mappings.home.zipcodeClearButton
+              - enterText:
+                  identifier: us.mappings.home.selectStoreTextField
+                  string: ${zipcode}
+                  pressEnter: true
+              - if: 
+                  condition : ${zipcode} == 95122
+                  then: 
+                    - click:
+                        identifier: us.mappings.home.sanJosesStoreRadioButton
+                    - log: Selecting San Jose store
+                  else:
+                    - click: 
+                        identifier: us.mappings.home.storeRadioButton
+              - click: 
+                  identifier: us.mappings.gic.selectStore.save.button # us.mappings.home.selectStoreSaveButton
+              - executeFunction:
+                  name: us.functions.utils.handleTechnicalErrorPopup
+        - if: 
+            identifier:
+              present:
+                - identifier: us.mappings.home.InstallationUnavailablePopUp
+            then:
+              - click: 
+                  identifier: us.mappings.home.changeStoreRemoveInstallation
+        - sleep:
+            duration: 2000
+        - if:
+            identifier:
+              notPresent:
+                - identifier: us.mappings.home.locationBannerButton
+            then:
+              - executeFunction:
+                  name: us.functions.gic.collapseIfExpanded
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.gic.collapsedIcon
+
+  - name: us.functions.home.ost.verify.youHaveCheckedIn
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.ost.youAreCheckedInCopy
+            - identifier: us.mappings.home.ost.parkInPickupAreaCopy
+            - identifier: us.mappings.home.ost.iHaveParkedButton
+
+  - name: us.functions.home.ost.verify.checkedInOrder.addParkingInfo
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.ost.addParkinginfoCopy
+            - identifier: us.mappings.home.ost.howToFindYouCopy
+            - identifier: us.mappings.home.ost.addParkingInfoButton
+
+  - name: us.functions.home.ost.verify.checkedInOrder.editParkingInfo
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.ost.youAreInParkingCopy
+            - identifier: us.mappings.home.ost.willBeOutShortlyCopy
+            - identifier: us.mappings.home.ost.editParkingInfoButton
+
+  # Assert the Curbside pickup and Delivery module on home screen Store info. ***
+  - name: us.functions.home.verify.curbsideDeliveryModule.allStores
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+            - identifier: us.mappings.home.bookSlotHeaderLabel
+            # - identifier: us.mappings.home.bookSlotSubHeaderLabel          #Not available anymore
+            - identifier: us.mappings.home.locationAddressLabel
+            - identifier: us.mappings.home.seeTimes
+      - verifyValue:
+          identifier: us.mappings.home.bookSlotHeaderLabel
+          contains: ${pickupDeliveryLabel}
+      # Value display removed before slot selection
+      # - verifyValue:
+      #     identifier: us.mappings.home.locationAddressLabel
+      #     contains: ${storeAddress}
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.seeTimes
+
+  # Assert the Curbside pickup and Delivery module on home screen Store info. ***
+  - name: us.functions.home.verify.curbsideDeliveryModule.bookedSlot
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.bookSlotHeaderLabel
+            - identifier: us.mappings.home.bookSlotSubHeaderLabel
+            - identifier: us.mappings.reserveSlot.scheduledDelivery.changeAddressLink
+      - verifyValue:
+          identifier: us.mappings.home.bookSlotHeaderLabel
+          contains: ${bookslotTime}
+      - verifyValue:
+          identifier: us.mappings.home.bookSlotSubHeaderLabel
+          equals: ${storeInfo}
+
+  - name: us.functions.home.search.searchItem
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.home.searchBar
+          wait: 3000
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.searchBarSelected
+      - enterText:
+          identifier: us.mappings.home.searchBarSelected
+          string: ${searchTerm}
+          pressEnter: true
+      - verifyIdentifier:
+          notPresent:
+             - identifier: us.mappings.home.searchBarSelected
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.search.firstItem
+
+  - name: us.functions.home.browse.departments
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.search.browseDepartmentName
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.browseDepartmentName
+          then:
+            - click :
+                identifier: us.mappings.search.browseDepartmentName
+          else:
+            - click:
+                identifier: us.mappings.tabBar.search
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.search.browseDepartmentName
+            - click:
+                identifier: us.mappings.search.browseDepartmentName
+      - verifyIdentifier:
+          present: 
+            - identifier:  us.mappings.home.searchBar
+      - if: 
+          condition: ${subDepartmentName} != null
+          then: 
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.browseSubDepartmentName
+                  - name: direction
+                    string: down 
+            - click :
+                identifier: us.mappings.search.browseSubDepartmentName  
+          else:
+            - click :
+                identifier: us.mappings.search.SubDepartments
+
+# Verify the homescreen after Delivery Bookslot time is Selected for Logged in user with an Address, Select Address.
+  - name: us.functions.home.bookSlotStatus.setAddress.for.deliveryTime
+    platform: ios
+    flow:  
+      # Select a Delivery slot
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.reserveSlot.title
+      - click:
+          identifier: us.mappings.reserveSlot.scheduledDelivery.tab
+          wait: 5000          
+      - click:
+          identifier: us.mappings.reserveSlot.scheduledDelivery.addAddressButton
+      - click:
+          identifier: us.mappings.selectAddress.continueButton          
+
+# sanity test by scrolling down to the feedback module on Home screen, asserting all elements.
+  - name: us.functions.home.feedback.module
+    platform: ios
+    flow:   
+      - loop:
+         begin: 1
+         end: 6
+         flow:    
+           - executeFunction:
+               name: us.functions.utils.scrollIfNotVisible
+               params:
+                 - name: identifier
+                   string: us.mappings.home.feedback.givefeedback.button
+                 - name: direction
+                   string: down
+                 - name: limit
+                   string: 10              
+           - if: 
+              identifier:
+               present:
+                - identifier: us.mappings.home.feedback.givefeedback.button
+              then:
+              - break: true
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.feedback.module.txt  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.feedback.givefeedback.button
+      - click:
+          identifier: us.mappings.home.feedback.givefeedback.button
+      - click:
+          identifier: us.mappings.home.feedback.dismissFeedbackPage                   
+
+# sanity test by scrolling down to the feedback module on Home screen, asserting elements, submit feedback
+  - name: us.functions.home.feedback.module.submit
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.feedback.module.button
+          position: center
+          wait: 1000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.feedback.module.button
+          position: center
+          wait: 1000
+      - log: Scroll Passed!  
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.feedback.module.button
+            - name: direction
+              string: down     
+            - name: limit
+              string: 15
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.feedback.module.button
+      - click:
+          identifier: us.mappings.home.feedback.module.button
+      - verifyValue:
+          identifier: us.mappings.home.feedback.surveyHeaderTxt
+          equals: Your feedback matters! Help us improve the Walmart app
+      - verifyValue:
+          identifier: us.mappings.home.feedback.surveySubTxt
+          equals: Rate your experience
+      - click:
+          identifier: us.mappings.home.feedback.surveyRatingStars
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.feedback.subTxtFair
+            - identifier: us.mappings.home.feedback.subTxtSorry
+            - identifier: us.mappings.home.feedback.notSelected.appExperience
+            - identifier: us.mappings.home.feedback.notSelected.recentOrder
+            - identifier: us.mappings.home.feedback.notSelected.inStore
+            - identifier: us.mappings.home.feedback.notSelected.customerService
+            - identifier: us.mappings.home.feedback.notSelected.deliveryPickup
+            - identifier: us.mappings.home.feedback.notSelected.other
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.other
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.feedback.inlineFeedbackTxt
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.appExperience
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.recentOrder                                 
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.inStore
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.customerService
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.deliveryPickup
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.feedback.selected.appExperience           
+            - identifier: us.mappings.home.feedback.selected.recentOrder
+            - identifier: us.mappings.home.feedback.selected.inStore
+            - identifier: us.mappings.home.feedback.selected.customerService 
+            - identifier: us.mappings.home.feedback.selected.deliveryPickup               
+            - identifier: us.mappings.home.feedback.selected.other
+            - identifier: us.mappings.home.feedback.helpTxt
+            - identifier: us.mappings.home.feedback.helpTxtLink
+      - click:
+          identifier: us.mappings.home.feedback.inlineFeedbackTxt
+      - enterText:
+          identifier: us.mappings.home.feedback.inlineFeedbackTxt
+          string: I like Walmart services!!
+          pressEnter: true
+      - click:
+          identifier: us.mappings.home.feedback.shareFeedbackButton
+      - click:
+          identifier:  us.mappings.home.feedback.doneButton
+          wait: 2000
+
+  - name: us.functions.home.verifyAddress
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.bookslotAddress
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.home.bookslotAddress
+              contains: ${zipcode}
+
+  - name: us.functions.home.location.updateStore
+    platform: ios
+    flow:
+      # Making sure GIC is displayed
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Pickup
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.storeaddress
+      - try:
+          flow:
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.home.gic.storeaddress
+                    contains: $ZIP_CODE
+            - log: "Already in $ZIP_CODE Store."
+          catch:
+            flow:
+            - click:
+                identifier: us.mappings.home.gic.storeaddress
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.zipcodeClearButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.zipcodeClearButton
+            - click:
+                identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield
+            - enterText:
+                identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield
+                string: ${ZIP_CODE}
+                pressEnter: true
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.storeAddressSelection
+                then:
+                  - click:
+                      identifier: us.mappings.home.storeAddressSelection
+                else:
+                  - scroll: 
+                      direction: down
+                      untilIdentifier: us.mappings.home.storeAddressSelection
+                  - click:
+                      identifier: us.mappings.home.storeAddressSelection
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reserveSlot.selectStore.saveButton
+            - click:
+                identifier: us.mappings.reserveSlot.selectStore.saveButton
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  - name: us.functions.home.verifyUserNameInTopleft
+    platform: ios
+    flow:        
+      - getString:
+          identifier: us.mappings.account.header
+          attribute: label
+          storeIn: usergreeting
+
+      - click:
+          identifier: us.mappings.tabBar.shop
+
+      - verifyIdentifier:
+          label: 
+            - identifier: us.mappings.home.userNameGreeting
+              equals: ${usergreeting}
+
+  - name: us.functions.home.headerElements.validateHomePage
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.searchBarSelected
+            - identifier: us.mappings.home.signInButton
+            - identifier: us.mappings.home.logo
+            - identifier: us.mappings.navBar.cartIcon
+
+  - name: us.functions.homePage.verifyPOV234ToBeSponsored
+    platform: ios
+    flow:
+      - scroll:
+            direction: down
+            untilIdentifier: us.mappings.home.pov
+            position: center
+      - storeIn:
+          key: label
+          value: 0
+      - loop:
+         begin: 0
+         end: 5
+         storeIndex: index
+         flow:
+           - log: $index
+           - scroll:
+               direction: left
+               untilIdentifier: us.mappings.home.povWithIndex
+               withinIdentifier: us.mappings.home.pov
+           - verifyIdentifier:
+               present:
+                - identifier: us.mappings.home.povWithIndex
+           - if:
+               identifier:
+                 present:
+                  - identifier: us.mappings.home.povWithAds
+               then:
+                  - storeIn:
+                        key: sponsored
+                        value: 1
+                  - arithmetic:
+                      expression: $label + $sponsored
+                      storeIn: label
+                  - log: $label Sponsored ad present
+                  - log: Ads is shown in position POV $index
+      - if: 
+          condition: "(${label} >= 2)"
+          then:
+            - log: Sponsored ad present
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Sponsored ad not available"
+      - storeIn:
+          key: index
+          value: 1
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.pov.playPauseButton
+      - click: 
+            identifier: us.mappings.home.pov.playPauseButton
+      - verifyIdentifier:
+            timeout: 50000
+            present:
+            - identifier: us.mappings.home.povWithIndex
+      - log: 
+            message: Play/PauseButton validation done
+
+  - name: us.functions.homePage.verifyPOV234Clickable
+    platform: ios
+    flow:
+      - scroll:
+            direction: down
+            untilIdentifier: us.mappings.home.pov
+            position: center
+      - loop:
+         begin: 1
+         end: 4
+         storeIndex: index
+         flow:
+           - log: $index
+           - scroll:
+               direction: left
+               untilIdentifier: us.mappings.home.povWithIndex
+               withinIdentifier: us.mappings.home.pov
+               scrollLimit: 6
+           - verifyIdentifier:
+               present:
+                - identifier: us.mappings.home.povWithIndex
+              #  label:
+              #   - identifier: us.mappings.home.povWithIndex
+              #     contains: Sponsored 
+           - click:
+               identifier: us.mappings.home.povWithIndex
+           - if:
+               identifier:
+                 present:
+                  - identifier: us.mappings.home.pov.browser
+               then:
+                 - executeFunction:
+                    name: us.functions.global.navigation.goToDeepLink
+                    params:
+                      - name: deepLinkUrl
+                        string: walmart://home
+                 - log: POV click Validation done $index 
+               else:
+                - executeFunction:
+                   name: us.functions.search.closeHowDoYouWantYourOrderBottomTray   
+           - if:
+               identifier:
+                 present:
+                  - identifier: us.mappings.search.firstProductNameTitle
+               then:         
+                - log: POV click Validation done $index
+                - goBack: true
+               else:
+                - goBack: true
+
+  - name: us.functions.homePage.verifymarquee1
+    platform: ios
+    flow:
+      - log:
+          message: Verifying marquee1
+      - scroll:
+          direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.marquee1
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.marquee1
+            - verifyIdentifier:
+                label:
+                  - identifier: us.mappings.home.marquee1
+                    contains: Sponsored
+            - log:
+                message:  marquee1 varification done
+
+  - name: us.functions.homePage.verifyMarqueeClick
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.marquee1
+          then:
+            - click:
+                identifier: us.mappings.home.marquee1
+
+  - name: us.functions.home.headerElements.validateHomePage
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.searchBarSelected
+            - identifier: us.mappings.home.signInButton
+            - identifier: us.mappings.home.logo
+            - identifier: us.mappings.navBar.cartIcon
+
+  - name: us.functions.home.verifyP13NSponsoredProductAds
+    platform: ios
+    flow:
+      - sleep:
+          duration: 1000
+      - loop:
+          begin: 0
+          end: 8
+          storeIndex: i
+          flow:
+            - log: $i
+            - scroll:
+                direction: down
+                scrollLimit: 2
+                position: center
+                untilIdentifier: us.mappings.home.p13nCarouselTitle
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.p13nCarouselTitle
+                then:
+                  - log: 'p13n ads present trying for the ${i} time'
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.home.p13nCarouselTitle
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.home.p13n_product_tile_sponsored_label
+                      then:
+                        - log: 'Sponsored Label present'              
+                        - click:
+                            identifier: us.mappings.home.p13nItemsSponsoredProductATC
+                        # - click:
+                        #     identifier: us.mappings.home.p13nItemsSponsoredProductATC                            
+                        # - click:
+                        #     identifier: us.mappings.home.home.p13n_atcDecrementStepper
+                        - break: true
+                      else:
+                        - scroll:
+                            direction: left
+                            scrollLimit: 5
+                            position: center
+                            # withinIdentifier: us.mappings.home.p13nCarouselTitle
+                            untilIdentifier: us.mappings.home.p13n_product_tile_sponsored_label
+                        - if:
+                            identifier:
+                              present:
+                                - identifier: us.mappings.home.p13n_product_tile_sponsored_label
+                            then:
+                              - log: 'Sponsored Label present'                                   
+                              - break: true
+                else:
+                  - log: 'p13n Ads is not present'
+
+  - name: us.functions.homePage.verifySigninNudge
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.personalisedExperienceText
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.home.personalisedExperienceText
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.home.personalisedExperienceText
+              contains: Get a personalized experience
+      - log: Personalized Experience text is present
+      - sleep:
+              duration: 5000
+      - click:
+          identifier: us.mappings.home.signinNudge
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.ios.signinnudge.email
+            - name: password
+              string: us.data.ios.signinnudge.password          
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.GreetingLabel
+      - sleep:
+              duration: 3000      
+      - log: User sign in is verified
+
+  - name: us.functions.homepage.redesign.verify.ost.storepickup
+    platform: ios
+    flow:
+      - if: 
+          condition: ${option} == 'placed'
+          then:
+            - verifyIdentifier:
+                timeout: 8000  
+            - executeFunction:
+                name: us.functions.homepage.assertOrderStatusTracker
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.home.orderStatusLink 
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center  
+            - click:
+                identifier: us.mappings.home.orderStatusLink 
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderStatusTrack
+
+          else: 
+            - if: 
+                condition: ${option} == 'inprogress'
+                then: 
+        
+                  - verifyIdentifier:
+                      timeout: 8000 
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.home.orderStatusLink 
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center  
+                  - click:
+                      identifier: us.mappings.home.orderStatusLink 
+                  - executeFunction:
+                      name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                      params:
+                        - name: orderNo
+                          string: ${orderNo}
+                else: 
+                  - if: 
+                      condition: ${option} == 'readyforpickup'
+                      then: 
+                        - verifyIdentifier:
+                            timeout: 8000 
+                        - executeFunction:
+                            name: us.functions.homepage.assertOrderStatusTracker
+                        - executeFunction:
+                            name: us.functions.utils.scrollIfNotVisible
+                            params:
+                              - name: identifier
+                                string: us.mappings.home.orderStatusLink 
+                              - name: direction
+                                string: down
+                              - name: scrollPosition
+                                string: center  
+                        - click:
+                            identifier: us.mappings.home.orderStatusLink 
+                        - executeFunction:
+                            name: us.functions.checkin.checkinUnscheduledPickup
+
+                      else: 
+                        - if: 
+                            condition: ${option} == 'checkedin'
+                            then: 
+                              - verifyIdentifier:
+                                  timeout: 8000 
+                              - executeFunction:
+                                  name: us.functions.homepage.assertOrderStatusTracker
+                            else: 
+                              - if: 
+                                  condition: ${option} == 'customerpicked'
+                                  then: 
+                                    - verifyIdentifier:
+                                       timeout: 8000 
+                                    - verifyIdentifier:
+                                        notPresent:
+                                          - identifier: us.mappings.home.orderStatusTrackerHeaderLabel
+
+  - name: us.functions.homepage.assertOrderStatusTracker
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.home.orderStatusTrackerHeaderLabel
+              contains: ${ostHeaderLabel}
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.home.orderStatusTrackerSubHeaderLabel
+              contains: ${ostSubHeaderLabel}
+      - verifyIdentifier:
+          label:
+            - identifier: us.mappings.home.orderStatusLink
+              contains: ${orderStatusLink}
+
+  - name: us.functions.homepage.redesign.verify.ost.shipping
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.orderStatusLink 
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center     
+      - if: 
+          condition: ${option} == 'placed'
+          then:
+            - verifyIdentifier:
+                timeout: 8000  
+            - executeFunction:
+                name: us.functions.homepage.assertOrderStatusTracker
+            - click:
+                identifier: us.mappings.home.orderStatusLink 
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderStatusTrack
+
+          else: 
+            - if: 
+                condition: ${option} == 'inprogress'
+                then:                                                
+                  - executeFunction:
+                      name: us.functions.homepage.assertOrderStatusTracker
+                  - click:
+                      identifier: us.mappings.home.orderStatusLink 
+                  - executeFunction:
+                      name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                      params:
+                        - name: orderNo
+                          string: ${orderNo}
+                else: 
+                  - if: 
+                      condition: ${option} == 'Shipped'
+                      then: 
+                        - verifyIdentifier:
+                            timeout: 8000 
+                        - executeFunction:
+                            name: us.functions.homepage.assertOrderStatusTracker
+                        - executeFunction:
+                            name: us.functions.homepage.ost.trackShipment
+                            params:
+                              - name: fulfillmentStatus
+                                string: Shipped
+
+                      else: 
+                        - if: 
+                            condition: ${option} == 'delivered'
+                            then: 
+                              - verifyIdentifier:
+                                  timeout: 8000 
+                              - executeFunction:
+                                  name: us.functions.homepage.assertOrderStatusTracker
+                        - executeFunction:
+                            name: us.functions.homepage.ost.trackShipment
+                            params:
+                              - name: fulfillmentStatus
+                                string: Delivered                                  
+
+  - name: us.functions.homepage.ost.trackShipment
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.home.orderStatusLink
+      - sleep:
+          duration: 5000          
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.trackShipment.title   
+            - identifier: us.mappings.orderDetails.trackShipment.progressBar
+            - identifier: us.mappings.orderDetails.trackShipment.deliveryAddress
+      - if:
+          condition: ${fulfillmentStatus} == 'Shipped'
+          then: 
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.trackShipment.arrivesByText
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center            
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.arrivesByText
+                  - identifier: us.mappings.orderDetails.trackShipment.fulfilmentStatus.shipped
+                  - identifier: us.mappings.orderDetails.trackShipment.shippedStatusDetails
+      - if:
+          condition: ${fulfillmentStatus} == 'Delivered'
+          then: 
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.orderDetails.trackShipment.shipmentDeliveredText
+                  - name: direction
+                    string: down
+                  - name: scrollPosition
+                    string: center
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.shipmentDeliveredText
+                  - identifier: us.mappings.orderDetails.trackShipment.fulfilmentStatus.delivered
+                  - identifier: us.mappings.orderDetails.trackShipment.deliveredStatusDetails
+      # - click: 
+      #     identifier: us.mappings.orderHistory.backButton              
+
+########################################################### Android ######################################################
+
+  # ################################## Navigation functions ################################## #
+  - name: us.functions.home.navigateHomeToSignIn
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Pre-transactions
+#      - verifyIdentifier:
+#          present:
+#            - identifier: us.mappings.home.seeTimes
+      - click:
+          identifier: us.mappings.tabBar.account
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.account.signInButton
+
+      # Retry click on signIn if not clicked in earlier iteration
+      - loop:
+          begin: 1
+          end: 3
+          storeIndex: i
+          flow:
+            - executeFunction:
+                name: us.functions.global.onboarding.smartLock.DismissNoneOfTheAbove
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.account.signInButton
+                then:
+                  - click:
+                      identifier: us.mappings.account.signInButton
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.signInAnotherWay
+                then:
+                  - executeFunction:
+                      name: us.functions.home.signInAnotherWay
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.global.authentication.emailField
+                then:
+                  - storeIn:
+                      key: signInValidated
+                      value: true
+                  - break: true
+      - if:
+          condition: ${signInValidated}
+          then:
+            - log: SignIn page loaded
+            - storeIn:
+                key: signInValidated
+                value: false
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - SIGN-IN ERROR"
+
+  # pick time slot from home page
+  - name: us.functions.home.navigateToPickTimeSlot
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+      - click:
+          identifier: us.mappings.tabBar.shop
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.seeTimes
+      - click:
+          wait: 5000
+          identifier: us.mappings.home.seeTimes
+      - executeFunction:
+          name: us.functions.utils.handleTechnicalErrorPopup
+
+  - name: us.functions.home.goToScannerFromHome
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.Scannerbutton
+      - click:
+          identifier: us.mappings.home.Scannerbutton
+          wait: 1000
+  # ################################## Navigation functions end ################################## #
+
+  # ################################## Home pop up screens ################################## #
+  - name: us.functions.home.rateDriverPopup
+    platform: android
+    flow:
+      - sleep:
+          duration: 7000  
+      - loop:
+          begin: 1
+          end: 6
+          storeIndex: index    
+          flow:
+            - log: $index          
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.tipping.notNowButton
+                then:
+                  - click:
+                      identifier: us.mappings.tipping.notNowButton
+                else:
+                  - break: true
+
+  - name: us.functions.home.personalizedPopUpScreenClose
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.personalizePopupText
+          then:
+            - click:
+                identifier: us.mappings.home.personalizePopupClose               
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.personalizePopupCloseButton
+          then:
+            - click:
+                identifier: us.mappings.home.personalizePopupCloseButton
+
+  - name: us.functions.home.closeWParamountPlusPopUpIfDisplayed
+    platform: android
+    flow:
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wlus.membershipBottomsheetClose # us.mappings.wplus.ParamountPlusText
+          then:
+            - click:
+                identifier: us.mappings.wlus.membershipBottomsheetClose  
+
+  - name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Transactions
+      - sleep:
+          duration: 6000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.startUsingwplusBenefitsButton
+          then:
+            - click:
+                identifier: us.mappings.wlus.membershipBottomsheetClose
+
+  - name: us.functions.home.handleReorderToolTip
+    platform: android
+    flow:
+      - if:
+          identifier: 
+            present:
+              - identifier: us.mappings.myItems.reOrderTootTipText
+          then:
+            - log: tooltip displayed
+            - click: 
+                identifier: us.mappings.myItems.reOrderTootTip.closeButton
+            - verifyIdentifier:
+                notPresent: 
+                  - identifier: us.mappings.myItems.reOrderTootTipText
+          else:
+            - log: no tooltip displayed
+
+  - name: us.functions.home.handleOrderSavingsupdates
+    platform: android
+    flow:
+      - sleep:
+          duration: 15000      
+      - if:
+          identifier: 
+            present:
+              - identifier: us.mappings.home.orderSavingsupdatesCancel 
+          then:
+            - log: Get order and savings updates displayed or Walmart Bottom sheet displayed
+            - click:
+                identifier: us.mappings.home.orderSavingsupdatesCancel 
+            - executeFunction:
+                name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed 
+            - verifyIdentifier:
+                present: 
+                  - identifier: us.mappings.home.searchBarSelected
+            - sleep:
+                duration: 3000
+          else:
+            - log: Get order and savings updates not displayed
+
+  # ################################## Home pop up screens end ################################## #
+
+  - name: us.functions.home.setStore
+    platform: android
+    flow:
+      - storeIn:
+          key: executionStage
+          value: Onboarding
+      - if: 
+          condition: ${store} == 32144
+          then:
+            - storeIn:
+                key: zipcode
+                value: 95122
+          else:
+            - storeIn:
+                key: zipcode
+                value: ${store}
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.gic.module.headerText.StoreDetails
+          then:
+            - log: Skipping as its already set to the required store
+          else:
+            - executeFunction:
+                name: us.functions.home.changeStore
+
+  - name: us.functions.home.changeStore
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.gic.collapseIcon
+          then:
+            - click:
+                identifier: us.mappings.home.gic.collapseIcon
+      - if:
+          condition: ${storeOnly} == false
+          then:
+            - try:
+                flow:
+                  - if:
+                      identifier:
+                        present:
+                          - identifier: us.mappings.home.gic.newModule.container
+                      then:
+                        - verifyIdentifier:
+                            checked:
+                              - identifier: us.mappings.wplus.globalIntentPickup
+                                value: true
+                      else:
+                        - verifyIdentifier:
+                            contentDescription:
+                              - identifier: us.mappings.wplus.globalIntentPickup
+                                contains: Clear
+                  - log: Pickup intent already selected
+                catch:
+                  flow:
+                    - click:
+                        identifier: us.mappings.wplus.globalIntentPickup
+          else:
+            - log: Selecting only store without intent
+
+      - if:
+          condition: ${driverpopup}
+          then:
+            - executeFunction:
+                name: us.functions.home.rateDriverPopup  
+
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.gic.expandedIcon
+          then:
+            - click:
+                identifier: us.mappings.tabBar.shop
+      - sleep:
+          duration: 2000
+      - executeFunction:
+          name: us.functions.home.closeWPlusPromotionPopUpIfDisplayed
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.gic.collapseIcon
+          then:
+            - click:
+                identifier: us.mappings.home.gic.collapseIcon                          
+      - click:
+          identifier: us.mappings.home.gicSelectStoreButton
+          wait: 3000
+      - log: --- Selecting the store ---
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.noPickupLocationaAvailableText
+          then:
+            - click: 
+                identifier: us.mappings.global.closeButton
+          else:
+            - enterText:
+                identifier: us.mappings.home.selectStoreTextField
+                string: ${zipcode}
+                pressEnter: true
+            - if:
+                condition: ${zipcode} == 95122
+                then:
+                  - click:
+                      identifier: us.mappings.home.sanJosesStoreRadioButton
+                      coordinates: 50%, 50%
+                  - log: Selecting San Jose store
+                else:
+                  - click:
+                      identifier: us.mappings.home.storeRadioButton
+                      coordinates: 50%, 50%
+            - click: 
+                identifier: us.mappings.gic.selectStore.save.button 
+                coordinates: 50%, 50%
+            - sleep:
+                duration: 5000
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.continueWithNewStoreButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.continueWithNewStoreButton
+            - executeFunction:
+                name: us.functions.utils.handleTechnicalErrorPopup
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.InstallationUnavailablePopUp
+                then:
+                  - click: 
+                      identifier: us.mappings.home.changeStoreRemoveInstallation
+                  - sleep:
+                      duration: 5000
+            - if:
+                identifier:
+                  notPresent:
+                    - identifier: us.mappings.home.locationBannerButton
+                then:
+                  - click:
+                      identifier: us.mappings.home.gicCollapsedButton
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.home.gicHomeLocation
+      - storeIn:
+          key: storeOnly
+          value: false
+
+  - name: us.functions.home.browse.departments
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+      # - verifyIdentifier:
+      #     present:
+      #        - identifier: us.mappings.search.browseDepartmentName
+      # - click :
+      #     identifier: us.mappings.search.browseDepartmentName
+# Department name is not visible
+      - if: 
+          condition: ${departmentName} != null
+          then:
+            - drag:
+                  from:
+                    x: 50%
+                    y: 55%
+                  to:
+                    x: 50%
+                    y: 50%
+            - click :
+                identifier: us.mappings.search.browseDepartmentName  
+          else:
+            - click :
+                identifier: us.mappings.search.browseDepartmentName  
+
+      - if: 
+          condition: ${subDepartmentName} != null
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.search.browseSubDepartmentName
+                  - name: direction
+                    string: down 
+            - click :
+                identifier: us.mappings.search.browseSubDepartmentName  
+          else:
+            - click :
+                identifier: us.mappings.search.SubDepartments
+
+  # Scrolls to top of home page
+  - name: us.functions.cart.scrollToTopOfHome
+    platform: android
+    flow:
+      - log: -------Scroll to top of home page function start-------
+      - log: Scrolling to top of home page
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.home.location.storeName      
+      - log: -------Scroll to top of home page function end-------
+
+  # Scrolls to top of home page
+  - name: us.functions.cart.scrollToTopOfHome
+    platform: ios
+    flow:
+      - log: -------Scroll to top of home page function start-------
+      - log: Scrolling to top of home page
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: up
+          untilIdentifier: us.mappings.home.location.storeName      
+      - log: -------Scroll to top of home page function end-------      
+
+  - name: us.functions.home.ost.verify.youHaveCheckedIn
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.ost.youAreCheckedInCopy
+            - identifier: us.mappings.home.ost.parkInPickupAreaCopy
+            - identifier: us.mappings.home.ost.iHaveParkedButton
+
+  - name: us.functions.home.ost.verify.checkedInOrder.editParkingInfo
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.ost.youAreInParkingCopy
+            - identifier: us.mappings.home.ost.willBeOutShortlyCopy
+            - identifier: us.mappings.home.ost.editParkingInfoButton
+
+  # sanity test by scrolling down to the feedback module on Home screen, asserting all elements.
+  - name: us.functions.home.feedback.module
+    platform: android
+    flow:     
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.feedback.module
+          position: center
+      - log: Scroll Passed!   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.feedback.givefeedback.button
+      - click:
+          identifier: us.mappings.home.feedback.givefeedback.button
+      - click:
+          identifier: us.mappings.home.feedback.dismissFeedbackPage  
+
+  # sanity test by scrolling down to the feedback module on Home screen, asserting elements, submit feedback
+  - name: us.functions.home.feedback.module.submit
+    platform: android
+    flow:
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.home.feedback.module
+      #     position: center
+      - loop:
+         begin: 1
+         end: 7
+         flow:  
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.feedback.module
+                wait: 1000
+      - log: Scroll Passed!
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.feedback.givefeedback.button
+      - click:
+          identifier: us.mappings.home.feedback.givefeedback.button
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.feedback.surveyHeaderTxt
+              contains: Your feedback matters! Help us improve the Walmart app
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.feedback.surveySubTxt
+              equals: Rate your experience
+      - click:
+          identifier: us.mappings.home.feedback.surveyRatingStars
+          wait: 5000
+      # - sleep:
+      #     duration: 3000
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.feedback.subTxtSorry
+            - identifier: us.mappings.home.feedback.notSelected.appExperience
+            - identifier: us.mappings.home.feedback.notSelected.recentOrder
+            - identifier: us.mappings.home.feedback.notSelected.inStore
+            - identifier: us.mappings.home.feedback.notSelected.customerService
+            - identifier: us.mappings.home.feedback.notSelected.deliveryPickup
+            - identifier: us.mappings.home.feedback.notSelected.other
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.other
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.feedback.inlineFeedbackTxt
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.appExperience
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.recentOrder                                 
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.inStore
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.customerService
+      - click:
+          identifier: us.mappings.home.feedback.notSelected.deliveryPickup
+      - verifyIdentifier:
+          checked:
+            - identifier: us.mappings.home.feedback.notSelected.appExperience
+              value: true
+      - verifyIdentifier:
+          checked:
+            - identifier: us.mappings.home.feedback.notSelected.recentOrder
+              value: true
+      - enterText:
+          identifier: us.mappings.home.feedback.inlineFeedbackTxt
+          string: I like Walmart service
+          clickFirst: true
+          clearField: true
+      - click:
+          identifier: us.mappings.home.feedback.shareFeedbackButton
+      - click:
+          identifier:  us.mappings.home.feedback.doneButton
+
+  # Verify the homescreen after Delivery Bookslot time is Selected for Logged in user with an Address, Select Address.
+  - name: us.functions.home.bookSlotStatus.setAddress.for.deliveryTime
+    platform: android
+    flow:  
+      # Select a Delivery slot
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.reserveSlot.title
+      - click:
+          identifier: us.mappings.reserveSlot.scheduledDelivery.tab
+          wait: 5000
+      #- click:
+          #identifier: us.mappings.reserveslot.scheduledDelivery.addAddresslink
+      - executeFunction:
+          name: us.functions.reserveSlot.noAddress.addDeliveryAddress
+      #- click:
+          #identifier: us.mappings.selectaddress.continue
+
+  # Verify the Reserve a Time for Logged in Android user with an Address, Select Address. ***
+  - name: us.functions.reserveslot.setAddress.for.deliveryTime
+    platform: android
+    flow:  
+      # Select a Delivery slot
+      - verifyIdentifier:
+          timeout: 10000
+          present:
+            - identifier: us.mappings.reserveSlot.title
+      - click:
+          identifier: us.mappings.reserveSlot.scheduledDelivery.tab
+          wait: 5000
+      - click:
+          identifier: us.mappings.deliveryAddress.addAddress.overlay.addAddressButton
+          wait: 5000
+      - click:
+          identifier: us.mappings.selectaddress.continue
+
+  - name: us.functions.home.verifyAddress
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.bookslotAddress
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.bookslotAddress
+              contains: ${zipcode}
+  - name: us.functions.home.location.nearbyStore
+    platform: android
+    flow: 
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.Searcherroritem # message to display item is not avaible in your store Please select near by store 
+              contains: isn't avaible to pickup  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.SelectnearbyStoreButton  
+      - click:
+          identifier: us.mappings.home.SelectnearbyStoreButton #select store button clicked
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.SelectAvailablestore 
+          then:
+            - click:
+                identifier: us.mappings.home.SelectAvailablestore
+            - click:
+                identifier: us.mappings.home.SaveAvailablestore #Save the available store to pick up    
+          else:
+            - scroll: 
+                direction: down
+                untilIdentifier: us.mappings.home.NotAvailablestore
+            - click:
+                identifier: us.mappings.home.close
+  
+  - name: us.functions.home.signInAnotherWay
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.signInAnotherWay
+      - click:
+          identifier: us.mappings.home.signInAnotherWay
+
+
+  - name: us.functions.home.location.nearbyStore
+    platform: ios
+    flow: 
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.Searcherroritem # message to display item is not avaible in your store Please select near by store 
+              contains: isn't avaible to pickup  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.SelectnearbyStoreButton  
+      - click:
+          identifier: us.mappings.home.SelectnearbyStoreButton #select store button clicked
+
+      - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.home.SelectAvailablestore 
+                then:
+                  - click:
+                      identifier: us.mappings.home.SelectAvailablestore
+                  - click:
+                      identifier: us.mappings.home.SaveAvailablestore #Save the available store to pick up    
+                else:
+                  - scroll: 
+                      direction: down
+                      untilIdentifier: us.mappings.home.NotAvailablestore
+                  - click:
+                      identifier: us.mappings.home.close  
+
+  - name: us.functions.home.location.updateStore
+    platform: android
+    flow:
+      # Making sure GIC is displayed
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+      # - click:
+      #     identifier: us.mappings.home.gic.collapsedIcon  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gicSelectStoreButton
+      - click:
+          identifier: us.mappings.home.gicSelectStoreButton
+      # - click:
+      #     identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield          
+      - enterText:
+          identifier: us.mappings.reserveSlot.selectStore.zicodeTextfield
+          string: ${ZIP_CODE}
+          pressEnter: true
+      - if:
+          condition: ${secondStore}
+          then:
+            - log: Selecting Second store
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.reserveSlot.selectStore.secondAddress
+            - click:
+                identifier: us.mappings.reserveSlot.selectStore.secondAddress
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.reserveSlot.selectStore.storeAddress 
+                then:
+                  - click:
+                      identifier: us.mappings.reserveSlot.selectStore.storeAddress 
+                else:
+                  - scroll: 
+                      direction: down
+                      untilIdentifier: us.mappings.reserveSlot.selectStore.storeAddress 
+                  - click:
+                      identifier: us.mappings.reserveSlot.selectStore.storeAddress 
+      # - verifyIdentifier:
+      #     present:
+      #       - identifier: us.mappings.reserveSlot.selectStore.saveButton
+      - click:
+          identifier: us.mappings.reserveSlot.selectStore.saveButton
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  - name: us.functions.home.location.updateStore.gicDss  #Author: Joel Litvin 3/27
+    platform: android
+    flow:
+      - log: ${ZIP_CODE}
+      # Making sure GIC is displayed
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed 
+      - executeFunction:
+          name: us.functions.gicDss.select.deliveryStore.address.updatesStoreCard
+      - executeFunction:
+          name: us.functions.gicDss.select.deliveryStore.address.updatesStoreCard.forPickupIntent
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  - name: us.functions.home.location.updateStore.gicDss   #Author: Joel Litvin 3/27
+    platform: ios
+    flow:
+      - log: ${ZIP_CODE}
+      # Making sure GIC is displayed
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed 
+      - executeFunction:
+          name: us.functions.gicDss.select.deliveryStore.address.updatesStoreCard
+      - executeFunction:
+          name: us.functions.gicDss.select.deliveryStore.address.updatesStoreCard.forPickupIntent
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  - name: us.functions.home.verifyUserNameInTopleft
+    platform: android
+    flow:
+      - sleep:
+          duration : 10000              
+      - getString:
+          identifier: us.mappings.account.header
+          attribute: text
+          storeIn: usergreeting
+
+      - click:
+          identifier: us.mappings.tabBar.shop
+
+      - verifyIdentifier:
+          text: 
+            - identifier: us.mappings.home.signInButton
+              equals: ${usergreeting}
+            
+  - name: us.functions.home.headerElements.validateHomePage
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.searchBarSelected
+            - identifier: us.mappings.home.signInButton
+            - identifier: us.mappings.home.logo
+            - identifier: us.mappings.navBar.cartIcon
+
+  - name: us.functions.home.verifyP13NSponsoredProductAds
+    platform: android
+    flow:
+      - sleep:
+          duration: 1000
+      - loop:
+          begin: 0
+          end: 12
+          storeIndex: i
+          flow:
+            - log: $i
+            - scroll:          
+                direction: down
+                scrollLimit: 1
+                position: center
+            - if: 
+                identifier:
+                  present: 
+                    - identifier: us.mappings.home.p13nCarouselView 
+                then:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.home.p13nCarouselTitle
+                        - name: direction
+                          string: down
+                        - name: scrollPosition
+                          string: center
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.home.p13nCarouselTitle
+                  - if: 
+                      identifier:
+                        present: 
+                          - identifier: us.mappings.home.p13n_product_tile_sponsored_label
+                          - identifier: us.mappings.home.p13n_product_tile_sponsored_label_ATC                        
+                      then:
+                        - log: 'Sponsored Label present'
+                        - click: 
+                            identifier: us.mappings.home.p13n_product_tile_sponsored_label_ATC
+                        - click: 
+                            identifier: us.mappings.home.p13n_product_tile_sponsored_label_ATC                            
+                        - click: 
+                            identifier: us.mappings.item.addToCartMinusButton 
+                        - break: true
+                      else: 
+                        - scroll:
+                            direction: left
+                            scrollLimit: 2                            
+                            withinIdentifier: us.mappings.home.p13nCarouselView
+                            untilIdentifier: us.mappings.home.p13n_product_tile_sponsored_label
+                            position: center                          
+                else:
+                  - log: 'p13n Ads is not present'             
+
+  - name: us.functions.homePage.verifyPOV234ToBeSponsored
+    platform: android
+    flow:
+      - scroll:
+            direction: down
+            untilIdentifier: us.mappings.home.pov
+            position: center
+      - storeIn:
+          key: label
+          value: 0            
+      - loop:
+         begin: 1
+         end: 5
+         storeIndex: index
+         flow:
+           - log: $index
+           - scroll:
+               direction: left
+               withinIdentifier: us.mappings.home.pov
+               untilIdentifier: us.mappings.home.povWithIndex
+
+           - verifyIdentifier:
+               present:
+                - identifier: us.mappings.home.povWithIndex
+           - if:
+               identifier:
+                 present:
+                  - identifier: us.mappings.home.povWithAds
+               then:
+                  - storeIn:
+                        key: sponsored
+                        value: 1
+                  - arithmetic:
+                      expression: $label + $sponsored
+                      storeIn: label
+                  - log: $label Sponsored ad present
+                  - log: Ads is shown in position POV $index
+      - if: 
+          condition: "(${label} >= 2)"
+          then:
+            - log: Sponsored ad present
+          else:
+            - failTest:
+                message: "FAILURE - ${env} - Sponsored ad not available"
+      - storeIn:
+          key: index
+          value: 1
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.pov.playPauseButton
+      - click: 
+            identifier: us.mappings.home.pov.playPauseButton
+      - verifyIdentifier:
+            timeout: 50000
+            present:
+            - identifier: us.mappings.home.povWithIndex
+      - log: 
+            message: Play/PauseButton validation done
+
+  - name: us.functions.homePage.verifyPOV234Clickable
+    platform: android
+    flow:
+      - scroll:
+            direction: down
+            untilIdentifier: us.mappings.home.pov
+            position: center
+      - loop:
+         begin: 2
+         end: 5
+         storeIndex: index
+         flow:
+           - log: $index
+           - scroll:
+               direction: left
+               untilIdentifier: us.mappings.home.povWithIndex
+               withinIdentifier: us.mappings.home.pov
+           - verifyIdentifier:
+               present:
+                - identifier: us.mappings.home.povHeading               
+                # - identifier: us.mappings.home.povLogo   
+                - identifier: us.mappings.home.povImage                          
+                - identifier: us.mappings.home.povWithIndex
+           - click:
+               identifier: us.mappings.home.povWithIndex
+           - sleep:
+               duration: 5000               
+           - if:
+               identifier:
+                 present:
+                  - identifier: us.mappings.home.searchBarSelected
+               then:
+                 - executeFunction:
+                    name: us.functions.global.navigation.goToDeepLink
+                    params:
+                      - name: deepLinkUrl
+                        string: walmart://home
+                 - sleep:
+                     duration: 5000      
+                 - log: POV click Validation done $index 
+               else:
+                - if:
+                    identifier:
+                      present:
+                        - identifier: us.mappings.item.itemDetailsView   
+                    then:
+                      - click:
+                            identifier: us.mappings.item.ad.SponsoredAd.item.close                          
+                - log: POV click Validation done $index
+
+  - name:  us.functions.homePage.verifymarquee1
+    platform: android
+    flow:
+      - log:
+          message: Verifying marquee1
+      - scroll:
+          direction: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.ad.Marquee1SponsoredText
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.ad.Marquee1Logo
+                  - identifier: us.mappings.item.ad.Marquee1Headline
+                  - identifier: us.mappings.search.ad.Marquee1SponsoredText
+                  - identifier: us.mappings.item.ad.Marquee1Headline                    
+            - verifyIdentifier:
+                text:
+                  - identifier: us.mappings.search.ad.Marquee1SponsoredText
+                    contains: Sponsored
+            - log:
+                message:  marquee1 varification done
+
+  - name: us.functions.homePage.verifyMarqueeClick
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.search.ad.Marquee1SponsoredText
+          then:
+            - click:
+                identifier: us.mappings.search.ad.Marquee1SponsoredText
+        
+  - name: us.functions.homePage.verifySigninNudge
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.personalisedExperienceText # us.mappings.home.verifyGetAPersonalizedExperienceText
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.personalisedExperienceText # us.mappings.home.verifyGetAPersonalizedExperienceText
+      - log: Personalized Experience text is present
+      - sleep:
+              duration: 5000
+      - click:
+          identifier: us.mappings.home.signinNudge # us.mappings.home.verifypSigninNudgeButton
+      - executeFunction:
+          name: us.functions.global.authentication.signInAccount
+          params:
+            - name: email
+              string: us.data.android.signinnudge.email
+            - name: password
+              string: us.data.android.signinnudge.password           
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.GreetingLabel
+      - sleep:
+              duration: 3000      
+      - log: User is signed in with welcome message
+
+  - name: us.functions.home.ost.UnScheduledPickup.orderStatusTrack
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: us.mappings.home.ost.module.OstHeading
+            - identifier: us.mappings.home.ost.module.OstSubHeading  
+            - identifier: us.mappings.home.ost.module.seeMoreLink
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.ost.module.OstHeading
+              contains: ${orderStatus}            
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.ost.module.OstSubHeading  
+              contains: Pick up
+      - click:
+          identifier: us.mappings.home.ost.module.seeMoreLink
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.ost.seeMore.odp.orderNumber
+            - identifier: us.mappings.ost.seeMore.odp.orderStatusMessage
+      - sleep:
+          duration: 5000
+
+  - name: us.functions.home.ost.UnScheduledPickup.orderStatusTrackAndCheckin
+    platform: android
+    flow:
+      - verifyIdentifier:
+          timeout: 40000
+          present:
+            - identifier: us.mappings.home.ost.module.OstHeading
+            - identifier: us.mappings.home.ost.module.OstSubHeading 
+            - identifier: us.mappings.home.ost.module.CheckinLink
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.ost.module.OstHeading
+              contains: ${orderStatus}            
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.ost.module.OstSubHeading 
+              contains: Check in before you go to the store
+      - click:
+          identifier: us.mappings.home.ost.module.CheckinLink
+      - sleep:
+          duration: 4000  
+      - click:
+          identifier: us.mappings.checkin.enableLocation
+      - click:
+          identifier: us.mappings.global.onboarding.allowWhileUsingAppButton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.home.ost.checkin.YouAreCheckedInText
+      - sleep:
+          duration: 5000 
+              
+  - name: us.functions.home.addItem.toCartUnder.reOrderYourEssentialsCarousel
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus bottom sheet appeared and closed it !!"
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.carousel
+          then:
+            - log: "The Reorder Your Essentials Carousel is not appearing, Scrolling DOWN!!!"
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.carousel
+                position: center
+      - log: "The Reorder Your Essentials Carousel is now SEEN!!!"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.reOrder.your.essentials.carousel
+            - identifier: us.mappings.home.show.my.items.link
+      - log: "The Show Items Link on the Reorder Your Essentials Carousel is Present !!"
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+          then:
+            - log: "The Add to cart button is not appearing, Scrolling DOWN!!!"
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+          then:
+            - log: "The Add button on Reorder Your Essentials Carousel is not visible, to Add item to the cart. So scrolling to left !!!"
+            - scroll:
+                direction: left
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+      - log: "Now the Add button on Reorder Your Essentials Carousel is visible !!!"
+      - click:
+          identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+      - log: "Clicked on the Add button, to add item to the cart"
+      - sleep:
+          duration: 4000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+
+  - name: us.functions.home.verify.itemAddedToCart.from.reOrderYourEssentialsCarousel
+    platform: android
+    flow:
+      - sleep:
+          duration: 2000
+      #Click on the Cart Icon
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.cartPage.item.confirmation
+          then:
+            - log: "Cart page top is not visible, so scrolling up"
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.home.cartPage.item.confirmation
+      - log: "Reached the Cart page top!!!"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.cart.itemPresent.itemNameLabel
+            - identifier: us.mappings.home.reOrder.your.essentials.noOfTimesBoughtTag
+            - identifier: us.mappings.home.reOrder.your.essentials.noOfItems.inCart
+      - log: "Verified the Item added to the cart from Reorder Your Essentials Carousel Successfully !!"
+
+  - name: us.functions.home.addItem.toCartUnder.reOrderYourEssentialsCarousel
+    platform: ios
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus bottom sheet appeared and closed it !!"
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.reOrder.your.essentials.title
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.reOrder.your.essentials.title
+      - log: "The Reorder Your Essentials Carousel is now SEEN!!!"
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+          then:
+            - log: "The Add to cart button is not appearing, Scrolling DOWN!!!"
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+            - log: "Now the Add button on Reorder Your Essentials Carousel is visible !!!"
+      - click:
+          identifier: us.mappings.home.reOrder.your.essentials.carousel.add.to.cart.button
+          wait: 4000
+      - log: "Clicked on the Add button, to add item to the cart"
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+          then:
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.reOrder.your.essentials.in.cart.count
+
+  - name: us.functions.home.verify.itemAddedToCart.from.reOrderYourEssentialsCarousel
+    platform: ios
+    flow:
+      #Click on the Cart Icon
+      - click:
+          identifier: us.mappings.navBar.cartIcon
+          wait: 4000
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.cartPage.item.confirmation
+          then:
+            - log: "Cart page top is not visible, so scrolling up"
+            - scroll:
+                direction: up
+                untilIdentifier: us.mappings.home.cartPage.item.confirmation
+                scrollLimit: 5
+      - log: "Reached the Cart page top!!!"
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.cart.ineligibleItemIcon
+          then:
+            - log: "verified item added to cart from Reorder Your Essentials Carousel Successfully but it is currently out of stock"
+          else:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.cart.itemPresent.itemNameLabel
+                  - identifier: us.mappings.home.reOrder.your.essentials.noOfItems.inCart
+            - log: "Verified the Item added to the cart from Reorder Your Essentials Carousel Successfully !!"
+
+  - name: us.functions.home.close.bottomSheet.startTrial.cta
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus bottom sheet appeared and closed it !!"
+          else:
+            - log: "The WPlus bottom sheet does not appear !!"
+
+  - name: us.functions.home.close.bottomSheet.startTrial.cta
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.skinnyBanner.bottomSheet.startTrial.cta
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus bottom sheet appeared and closed it !!"
+          else:
+            - log: "The WPlus bottom sheet does not appear !!"
+
+  - name: us.functions.home.close.bottomSheet.inHomestartTrial.cta
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.inhome.promotionalpopup
+          then:
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The WPlus inhome bottom sheet appeared and closed it !!"
+          else:
+            - log: "The WPlus inhome bottom sheet does not appear !!"
+
+  - name: us.functions.home.close.bottomSheet.inHomestartTrial.cta
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.wplus.inhome.promotionalpopup
+          then:
+            - click:
+                identifier: us.mappings.wplus.close
+            - log: "The WPlus inhome bottom sheet appeared and closed it !!"
+          else:
+            - log: "The WPlus inhome bottom sheet does not appear !!"
+
+  - name: us.functions.homepage.redesign.verify.ost.shipping
+    platform: android
+    flow:
+      - sleep:
+          duration: 10000
+      - if: 
+          condition: ${option} == 'placed'
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.home.orderStatusLink
+                  - name: direction
+                    string: down 
+            - executeFunction:
+                name: us.functions.homepage.assertOrderStatusTracker
+            - click:
+                identifier: us.mappings.home.orderStatusLink 
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+
+          else: 
+            - if: 
+                condition: ${option} == 'inprogress'
+                then:
+                  - executeFunction:
+                      name: us.functions.utils.scrollIfNotVisible
+                      params:
+                        - name: identifier
+                          string: us.mappings.home.orderStatusLink
+                        - name: direction
+                          string: down  
+                  - executeFunction:
+                      name: us.functions.homepage.assertOrderStatusTracker
+                  - click:
+                      identifier: us.mappings.home.orderStatusLink 
+                  - executeFunction:
+                      name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                      params:
+                        - name: orderNo
+                          string: ${orderNo}
+                else: 
+                  - if: 
+                      condition: ${option} == 'shipped'
+                      then: 
+                        - executeFunction:
+                            name: us.functions.utils.scrollIfNotVisible
+                            params:
+                              - name: identifier
+                                string: us.mappings.home.orderStatusLink
+                              - name: direction
+                                string: down  
+                        - executeFunction:
+                            name: us.functions.homepage.assertOrderStatusTracker
+                        - executeFunction:
+                            name: us.functions.homepage.ost.trackShipment
+                            params:
+                              - name: fulfillmentStatus
+                                string: Shipped
+
+                      else: 
+                        - if: 
+                            condition: ${option} == 'delivered'
+                            then: 
+                              - executeFunction:
+                                  name: us.functions.utils.scrollIfNotVisible
+                                  params:
+                                    - name: identifier
+                                      string: us.mappings.home.orderStatusLink
+                                    - name: direction
+                                      string: down  
+                              - executeFunction:
+                                  name: us.functions.homepage.assertOrderStatusTracker
+                              - executeFunction:
+                                  name: us.functions.homepage.ost.trackShipment
+                                  params:
+                                    - name: fulfillmentStatus
+                                      string: Delivered
+
+
+  - name: us.functions.homepage.assertOrderStatusTracker
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.orderStatusTrackerHeaderLabel
+              contains: ${ostHeaderLabel}
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.orderStatusTrackerSubHeaderLabel
+              contains: ${ostSubHeaderLabel}
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.orderStatusLink
+              contains: ${orderStatusLink}    
+
+  - name: us.functions.homepage.ost.trackShipment
+    platform: android
+    flow:   
+      - click:
+          identifier: us.mappings.home.orderStatusLink
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.trackShipment.title   
+            - identifier: us.mappings.orderDetails.trackShipment.progressBar
+            - identifier: us.mappings.orderDetails.trackShipment.deliveryAddress
+            - identifier: us.mappings.orderDetails.trackShipment.deliveryAddressText
+      - if:
+          condition: ${fulfillmentStatus} == 'Shipped'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.arrivesByText
+                  - identifier: us.mappings.orderDetails.trackShipment.fulfilmentStatus.shipped
+                  - identifier: us.mappings.orderDetails.trackShipment.shippedStatusDetails
+      - if:
+          condition: ${fulfillmentStatus} == 'Delivered'
+          then: 
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.orderDetails.trackShipment.shipmentDeliveredText
+                  - identifier: us.mappings.orderDetails.trackShipment.fulfilmentStatus.delivered
+                  - identifier: us.mappings.orderDetails.trackShipment.deliveredStatusDetails
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.orderDetails.trackShipment.helpCenterButton
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.orderDetails.trackShipment.helpCenterButton
+      - click: 
+          identifier: us.mappings.global.navigation.backNavigation            
+
+  - name: us.functions.home.verifyGalleryMiddleAds
+    platform: ios
+    flow:
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.verifyHomePageGalleryMiddleAds        
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.verifyGalleryMiddleOneAds
+            - identifier: us.mappings.home.verifyGalleryMiddleTwoAds            
+      - sleep:
+          duration: 5000
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.middleOneAds.verifySponsoredLabelOne
+          scrollLimit: 1  
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.verifyGalleryMiddleOneAds
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.middleOneAds.verifyLogoOne
+                  - identifier: us.mappings.home.middleOneAds.verifyHeadLineOne
+                  - identifier: us.mappings.home.middleOneAds.verifyShopNowOne
+                  - identifier: us.mappings.home.middleOneAds.verifySponsoredLabelOne
+      - sleep:
+          duration: 5000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.verifyGalleryMiddleTwoAds
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.middleOneAds.verifyLogoTwo
+                  - identifier: us.mappings.home.middleOneAds.verifyHeadLineTwo
+                  - identifier: us.mappings.home.middleOneAds.verifyShopNowTwo
+                  - identifier: us.mappings.home.middleOneAds.verifySponsoredLabelTwo
+      - sleep:
+          duration: 3000  
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.verifyHomePageGalleryMiddleAds
+          then:     
+            - scroll:
+                direction: up
+                scrollLimit: 1 
+      - click: 
+          identifier: us.mappings.home.verifyHomePageGalleryMiddleAds
+      - sleep:
+          duration: 3000
+
+  - name: us.functions.homepage.redesign.verify.ost.rateDrive
+    platform: ios
+    flow:
+      - sleep:
+          duration: 10000
+      - scroll:
+          direction: up
+          scrollLimit: 2
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.orderStatusTrackerHeaderLabel
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center  
+      - executeFunction:
+          name: us.functions.homepage.assertOrderStatusTracker
+      - if: 
+          condition: ${option} == 'On the way'
+          then:   
+            - executeFunction: 
+                name: us.functions.homepage.ost.rateDrive.navigateToRateYourDriveScreen
+                params:
+                  - name : fulfillmentStatus
+                    string: On the way
+          else: 
+            - if: 
+                condition: ${option} == 'delivered'
+                then: 
+                  - executeFunction:
+                      name: us.functions.homepage.ost.rateDrive.navigateToRateYourDriveScreen
+                      params:
+                        - name: fulfillmentStatus
+                          string: Delivered
+
+  - name: us.functions.homepage.ost.rateDrive.navigateToRateYourDriveScreen
+    platform: ios
+    flow:
+      - click:
+          identifier: us.mappings.home.orderStatusLink
+      - sleep:
+          duration: 10000
+      - if: 
+          condition: ${fulfillmentStatus} == 'On the way' 
+          then:
+            - verifyIdentifier:
+                timeout: 8000 
+                present:
+                  - identifier: us.mappings.orderdetails.trackOrder.estimatedArrivalText
+                  - identifier: us.mappings.orderdetails.trackorder.mapView.orderstatus.onTheWay
+                  - identifier: us.mappings.orderdetails.trackorder.mapView.contactDriverButton
+            - click:
+                identifier: us.mappings.orderdetails.trackorder.mapView.closeButton 
+
+          else: 
+            - if: 
+                condition: ${fulfillmentStatus} == 'Delivered'
+                then: 
+                  - if: 
+                      condition: ${orderStatusLink} == 'View order'
+                      then:
+                        - click:
+                            identifier: us.mappings.orderdetails.viewDeliveryDetailsButton
+                        - click:
+                            identifier: us.mappings.tipping.RateYourDriveHeader   
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.tipping.RateYourDriveHeader
+                        - identifier: us.mappings.tipping.feedbackPoUpHeader
+                        - identifier: us.mappings.tipping.confirmButton
+
+  - name: us.functions.homepage.redesign.verify.ost.storeDelivery
+    platform: android
+    flow:
+      - sleep:
+          duration: 15000
+      - scroll:
+          direction: up
+          scrollLimit: 3
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.orderStatusLink
+          position: center
+      - executeFunction:
+          name: us.functions.homepage.assertOrderStatusTracker    
+      - if: 
+          condition: ${option} == 'placed'
+          then: 
+            - click:
+                identifier: us.mappings.home.orderStatusLink 
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+
+          else: 
+            - if: 
+                condition: ${option} == 'inprogress'
+                then: 
+                  - click:
+                      identifier: us.mappings.home.orderStatusLink 
+                  - executeFunction:
+                      name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                      params:
+                        - name: orderNo
+                          string: ${orderNo}
+                else: 
+                  - if: 
+                      condition: ${option} == 'outForDelivery'
+                      then: 
+                        - executeFunction:
+                            name: us.functions.homepage.ost.verifyLot
+
+                      else: 
+                        - if: 
+                            condition: ${option} == 'delivered'
+                            then: 
+                              - executeFunction:
+                                  name: us.functions.homepage.ost.rateDriver
+                                 
+  - name: us.functions.homepage.ost.verifyLot
+    platform: android
+    flow: 
+      - click:
+          identifier: us.mappings.home.orderStatusLink                                 
+      - verifyIdentifier:
+          present: 
+            - identifier: us.mappings.orderdetails.trackorder.mapView.map
+            - identifier: us.mappings.orderdetails.trackorder.mapView.ostStatus
+            - identifier: us.mappings.orderdetails.trackorder.mapView.contactDriverButton
+            - identifier: us.mappings.orderdetails.trackorder.mapView.trackingProgressBar
+      - click:
+          identifier: us.mappings.orderdetails.trackorder.mapView.closeButton
+      - verifyIdentifier:
+          notPresent: 
+            - identifier: us.mappings.orderdetails.trackorder.mapView.map    
+
+  - name: us.functions.homepage.ost.rateDriver
+    platform: android
+    flow:
+      - click:
+          identifier: us.mappings.home.orderStatusLink 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.tipping.feedbackAndTippingScreenHeader
+          then:
+            - log: "Feedback and tipping screen is dispalyed correctly"
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Feedback and tipping screen is not dispalyed correctly"
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tipping.feedbackStar
+      - click:
+          identifier: us.mappings.feedback.fourstarRating
+      - sleep:
+          duration: 3000
+      - click: 
+          identifier: us.mappings.tipping.reasonDriverLate
+      - sleep:
+          duration: 3000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.tipping.rateDriverHeader
+            - name: direction
+              string: down      
+      - click:
+          identifier: us.mappings.feedback.fourstarRating
+      - click: 
+          identifier: us.mappings.tipping.reasonDriverdeliveredToWrongAddress
+      - click: 
+          identifier: us.mappings.orderDetails.CSATSurveyRating.submitButton                                       
+
+  - name: us.functions.home.verifyGalleryMiddleAds
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.verifyGalleryMiddleAds   
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.middleOneAds.verifyShopNowOne
+            - name: direction
+              string: down  
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.verifyGalleryMiddleAds          
+            - identifier: us.mappings.home.verifyGalleryMiddleOneAds
+            - identifier: us.mappings.home.verifyGalleryMiddleTwoAds
+            - identifier: us.mappings.home.middleOneAds.verifyHeadLineOne       
+            - identifier: us.mappings.home.middleOneAds.verifyShopNowOne 
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.middleOneAds.verifyShopNowTwo
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.home.middleOneAds.verifyHeadLineTwo
+                  - identifier: us.mappings.home.middleOneAds.verifyShopNowTwo
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.middleOneAds.verifySponsoredLabelOne
+            - name: direction
+              string: down 
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.middleOneAds.verifySponsoredLabelOne
+            - identifier: us.mappings.home.middleOneAds.verifySponsoredLabelTwo                 
+      - click:
+          identifier: us.mappings.home.verifyGalleryMiddleAds
+      - sleep:
+          duration: 2000
+      - if: 
+          identifier:
+            present:
+              - identifier: us.mappings.item.itemDetailsView
+          then:
+            - verifyIdentifier:
+                present:
+                  - identifier: us.mappings.item.itemDetailsView
+                  - identifier: us.mappings.search.pdp.productTitle 
+          else:
+            - if: 
+                identifier:
+                  present:
+                    - identifier: us.mappings.item.itemDetailsView
+                then:
+                  - verifyIdentifier:
+                      present:
+                        - identifier: us.mappings.search.storeMapsAisle.itemDetailScreen
+                        - identifier: us.mappings.home.middleOneAds.verifySearchWalmartText
+                else:
+                  - if: 
+                      identifier:
+                        present:
+                          - identifier: us.mappings.search.firstItem
+                      then:
+                        - verifyIdentifier:
+                            present:
+                              - identifier:  us.mappings.search.firstItem
+                      else:
+                        - verifyIdentifier:
+                            present:
+                              - identifier: us.mappings.home.verifyGalleryAdpageBanner
+
+  - name: us.functions.homePage.SplashScreen
+    platform: android
+    flow:
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.verifyPaymentCard
+            - name: direction
+              string: down  
+            - name: scrollPosition
+              string: center
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.verifyPaymentCard
+            - identifier: us.mappings.home.verifyPaymentDescription
+      - click:
+          identifier: us.mappings.home.ChangePayment
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.addCardButton
+
+  - name: us.functions.homePage.verifyCardOnSplashScreen
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.account.paymentMethod.addCardDetails
+          params:
+            - name: number
+              string: us.data.flow004.payment.debitCard
+            - name: expiration
+              string: us.data.flow004.payment.expiration
+            - name: cvv
+              string: us.data.flow004.payment.cvv
+            - name: phoneNumber
+              string: us.data.flow004.phoneNumber
+            - name: streetAddress
+              string: us.data.flow004.streetAddress
+            - name: city
+              string: us.data.flow004.city
+            - name: state
+              string: us.data.flow004.state
+            - name: zipcode
+              string: us.data.flow004.zipcode
+      - sleep:
+          duration: 3000
+      - click:
+          identifier: us.mappings.amend.cc.confirmbutton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.verifyPaymentDescription
+              contains: VISA ending in 7777
+      - click:
+          identifier: us.mappings.home.ChangePayment
+      - click:
+          identifier: us.mappings.paymentMethod.selectSecondCard
+      - click:
+          identifier: us.mappings.paymentMethod.secondCardRadioButton
+      - click:
+          identifier: us.mappings.amend.cc.confirmbutton
+      - sleep:
+          duration: 3000
+      - verifyIdentifier:
+          text:
+            - identifier: us.mappings.home.verifyPaymentDescription
+              contains: VISA ending in 0005  
+
+  - name: us.functions.nonmember.splashpageOnLogin
+    platform: android
+    flow:
+      - sleep:
+          duration: 10000
+      #Pop Up Screen    
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.orderSavingsupdatesCancel
+          then:
+            - click:
+                identifier: us.mappings.home.orderSavingsupdatesCancel
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.mip.bottomSheet.id
+          then:
+            - verifyIdentifier:
+                timeout: 50000
+                present:
+                  - identifier: us.mappings.reviewOrder.mip.bottomSheet.id #us.mappings.splashpageOnLogin.cardDetails
+                  - identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+                  #- identifier: us.mappings.home.splashPage.MonthlyTenure
+          else:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Wplus Splash Page did not launch"
+
+      - if:
+          condition: ${addCreditCard}
+          then:
+          - click:
+              identifier: us.mapping.wplus.splashPage.AddCreditCard
+              wait: 8000
+          - executeFunction:
+              name: us.functions.account.paymentMethod.addCardDetailsSplashScreen
+              params:
+                - name: firstName
+                  string: us.data.flow005.payment.firstName
+                - name: lastName
+                  string: us.data.flow005.payment.lastName
+                - name: number
+                  string: us.data.flow005.payment.creditCard
+                - name: expiration
+                  string: us.data.flow005.payment.expiration
+                - name: cvv
+                  string: us.data.flow005.payment.cvv
+                - name: streetAddress
+                  string: us.data.flow005.streetAddress
+                - name: city
+                  string: us.data.flow005.city
+                - name: state
+                  string: us.data.flow005.state
+                - name: zipcode
+                  string: us.data.flow005.zipcode
+                - name: phoneNumber
+                  string: us.data.flow005.phoneNumber
+
+      - if: 
+          condition: ${plan} == 'annual'
+          then:
+            - click: 
+                identifier: us.mappings.wplus.annualTenurePlan
+            - log: 'Annual Plan selected'
+          else:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.wplus.monthlyTenurePlan
+                then:
+                  - click: 
+                      identifier: us.mappings.wplus.monthlyTenurePlan
+            - log: 'Monthly Plan selected' 
+            
+      #Scroll to the bottom and cklick I Agree Checkbox
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reviewOrder.mip.bottomSheet.id
+          then:
+           - try:
+                flow:
+                  - scroll:
+                      direction: down
+                      untilIdentifier: us.mappings.wplus.splashPage.IagreeTermsAndConditionCheckBox
+
+                  - click:
+                      wait: 3000
+                      identifier: us.mappings.wplus.splashPage.IagreeTermsAndConditionCheckBox
+                catch:
+                  flow:
+                    - log: Terms and conditions Agree checkbox not present
+            
+      - click:
+          identifier: us.mappings.search.returns.reactivateWalmartPlus
+
+      #Call The Send Code Function
+      - executeFunction:
+          name: us.functions.wplus.phoneVerificationPage
+
+      #Close the Welcome Bottom Sheet
+      - click:
+           identifier: us.mappings.search.rewards.bottomSheetCloseButton
+
+  - name: us.functions.homepage.redesign.verify.ost.storeDelivery
+    platform: ios
+    flow:
+      - sleep:
+          duration: 15000
+      - scroll:
+          direction: up
+      - sleep:
+          duration: 5000
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.orderStatusLink
+            - name: direction
+              string: down
+      - if:
+          condition: ${option} == 'placed'
+          then:
+            - click:
+                identifier: us.mappings.home.orderStatusLink
+            - executeFunction:
+                name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                params:
+                  - name: orderNo
+                    string: ${orderNo}
+          else:
+            - if:
+                condition: ${option} == 'inprogress'
+                then:
+                  - click:
+                      identifier: us.mappings.home.orderStatusLink
+                  - executeFunction:
+                      name: us.functions.purchaseHistory.orderDetails.assertOrderId
+                      params:
+                        - name: orderNo
+                          string: ${orderNo}
+                else:
+                  - if:
+                      condition: ${option} == 'On the way'
+                      then:
+                        - executeFunction:
+                            name: us.functions.homepage.redesign.verify.ost.rateDrive
+                      else:
+                        - if:
+                            condition: ${option} == 'delivered'
+                            then:
+                              - executeFunction:
+                                  name: us.functions.homepage.redesign.verify.ost.rateDrive       
+
+  - name: us.functions.home.searchStore.cityState
+    platform: ios
+    flow:
+        - if:
+            identifier:
+              visible:
+                - identifier: us.mappings.home.gic.module.unselectedIntent.storeAddress
+                  value: "true"
+            then:        
+              - click:
+                 identifier: us.mappings.home.gic.module.unselectedIntent.storeAddress
+                 wait: 3000
+        - if: 
+            identifier:
+              present:
+                - identifier: us.mappings.home.noPickupLocationaAvailableText
+            then:
+              - click: 
+                  identifier: us.mappings.global.closeButton
+            else:
+              - if:
+                  identifier:
+                    present:
+                      - identifier: us.mappings.home.zipcodeClearButton
+                  then:
+                    - click:
+                        identifier: us.mappings.home.zipcodeClearButton
+              - enterText:
+                  identifier: us.mappings.home.selectStoreTextField
+                  string: ${cityState}
+              - click:
+                  identifier: us.mappings.home.selectStoreCityStateSuggestions
+        - sleep:
+            duration: 2000                   
+        - log: Verifying Store list for ${cityState}
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.home.selectStore.storeList 
+                # - identifier: us.mappings.reserveSlot.selectStore.saveButton               
+            then:
+              - verifyIdentifier:
+                  label:
+                     - identifier: us.mappings.home.storeRadioButton
+                       contains: us.data.storeSelector.city
+              - log: "List of stores are populated for - ${cityState} "
+              - storeIn:
+                      key: storeLocations
+                      value: available                        
+            else:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.selectStore.errorAlertLabel
+              - log: Error message "Enter a valid zipcode or city,state" is displayed.
+              - failTest:
+                 message: "STORE_SELECTOR_FAILURE - ${cityState} - Invalid city, state ERROR"              
+        - if:
+            condition: ${storeLocations} != 'available'
+            then:
+              - failTest:
+                  message: "STORE_SELECTOR_FAILURE - ${env} -  Store locations are not displayed for ${cityState}"                                
+
+  - name: us.functions.home.searchStore.cityState.combinations
+    platform: ios
+    flow:
+      - loop:
+          each: ${combination}
+          storeElement: location
+          storeIndex: itemIndex
+          flow:
+              - executeFunction:
+                  name: us.functions.home.searchStore.cityState
+                  params:
+                    - name: cityState
+                      string: $location
+      - click: 
+          identifier: us.mappings.home.storeRadioButton
+      - click: 
+          identifier: us.mappings.gic.selectStore.save.button # us.mappings.home.selectStoreSaveButton
+      - sleep:
+          duration: 5000
+      - verifyIdentifier:
+          label:
+              - identifier: us.mappings.home.gic.module.unselectedIntent.storeAddress
+                contains: us.data.storeSelector.city
+      - log: Validate store selection completed 
+
+  # Verify selected store is displayed on Reserve-slot page
+  - name: us.functions.home.verify.reserveSlotAddress
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.tabBar.shop
+      - click:
+          identifier: us.mappings.tabBar.shop
+      - sleep:
+            duration: 4000     
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.gic.reserve.viewalltimes.text
+          then:
+            - click:
+                identifier: us.mappings.gic.reserve.viewalltimes.text
+          else:
+            - click:
+                identifier: us.mappings.home.changeButton               
+      - sleep:
+            duration: 4000              
+      - verifyIdentifier:
+          present:
+              - identifier: us.mappings.reserveSlot.title   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.curbsidePickup.storeAddress
+          then:
+            - verifyIdentifier:
+                label:
+                   - identifier: us.mappings.reserveSlot.curbsidePickup.storeAddress
+                     contains: us.data.storeSelector.storeName
+          else:
+            - verifyIdentifier:
+                label:
+                   - identifier: us.mappings.resrveSlot.selectStore.firstStoreName
+                     contains: us.data.storeSelector.storeName              
+
+      - log: Selected store is displayed on Reserve-slot page
+
+  # Verify selected store is displayed on Reserve-slot page
+  - name: us.functions.cart.verify.pickupAddress
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          label:
+              - identifier: us.mappings.cart.pickUp.address
+                contains: us.data.storeSelector.storeName      
+      - log: Selected store is displayed on Cart page
+      # - click:
+      #       identifier: us.mappings.cart.continueToCheckoutButton 
+      # - sleep:
+      #       duration: 4000                 
+
+  - name: us.functions.home.searchStore.cityState
+    platform: android
+    flow:
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.home.gicSelectStoreButton              
+            then:        
+              - click:
+                 identifier: us.mappings.home.gicSelectStoreButton
+                 wait: 3000
+
+        - if: 
+            identifier:
+              present:
+                - identifier: us.mappings.home.noPickupLocationaAvailableText
+            then:
+                - click: 
+                    identifier: us.mappings.global.closeButton
+            else:
+                - enterText:
+                    identifier: us.mappings.home.selectStoreTextField
+                    string: ${cityState}
+                    clearField: true
+                - click:
+                    identifier: us.mappings.home.selectStoreCityStateSuggestions
+
+        - sleep:
+            duration: 2000                   
+        - log: Verifying Store list for ${cityState}
+        - if:
+            identifier:
+              present:
+                - identifier: us.mappings.inHome.bookSlot.verifyInHomeEligibleStore 
+                # - identifier: us.mappings.reserveSlot.selectStore.saveButton              
+            then:
+              - verifyIdentifier:
+                  text:
+                     - identifier: us.mappings.inHome.bookSlot.verifyInHomeEligibleStore
+                       contains: us.data.storeSelector.city
+              - log: "List of stores are populated for - ${cityState} "
+              - storeIn:
+                      key: storeLocations
+                      value: available                        
+            else:
+              - verifyIdentifier:
+                  present:
+                    - identifier: us.mappings.home.selectStore.errorAlertLabel
+              - log: Error message "Enter a valid zipcode or city,state" is displayed.
+              - failTest:
+                 message: "STORE_SELECTOR_FAILURE - ${cityState} - Invalid city, state ERROR"              
+        - if:
+            condition: ${storeLocations} != 'available'
+            then:
+              - failTest:
+                  message: "STORE_SELECTOR_FAILURE - ${env} -  Store locations are not displayed for ${cityState}" 
+
+
+  - name: us.functions.home.searchStore.cityState.combinations
+    platform: android
+    flow:
+      - loop:
+          each: ${combination}
+          storeElement: location
+          storeIndex: itemIndex
+          flow:
+              - executeFunction:
+                  name: us.functions.home.searchStore.cityState
+                  params:
+                    - name: cityState
+                      string: $location
+      - click: 
+          identifier: us.mappings.home.storeRadioButton
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.gic.selectStore.keyboard
+          then:
+            - goBack: true
+      - click: 
+          identifier: us.mappings.gic.selectStore.save.button 
+      - sleep:
+          duration: 4000
+      - verifyIdentifier:
+          text:
+              - identifier: us.mappings.home.gic.module.storeAddressSection.storeName
+                contains: us.data.storeSelector.city
+      - log: Validate store selection completed 
+
+  # Verify selected store is displayed on Reserve-slot page
+  - name: us.functions.home.verify.reserveSlotAddress
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+              - identifier: us.mappings.reserveSlot.title   
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.reserveSlot.curbsidePickup.selectedstoreAddress
+          then:
+            - verifyIdentifier:
+                text:
+                   - identifier: us.mappings.reserveSlot.curbsidePickup.selectedstoreAddress
+                     contains: us.data.storeSelector.storeName
+          else:
+            - verifyIdentifier:
+                text:
+                   - identifier: us.mappings.reserveSlot.curbsidePickup.storeAddressText
+                     contains: us.data.storeSelector.storeName              
+      - log: Selected store is displayed on Reserve-slot page
+      - click:
+           identifier: us.mappings.item.backButton        
+
+  # Verify selected store is displayed on Reserve-slot page
+  - name: us.functions.cart.verify.pickupAddress
+    platform: android
+    flow:
+      - verifyIdentifier:
+          text:
+              - identifier: us.mappings.cart.registryAddress
+                contains: us.data.storeSelector.storeName      
+      - log: Selected store is displayed on Cart page
+                
+      # - click:
+      #       identifier: us.mappings.cart.continueToCheckoutButton 
+      - sleep:
+            duration: 4000
+
+  # Validate Trial banner nudge 
+  - name: us.functions.home.trialNudge
+    platform: ios
+    flow:
+      - if:
+          condition: ${bannerExists} == n
+          then:
+            - verifyIdentifier:
+                timeout: 5000 
+                notPresent:
+                  - identifier: us.mappings.home.trial.nudge.exploreBenefitsButton
+                  - identifier: us.mappings.home.trial.nudge.closeImage
+                  - identifier: us.mappings.home.trial.nudge.header
+          else:
+            - executeFunction: 
+                name: us.functions.cart.scrollToTopOfHome
+            - executeFunction:
+                name: us.functions.home.closeWPlusEarnRewardPopup 
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.trial.nudge.closeImage
+                position: center  
+            - verifyIdentifier:
+                timeout: 5000 
+                present: 
+                  - identifier: us.mappings.home.trial.nudge.exploreBenefitsButton
+                  - identifier: us.mappings.home.trial.nudge.closeImage
+                  - identifier: us.mappings.home.trial.nudge.header
+            - log: Verified trial nudge elements and clicking exploreBenefits Button
+            - click:
+                identifier: us.mappings.home.trial.nudge.exploreBenefitsButton
+            - verifyIdentifier:
+                timeout: 8000 
+                present: 
+                  - identifier: us.mappings.benefits.title
+   
+
+  # Validate Trial banner nudge     
+  - name: us.functions.home.trialNudge
+    platform: android
+    flow:
+      - if:
+          condition: ${bannerExists} == n
+          then:
+            - verifyIdentifier:
+                timeout: 5000
+                notPresent:
+                  - identifier: us.mappings.home.trial.nudge.exploreBenefitsButton
+                  - identifier: us.mappings.home.trial.nudge.closeImage
+                  - identifier: us.mappings.home.trial.nudge.header
+            - log: Banner not showing      
+          else:
+            - executeFunction: 
+                name: us.functions.cart.scrollToTopOfHome
+            - scroll:
+                direction: down
+                untilIdentifier: us.mappings.home.trial.nudge.closeImage
+                position: center     
+            - verifyIdentifier:
+                timeout: 5000
+                present: 
+                  - identifier: us.mappings.home.trial.nudge.exploreBenefitsButton
+                  - identifier: us.mappings.home.trial.nudge.closeImage
+                  - identifier: us.mappings.home.trial.nudge.header
+            - log: Verified trial nudge elements and clicking exploreBenefits Button
+            - click:
+                identifier: us.mappings.home.trial.nudge.exploreBenefitsButton
+            - verifyIdentifier:
+                timeout: 8000 
+                present: 
+                  - identifier: us.mappings.benefits.title
+            - click:
+                wait: 3000
+                identifier: us.mappings.global.navigateBackArrow
+       
+
+# closing Trial banner nudge
+  - name: us.functions.home.closeTrialBanner
+    platform: android
+    flow:
+      - executeFunction: 
+          name: us.functions.cart.scrollToTopOfHome
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.trial.nudge.closeImage
+          position: center
+      - click: 
+          identifier: us.mappings.home.trial.nudge.closeImage
+
+# closing Trial banner nudge
+  - name: us.functions.home.closeTrialBanner
+    platform: ios
+    flow:
+      - executeFunction: 
+          name: us.functions.cart.scrollToTopOfHome
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.trial.nudge.closeImage
+          position: center
+      - click: 
+          identifier: us.mappings.home.trial.nudge.closeImage
+
+# Function to Scroll to P13N ads module and click on the item to go to Item page
+  - name: us.functions.home.verifyP13NSponsoredProductAdsAndSelectItem
+    platform: android
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselTitle
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselTitle
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.home.p13N.firstItem                      
+          then:
+            - log: 'Selecting First item from Sponsored listing Carousel'
+            - click: 
+                identifier: us.mappings.home.p13N.firstItem
+                
+# Function to Scroll to P13N ads module and click on the item to go to Item page
+  - name: us.functions.home.verifyP13NSponsoredProductAdsAndSelectItem
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselTitle
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselTitle
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.home.p13N.firstItem                      
+          then:
+            - log: 'Selecting First item from Sponsored listing Carousel'
+            - click: 
+                identifier: us.mappings.home.p13N.firstItem                      
+
+# To click Book Now on splash screen
+  - name: us.functions.homePage.bookNowOnWPlusSplashScreen
+    platform: ios
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.home.wplusSplashScreenTitle                     
+          then:
+            - click:
+                identifier: us.mappings.home.bookNowButton
+                
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+            - identifier: us.mappings.reserveSlot.title
+
+  - name: us.functions.homePage.bookNowOnWPlusSplashScreen
+    platform: android
+    flow:
+      - if: 
+          identifier:
+            present: 
+              - identifier: us.mappings.home.wplusSplashScreenTitle                     
+          then:
+            - click:
+                identifier: us.mappings.home.bookNowButton
+
+      - verifyIdentifier:
+          timeout: 3000
+          present:
+            - identifier: us.mappings.reserveSlot.title
+
+# Enter card details and save
+  - name: us.functions.account.paymentMethod.addCardDetailsSplashScreen
+    platform: android
+    flow:
+      - sleep:
+          duration: 3000    
+      - click:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+
+      - enterText:
+          identifier: us.mappings.paymentMethod.addPayment.overlay.cardNumberField
+          string: ${number}
+      - sleep:
+          duration: 3000
+
+      - if:
+          identifier:
+            notPresent:
+              - identifier: us.mappings.home.locationBannerButton
+          then:
+            - executeFunction:
+                name: us.functions.utils.scrollIfNotVisible
+                params:
+                  - name: identifier
+                    string: us.mappings.payment.add.firstName
+                  - name: direction
+                    string: down
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.payment.add.firstName
+          then:
+            - enterText:
+                identifier: us.mappings.payment.add.firstName
+                string: Mobile
+            #- hideKeyboard: true
+            #- goBack: true
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.payment.add.lastName
+          then:
+            - enterText:
+                identifier: us.mappings.payment.add.lastName
+                string: user
+            #- goBack: true
+            - hideKeyboard: true
+
+      # - click:
+      #     identifier: us.mappings.paymentMethod.addPayment.overlay.expiry
+
+      - enterText:
+          identifier: us.mappings.payment.add.expirationDate
+          string: ${expiration}
+
+      #- goBack: true
+      #- hideKeyboard: true
+
+      - click:
+          identifier: us.mappings.payment.add.cvv
+
+      - enterText:
+          identifier: us.mappings.payment.add.cvv
+          string: ${cvv}
+          
+      #- goBack: true
+      
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.payment.add.phoneNumber
+
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.payment.add.phoneNumber
+          then:
+            - click:
+                identifier: us.mappings.payment.add.phoneNumber
+            - enterText:
+                identifier: us.mappings.payment.add.phoneNumber
+                string: ${phoneNumber}
+            #- goBack: true 
+            #- hideKeyboard: true
+
+
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.payment.add.saveCard
+            - name: direction
+              string: down
+      - click:
+          identifier: us.mappings.payment.add.saveCard
+
+      - sleep:
+         duration: 7000
+      - loop:
+         begin: 0
+         end: 3
+         storeIndex: i
+         flow:
+            - if:
+                identifier:
+                  present:
+                    - identifier: us.mappings.paymentMethod.technicalerror 
+                then:
+                  - click:
+                      identifier: us.mappings.payment.add.saveCard
+                else:
+                  - break: true               
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.paymentMethod.technicalerror   
+          then:
+            - failTest:
+                message: "ENV_FAILURE - ${env} - Unable to save card"    
+
+  - name: us.functions.home.newEDCBannerAndA2HSlot
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+
+      #Adding Condition to check If Add Address present - Click and Select the address from GIC
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.home.gic.addAddress.button
+          then:
+            - click:
+                identifier: us.mappings.home.gic.addAddress.button
+                wait: 2000
+            - click:
+                identifier: us.mappings.gic.select.edcCatchmentAddress.btn
+            - click:
+                identifier: us.mappings.gic.select.address.save.button  
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.newEDCDeliveryIcon
+            - identifier: us.mappings.home.newEDCDeliveryBanner
+
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+          then:
+            - click:
+                identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+                wait: 2000      
+  
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.newA2HSlots
+
+      - executeFunction:
+          name: us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  - name: us.functions.home.newEDCBannerAndA2HSlot
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+
+      #Adding Condition to check If Add Address present - Click and Select the address from GIC
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.home.gic.addAddress.button
+          then:
+            - click:
+                identifier: us.mappings.home.gic.addAddress.button
+                wait: 2000
+            - click:
+                identifier: us.mappings.gic.select.edcCatchmentAddress.btn
+            - click:
+                identifier: us.mappings.gic.select.address.save.button             
+            
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.newEDCDeliveryIcon
+            - identifier: us.mappings.home.newEDCDeliveryBanner
+
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - if:
+          identifier:
+              present:
+                - identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+          then:
+            - click:
+                identifier: us.mappings.gic.select.dss.UpdateMyStore.cta
+                wait: 2000      
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.newA2HSlots
+            - identifier: us.mappings.home.gic.newEDCChip
+
+      - executeFunction:
+          name: us.functions.gic.deselectFulfillment
+          params:
+            - name: option
+              string: Delivery
+
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+        
+  - name: us.functions.home.newA2HSlot
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery     
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.a2hSlotInGic
+
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+  - name: us.functions.home.newA2HSlot
+    platform: ios
+    flow:
+      - executeFunction:
+          name: us.functions.gic.expandIfCollapsed
+
+      - executeFunction:
+          name: us.functions.gic.setFulfillment
+          params:
+            - name: option
+              string: Delivery     
+
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.gic.a2hSlotInGic
+
+      - executeFunction:
+          name: us.functions.gic.collapseIfExpanded
+
+
+  - name: us.functions.home.close.bottomSheet.autoLaunch
+    platform: ios
+    flow:
+      - try:
+          flow:
+            - verifyIdentifier:
+                timeout: 5000
+                present:
+                  - identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - click:
+                identifier: us.mappings.wplus.cashback.bottomSheetcloseBtn
+            - log: "The Auto Launch WPlus bottom sheet appeared and closed it !!"
+          catch:
+            flow:
+              - log: "The Auto Launch WPlus bottom sheet does not appear !!"
+
+  - name: us.functions.home.verifyBadgesforNonWplus
+    platform: android  
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup badge 
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup  badge      
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouseldeliveryTitle # Validating Delivery Badge   
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselsavewithw+Title # Validating save with w+badge   
+
+     # Function to verify different badges after adding item to cart 
+  - name: us.functions.home.verifyBadgesforNonWplus
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup badge 
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup  badge      
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.home.p13nCarouseldeliveryTitle # Validating Delivery badge
+      #     position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouseldeliveryTitle # Validating Delivery Badge   
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.home.p13nCarouselsavewithw+Title # Validating save with w+badge
+      #     position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselsavewithw+Title # Validating save with w+badge              
+
+    # Function to verify different badges after adding item to cart 
+  - name: us.functions.home.verifyBadgesForWplus
+    platform: android  
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup badge 
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup  badge      
+      # - scroll:
+      #     direction: down
+      #     untilIdentifier: us.mappings.home.p13nCarouselw+deliveryTitle # Validating Delivery badge
+      #     position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselw+deliveryTitle # Validating Delivery Badge. 
+
+    # Function to verify different badges after adding item to cart 
+  - name: us.functions.home.verifyP13NdifferentAdsbadgesforwplus
+    platform: ios
+    flow:
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup badge 
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselPickupTitle # Validating pickup  badge      
+      - scroll:
+          direction: down
+          untilIdentifier: us.mappings.home.p13nCarouselw+deliveryTitle # Validating Delivery badge
+          position: center
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.p13nCarouselw+deliveryTitle # Validating Delivery Badge.        
+
+  - name: us.functions.home.closeP13NdifferentAdsbadges
+    platform: android  
+    flow:        
+      - click:
+          identifier: 
+            us.mappings.home.signView.closeButon
+      - click:
+          identifier: 
+            us.mappings.home.signView.closeButon      
+
+  - name: us.functions.home.closeP13NdifferentAdsbadges
+    platform: ios
+    flow:        
+      - click:
+          identifier: 
+            us.mappings.home.signView.closeButon
+      - click:
+          identifier: 
+            us.mappings.home.signView.closeButon              
+
+  - name: us.functions.home.addtocartP13N
+    platform: android
+    flow:
+      - executeFunction:
+          name: us.functions.item.preAddToCartSteps     
+
+      - executeFunction:
+          name: us.functions.item.validateAndClickAddToCartButton 
+
+
+  # verify shipping arrival message validation
+  - name: us.functions.home.shippingArrivalMessageValidation
+    platform: android
+    flow:
+      - log: 
+          message: verify shiiping arrival message.
+          color: GREEN_BOLD
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.shippingArrivalMessageValidation    
+      - log:
+          message: "shipping Arrival Message found"
+          color: GREEN_BOLD
+  # veiry shipping and import fee
+  - name: us.functions.home.shippingAndImportFee
+    platform: android
+    flow:
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.shippingAndImportFee
+      - click:
+          identifier: us.mappings.home.shippingAndImportFee
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.shippingAndImportFeeTitle
+      - click:
+          identifier: us.mappings.home.storeMode.close
+
+ # Local Market Place
+  - name: us.functions.home.localmarketplace.entrypoints
+    platform: android
+    flow:
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.localFinds
+      - click:
+          identifier: us.mappings.home.localMarketPlace.localFinds
+
+
+  - name: us.functions.home.localMarketPlaceLandingPageValidations
+    platform: android
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.localMarketPlace.addressSelector
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.localMarketPlace.homePageBanner
+      - log: "Landed back to Local Market Place Home Page"
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.categoryPillCarousel
+              - identifier: us.mappings.home.localMarketPlace.sellerCarousel
+              - identifier: us.mappings.home.localMarketPlace.sellerSLA
+              - identifier: us.mappings.home.localMarketPlace.sellerDistance
+      # - click:
+      #     identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAll
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAllPage
+      # - click:
+      #     identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAllPage.backButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.soldLocallyBadging
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel1
+              - identifier: us.mappings.home.localMarketPlace.soldLocallyBadging
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.3up
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.3up
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.FAQ
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center              
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel2            
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel3
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.FAQ
+
+  - name: us.functions.home.localmarketplace.sellerPageValidations   
+    platform: android
+    flow:      
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.backButton
+              # - identifier: us.mappings.home.localMarketPlace.sellerPage.deliverySLA # needs to be updated once the feature becomes stable
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerName
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerAddress
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerContactInfoCTA
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerPhoneNumber
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerStoreReviews
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerInfo
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel
+            - name: direction
+              string: down
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.featuredOption
+      # Shop All Pill        
+      - click:
+          identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllOption
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllItemList
+      # - executeFunction: Needs to be updated once the feature is stable on Prod
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string:  us.mappings.home.localMarketPlace.sellerPage.3UPPOVcarousel
+      #       - name: direction
+      #         string: down
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerPage.3UPPOVcarousel
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel1
+      #       - name: direction
+      #         string: down
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel1
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel2
+      #       - name: direction
+      #         string: down
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel2
+
+
+# IOS
+
+ # Local Market Place
+  - name: us.functions.home.localmarketplace.entrypoints
+    platform: ios
+    flow:
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.localFinds
+      - click:
+          identifier: us.mappings.home.localMarketPlace.localFinds
+
+  - name: us.functions.home.localMarketPlaceLandingPageValidations
+    platform: ios
+    flow:
+      - verifyIdentifier:
+          present:
+            - identifier: us.mappings.home.localMarketPlace.addressSelector
+            - identifier: us.mappings.home.localMarketPlace.homePageBanner
+      - log: "Landed back to Local Market Place Home Page"
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.categoryPillCarousel.specialtyFood
+              - identifier: us.mappings.home.localMarketPlace.categoryPillCarousel.featured
+              - identifier: us.mappings.home.localMarketPlace.sellerCarousel
+              - identifier: us.mappings.home.localMarketPlace.sellerSLA
+              - identifier: us.mappings.home.localMarketPlace.sellerDistance
+      # - click:
+      #     identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAll
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAllPage
+      # - click:
+      #     identifier: us.mappings.home.localMarketPlace.sellerCarousel.viewAllPage.backButton
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.soldLocallyBadging
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel1
+              - identifier: us.mappings.home.localMarketPlace.soldLocallyBadging
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.home.localMarketPlace.3up
+      #       - name: direction
+      #         string: down
+      #       - name: scrollPosition
+      #         string: center
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.3up
+      - executeFunction:
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.FAQ
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center              
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel2            
+      #         - identifier: us.mappings.home.localMarketPlace.sellerItemCarousel3
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.FAQ
+
+  - name: us.functions.home.localmarketplace.sellerPageValidations   
+    platform: ios
+    flow:      
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.backButton
+              # - identifier: us.mappings.home.localMarketPlace.sellerPage.deliverySLA # needs to be updated once the feature becomes stable
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerName
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerAddress
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerContactInfoCTA
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerPhoneNumber
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerStoreReviews
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.sellerInfo
+      # Shop All Pill        
+      - click:
+          identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllOption
+      - executeFunction: 
+          name: us.functions.utils.scrollIfNotVisible
+          params:
+            - name: identifier
+              string: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllItemList
+            - name: direction
+              string: down
+            - name: scrollPosition
+              string: center                
+      - verifyIdentifier:
+            present:
+              - identifier: us.mappings.home.localMarketPlace.sellerPage.categoryCarousel.shopAllItemListitem1
+      # - executeFunction: Needs to be updated once the feature is stable on Prod
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string:  us.mappings.home.localMarketPlace.sellerPage.3UPPOVcarousel
+      #       - name: direction
+      #         string: down
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerPage.3UPPOVcarousel
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel1
+      #       - name: direction
+      #         string: down
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel1
+      # - executeFunction:
+      #     name: us.functions.utils.scrollIfNotVisible
+      #     params:
+      #       - name: identifier
+      #         string: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel2
+      #       - name: direction
+      #         string: down
+      # - verifyIdentifier:
+      #       present:
+      #         - identifier: us.mappings.home.localMarketPlace.sellerPage.ItemCarousel2
+
+
+  # Function to handle New Walmart Promotion
+  - name: us.functions.home.closeWplusBottomSheetNewBannerIfDisplayed
+    platform: ios
+    flow:
+      - sleep:
+          duration: 3000
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.home.wplus.closeWplusBottomSheetNewBanner
+          then:
+            - click:
+                identifier: us.mappings.home.wplus.closeWplusNewBottomSheetBanner
+
+  - name: us.functions.home.rateDriverPopup.dismiss
+    platform: android
+    flow:
+      - if:
+          identifier:
+            present:
+              - identifier: us.mappings.global.feedback.title
+          then:
+            - log: "The rate diver pop-up is visible, closing that !!!!"
+            - click:
+                identifier: us.mapings.itemDetails.closeButton
+          else:
+            - log: "The rate diver pop-up is NOT visible !!!!"

@@ -1,0 +1,139 @@
+#-------------------------------------------------------------------------------------------------------------------
+# POX: 001
+# User: Amend Order, Existing User
+# Order Type: GO
+# Fulfillment: SCHEDULED_DELIVERY
+# Payment Type: CC
+# Experience: Increase Qty
+# Validation: Validate OD
+# Developed BY: sureshkumar Peethambaram
+# Remark:  
+#-------------------------------------------------------------------------------------------------------------------
+
+
+general:
+  platform: ios
+  tags: POX-001,ca_POX,en_POX
+  inherit:
+    filesRunAll:
+      - ca-errors-helpers.yaml
+
+scenarios:
+  - name: Before
+    before: true
+    endTestOnFailure: true
+    flow:
+      - log: Execute before steps
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+      - log: 'R2_Post order experience'
+
+# * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * #
+  - name: Main
+    flow:
+
+      - log: Start Main
+
+      # Get TimeStamp
+      - getTimestamp:
+          asDate: false
+          storeIn: timestamp
+
+      - executeFunction:
+          name: ca.test.functions.global.onboarding.navigateiosOnboardingToHomeparamZip
+          params:
+            - name: ZIP_CODE
+              string: ca.test.data.pox001.onboardingZipCode
+      
+      
+      # Creating account using astro
+      - executeFunction:
+          name: ca.test.functions.astro.createAccount
+          params:
+            - name: payLoad
+              string: ca.test.data.pox001.astroRequestBody1
+      # Verifying home screen
+      - executeFunction:
+          name: ca.test.functions.home.headerElements.validateIosHomePage
+#      # Verifying home screen bottom ribbon
+#      - executeFunction:
+#          name: ca.test.functions.home.livingDesign.validateIosBottomNavigation
+#
+#      # Navigate to Account Tab
+#      - executeFunction:
+#          name: ca.test.functions.global.navigation.goToAccountFromTabBarIos
+
+      #done
+      # Account page validation before login
+#      - executeFunction:
+#          name: ca.test.functions.accountPage.accountPageBeforeLogin
+
+      # Placing order using astro api
+      - executeFunction:
+          name: ca.test.functions.astro.placeOrder.scheduledPickup
+          params:
+            - name: email
+              string: ca.test.data.pox001.emailId
+            - name: password
+              string: ca.test.data.pox001.password
+            - name: payLoad
+              string: ca.test.data.pox001.astroOrderBody
+
+      - executeFunction:
+          name: ca.test.functions.home.signInIos
+      
+      # Login to account
+      - executeFunction:
+          name: ca.test.functions.global.authentication.signInAccountIos
+          params:
+            - name: email
+              string: ca.test.data.pox001.emailId
+            - name: password
+              string: ca.test.data.pox001.password
+           
+       # Navigate to Account Tab
+      - executeFunction:
+          name: ca.test.functions.global.navigation.goToAccountFromTabBarIos
+
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      - log: 'R2 Post order experience'
+# # * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      
+      # Go to purchase page
+      - executeFunction:
+          name: ca.test.functions.accountPage.purchaseHistoryButtonIos
+
+      # Validating purchase history page
+      # - executeFunction:
+      #     name: ca.test.functions.purchaseHistoryPageValidationIos
+
+      # Purchase history page to view Details
+      - executeFunction:
+          name: ca.test.mappings.purchaseHistory.viewDetails.placedOrder
+
+      #      - executeFunction:
+#          name: ca.test.functions.purchaseHistory.viewDetails.editOrderButton
+#      - executeFunction:
+#          name: ca.test.functions.purchaseHistory.viewDetails.amendQuantity
+#          params:
+#            - name: amendQuantity
+#              string: ca.test.data.pox001.amendType
+#            - name: Quantity
+#              string: ca.test.data.pox001.amendQuantity
+
+      - executeFunction:
+          name: ca.test.functions.amendOrder.increaseQty
+
+      - storeIn:
+          key: testStatus
+          value: passed
+
+  # After Scenarios
+  - name: After
+    after: true
+    flow:
+      - log:
+          message: POX-001
+          color: GREEN_BOLD
+      - executeFunction:
+          name: ca.test.functions.utils.afterSteps
