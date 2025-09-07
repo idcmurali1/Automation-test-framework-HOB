@@ -5,8 +5,8 @@ on:
     types: [app_change]
 
 permissions:
-  contents: write         # required to push branch
-  pull-requests: write    # required to open PR
+  contents: write          # allow pushing branches
+  pull-requests: write     # allow opening PRs
 
 jobs:
   update-identifiers:
@@ -16,19 +16,20 @@ jobs:
       - name: Checkout tests repo (this repo)
         uses: actions/checkout@v4
 
-      - name: Checkout Hob-shop app
+      # ⬇️ SHA-first checkout to avoid refs/pull/*/merge issues
+      - name: Checkout Hob-shop at requested commit
         uses: actions/checkout@v4
         with:
           repository: idcmurali1/Hob-shop
+          ref: ${{ github.event.client_payload.sha || github.event.client_payload.branch || 'main' }}
           path: hob-shop
-          # use ref from the payload if present; else main
-          ref: ${{ github.event.client_payload.branch || 'main' }}
+          fetch-depth: 0
 
       - name: Checkout autoheal framework
         uses: actions/checkout@v4
         with:
-          # use the repo that contains your autoheal code
-          repository: idcmurali1/auto-healing-framework
+          # if your code is in autoheal_production, use that repo
+          repository: idcmurali1/autoheal_production
           path: autoheal_fw
 
       - name: Setup Python
@@ -83,9 +84,8 @@ jobs:
 
       - name: Run autoheal (extract IDs from app → update mappings → PR)
         env:
-          # Built-in token is enough to push and open PRs in this repo
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # optional; not required for this run
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # built-in token is enough
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # optional
           PYTHONPATH: ${{ github.workspace }}/autoheal_fw
         run: |
           source venv/bin/activate
