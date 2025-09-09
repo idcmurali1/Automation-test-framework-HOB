@@ -3,10 +3,11 @@ name: Autoheal identifiers (from Hob-shop changes)
 on:
   repository_dispatch:
     types: [app_change]
+  workflow_dispatch:
 
 permissions:
-  contents: write          # allow pushing branches
-  pull-requests: write     # allow opening PRs
+  contents: write
+  pull-requests: write
 
 jobs:
   update-identifiers:
@@ -15,12 +16,13 @@ jobs:
     steps:
       - name: Checkout tests repo (this repo)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # ⬇️ SHA-first checkout to avoid refs/pull/*/merge issues
       - name: Checkout Hob-shop at requested commit
         uses: actions/checkout@v4
         with:
-          repository: idcmurali1/Hob-shop
+          repository: idcmurali1/hob-shop
           ref: ${{ github.event.client_payload.sha || github.event.client_payload.branch || 'main' }}
           path: hob-shop
           fetch-depth: 0
@@ -28,9 +30,9 @@ jobs:
       - name: Checkout autoheal framework
         uses: actions/checkout@v4
         with:
-          # if your code is in autoheal_production, use that repo
           repository: idcmurali1/autoheal_production
           path: autoheal_fw
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -42,60 +44,121 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           if [ -f autoheal_fw/requirements.txt ]; then
+            pip install --upgrade pip
             pip install -r autoheal_fw/requirements.txt
           else
+            pip install --upgrade pip
             pip install pyyaml requests
           fi
+          # Option A (works because we set PYTHONPATH below)
+          # Option B (also fine): pip install -e autoheal_fw
 
       - name: Configure git identity for the commit
         run: |
           git config user.name  "autoheal-bot"
           git config user.email "autoheal-bot@users.noreply.github.com"
 
-      - name: Write minimal config.yaml for CLI
+      - name: Write full config.yaml for CLI (includes app mappings + source files)
         run: |
           mkdir -p autoheal_fw/config
           cat > autoheal_fw/config/config.yaml <<'YAML'
+          app:
+            platform: react_native
+
+            # exact RN testID -> logical
+            testid_to_logical:
+              product_sku_hoodie:  us.mappings.yourOrders.hoodieProduct
+              product_sku_cap:     us.mappings.yourOrders.capProduct
+
+            # regex-based families
+            testid_patterns:
+              - match: "^product_sku_hoodie.*$"
+                logical: us.mappings.yourOrders.hoodieProduct
+              - match: "^product_sku_cap.*$"
+                logical: us.mappings.yourOrders.capProduct
+              - match: "^product_sku_shirt.*$"
+                logical: us.mappings.yourOrders.shirtProduct
+
+            # (optional) native patterns
+            ios_patterns:
+              - match: "^(settingsButton|.*SettingsButton.*)$"
+                logical: us.mappings.account.menuSettingsButton
+
+            android_patterns:
+              - match: "^com\\.walmart\\.android\\.debug:id/account_header_settings.*$"
+                logical: us.mappings.account.menuSettingsButton
+              - match: "^product_sku_hoodie.*$"
+                logical: us.mappings.yourOrders.hoodieProduct
+              - match: "^product_sku_cap.*$"
+                logical: us.mappings.yourOrders.capProduct
+
+          source_files:
+            react_native:
+              - "src/catalog.ts"
+              - "src/menu.ts"
+            ios_native:
+              - "ios/Views/ProductView.swift"
+              - "ios/Controllers/MenuController.swift"
+            android_native:
+              - "android/app/src/main/java/com/walmart/app/CatalogActivity.java"
+              - "android/app/src/main/java/com/walmart/app/MenuActivity.java"
+
           llm:
             provider: rulebased
             openai_api_key: "${OPENAI_API_KEY:-}"
             anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
             model: "gpt-4o"
             temperature: 0.1
+
           vectordb:
             provider: local
             api_key: ""
             index_name: "autoheal-failures"
             base_path: "./vector_index"
+
           vcs:
             provider: local
             github_token: "${GITHUB_TOKEN:-}"
             repo: "idcmurali1/Automation-test-framework-HOB"
+
           ci:
             provider: local
+
           artifact_store:
             path: "./artifacts"
+
           policy:
             file: "./policies/policy.yaml"
+
           logging:
             level: "INFO"
             patch_ledger: "./patches/ledger.jsonl"
           YAML
 
-      - name: Run autoheal (extract IDs from app → update mappings → PR)
+      - name: Run autoheal (extract IDs → update mappings → PR)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # built-in token is enough
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # optional
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # ok: same-repo PRs
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # optional
           PYTHONPATH: ${{ github.workspace }}/autoheal_fw
         run: |
           source venv/bin/activate
           python -m autoheal.cli update-mappings-from-app \
-            --app_repo "$GITHUB_WORKSPACE/hob-shop" \
+            --app_repo   "$GITHUB_WORKSPACE/hob-shop" \
             --tests_repo "$GITHUB_WORKSPACE" \
-            --logical "us.mappings.account.menuSettingsButton" \
-            --branch "autoheal/update-identifiers" \
+            --logical "" \
+            --branch "autoheal/rn-sync-${{ github.run_id }}" \
             --config "$GITHUB_WORKSPACE/autoheal_fw/config/config.yaml" \
             --github_token "${GITHUB_TOKEN}"
+
+      - name: Show debug artifacts
+        if: always()
+        run: |
+          echo "---- identifiers_discovered_runtime.json ----"
+          cat "$GITHUB_WORKSPACE/artifacts/identifiers_discovered_runtime.json" || true
+          echo "---- identifiers_update_plan.json ----"
+          cat "$GITHUB_WORKSPACE/artifacts/identifiers_update_plan.json" || true
+          echo "---- identifiers_update_summary.json ----"
+          cat "$GITHUB_WORKSPACE/artifacts/identifiers_update_summary.json" || true
 
       - name: Upload artifacts (debug)
         if: always()
