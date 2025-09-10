@@ -1,59 +1,50 @@
-name: Autoheal: extract IDs → update mappings → PR
+name: Autoheal identifiers (from app changes)
 
 on:
-  workflow_dispatch:
-  # Optional: run when a PR changes the app or test files
-  pull_request:
-    paths:
-      - "hob-shop/**"
-      - "us/e2e-tests/**"
-      - "autoheal_fw/**"
-      - ".github/workflows/autoheal-identifiers.yml"
+  repository_dispatch:
+    types: [app_change]
+  workflow_dispatch: {}
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  app_change:
-    runs-on: ubuntu-24.04
+  autoheal:
+    name: extract IDs → update mappings → PR
+    runs-on: ubuntu-latest
 
     env:
-      # Force OpenAI provider (no more rulebased unless you set it)
-      LLM_PROVIDER: openai
+      # Required secrets (set these in repo Settings → Secrets and variables → Actions)
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      PYTHONUNBUFFERED: "1"
+      GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}     # repo-scoped is fine for same-repo PR
+      # Optional cross-repo PAT if you dispatch from another repo
+      # CROSS_REPO_PAT:  ${{ secrets.CROSS_REPO_PAT }}
 
     steps:
-      - name: Checkout test framework repo (this repo)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Echo dispatch payload (debug)
+        run: |
+          echo "event_name=${{ github.event_name }}"
+          echo "event_type=${{ github.event.action || github.event.repository_dispatch_type }}"
+          echo "client_payload:"
+          echo '${{ toJson(github.event.client_payload) }}'
 
-      - name: Checkout app repo (hob-shop) to subfolder
+      - name: Checkout repo at requested ref (or main)
         uses: actions/checkout@v4
         with:
-          repository: idcmurali1/hob-shop
-          path: hob-shop
-          fetch-depth: 0
+          ref: ${{ github.event.client_payload.sha || github.event.client_payload.branch || 'main' }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.11'
 
-      - name: Create venv & install deps
+      - name: Install project
         run: |
           python -m venv venv
           source venv/bin/activate
-          if [ -f autoheal_fw/requirements.txt ]; then
-            pip install --upgrade pip
-            pip install -r autoheal_fw/requirements.txt
-          else
-            pip install --upgrade pip
-            pip install pyyaml requests scikit-learn
-          fi
+          pip install -U pip
+          pip install -e .
 
       - name: Write config.yaml for CLI (OpenAI + RN patterns)
         run: |
@@ -61,47 +52,20 @@ jobs:
           cat > autoheal_fw/config/config.yaml <<'YAML'
           app:
             platform: react_native
-
-            # Exact RN testID -> logical
-            testid_to_logical:
-              product_sku_hoodie:  us.mappings.yourOrders.hoodieProduct
-              product_sku_cap:     us.mappings.yourOrders.capProduct
-
-            # Flexible RN families (regex)
-            testid_patterns:
-              - match: "^product_sku_hoodie.*$"
-                logical: us.mappings.yourOrders.hoodieProduct
-              - match: "^product_sku_cap.*$"
-                logical: us.mappings.yourOrders.capProduct
-              - match: "^product_sku_shirt.*$"
-                logical: us.mappings.yourOrders.shirtProduct
-
-            # Optional native patterns
-            ios_patterns:
-              - match: "^(settingsButton|.*SettingsButton.*)$"
-                logical: us.mappings.account.menuSettingsButton
-
-            android_patterns:
-              - match: "^com\\.walmart\\.android\\.debug:id/account_header_settings.*$"
-                logical: us.mappings.account.menuSettingsButton
-              - match: "^product_sku_hoodie.*$"
-                logical: us.mappings.yourOrders.hoodieProduct
-              - match: "^product_sku_cap.*$"
-                logical: us.mappings.yourOrders.capProduct
+            testid_to_logical: {}
+            testid_patterns: []
+            ios_patterns: []
+            android_patterns: []
 
           source_files:
             react_native:
               - "src/catalog.ts"
               - "src/menu.ts"
-            ios_native:
-              - "ios/Views/ProductView.swift"
-              - "ios/Controllers/MenuController.swift"
-            android_native:
-              - "android/app/src/main/java/com/walmart/app/CatalogActivity.java"
-              - "android/app/src/main/java/com/walmart/app/MenuActivity.java"
+            ios_native: []
+            android_native: []
 
           llm:
-            provider: ${LLM_PROVIDER:-openai}
+            provider: openai
             openai_api_key: "${OPENAI_API_KEY:-}"
             anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
             model: "gpt-4o"
@@ -131,26 +95,24 @@ jobs:
             level: "INFO"
             patch_ledger: "./patches/ledger.jsonl"
           YAML
+          echo "Wrote autoheal_fw/config/config.yaml"
 
       - name: Run autoheal (extract IDs → update mappings → PR)
-        env:
-          PYTHONPATH: ${{ github.workspace }}/autoheal_fw
         run: |
           source venv/bin/activate
-          echo "__main__: LLM provider=${LLM_PROVIDER:-openai} model=gpt-4o"
           python -m autoheal.cli update-mappings-from-app \
             --app_repo "$GITHUB_WORKSPACE/hob-shop" \
             --tests_repo "$GITHUB_WORKSPACE" \
             --logical "" \
-            --branch "autoheal/update-identifiers" \
-            --config "$GITHUB_WORKSPACE/autoheal_fw/config/config.yaml" \
-            --github_token "${GITHUB_TOKEN}"
+            --branch "autoheal/ids-$(date +%Y%m%d-%H%M%S)" \
+            --config "autoheal_fw/config/config.yaml" \
+            --github_token "${GITHUB_TOKEN:-}"
 
       - name: Upload artifacts (debug)
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: autoheal-artifacts
           path: |
             artifacts/**
             autoheal_fw/config/config.yaml
+          if-no-files-found: ignore
