@@ -3,7 +3,6 @@ name: Autoheal identifiers (from Hob-shop changes)
 on:
   repository_dispatch:
     types: [app_change]
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -12,6 +11,11 @@ permissions:
 jobs:
   update-identifiers:
     runs-on: ubuntu-latest
+    env:
+      # Make sure you set these in your repo "Settings → Secrets and variables → Actions"
+      LLM_PROVIDER: openai
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
       - name: Checkout tests repo (this repo)
@@ -19,10 +23,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Checkout Hob-shop at requested commit
+      - name: Checkout Hob-shop at requested commit/branch
         uses: actions/checkout@v4
         with:
           repository: idcmurali1/hob-shop
+          # prefers SHA from payload; falls back to branch; then main
           ref: ${{ github.event.client_payload.sha || github.event.client_payload.branch || 'main' }}
           path: hob-shop
           fetch-depth: 0
@@ -43,34 +48,27 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
+          pip install --upgrade pip
           if [ -f autoheal_fw/requirements.txt ]; then
-            pip install --upgrade pip
             pip install -r autoheal_fw/requirements.txt
           else
-            pip install --upgrade pip
-            pip install pyyaml requests
+            pip install pyyaml requests scikit-learn
           fi
-          # Option A (works because we set PYTHONPATH below)
-          # Option B (also fine): pip install -e autoheal_fw
 
-      - name: Configure git identity for the commit
-        run: |
-          git config user.name  "autoheal-bot"
-          git config user.email "autoheal-bot@users.noreply.github.com"
-
-      - name: Write full config.yaml for CLI (includes app mappings + source files)
+      # ⬇️ This writes the config cleanly (no tabs), with OpenAI + RN patterns
+      - name: Write config.yaml for CLI (OpenAI + RN patterns)
         run: |
           mkdir -p autoheal_fw/config
           cat > autoheal_fw/config/config.yaml <<'YAML'
           app:
             platform: react_native
 
-            # exact RN testID -> logical
+            # Exact RN testID -> logical
             testid_to_logical:
               product_sku_hoodie:  us.mappings.yourOrders.hoodieProduct
               product_sku_cap:     us.mappings.yourOrders.capProduct
 
-            # regex-based families
+            # Flexible families (regex)
             testid_patterns:
               - match: "^product_sku_hoodie.*$"
                 logical: us.mappings.yourOrders.hoodieProduct
@@ -79,7 +77,6 @@ jobs:
               - match: "^product_sku_shirt.*$"
                 logical: us.mappings.yourOrders.shirtProduct
 
-            # (optional) native patterns
             ios_patterns:
               - match: "^(settingsButton|.*SettingsButton.*)$"
                 logical: us.mappings.account.menuSettingsButton
@@ -104,7 +101,7 @@ jobs:
               - "android/app/src/main/java/com/walmart/app/MenuActivity.java"
 
           llm:
-            provider: rulebased
+            provider: ${LLM_PROVIDER:-openai}
             openai_api_key: "${OPENAI_API_KEY:-}"
             anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
             model: "gpt-4o"
@@ -135,10 +132,18 @@ jobs:
             patch_ledger: "./patches/ledger.jsonl"
           YAML
 
-      - name: Run autoheal (extract IDs → update mappings → PR)
+      - name: Show config used (debug)
+        run: |
+          echo "---- USING CONFIG ----"
+          sed -n '1,200p' "$GITHUB_WORKSPACE/autoheal_fw/config/config.yaml"
+
+      - name: Configure git identity for the commit
+        run: |
+          git config user.name  "autoheal-bot"
+          git config user.email "autoheal-bot@users.noreply.github.com"
+
+      - name: Run autoheal (extract IDs -> update mappings -> PR)
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}     # ok: same-repo PRs
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # optional
           PYTHONPATH: ${{ github.workspace }}/autoheal_fw
         run: |
           source venv/bin/activate
@@ -149,16 +154,6 @@ jobs:
             --branch "autoheal/rn-sync-${{ github.run_id }}" \
             --config "$GITHUB_WORKSPACE/autoheal_fw/config/config.yaml" \
             --github_token "${GITHUB_TOKEN}"
-
-      - name: Show debug artifacts
-        if: always()
-        run: |
-          echo "---- identifiers_discovered_runtime.json ----"
-          cat "$GITHUB_WORKSPACE/artifacts/identifiers_discovered_runtime.json" || true
-          echo "---- identifiers_update_plan.json ----"
-          cat "$GITHUB_WORKSPACE/artifacts/identifiers_update_plan.json" || true
-          echo "---- identifiers_update_summary.json ----"
-          cat "$GITHUB_WORKSPACE/artifacts/identifiers_update_summary.json" || true
 
       - name: Upload artifacts (debug)
         if: always()
