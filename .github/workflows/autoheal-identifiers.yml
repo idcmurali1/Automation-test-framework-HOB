@@ -1,7 +1,6 @@
 name: "Autoheal: extract IDs → update mappings → PR"
 
 on:
-  # Manual run
   workflow_dispatch:
     inputs:
       app_repo:
@@ -13,11 +12,9 @@ on:
         required: false
         type: string
 
-  # Fire when an external process tells us the app changed
   repository_dispatch:
     types: [app_change]
 
-  # Optional: run when this repo changes workflow or framework files
   push:
     paths:
       - ".github/workflows/autoheal-identifiers.yml"
@@ -29,9 +26,6 @@ permissions:
   pull-requests: write
 
 env:
-  # Provide defaults; can be overridden by repository_dispatch payload or workflow inputs
-  DEFAULT_APP_REPO: idcmurali1/hob-shop
-  DEFAULT_APP_REF: main
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -44,40 +38,39 @@ jobs:
       - name: Checkout tests repo (this repo)
         uses: actions/checkout@v4
         with:
-            # we need full history when we will push a branch later
-            fetch-depth: 0
+          fetch-depth: 0
 
+      # ✅ This is the step you asked for, exactly as written
       - name: Determine app repo/ref
         id: app
         shell: bash
+        env:
+          DEFAULT_APP_REPO: idcmurali1/hob-shop   # <-- put your APP repo here
+          DEFAULT_APP_REF: main
         run: |
-          # Decide APP_REPO / WANT_REF from event or inputs
+          # Choose repo/ref from event or defaults
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-            APP_REPO="${{ github.event.client_payload.app_repo }}"
-            WANT_REF="${{ github.event.client_payload.ref || github.event.client_payload.branch }}"
+            APP_REPO="${{ github.event.client_payload.app_repo || env.DEFAULT_APP_REPO }}"
+            WANT_REF="${{ github.event.client_payload.ref || github.event.client_payload.branch || env.DEFAULT_APP_REF }}"
           else
-            APP_REPO="${{ inputs.app_repo }}"
-            WANT_REF="${{ inputs.ref }}"
+            APP_REPO="${{ inputs.app_repo || env.DEFAULT_APP_REPO }}"
+            WANT_REF="${{ inputs.ref || env.DEFAULT_APP_REF }}"
           fi
-
-          # Apply defaults when empty
-          APP_REPO="${APP_REPO:-${DEFAULT_APP_REPO}}"
-          WANT_REF="${WANT_REF:-${DEFAULT_APP_REF}}"
 
           echo "Requested app repo: $APP_REPO"
           echo "Requested app ref:  $WANT_REF"
 
-          # Verify the ref exists in the remote; fall back to DEFAULT_APP_REF if not
-          if git ls-remote --heads --tags "https://github.com/${APP_REPO}" "${WANT_REF}" | grep -q . ; then
-            APP_REF="${WANT_REF}"
+          # Validate the ref exists; if not, fall back to DEFAULT_APP_REF
+          if git ls-remote --heads --tags "https://github.com/$APP_REPO" "$WANT_REF" | grep -q . ; then
+            APP_REF="$WANT_REF"
           else
-            echo "Ref '${WANT_REF}' not found in ${APP_REPO}. Falling back to '${DEFAULT_APP_REF}'."
-            APP_REF="${DEFAULT_APP_REF}"
+            echo "Ref '$WANT_REF' not found in $APP_REPO, falling back to '${DEFAULT_APP_REF}'."
+            APP_REF="$DEFAULT_APP_REF"
           fi
 
-          echo "repo=${APP_REPO}" >> "$GITHUB_OUTPUT"
-          echo "ref=${APP_REF}"   >> "$GITHUB_OUTPUT"
-          echo "Using app repo: ${APP_REPO} @ ${APP_REF}"
+          echo "repo=$APP_REPO" >> "$GITHUB_OUTPUT"
+          echo "ref=$APP_REF"  >> "$GITHUB_OUTPUT"
+          echo "Using app repo: $APP_REPO @ $APP_REF"
 
       - name: Checkout app repo at requested ref
         uses: actions/checkout@v4
@@ -98,7 +91,6 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install -U pip
-          # install from local package or fallback
           if [[ -f requirements.txt ]]; then
             pip install -r requirements.txt
           fi
@@ -113,8 +105,6 @@ jobs:
           cat > autoheal_fw/config/config.yaml <<'YAML'
           app:
             platform: react_native
-
-            # Keep patterns minimal; LLM+RAG adds reasoning, this just seeds families
             testid_patterns:
               - match: "^product_sku_hoodie.*$"
                 logical: us.mappings.yourOrders.hoodieProduct
@@ -152,7 +142,6 @@ jobs:
         id: run_cli
         shell: bash
         env:
-          # pass secrets again inside the venv session
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -167,13 +156,11 @@ jobs:
             --config     "autoheal_fw/config/config.yaml" \
             --github_token "${GITHUB_TOKEN}" || true
 
-          # Expose potential PR url to job summary
           if [[ -f pull_request.json ]]; then
             PR_URL=$(python - <<'PY'
-import json,sys
+import json
 try:
-  d=json.load(open('pull_request.json'))
-  print(d.get('html_url',''))
+  print(json.load(open("pull_request.json")).get("html_url",""))
 except Exception:
   pass
 PY
