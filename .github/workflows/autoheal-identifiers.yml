@@ -27,7 +27,7 @@ permissions:
 
 env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   update-identifiers:
@@ -40,15 +40,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      # ✅ This is the step you asked for, exactly as written
+      # ✅ Repo/ref selection with fallback
       - name: Determine app repo/ref
         id: app
         shell: bash
         env:
-          DEFAULT_APP_REPO: idcmurali1/hob-shop   # <-- put your APP repo here
+          DEFAULT_APP_REPO: idcmurali1/hob-shop   # <-- change if your app repo differs
           DEFAULT_APP_REF: main
         run: |
-          # Choose repo/ref from event or defaults
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
             APP_REPO="${{ github.event.client_payload.app_repo || env.DEFAULT_APP_REPO }}"
             WANT_REF="${{ github.event.client_payload.ref || github.event.client_payload.branch || env.DEFAULT_APP_REF }}"
@@ -60,7 +59,6 @@ jobs:
           echo "Requested app repo: $APP_REPO"
           echo "Requested app ref:  $WANT_REF"
 
-          # Validate the ref exists; if not, fall back to DEFAULT_APP_REF
           if git ls-remote --heads --tags "https://github.com/$APP_REPO" "$WANT_REF" | grep -q . ; then
             APP_REF="$WANT_REF"
           else
@@ -148,6 +146,7 @@ jobs:
           set -e
           source venv/bin/activate
           echo "LLM provider=openai model=gpt-4o"
+
           BRANCH="autoheal/rn-sync-$(date +%s)"
           python -m autoheal.cli update-mappings-from-app \
             --app_repo   "$(pwd)/app-src" \
@@ -156,15 +155,11 @@ jobs:
             --config     "autoheal_fw/config/config.yaml" \
             --github_token "${GITHUB_TOKEN}" || true
 
+          # Read PR URL without heredoc (avoids YAML parse issues)
           if [[ -f pull_request.json ]]; then
-            PR_URL=$(python - <<'PY'
-import json
-try:
-  print(json.load(open("pull_request.json")).get("html_url",""))
-except Exception:
-  pass
-PY
-)
+            PR_URL=$(python -c 'import json,sys; \
+import pathlib; p=pathlib.Path("pull_request.json"); \
+print(json.load(p.open()).get("html_url","")) if p.exists() else print("")' 2>/dev/null || true)
             if [[ -n "$PR_URL" ]]; then
               echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
             fi
