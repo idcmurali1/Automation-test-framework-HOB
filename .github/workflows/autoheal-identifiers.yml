@@ -1,7 +1,6 @@
-name: Autoheal: extract IDs → update mappings → PR
+name: "Autoheal: extract IDs -> update mappings -> PR"
 
 on:
-  # Manual run support
   workflow_dispatch:
     inputs:
       app_repo:
@@ -14,8 +13,6 @@ on:
         required: true
         default: "main"
         type: string
-
-  # Event from other repos/services
   repository_dispatch:
     types: [app_change]
 
@@ -29,14 +26,12 @@ concurrency:
 
 jobs:
   run:
-    name: extract IDs → update mappings → PR
+    name: extract IDs -> update mappings -> PR
     runs-on: ubuntu-latest
 
     env:
-      # Secrets expected: OPENAI_API_KEY, GITHUB_TOKEN (repo default)
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # Optional repo-level variable for default app repo
       DEFAULT_APP_REPO: ${{ vars.DEFAULT_APP_REPO }}
 
     steps:
@@ -55,7 +50,6 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
-            # prefer payload values; fall back to repo variable; finally the tests repo itself
             APP_REPO="${{ github.event.client_payload.app_repo || env.DEFAULT_APP_REPO || github.repository }}"
             if [[ -n "${{ github.event.client_payload.ref }}" ]]; then
               APP_REF="${{ github.event.client_payload.ref }}"
@@ -98,7 +92,6 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          # install your package (adjust if your package path/name differs)
           pip install -e .
 
       - name: Write config.yaml for CLI (OpenAI + RN patterns)
@@ -109,12 +102,10 @@ jobs:
           app:
             platform: react_native
 
-            # Highest priority exact mappings (optional; helpful when testIDs are stable)
             testid_to_logical:
               product_sku_hoodie:  us.mappings.yourOrders.hoodieProduct
               product_sku_cap:     us.mappings.yourOrders.capProduct
 
-            # Regex families to catch *_val*, *_9000, etc.
             testid_patterns:
               - match: "^product_sku_hoodie.*$"
                 logical: us.mappings.yourOrders.hoodieProduct
@@ -123,7 +114,6 @@ jobs:
               - match: "^product_sku_shirt.*$"
                 logical: us.mappings.yourOrders.shirtProduct
 
-            # Optional pattern examples for native platforms
             ios_patterns:
               - match: "^(settingsButton|.*SettingsButton.*)$"
                 logical: us.mappings.account.menuSettingsButton
@@ -179,10 +169,9 @@ jobs:
             patch_ledger: "./patches/ledger.jsonl"
           YAML
 
-      - name: Run CLI (extract → plan → update across modules)
+      - name: Run CLI (extract -> plan -> update across modules)
         shell: bash
         env:
-          # Ensure provider resolves to openai unless explicitly overridden
           LLM_PROVIDER: openai
         run: |
           source venv/bin/activate
