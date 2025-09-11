@@ -1,4 +1,4 @@
-name: Autoheal identifiers (extract IDs -> update mappings -> PR)
+name: Autoheal:(extract IDs -> update mappings -> PR)
 
 on:
   workflow_dispatch:
@@ -11,29 +11,21 @@ on:
         description: "Branch or tag in the app repo. Leave empty to use default."
         required: false
         type: string
-
   repository_dispatch:
     types: [app_change]
-
   push:
-    branches: [main]
     paths:
       - "hob-shop/**"
+      - "autoheal/**"
       - "autoheal_fw/**"
       - ".github/workflows/autoheal-identifiers.yml"
-
-permissions:
-  contents: write
-  pull-requests: write
 
 jobs:
   update-identifiers:
     runs-on: ubuntu-latest
-
-    env:
-      # Set your defaults here
-      DEFAULT_APP_REPO: idcmurali1/hob-shop
-      DEFAULT_APP_REF: main
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout tests repo (this repo)
@@ -41,37 +33,41 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # --- Surgical fix #1: pick the app repo/ref robustly and default to hob-shop/main ---
       - name: Determine app repo/ref
         id: app
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          PAYLOAD_APP_REPO: ${{ github.event.client_payload.app_repo }}
-          PAYLOAD_REF: ${{ github.event.client_payload.ref }}
-          PAYLOAD_BRANCH: ${{ github.event.client_payload.branch }}
-          INPUT_APP_REPO: ${{ inputs.app_repo }}
-          INPUT_REF: ${{ inputs.ref }}
+          DEFAULT_APP_REPO: idcmurali1/hob-shop   # <— your APP repo here
+          DEFAULT_APP_REF: main
         run: |
           set -euo pipefail
-          APP_REPO="${INPUT_APP_REPO:-${PAYLOAD_APP_REPO:-$DEFAULT_APP_REPO}}"
-          WANT_REF="${INPUT_REF:-${PAYLOAD_REF:-${PAYLOAD_BRANCH:-$DEFAULT_APP_REF}}}"
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            APP_REPO="${{ github.event.client_payload.app_repo || env.DEFAULT_APP_REPO }}"
+            WANT_REF="${{ github.event.client_payload.ref || github.event.client_payload.branch || env.DEFAULT_APP_REF }}"
+          else
+            APP_REPO="${{ inputs.app_repo || env.DEFAULT_APP_REPO }}"
+            WANT_REF="${{ inputs.ref || env.DEFAULT_APP_REF }}"
+          fi
 
           echo "Requested app repo: $APP_REPO"
           echo "Requested app ref:  $WANT_REF"
 
-          if git ls-remote --heads --tags "https://github.com/${APP_REPO}" "${WANT_REF}" >/dev/null 2>&1; then
+          if git ls-remote --exit-code --heads --tags "https://github.com/${APP_REPO}" "$WANT_REF" >/dev/null 2>&1; then
             APP_REF="$WANT_REF"
           else
-            echo "Ref '${WANT_REF}' not found in ${APP_REPO}; falling back to '${DEFAULT_APP_REF}'."
-            APP_REF="$DEFAULT_APP_REF"
+            echo "Ref '$WANT_REF' not found in $APP_REPO; defaulting to ${DEFAULT_APP_REF}"
+            APP_REF="${DEFAULT_APP_REF}"
           fi
 
-          {
-            echo "repo=${APP_REPO}"
-            echo "ref=${APP_REF}"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "Using app repo: ${APP_REPO} @ ${APP_REF}"
+          echo "repo=$APP_REPO" >> "$GITHUB_OUTPUT"
+          echo "ref=$APP_REF"  >> "$GITHUB_OUTPUT"
+          echo "Using app repo: $APP_REPO @ $APP_REF"
 
       - name: Checkout app repo at requested ref
         uses: actions/checkout@v4
@@ -81,31 +77,41 @@ jobs:
           path: app-src
           fetch-depth: 1
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
+      # --- Surgical fix #2: install package from an existing path (root or autoheal/) ---
       - name: Install autoheal framework
+        shell: bash
         run: |
+          set -euo pipefail
           python -m venv venv
           source venv/bin/activate
-          pip install -U pip
-          pip install -e ./autoheal_fw
+          python -m pip install -U pip
+
+          if [ -f pyproject.toml ] || [ -f setup.cfg ] || [ -f setup.py ]; then
+            PKG_DIR="."
+          elif [ -f autoheal/pyproject.toml ] || [ -f autoheal/setup.cfg ] || [ -f autoheal/setup.py ]; then
+            PKG_DIR="autoheal"
+          else
+            echo "❌ Could not find package metadata (pyproject.toml/setup.*). Tree:"
+            find . -maxdepth 2 -type f -name 'pyproject.toml' -o -name 'setup.cfg' -o -name 'setup.py'
+            exit 1
+          fi
+
+          echo "Installing package from: $PKG_DIR"
+          python -m pip install -e "$PKG_DIR"
 
       - name: Write config.yaml for CLI (OpenAI + RN patterns)
+        shell: bash
+        env:
+          LLM_PROVIDER: openai
         run: |
+          set -euo pipefail
           mkdir -p autoheal_fw/config
           cat > autoheal_fw/config/config.yaml <<'YAML'
           app:
             platform: react_native
-
-            # Highest precedence: exact mappings
             testid_to_logical:
               product_sku_hoodie:  us.mappings.yourOrders.hoodieProduct
               product_sku_cap:     us.mappings.yourOrders.capProduct
-
-            # Flexible families (regex)
             testid_patterns:
               - match: "^product_sku_hoodie.*$"
                 logical: us.mappings.yourOrders.hoodieProduct
@@ -113,6 +119,16 @@ jobs:
                 logical: us.mappings.yourOrders.capProduct
               - match: "^product_sku_shirt.*$"
                 logical: us.mappings.yourOrders.shirtProduct
+            ios_patterns:
+              - match: "^(settingsButton|.*SettingsButton.*)$"
+                logical: us.mappings.account.menuSettingsButton
+            android_patterns:
+              - match: "^com\\.walmart\\.android\\.debug:id/account_header_settings.*$"
+                logical: us.mappings.account.menuSettingsButton
+              - match: "^product_sku_hoodie.*$"
+                logical: us.mappings.yourOrders.hoodieProduct
+              - match: "^product_sku_cap.*$"
+                logical: us.mappings.yourOrders.capProduct
 
           source_files:
             react_native:
@@ -120,7 +136,7 @@ jobs:
               - "src/menu.ts"
 
           llm:
-            provider: openai
+            provider: ${LLM_PROVIDER:-openai}
             openai_api_key: "${OPENAI_API_KEY:-}"
             anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
             model: "gpt-4o"
@@ -151,47 +167,27 @@ jobs:
             patch_ledger: "./patches/ledger.jsonl"
           YAML
 
-      - name: Run autoheal (extract -> update -> PR)
-        id: run_cli
+      - name: Run autoheal (extract IDs -> update mappings -> PR)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APP_REPO: ${{ steps.app.outputs.repo }}
-          BRANCH: autoheal/rn-sync-${{ github.run_id }}
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           source venv/bin/activate
 
-          # Log LLM info (so we can confirm OpenAI is used)
-          python - <<'PY'
-          import json, os, pathlib
-          info = {
-              "provider": "openai",
-              "model": "gpt-4o",
-              "has_openai_key": bool(os.getenv("OPENAI_API_KEY")),
-          }
-          pathlib.Path("llm_info.json").write_text(json.dumps(info, indent=2))
-          PY
-
+          BRANCH="autoheal/rn-sync-${{ github.run_id }}"
           python -m autoheal.cli update-mappings-from-app \
-            --app_repo   "${APP_REPO}" \
-            --tests_repo "${GITHUB_WORKSPACE}" \
-            --logical    "" \
-            --branch     "${BRANCH}" \
-            --config     "autoheal_fw/config/config.yaml" \
+            --app_repo     "${{ steps.app.outputs.repo }}" \
+            --tests_repo   "$PWD" \
+            --branch       "${BRANCH}" \
+            --config       "autoheal_fw/config/config.yaml" \
             --github_token "${GITHUB_TOKEN}" || true
 
-          # Capture PR URL if one was created
-          if [[ -f pull_request.json ]]; then
-            PR_URL="$(python - <<'PY'
-          import json, pathlib
-          p = pathlib.Path("pull_request.json")
-          print(json.loads(p.read_text()).get("html_url","") if p.exists() else "")
-          PY
-          )"
-            if [[ -n "$PR_URL" ]]; then
-              echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
-            fi
+          # Read PR URL safely (no heredoc/YAML pitfalls)
+          PR_URL=$(python -c 'import json,os,sys; p="pull_request.json"; print(json.load(open(p)).get("html_url","") if os.path.exists(p) else "")')
+          if [[ -n "$PR_URL" ]]; then
+            echo "pr_url=$PR_URL" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload artifacts (debug)
@@ -204,5 +200,7 @@ jobs:
             autoheal_fw/config/config.yaml
             pull_request.json
             identifiers_discovered*.json
+            identifiers_update_plan.json
+            identifiers_update_summary.json
             rag_index_manifest_*.json
             llm_info.json
