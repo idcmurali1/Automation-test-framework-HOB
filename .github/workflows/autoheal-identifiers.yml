@@ -1,26 +1,20 @@
-name: Autoheal: extract IDs → update mappings → PR
+name: Autoheal - update identifiers from app
 
 on:
-  # Manual run support (you can override the app repo/ref here)
   workflow_dispatch:
     inputs:
       app_repo:
-        description: "App repository to scan (owner/repo)"
+        description: "App repository (owner/repo)"
+        required: true
+        default: idcmurali1/Automation-test-framework-HOB
+      ref:
+        description: "Git ref to scan (branch/SHA)"
         required: false
-        default: "idcmurali1/Hob-shop"
-      branch:
-        description: "App branch (fallback if SHA not provided)"
-        required: false
-        default: "main"
-      sha:
-        description: "App commit SHA to scan (takes precedence over branch)"
-        required: false
-        default: ""
+        default: main
       logical:
-        description: "Optional: only update a single logical mapping"
+        description: "Filter to one logical mapping (optional)"
         required: false
         default: ""
-  # Fired by your app repo when it changes
   repository_dispatch:
     types: [app_change]
 
@@ -32,70 +26,72 @@ concurrency:
   group: autoheal-identifiers-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  # Force LLM provider to OpenAI; no rulebased fallback here
-  LLM_PROVIDER: openai
-  APP_REPO: ${{ inputs.app_repo || 'idcmurali1/Hob-shop' }}
-  APP_REF: ${{ github.event.client_payload.sha || github.event.client_payload.branch || inputs.sha || inputs.branch || 'main' }}
-  LOGICAL_FILTER: ${{ inputs.logical || '' }}
-
 jobs:
   update-identifiers:
+    name: extract IDs → update mappings → PR
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      LLM_PROVIDER: openai
     steps:
-      - name: Show dispatch payload (debug)
+      - name: Checkout tests repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine app repo/ref
+        id: app
+        shell: bash
         run: |
-          echo "event_name=${{ github.event_name }}"
-          echo "event_type=${{ github.event.action || github.event.action || '' }}"
-          echo "client_payload:"
-          echo '${{ toJson(github.event.client_payload) }}'
-          echo "APP_REPO=$APP_REPO"
-          echo "APP_REF=$APP_REF"
-          echo "LOGICAL_FILTER=$LOGICAL_FILTER"
+          if [[ "${{ github.event_name }}" == "repository_dispatch" ]]; then
+            APP_REPO="${{ github.repository }}"
+            # Prefer branch from payload, otherwise SHA; fallback to default branch ref
+            if [[ -n "${{ github.event.client_payload.branch }}" ]]; then
+              APP_REF="${{ github.event.client_payload.branch }}"
+            elif [[ -n "${{ github.event.client_payload.sha }}" ]]; then
+              APP_REF="${{ github.event.client_payload.sha }}"
+            else
+              APP_REF="${{ github.ref_name }}"
+            fi
+          else
+            APP_REPO="${{ inputs.app_repo }}"
+            APP_REF="${{ inputs.ref }}"
+          fi
+          echo "repo=$APP_REPO" >> "$GITHUB_OUTPUT"
+          echo "ref=$APP_REF" >> "$GITHUB_OUTPUT"
 
-      # 1) Checkout THIS repo (tests repo) always at main with full history so we can branch & push
-      - name: Checkout tests repo (this repo)
+      - name: Checkout app repo
         uses: actions/checkout@v4
         with:
-          ref: main
-          fetch-depth: 0
-          persist-credentials: true
-
-      # 2) Checkout the APP repo to a subfolder at the requested SHA/branch
-      - name: Checkout app repo (Hob-shop) at provided SHA/branch
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ env.APP_REPO }}
-          ref: ${{ env.APP_REF }}
-          path: hob-shop
+          repository: ${{ steps.app.outputs.repo }}
+          ref: ${{ steps.app.outputs.ref }}
+          path: app-src
           fetch-depth: 0
 
-      # 3) Setup Python
-      - name: Setup Python 3.11
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install autoheal CLI
+        shell: bash
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ./autoheal_fw
-          python -m pip install pyyaml
+          python -m venv venv
+          source venv/bin/activate
+          pip install -U pip
+          pip install -e .
 
-      # 4) Write config.yaml (LLM=OpenAI; RN patterns for mapping)
-      - name: Write config.yaml for CLI (OpenAI + RN patterns)
+      - name: Write config.yaml
+        shell: bash
         run: |
-          mkdir -p autoheal_fw/config
+          mkdir -p autoheal_fw/config artifacts vector_index
           cat > autoheal_fw/config/config.yaml <<'CFG'
           app:
             platform: react_native
-
-            # Highest-priority exact RN testID → logical (still helpful as hints)
             testid_to_logical:
-              product_sku_hoodie:  us.mappings.yourOrders.hoodieProduct
-              product_sku_cap:     us.mappings.yourOrders.capProduct
-
-            # Regex families so *_valNNNN variants are auto-mapped
+              product_sku_hoodie: us.mappings.yourOrders.hoodieProduct
+              product_sku_cap: us.mappings.yourOrders.capProduct
             testid_patterns:
               - match: "^product_sku_hoodie.*$"
                 logical: us.mappings.yourOrders.hoodieProduct
@@ -103,12 +99,9 @@ jobs:
                 logical: us.mappings.yourOrders.capProduct
               - match: "^product_sku_shirt.*$"
                 logical: us.mappings.yourOrders.shirtProduct
-
-            # Optional native patterns (kept for future native scanning)
             ios_patterns:
               - match: "^(settingsButton|.*SettingsButton.*)$"
                 logical: us.mappings.account.menuSettingsButton
-
             android_patterns:
               - match: "^com\\.walmart\\.android\\.debug:id/account_header_settings.*$"
                 logical: us.mappings.account.menuSettingsButton
@@ -116,78 +109,66 @@ jobs:
                 logical: us.mappings.yourOrders.hoodieProduct
               - match: "^product_sku_cap.*$"
                 logical: us.mappings.yourOrders.capProduct
-
           source_files:
             react_native:
               - "src/catalog.ts"
               - "src/menu.ts"
-            ios_native: []
-            android_native: []
-
           llm:
-            provider: openai
+            provider: ${LLM_PROVIDER:-openai}
             openai_api_key: "${OPENAI_API_KEY:-}"
             anthropic_api_key: "${ANTHROPIC_API_KEY:-}"
             model: "gpt-4o"
             temperature: 0.1
-
           vectordb:
             provider: local
             api_key: ""
             index_name: "autoheal-failures"
             base_path: "./vector_index"
-
           vcs:
             provider: local
             github_token: "${GITHUB_TOKEN:-}"
             repo: "idcmurali1/Automation-test-framework-HOB"
-
           ci:
             provider: local
-
           artifact_store:
             path: "./artifacts"
-
           policy:
             file: "./policies/policy.yaml"
-
           logging:
             level: "INFO"
             patch_ledger: "./patches/ledger.jsonl"
           CFG
 
-      # 5) Run the CLI to extract identifiers from app → update tests mappings → PR
-      - name: Run autoheal (extract IDs → update mappings → PR)
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: (Optional) Build simple RAG manifest
+        shell: bash
         run: |
+          source venv/bin/activate
           python - <<'PY'
-          import os, json, subprocess, sys
-          cfg_path = "autoheal_fw/config/config.yaml"
-          branch = f"autoheal/app-ids-{os.environ.get('GITHUB_RUN_ID')}"
-          logical = os.environ.get("LOGICAL_FILTER","").strip()
-          args = [
-            sys.executable, "-m", "autoheal.cli", "update-mappings-from-app",
-            "--app_repo", "hob-shop",
-            "--tests_repo", ".",
-            "--logical", logical,
-            "--branch", branch,
-            "--config", cfg_path,
-            "--github_token", os.environ.get("GITHUB_TOKEN",""),
-          ]
-          print("Running:", " ".join(args))
-          subprocess.run(args, check=False)
+          import json, os, glob
+          os.makedirs("artifacts", exist_ok=True)
+          manifest={"repo":"${{ steps.app.outputs.repo }}","ref":"${{ steps.app.outputs.ref }}","files":[]}
+          for p in glob.glob("app-src/**/*.*", recursive=True):
+            if os.path.isfile(p) and p.split(".")[-1] in {"ts","tsx","js","jsx","java","kt","swift"}:
+              manifest["files"].append(p)
+          open("artifacts/rag_index_manifest_update_from_app.json","w").write(json.dumps(manifest, indent=2))
           PY
 
-      # 6) Upload artifacts (prompt, plan, summary, PR json, etc.)
-      - name: Upload artifacts (debug)
-        if: always()
+      - name: Run CLI (update identifiers from app)
+        shell: bash
+        run: |
+          source venv/bin/activate
+          python -m autoheal.cli update-mappings-from-app \
+            --app_repo "$GITHUB_WORKSPACE/app-src" \
+            --tests_repo "$GITHUB_WORKSPACE" \
+            --logical "${{ inputs.logical || '' }}" \
+            --branch "autoheal/app-update-${{ github.run_id }}" \
+            --config "autoheal_fw/config/config.yaml" \
+            --github_token "${GITHUB_TOKEN}"
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: autoheal-artifacts
+          name: autoheal-identifiers
           path: |
             artifacts/**
             autoheal_fw/config/config.yaml
-            patches/**
-          if-no-files-found: warn
